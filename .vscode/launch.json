@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "compounds": [
+    {
+      "name": "Run All Projects",
+      "configurations": ["Lisa.DcePortal.Api", "Lisa.School.Api"]
+    }
+  ],
+  "configurations": [
+    {
+      "name": "Lisa.DcePortal.Api",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-dce-portal-api",
+      "program": "${workspaceFolder}/Lisa.DcePortal.Api/bin/Debug/net8.0/Lisa.DcePortal.Api.dll",
+      "cwd": "${workspaceFolder}/Lisa.DcePortal.Api",
+      "stopAtEntry": false
+    },
+    {
+      "name": "Lisa.School.Api",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-school-api",
+      "program": "${workspaceFolder}/Lisa.School.Api/bin/Debug/net8.0/Lisa.School.Api.dll",
+      "cwd": "${workspaceFolder}/Lisa.School.Api",
+      "stopAtEntry": false
+    }
+  ]
+}

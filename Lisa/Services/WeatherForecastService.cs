@@ -1,5 +1,4 @@
-namespace Lisa.Data;
-
+namespace Lisa.Services;
 public class WeatherForecastService
 {
     private static readonly string[] Summaries = new[]

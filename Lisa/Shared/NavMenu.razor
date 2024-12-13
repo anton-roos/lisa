@@ -1,39 +1,49 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using Lisa.Services
+@inject SchoolService _schoolService
+@inject NavigationService NavigationService
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">Lisa</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+        <a class="navbar-brand" href="">@_schoolService.GetSchoolName()</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu"
+            aria-expanded="@(!collapseNavMenu).ToString().ToLower()">
             <span class="navbar-toggler-icon"></span>
         </button>
     </div>
 </div>
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+<div class="@NavMenuCssClass nav-scrollable">
     <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="oi oi-home" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="oi oi-plus" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="fetchdata">
-                <span class="oi oi-list-rich" aria-hidden="true"></span> Fetch data
-            </NavLink>
-        </div>
+        @foreach (var navItem in NavigationService.GetNavigationItems())
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="@navItem.Url" Match="@GetNavLinkMatch(navItem.Url)" ActiveClass="active">
+                    <span class="@navItem.IconClass" aria-hidden="true"></span> @navItem.Title
+                </NavLink>
+            </div>
+        }
     </nav>
 </div>
 
 @code {
     private bool collapseNavMenu = true;
 
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : "nav-open";
 
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private NavLinkMatch GetNavLinkMatch(string url)
+    {
+        // Use NavLinkMatch.All for the Home link ("/") to ensure exact match
+        if (url == "/")
+        {
+            return NavLinkMatch.All;
+        }
+
+        // Use NavLinkMatch.Prefix for all other links
+        return NavLinkMatch.Prefix;
     }
 }

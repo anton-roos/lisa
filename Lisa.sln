@@ -3,14 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.002.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lisa.DcePortal.Api", "Lisa.DcePortal.Api\Lisa.DcePortal.Api.csproj", "{42A8E733-3189-4694-B4CA-DA6C07B35BF7}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lisa.DcePortal.App", "Lisa.DcePortal.App\Lisa.DcePortal.App.csproj", "{6CE8DD77-F17A-4E2B-96EE-87809C9C1180}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lisa.DcePortal", "Lisa.DcePortal\Lisa.DcePortal.csproj", "{CBCBFAFF-1862-4338-968D-57218414391A}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lisa.School", "Lisa.School\Lisa.School.csproj", "{08EF206B-EC8F-44BA-812A-0F300697A81D}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lisa", "Lisa\Lisa.csproj", "{08CBB9A8-78C2-47D9-9F5D-56D086DACDFA}"
 EndProject
 Global
@@ -19,22 +11,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{42A8E733-3189-4694-B4CA-DA6C07B35BF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{42A8E733-3189-4694-B4CA-DA6C07B35BF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{42A8E733-3189-4694-B4CA-DA6C07B35BF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{42A8E733-3189-4694-B4CA-DA6C07B35BF7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6CE8DD77-F17A-4E2B-96EE-87809C9C1180}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6CE8DD77-F17A-4E2B-96EE-87809C9C1180}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6CE8DD77-F17A-4E2B-96EE-87809C9C1180}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6CE8DD77-F17A-4E2B-96EE-87809C9C1180}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CBCBFAFF-1862-4338-968D-57218414391A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CBCBFAFF-1862-4338-968D-57218414391A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CBCBFAFF-1862-4338-968D-57218414391A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CBCBFAFF-1862-4338-968D-57218414391A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{08EF206B-EC8F-44BA-812A-0F300697A81D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{08EF206B-EC8F-44BA-812A-0F300697A81D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{08EF206B-EC8F-44BA-812A-0F300697A81D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{08EF206B-EC8F-44BA-812A-0F300697A81D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{08CBB9A8-78C2-47D9-9F5D-56D086DACDFA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{08CBB9A8-78C2-47D9-9F5D-56D086DACDFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{08CBB9A8-78C2-47D9-9F5D-56D086DACDFA}.Release|Any CPU.ActiveCfg = Release|Any CPU

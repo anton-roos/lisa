@@ -1,4 +1,4 @@
-namespace Lisa.Data;
+namespace Lisa.Services;
 
 public class WeatherForecast
 {

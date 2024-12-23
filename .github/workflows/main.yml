@@ -35,7 +35,7 @@ jobs:
         $cred = New-Object System.Management.Automation.PSCredential (${{ secrets.USERNAME }}, $password)
 
         # Use msdeploy to deploy the application
-        & "C:\Program Files (x86)\IIS\Microsoft Web Deploy V3\msdeploy.exe" `
+        & "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe" `
         -verb:sync `
         -source:content="C:\build\output" `
         -dest:content=https://${{ secrets.SERVER_IP }},userName=${{ secrets.USERNAME }},password=${{ secrets.PASSWORD }},authType=Basic `

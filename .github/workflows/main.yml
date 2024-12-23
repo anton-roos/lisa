@@ -1,4 +1,4 @@
-name: Deploy to IIS with Web Deploy
+name: Deploy to IIS
 
 on:
   push:
@@ -7,36 +7,26 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: self-hosted  # Use the self-hosted runner
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
-    
-#    - name: Setup MSBuild
-#      uses: microsoft/setup-msbuild@v2
-    
-#    - name: Restore NuGet Packages
-#      run: |
- #       dotnet restore
-    
-  #  - name: Build Application
-  #    run: |
-  #      msbuild Lisa.sln /p:Configuration=Release /p:OutputPath=C:\build\output
 
-  #  - name: Install Web Deploy (msdeploy)
-  #    run: |
-  #      choco install webdeploy
+    - name: Restore NuGet Packages
+      run: dotnet restore
 
-   # - name: Deploy to IIS using Web Deploy
-    #  run: |
-        # Create a secure password object from the secret
-     #   $password = ConvertTo-SecureString -String ${{ secrets.PASSWORD }} -AsPlainText -Force
-      #  $cred = New-Object System.Management.Automation.PSCredential (${{ secrets.USERNAME }}, $password)
+    - name: Build Application
+      run: dotnet build --configuration Release
 
-        # Use msdeploy to deploy the application
-#        & "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe" `
- #           -verb:sync `
-  #          -source:dirPath="C:\build\output" `
-   #         -dest:auto,computerName=https://41.76.111.105:8172/msdeploy.axd,authType=NTLM  `
-    #        -disableLink:AppPool
+    - name: Publish Application
+      run: dotnet publish --configuration Release --output "C:\actions-runner\temp"
+
+    - name: Deploy to IIS
+      run: |
+        Copy-Item -Path "C:\actions-runner\temp*" -Destination "C:\Users\Remote\Sites\lis" -Recurse -Force
+        Restart-WebAppPool -Name "lis"
+    
+    - name: Clean Temp Folder
+      run: |
+        Remove-Item -Path "C:\actions-runner\temp\*" -Recurse -Force

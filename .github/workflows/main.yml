@@ -7,36 +7,36 @@ on:
 
 jobs:
   deploy:
-    runs-on: windows-latest
+    runs-on: self-hosted
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
     
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
+#    - name: Setup MSBuild
+#      uses: microsoft/setup-msbuild@v2
     
-    - name: Restore NuGet Packages
-      run: |
-        dotnet restore
+#    - name: Restore NuGet Packages
+#      run: |
+ #       dotnet restore
     
-    - name: Build Application
-      run: |
-        msbuild Lisa.sln /p:Configuration=Release /p:OutputPath=C:\build\output
+  #  - name: Build Application
+  #    run: |
+  #      msbuild Lisa.sln /p:Configuration=Release /p:OutputPath=C:\build\output
 
-    - name: Install Web Deploy (msdeploy)
-      run: |
-        choco install webdeploy
+  #  - name: Install Web Deploy (msdeploy)
+  #    run: |
+  #      choco install webdeploy
 
-    - name: Deploy to IIS using Web Deploy
-      run: |
+   # - name: Deploy to IIS using Web Deploy
+    #  run: |
         # Create a secure password object from the secret
-        $password = ConvertTo-SecureString -String ${{ secrets.PASSWORD }} -AsPlainText -Force
-        $cred = New-Object System.Management.Automation.PSCredential (${{ secrets.USERNAME }}, $password)
+     #   $password = ConvertTo-SecureString -String ${{ secrets.PASSWORD }} -AsPlainText -Force
+      #  $cred = New-Object System.Management.Automation.PSCredential (${{ secrets.USERNAME }}, $password)
 
         # Use msdeploy to deploy the application
-        & "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe" `
-            -verb:sync `
-            -source:dirPath="C:\build\output" `
-            -dest:auto,computerName=https://41.76.111.105:8172/msdeploy.axd,authType=NTLM  `
-            -disableLink:AppPool
+#        & "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe" `
+ #           -verb:sync `
+  #          -source:dirPath="C:\build\output" `
+   #         -dest:auto,computerName=https://41.76.111.105:8172/msdeploy.axd,authType=NTLM  `
+    #        -disableLink:AppPool

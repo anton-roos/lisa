@@ -1,0 +1,27 @@
+name: Deploy to IIS with PowerShell
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Build Application
+      run: |
+        msbuild Lisa.sln /p:Configuration=Release /p:OutputPath=C:\build\output
+
+    - name: Deploy with PowerShell
+      run: |
+        $password = ConvertTo-SecureString -String ${{ secrets.PASSWORD }} -AsPlainText -Force
+        $cred = New-Object System.Management.Automation.PSCredential (${{ secrets.USERNAME }}, $password)
+        Invoke-Command -ComputerName ${{ secrets.SERVER_IP }} -Credential $cred -ScriptBlock {
+          Copy-Item -Path "C:\build\output" -Destination "C:\Users\Remote\Sites\lis" -Recurse -Force
+          Restart-WebAppPool -Name "lis"
+        }

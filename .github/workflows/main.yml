@@ -28,11 +28,11 @@ jobs:
       run: |
         Set-Item wsman:\localhost\Client\TrustedHosts -Value "${{ secrets.SERVER_IP }}" -Force
 
-    - name: Deploy with PowerShell
+    - name: Deploy with PowerShell (Disable SSL Validation)
       run: |
         $password = ConvertTo-SecureString -String ${{ secrets.PASSWORD }} -AsPlainText -Force
         $cred = New-Object System.Management.Automation.PSCredential (${{ secrets.USERNAME }}, $password)
-        Invoke-Command -ConnectionUri "https://${{ secrets.SERVER_IP }}:5986/wsman" -Credential $cred -ScriptBlock {
+        Invoke-Command -ConnectionUri "https://${{ secrets.SERVER_IP }}:5986/wsman" -Credential $cred -SkipCACheck -SkipCNCheck -ScriptBlock {
           try {
             Copy-Item -Path "C:\build\output" -Destination "C:\Users\Remote\Sites\lis" -Recurse -Force
           } catch {
@@ -42,3 +42,4 @@ jobs:
           Import-Module WebAdministration
           Restart-WebAppPool -Name "lis"
         }
+

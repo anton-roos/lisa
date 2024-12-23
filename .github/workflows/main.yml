@@ -28,11 +28,19 @@ jobs:
       run: |
         Set-Item wsman:\localhost\Client\TrustedHosts -Value "${{ secrets.SERVER_IP }}" -Force
 
-    - name: Deploy with PowerShell (Disable SSL Validation)
+    - name: Deploy with PowerShell
       run: |
         $password = ConvertTo-SecureString -String ${{ secrets.PASSWORD }} -AsPlainText -Force
         $cred = New-Object System.Management.Automation.PSCredential (${{ secrets.USERNAME }}, $password)
-        Invoke-Command -ConnectionUri "https://${{ secrets.SERVER_IP }}:5986/wsman" -Credential $cred -SkipCACheck -SkipCNCheck -ScriptBlock {
+    
+        # Create a session option to bypass SSL certificate validation
+        $sessionOption = New-PSSessionOption -SkipCACheck -SkipCNCheck
+    
+        # Create the session with the custom session option
+        $session = New-PSSession -ComputerName "${{ secrets.SERVER_IP }}" -Credential $cred -UseSSL -SessionOption $sessionOption
+    
+        # Invoke command on the remote server using the session
+        Invoke-Command -Session $session -ScriptBlock {
           try {
             Copy-Item -Path "C:\build\output" -Destination "C:\Users\Remote\Sites\lis" -Recurse -Force
           } catch {
@@ -42,4 +50,8 @@ jobs:
           Import-Module WebAdministration
           Restart-WebAppPool -Name "lis"
         }
+    
+        # Clean up the session
+        Remove-PSSession -Session $session
+
 

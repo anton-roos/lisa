@@ -36,7 +36,7 @@ jobs:
 
         # Use msdeploy to deploy the application
         & "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe" `
-        -verb:sync `
-        -source:content="C:\build\output" `
-        -dest:content=https://${{ secrets.SERVER_IP }},userName=${{ secrets.USERNAME }},password=${{ secrets.PASSWORD }},authType=Basic `
-        -disableLink:AppPool
+          -verb:sync `
+          -source:dirPath="C:\build\output" `
+          -dest:auto,computerName="https://${{ secrets.SERVER_IP }}/msdeploy.axd",userName=${{ secrets.USERNAME }},password=${{ secrets.PASSWORD }},authType=Basic `
+          -disableLink:AppPool

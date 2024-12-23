@@ -1,4 +1,4 @@
-name: Deploy to IIS with PowerShell
+name: Deploy to IIS with Web Deploy
 
 on:
   push:
@@ -13,45 +13,31 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v3
     
-    - name: setup-msbuild
+    - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
     
     - name: Restore NuGet Packages
       run: |
         dotnet restore
-
+    
     - name: Build Application
       run: |
         msbuild Lisa.sln /p:Configuration=Release /p:OutputPath=C:\build\output
 
-    - name: Configure WinRM TrustedHosts
+    - name: Install Web Deploy (msdeploy)
       run: |
-        Set-Item wsman:\localhost\Client\TrustedHosts -Value "${{ secrets.SERVER_IP }}" -Force
+        choco install webdeploy --version 5.1.0
 
-    - name: Deploy with PowerShell
+    - name: Deploy to IIS using Web Deploy
       run: |
+        # Create a secure password object from the secret
         $password = ConvertTo-SecureString -String ${{ secrets.PASSWORD }} -AsPlainText -Force
         $cred = New-Object System.Management.Automation.PSCredential (${{ secrets.USERNAME }}, $password)
-    
-        # Create a session option to bypass SSL certificate validation
-        $sessionOption = New-PSSessionOption -SkipCACheck -SkipCNCheck
-    
-        # Create the session with the custom session option
-        $session = New-PSSession -ComputerName "${{ secrets.SERVER_IP }}" -Credential $cred -UseSSL -SessionOption $sessionOption
-    
-        # Invoke command on the remote server using the session
-        Invoke-Command -Session $session -ScriptBlock {
-          try {
-            Copy-Item -Path "C:\build\output" -Destination "C:\Users\Remote\Sites\lis" -Recurse -Force
-          } catch {
-            Write-Error "Failed to copy files: $_"
-            exit 1
-          }
-          Import-Module WebAdministration
-          Restart-WebAppPool -Name "lis"
-        }
-    
-        # Clean up the session
-        Remove-PSSession -Session $session
 
-
+        # Use msdeploy to deploy the application
+        & "C:\Program Files (x86)\IIS\Microsoft Web Deploy V3\msdeploy.exe" `
+            -verb:sync `
+            -source:content="C:\build\output" `
+            -dest:content="https://${{ secrets.SERVER_IP }}/MySite",userName=${{ secrets.USERNAME }},password=${{ secrets.PASSWORD }},authType=Basic `
+            -setParam:name="IIS Web Application Name",value="MySite" `
+            -disableLink:AppPool

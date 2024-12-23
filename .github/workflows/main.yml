@@ -26,7 +26,7 @@ jobs:
       run: |
         try {
           # Deploy the application to IIS
-          Copy-Item -Path "C:\actions-runner\temp\*" -Destination "C:\Users\Remote\Sites\lis" -Recurse -Force
+          Copy-Item -Path "C:\actions-runner\temp\*" -Destination "C:\Sites\lis" -Recurse -Force
         } catch {
           # Handle the error (e.g., logging, sending notifications, etc.)
           Write-Host "Error during deployment: $_"

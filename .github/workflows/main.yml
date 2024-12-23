@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted  # Use the self-hosted runner
+    runs-on: self-hosted  # Use self-hosted runner
 
     steps:
     - name: Checkout Code
@@ -24,9 +24,20 @@ jobs:
 
     - name: Deploy to IIS
       run: |
-        Copy-Item -Path "C:\actions-runner\temp*" -Destination "C:\Users\Remote\Sites\lis" -Recurse -Force
-        Restart-WebAppPool -Name "lis"
-    
+        try {
+          # Deploy the application to IIS
+          Copy-Item -Path "C:\actions-runner\temp\*" -Destination "C:\Users\Remote\Sites\lis" -Recurse -Force
+        } catch {
+          # Handle the error (e.g., logging, sending notifications, etc.)
+          Write-Host "Error during deployment: $_"
+          throw $_  # Rethrow the error to ensure the step fails
+        } finally {
+          # Clean up the temp folder regardless of success or failure
+          Write-Host "Cleaning up the temp folder..."
+          Remove-Item -Path "C:\actions-runner\temp\*" -Recurse -Force
+        }
+
     - name: Clean Temp Folder
       run: |
+        # This is just an additional safety measure in case of failures
         Remove-Item -Path "C:\actions-runner\temp\*" -Recurse -Force

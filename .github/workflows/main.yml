@@ -19,6 +19,10 @@ jobs:
     - name: Check MSBuild
       run: where msbuild
     
+    - name: Restore NuGet Packages
+      run: |
+        dotnet restore
+
 
     - name: Build Application
       run: |

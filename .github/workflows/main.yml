@@ -32,7 +32,7 @@ jobs:
       run: |
         $password = ConvertTo-SecureString -String ${{ secrets.PASSWORD }} -AsPlainText -Force
         $cred = New-Object System.Management.Automation.PSCredential (${{ secrets.USERNAME }}, $password)
-        Invoke-Command -ComputerName "https://${{ secrets.SERVER_IP }}" -Credential $cred -ScriptBlock {
+        Invoke-Command -ConnectionUri "https://${{ secrets.SERVER_IP }}:5986/wsman" -Credential $cred -ScriptBlock {
           try {
             Copy-Item -Path "C:\build\output" -Destination "C:\Users\Remote\Sites\lis" -Recurse -Force
           } catch {

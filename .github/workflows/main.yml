@@ -16,13 +16,9 @@ jobs:
     - name: setup-msbuild
       uses: microsoft/setup-msbuild@v2
     
-    - name: Check MSBuild
-      run: where msbuild
-    
     - name: Restore NuGet Packages
       run: |
         dotnet restore
-
 
     - name: Build Application
       run: |

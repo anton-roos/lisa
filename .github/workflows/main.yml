@@ -13,6 +13,9 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v3
 
+    - name: Check MSBuild
+      run: where msbuild
+
     - name: Build Application
       run: |
         msbuild Lisa.sln /p:Configuration=Release /p:OutputPath=C:\build\output

@@ -38,6 +38,6 @@ jobs:
         & "C:\Program Files (x86)\IIS\Microsoft Web Deploy V3\msdeploy.exe" `
         -verb:sync `
         -source:content="C:\build\output" `
-        -dest:content="https://${{ secrets.SERVER_IP }}/MySite",userName=${{ secrets.USERNAME }},password=${{ secrets.PASSWORD }},authType=Basic `
+        -dest:content=https://${{ secrets.SERVER_IP }},userName=${{ secrets.USERNAME }},password=${{ secrets.PASSWORD }},authType=Basic `
         -setParam:name="lis",value="lis" `
         -disableLink:AppPool

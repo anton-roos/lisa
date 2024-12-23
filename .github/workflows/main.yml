@@ -13,8 +13,8 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v3
     
-    - name: Check MSBuild
-      run: warrenbuckley/Setup-MSBuild
+    - name: setup-msbuild
+      uses: microsoft/setup-msbuild@v2
     
     - name: Check MSBuild
       run: where msbuild

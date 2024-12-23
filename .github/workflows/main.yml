@@ -38,5 +38,5 @@ jobs:
         & "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe" `
             -verb:sync `
             -source:dirPath="C:\build\output" `
-            -dest:auto,computerName=https://41.76.111.105:8172/msdeploy.axd,userName=${{ secrets.USERNAME }},password=${{ secrets.PASSWORD }},authType=Basic `
+            -dest:auto,computerName=https://41.76.111.105:8172/msdeploy.axd,authType=NTLM  `
             -disableLink:AppPool

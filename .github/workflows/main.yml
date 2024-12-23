@@ -39,5 +39,5 @@ jobs:
         -verb:sync `
         -source:content="C:\build\output" `
         -dest:content="https://${{ secrets.SERVER_IP }}/MySite",userName=${{ secrets.USERNAME }},password=${{ secrets.PASSWORD }},authType=Basic `
-        -setParam:name=lis",value="lis" `
+        -setParam:name="lis",value="lis" `
         -disableLink:AppPool

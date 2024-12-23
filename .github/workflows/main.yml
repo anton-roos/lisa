@@ -26,7 +26,7 @@ jobs:
 
     - name: Configure WinRM TrustedHosts
       run: |
-        winrm set winrm/config/client @{TrustedHosts="${{ secrets.SERVER_IP }}"}
+        Set-Item wsman:\localhost\Client\TrustedHosts -Value "${{ secrets.SERVER_IP }}" -Force
 
     - name: Deploy with PowerShell
       run: |

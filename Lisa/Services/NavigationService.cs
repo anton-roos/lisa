@@ -21,10 +21,8 @@ public class NavigationService
         var allNavigationItems = new List<NavigationItem>
         {
             new NavigationItem("Home", "/", "oi oi-home", false, "view_home"),
-            new NavigationItem("Counter", "counter", "oi oi-plus", false, "view_counter"),
-            new NavigationItem("Fetch data", "fetchdata", "oi oi-list-rich", false, "view_fetchdata"),
+            new NavigationItem("Schools", "schools", "oi oi-book", false, "view_schools"),
             new NavigationItem("Learners", "learners", "oi oi-people", false, "view_learners"),
-            new NavigationItem("Schools", "schools", "oi oi-book", false, "view_schools")
         };
 
         // Add school-specific navigation items if a school is selected

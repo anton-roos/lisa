@@ -25,7 +25,7 @@ public class SchoolService
             "destiny" => "Destiny College",
             "impact" => "Impact School",
             "distance" => "Distance Learning Center",
-            _ => "Lisa" // Default fallback
+            _ => "DCEG Portal" // Default fallback
         };
     }
 

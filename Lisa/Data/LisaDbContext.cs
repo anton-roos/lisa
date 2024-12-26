@@ -4,6 +4,9 @@ namespace Lisa.Data;
 
 public class LisaDbContext : DbContext
 {
+    public LisaDbContext(DbContextOptions<LisaDbContext> options)
+        : base(options) { }
+
     public DbSet<School> Schools { get; set; }
     public DbSet<Grade> Grades { get; set; }
     public DbSet<Learner> Learners { get; set; }
@@ -83,7 +86,7 @@ public class LisaDbContext : DbContext
 
         // Principal
         modelBuilder.Entity<Principal>()
-            .HasKey(p => p.Id);
+            .HasBaseType<User>();
         modelBuilder.Entity<Principal>()
             .HasOne(p => p.School)
             .WithMany()
@@ -91,7 +94,7 @@ public class LisaDbContext : DbContext
 
         // Administrator
         modelBuilder.Entity<Administrator>()
-            .HasKey(a => a.Id);
+            .HasBaseType<User>();
         modelBuilder.Entity<Administrator>()
             .HasOne(a => a.School)
             .WithMany()
@@ -99,7 +102,7 @@ public class LisaDbContext : DbContext
 
         // SchoolManagement
         modelBuilder.Entity<SchoolManagement>()
-            .HasKey(sm => sm.Id);
+            .HasBaseType<User>();
         modelBuilder.Entity<SchoolManagement>()
             .HasOne(sm => sm.School)
             .WithMany()
@@ -107,11 +110,11 @@ public class LisaDbContext : DbContext
 
         // SystemAdministrator
         modelBuilder.Entity<SystemAdministrator>()
-            .HasKey(sa => sa.Id);
+            .HasBaseType<User>();
 
         // Teacher
         modelBuilder.Entity<Teacher>()
-            .HasKey(t => t.Id);
+            .HasBaseType<User>();
         modelBuilder.Entity<Teacher>()
             .HasOne(t => t.School)
             .WithMany()

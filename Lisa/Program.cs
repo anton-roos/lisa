@@ -1,10 +1,15 @@
+using Lisa.Data;
 using Lisa.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddControllers();
+
+builder.Services.AddDbContext<LisaDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresConnection")));
 
 var app = builder.Build();
 

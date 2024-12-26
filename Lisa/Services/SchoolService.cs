@@ -7,9 +7,8 @@ public class SchoolService
     private readonly NavigationManager _navigationManager;
 
 
-    public SchoolService(NavigationManager navigationManager)
+    public SchoolService()
     {
-        _navigationManager = navigationManager;
     }
 
 

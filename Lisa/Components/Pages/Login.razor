@@ -1,9 +1,12 @@
 @page "/login"
+@using Lisa.Middleware
 @using Microsoft.AspNetCore.Identity
 @using System.ComponentModel.DataAnnotations
 @inject SignInManager<IdentityUser> SignInManager
 @inject NavigationManager NavigationManager
 @rendermode InteractiveServer
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<IdentityUser> UserManager
 
 <h3>Login</h3>
 
@@ -44,11 +47,6 @@ else
             </div>
         }
 
-        <div>
-            <InputCheckbox id="rememberMe" @bind-Value="loginModel.RememberMe" />
-            <label for="rememberMe">Remember me</label>
-        </div>
-
         <button type="submit" class="btn btn-primary">Log in</button>
     </EditForm>
 }
@@ -58,31 +56,54 @@ else
     private string loginError = string.Empty;
     private bool isLoading = false;
 
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            NavigationManager.NavigateTo("/");
+        }
+    }
+
     private async Task HandleLogin()
     {
         isLoading = true;
-        StateHasChanged(); // Notify Blazor to refresh the UI to show the loading state
+        await Task.Delay(2000);
 
-        await Task.Delay(2000); // Simulate a delay (non-blocking)
-
-        var result = await SignInManager.PasswordSignInAsync(
-            loginModel.Email!,
-            loginModel.Password!,
-            loginModel.RememberMe,
-            lockoutOnFailure: false);
-
-        if (result.Succeeded)
+        var user = await UserManager.FindByEmailAsync(loginModel.Email!);
+        if (user == null)
         {
+            loginError = "A User with that email does not exist.";
             isLoading = false;
-            NavigationManager.NavigateTo("/");
+            return;
+        }
+
+        if (await SignInManager.CanSignInAsync(user))
+        {
+            var result = await SignInManager.CheckPasswordSignInAsync(user, loginModel.Password!, false);
+            if (result == Microsoft.AspNetCore.Identity.SignInResult.Success)
+            {
+                isLoading = false;
+                Guid key = Guid.NewGuid();
+                BlazorCookieLoginMiddleware.Logins[key] = new LoginInfo { Email = loginModel.Email, Password = loginModel.Password };
+                NavigationManager.NavigateTo($"/login?key={key}", true);
+            }
+            else
+            {
+                loginError = "Invalid username or password.";
+                isLoading = false;
+                return;
+            }
         }
         else
         {
+            loginError = "User is blocked.";
             isLoading = false;
-            loginError = "Invalid username or password.";
+            return;
         }
-
-        StateHasChanged(); // Notify Blazor to refresh the UI after the operation
     }
 
     private void HandleFieldChanged(FieldChangedEventArgs args)
@@ -98,7 +119,5 @@ else
 
         [Required(ErrorMessage = "Password is required.")]
         public string? Password { get; set; }
-
-        public bool RememberMe { get; set; }
     }
 }

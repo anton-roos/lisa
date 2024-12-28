@@ -4,6 +4,7 @@ using Lisa.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
+using Lisa.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,6 +44,8 @@ builder.Services.Configure<IdentityOptions>(options =>
     options.User.AllowedUserNameCharacters =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
     options.User.RequireUniqueEmail = true;
+
+    options.SignIn.RequireConfirmedEmail = false;
 });
 
 builder.Services.ConfigureApplicationCookie(options =>
@@ -84,6 +87,7 @@ app.UseHttpsRedirection();
 app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<BlazorCookieLoginMiddleware>();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

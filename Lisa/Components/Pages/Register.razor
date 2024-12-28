@@ -5,12 +5,14 @@
 @inject NavigationManager NavigationManager
 @using Microsoft.AspNetCore.Components.Forms
 @using System.ComponentModel.DataAnnotations
+@rendermode InteractiveServer
 
 <h3>Register</h3>
 
+
+
 <EditForm Model="@registerModel" OnValidSubmit="HandleRegister" FormName="registerForm">
     <DataAnnotationsValidator />
-    <ValidationSummary />
 
     <div>
         <label for="email">Email</label>
@@ -19,27 +21,43 @@
     </div>
 
     <div>
+        <label for="password">Password</label>
         <InputText id="password" type="password" @bind-value="registerModel.Password" class="form-control" />
         <ValidationMessage For="@(() => registerModel.Password)" />
     </div>
 
     <div>
         <label for="confirmPassword">Confirm Password</label>
-        <InputText id="confirmPassword" type="password" @bind-Value="registerModel.ConfirmPassword" class="form-control" />
+        <InputText id="confirmPassword" type="password" @bind-Value="registerModel.ConfirmPassword"
+            class="form-control" />
         <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
     </div>
+
+    @if (!string.IsNullOrEmpty(registerError))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert"
+            @onclick="() => registerError = string.Empty">
+            @registerError
+            <button type="button" class="btn-close" aria-label="Close"
+                @onclick="() => registerError = string.Empty"></button>
+        </div>
+    }
 
     <button type="submit" class="btn btn-primary">Register</button>
 </EditForm>
 
 @code {
     private RegisterModel registerModel = new RegisterModel();
+    private string registerError = string.Empty;
+    private bool isLoading = false;
 
     private async Task HandleRegister()
     {
+        isLoading = true;
         if (registerModel.Password != registerModel.ConfirmPassword)
         {
-            // Handle password mismatch
+            registerError = "Passwords do not match.";
+            isLoading = false;
             return;
         }
 
@@ -48,12 +66,13 @@
 
         if (result.Succeeded)
         {
-            await SignInManager.SignInAsync(user, isPersistent: false);
+            isLoading = false;
             NavigationManager.NavigateTo("/");
         }
         else
         {
-            // Handle registration failure
+            isLoading = false;
+            registerError = string.Join(", ", result.Errors.Select(e => e.Description));
         }
     }
 
@@ -61,13 +80,13 @@
     {
         [Required]
         [EmailAddress]
-        public string Email { get; set; }
+        public string? Email { get; set; }
 
         [Required]
-        public string Password { get; set; }
+        public string? Password { get; set; }
 
         [Required]
         [Compare("Password", ErrorMessage = "Passwords do not match.")]
-        public string ConfirmPassword { get; set; }
+        public string? ConfirmPassword { get; set; }
     }
 }

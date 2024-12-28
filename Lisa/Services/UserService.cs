@@ -1,3 +1,5 @@
+namespace Lisa.Services;
+
 public class UserService
 {
     public List<string> GetUserPermissions()

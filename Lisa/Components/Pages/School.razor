@@ -1,0 +1,28 @@
+﻿@page "/school/{SchoolId:int}"
+@inject Lisa.Services.SchoolService SchoolService
+@attribute [StreamRendering]
+
+<PageTitle>Schools</PageTitle>
+
+<h1>Schools</h1>
+
+@if (school == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <p>@school.Title</p>
+}
+
+@code {
+    private Lisa.Services.School? school;
+
+    [Parameter]
+    public int SchoolId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        school = await SchoolService.GetSchoolAsync(SchoolId);
+    }
+}

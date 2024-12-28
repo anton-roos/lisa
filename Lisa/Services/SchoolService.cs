@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Lisa.Services;
 
@@ -7,8 +8,9 @@ public class SchoolService
     private readonly NavigationManager _navigationManager;
 
 
-    public SchoolService()
+    public SchoolService(NavigationManager navigationManager)
     {
+        _navigationManager = navigationManager;
     }
 
 
@@ -35,12 +37,20 @@ public class SchoolService
         return schools.Find(s => s.Url.Contains(relativeUrl)) ?? new();
     }
 
+    public async Task<School> GetSchoolAsync(int id)
+    {
+        await Task.Delay(1000); // Simulate a delay
+        return await Task.Run(() => schools.Single(s => s.Id == id));
+    }
+
+
     public List<School> GetSchools() => schools;
 
     private readonly List<School> schools = new()
     {
         new()
         {
+            Id = 1,
             Title = "Impact Independent",
             Description = "Impact Independent High School",
             Image = "https://dcegroup.co.za/wp-content/uploads/2021/01/Impact-10.jpg",
@@ -49,6 +59,7 @@ public class SchoolService
         },
         new()
         {
+            Id = 2,
             Title = "Destiny Independent",
             Description = "Destiny Independent School Kempton Park",
             Image = "https://dcegroup.co.za/wp-content/uploads/2021/01/Destiny-Gen-25.jpg",
@@ -57,6 +68,7 @@ public class SchoolService
         },
         new()
         {
+            Id = 3,
             Title = "Broadlands",
             Description = "Broadlands Private School",
             Image ="https://dcegroup.co.za/wp-content/uploads/2024/04/WhatsApp-Image-2024-02-27-at-14.23.24.jpeg" ,
@@ -65,6 +77,7 @@ public class SchoolService
         },
         new()
         {
+            Id = 4,
             Title = "Greenacres",
             Description = "Greenacres Private College",
             Image = "https://dcegroup.co.za/wp-content/uploads/2024/04/WhatsApp-Image-2024-02-27-at-14.23.18-2.jpeg",
@@ -73,6 +86,7 @@ public class SchoolService
         },
         new()
         {
+            Id = 5,
             Title = "Dream Distance",
             Description = "Dream Distance Education",
             Image
@@ -86,9 +100,14 @@ public class SchoolService
 
 public class School
 {
+    public int Id { get; set; }
     public string? Title { get; set; }
     public string? Description { get; set; }
     public string? Image { get; set; }
     public string? Url { get; set; }
     public string? Color { get; set; }
+    public void OnGet(int id)
+    {
+        Id = id;  // This binds the route parameter to the property
+    }
 }

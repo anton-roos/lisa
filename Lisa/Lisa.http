@@ -1,6 +1,0 @@
-@Lisa_Api_HostAddress = http://localhost:5198
-GET {{Lisa_Api_HostAddress}}/weatherforecast/
-Accept: application/json
-###
-GET {{Lisa_Api_HostAddress}}/api/student/
-Accept: application/json

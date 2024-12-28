@@ -8,7 +8,17 @@
 
 @if (school == null)
 {
-    <p><em>Loading...</em></p>
+    @for (int i = 0; i < 3; i++)
+    {
+        <div class="card skeleton">
+            <div class="skeleton-image"></div>
+            <div class="skeleton-content">
+                <div class="skeleton-title"></div>
+                <div class="skeleton-text"></div>
+                <div class="skeleton-button"></div>
+            </div>
+        </div>
+    }
 }
 else
 {

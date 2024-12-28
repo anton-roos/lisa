@@ -1,0 +1,26 @@
+@page "/login"
+@using Lisa.Models.ViewModels
+
+<div class="row">
+    <EditForm Model="@Model" OnValidSubmit="Authenticate" FormName="LoginForm">
+        <DataAnnotationsValidator />
+        <FluentTextField @bind-Value="@Model.Email" Label="Username" />
+        <FluentTextField @bind-Value="@Model.Password" Label="Password" />
+        <FluentLabel>@ErrorMessage</FluentLabel>
+        <button type="submit" class="btn btn-primary">Login</button>
+    </EditForm>
+</div>
+
+@code {
+    [CascadingParameter]
+    HttpContext? HttpContext { get; set; }
+    
+    [SupplyParameterFromForm]
+    public LoginViewModel Model { get; set; } = new();
+
+    private string? ErrorMessage { get; set; }
+    private void Authenticate()
+    {
+        Console.WriteLine("Authenticate");
+    }
+}

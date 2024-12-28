@@ -213,6 +213,33 @@ public class LisaDbContext : DbContext
     }
 }
 
+public class School
+{
+    public int Id { get; set; }
+    public string? ShortName { get; set; }
+    public string? LongName { get; set; }
+    public string? Color { get; set; }
+    public int SchoolTypeId { get; set; }
+    public SchoolType? SchoolType { get; set; }
+    public int CirriculumId { get; set; }
+    public Cirriculum? Cirriculum { get; set; }
+    public ICollection<Grade>? Grades { get; set; }
+    public ICollection<RegisterClass>? RegisterClasses { get; set; }
+    public ICollection<Teacher>? Teachers { get; set; }
+}
+
+public class SchoolType {
+    public int Id { get; set; }
+    public string? Name { get; set; }
+}
+
+public class Cirriculum {
+    public int Id { get; set; }
+    public string? Name { get; set; }
+}
+
+
+
 public class SystemAdministrator : User
 {
     public int Id { get; set; }
@@ -242,18 +269,6 @@ public class Principal : User
     public int Id { get; set; }
     public int SchoolId { get; set; }
     public School School { get; set; }
-}
-
-public class School
-{
-    public int Id { get; set; }
-    public string Name { get; set; }
-    public string Description { get; set; }
-    public string Color { get; set; }
-
-    public ICollection<Grade> Grades { get; set; }
-    public ICollection<RegisterClass> RegisterClasses { get; set; }
-    public ICollection<Teacher> Teachers { get; set; }
 }
 
 public class Grade

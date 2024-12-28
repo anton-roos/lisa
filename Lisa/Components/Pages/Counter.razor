@@ -7,13 +7,29 @@
 
 <p role="status">Current count: @currentCount</p>
 
+<AuthorizeView>
+    <Authorized>
+        <p>Hello, @context.User.Identity.Name!</p>
+        <FluentButton OnClick="ShowGreeting">Show Greeting</FluentButton>
+    </Authorized>
+</AuthorizeView>
+
 <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+    [Inject]
+    private IJSRuntime JSRuntime { get; set; }
     private int currentCount = 0;
-
     private void IncrementCount()
     {
         currentCount++;
+    }
+    private async Task ShowGreeting()
+    {
+        var authenticated = await authenticationStateTask;
+        var message = "Hello, " + authenticated.User.Identity.Name + "!";
+        await JSRuntime.InvokeAsync<object>("alert", new object[] { message });
     }
 }

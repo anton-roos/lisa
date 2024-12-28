@@ -1,4 +1,7 @@
+using Lisa.Handlers;
 using Lisa.Services;
+using Microsoft.AspNetCore.Components.Server.Circuits;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -8,6 +11,8 @@ builder.Services.AddSingleton<WeatherForecastService>();
 builder.Services.AddScoped<NavigationService>();
 builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddControllers();
+builder.Services.AddScoped<CircuitHandler, CustomCircuitHandler>();
 
 var app = builder.Build();
 
@@ -24,8 +29,8 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
-
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
+app.MapControllers();
 
 app.Run();

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace Lisa.Controllerse
+namespace Lisa.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]

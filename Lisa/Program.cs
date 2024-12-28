@@ -17,8 +17,6 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddDbContext<LisaDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Lisa")));
 
-builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<UserDbContext>();
-
 builder.Services.AddDbContext<UserDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Identity")));
 
@@ -69,8 +67,6 @@ builder.Services.AddDataGridEntityFrameworkAdapter();
 builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<NavigationService>();
-
-builder.Services.AddRazorPages();
 
 var app = builder.Build();
 

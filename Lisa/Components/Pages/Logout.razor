@@ -5,19 +5,13 @@
 @inject SignInManager<IdentityUser> SignInManager
 @rendermode InteractiveServer
 
-<h2>Logged Out</h2>
-<p>You have successfully Logged out.</p>
+<h2>Log Out</h2>
+<p>Are you sure you want to Log Out?</p>
+<button class="btn btn-primary" @onclick="LogoutWithMiddleware">Yes</button>
 
 @code {
-    protected override async Task OnInitializedAsync()
+    private void LogoutWithMiddleware()
     {
-        if (SignInManager.Context?.User?.Identity?.IsAuthenticated == true)
-        {
-            await SignInManager.SignOutAsync();
-        }
-        else
-        {
-            NavigationManager.NavigateTo("/", true);
-        }
+        NavigationManager.NavigateTo("/logout?middleware=true", true);
     }
-}    
+}

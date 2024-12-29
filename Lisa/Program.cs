@@ -92,4 +92,12 @@ app.UseMiddleware<BlazorCookieLoginMiddleware>();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    await DatabaseSeed.SeedRoles(services);
+    await DatabaseSeed.SeedAdmin(services);
+}
+
 app.Run();

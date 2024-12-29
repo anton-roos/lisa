@@ -27,10 +27,10 @@ public class BlazorCookieLoginMiddleware
     {
         if (context.Request.Path == "/login" && context.Request.Query.ContainsKey("key"))
         {
-            var key = Guid.Parse(context.Request.Query["key"]);
+            var key = Guid.Parse(context.Request.Query["key"]!);
             var info = Logins[key];
 
-            var result = await signInManager.PasswordSignInAsync(info.Email, info.Password, false, lockoutOnFailure: true);
+            var result = await signInManager.PasswordSignInAsync(info.Email!, info.Password!, false, lockoutOnFailure: true);
             info.Password = null;
             if (result.Succeeded)
             {
@@ -40,16 +40,21 @@ public class BlazorCookieLoginMiddleware
             }
             else if (result.RequiresTwoFactor)
             {
-                //TODO: redirect to 2FA razor component
-                context.Response.Redirect("/loginwith2fa/" + key);
+                context.Response.Redirect("/login-with-2fa/" + key);
                 return;
             }
             else
             {
-                //TODO: Proper error handling
-                context.Response.Redirect("/loginfailed");
+                context.Response.Redirect("/login-failed");
                 return;
             }
+        }
+        else if (context.Request.Path == "/logout" && context.Request.Query.ContainsKey("middleware"))
+        {
+
+            await signInManager.SignOutAsync();
+            context.Response.Redirect("/");
+            return;
         }
         else
         {

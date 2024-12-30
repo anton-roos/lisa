@@ -71,8 +71,6 @@ builder.Services.AddFluentUIComponents();
 builder.Services.AddDataGridEntityFrameworkAdapter();
 
 builder.Services.AddScoped<SchoolService>();
-builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<NavigationService>();
 
 var app = builder.Build();
 

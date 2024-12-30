@@ -21,6 +21,11 @@ public static class DatabaseSeed
             };
             await userManager.CreateAsync(user, AdminPassword);
         }
+
+        if (adminUser != null && !await userManager.IsInRoleAsync(adminUser, Roles.SystemAdministrator))
+        {
+            await userManager.AddToRoleAsync(adminUser, Roles.SystemAdministrator);
+        }
     }
 
 
@@ -46,10 +51,6 @@ public static class DatabaseSeed
             }
         }
 
-        var adminUser = await userManager.FindByEmailAsync(AdminEmail);
-        if (adminUser != null && !await userManager.IsInRoleAsync(adminUser, Roles.SystemAdministrator))
-        {
-            await userManager.AddToRoleAsync(adminUser, Roles.SystemAdministrator);
-        }
+        
     }
 }

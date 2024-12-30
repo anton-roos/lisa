@@ -9,14 +9,12 @@
 <h3>User Management</h3>
 
 <div>
-    <button @onclick="ShowAddUserForm">Add User</button>
+    <button class="btn btn-primary" @onclick="ShowAddUserForm">Add User</button>
 </div>
 
 @if (showAddUserForm)
 {
     <EditForm Model="@newUser" OnValidSubmit="HandleAddUser">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
 
         <div>
             <label for="email">Email</label>
@@ -50,8 +48,7 @@
                 <td>@user.Email</td>
                 <td>@string.Join(", ", user.Roles)</td>
                 <td>
-                    <button @onclick="() => ShowEditUserForm(user)">Edit</button>
-                    <button @onclick="() => DeleteUser(user.Id)">Delete</button>
+                    <button class="btn btn-primary" @onclick="() => ShowEditUserForm(user)">Edit</button>
                 </td>
             </tr>
         }
@@ -61,13 +58,10 @@
 @if (showEditUserForm)
 {
     <EditForm Model="@editUser" OnValidSubmit="HandleEditUser">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
 
         <div>
             <label for="email">Email</label>
             <InputText id="email" @bind-Value="editUser.Email" class="form-control" />
-            <ValidationMessage For="@(() => editUser.Email)" />
         </div>
 
         <div>

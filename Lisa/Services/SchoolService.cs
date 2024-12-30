@@ -1,40 +1,35 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Lisa.Services;
 
 public class SchoolService
 {
     private readonly NavigationManager _navigationManager;
+    private School _currentSchool;
 
 
     public SchoolService(NavigationManager navigationManager)
     {
         _navigationManager = navigationManager;
-    }
-
-
-    public string GetSchoolName()
-    {
-        string currentUrl = _navigationManager.Uri; // Get the current URL
-        string relativeUrl = currentUrl.Replace(_navigationManager.BaseUri, ""); // Remove base URL
-
-        return relativeUrl switch
+        _currentSchool = new() // Ensure that the current school is always set grab the first school from the database.
         {
-            "broadlands" => "Broadlands High",
-            "greenacres" => "Greenacres Academy",
-            "destiny" => "Destiny College",
-            "impact" => "Impact School",
-            "distance" => "Distance Learning Center",
-            _ => "DCEG Portal" // Default fallback
+            Id = 1,
+            Title = "Impact Independent",
+            Description = "Impact Independent High School",
+            Image = "https://dcegroup.co.za/wp-content/uploads/2021/01/Impact-10.jpg",
+            Url = "/impact",
+            Color = "#C00000"
         };
     }
 
     public School GetCurrentSchool()
     {
-        string currentUrl = _navigationManager.Uri; // Get the current URL
-        string relativeUrl = currentUrl.Replace(_navigationManager.BaseUri, "");
-        return schools.Find(s => s.Url.Contains(relativeUrl)) ?? new();
+        return _currentSchool;
+    }
+
+    public void SetCurrentSchool(int schoolId)
+    {
+        _currentSchool = schools.Single(s => s.Id == schoolId);
     }
 
     public async Task<School> GetSchoolAsync(int id)

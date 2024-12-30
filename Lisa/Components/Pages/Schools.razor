@@ -1,7 +1,9 @@
 ﻿@page "/schools"
+@using Microsoft.AspNetCore.Authorization
 @inject Lisa.Services.SchoolService SchoolService
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
+@attribute [Authorize(Roles = Roles.SystemAdministrator)]
 
 <PageTitle>Schools</PageTitle>
 

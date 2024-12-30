@@ -7,6 +7,9 @@
 
     <main>
         <div class="top-row px-4">
+            <AuthorizeView Roles="@Roles.SystemAdministrator">
+                <SelectSchool></SelectSchool>
+            </AuthorizeView>
             <AuthorizeView>
                 <Authorized>
                     <a href="/logout">Logout</a>

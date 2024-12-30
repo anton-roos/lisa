@@ -26,13 +26,3 @@
         <p>You are a System Administrator</p>
     </Authorized>
 </AuthorizeView>
-
-@code {
-    [CascadingParameter]
-    public Task<AuthenticationState> authenticationStateTask { get; set; }
-    protected override async Task OnInitializedAsync()
-    {
-        var auth = await authenticationStateTask;
-        var user = auth.User;
-    }
-}

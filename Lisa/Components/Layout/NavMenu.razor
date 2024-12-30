@@ -16,35 +16,64 @@
             </NavLink>
         </div>
 
-        <AuthorizeView Roles="Administrator,User">
+        <AuthorizeView Roles="@Roles.Teacher">
             <Authorized>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="counter">
-                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+                    <NavLink class="nav-link" href="results">
+                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Capture Marks
                     </NavLink>
                 </div>
-
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="weather">
-                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-                    </NavLink>
-                </div>
-
-
             </Authorized>
         </AuthorizeView>
 
-        <AuthorizeView>
+        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="learners">
+                    <span class="bi bi-mortarboard-nav-menu" aria-hidden="true"></span> Learners
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="feedback">
+                    <span class="bi feedback-icon" aria-hidden="true"></span> Feedback
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="combinations">
+                    <span class="bi combination-icon" aria-hidden="true"></span> Combinations
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+
+        <AuthorizeView Roles="@Roles.SystemAdministrator">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="schools">
                     <span class="bi bi-mortarboard-nav-menu" aria-hidden="true"></span> Schools
                 </NavLink>
             </div>
-        </AuthorizeView>
-        <AuthorizeView>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="users">
                     <span class="bi bi-mortarboard-nav-menu" aria-hidden="true"></span> Users
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="teachers">
+                    <span class="bi bi-mortarboard-nav-menu" aria-hidden="true"></span> Teachers
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="communication">
+                    <span class="bi communication-icon" aria-hidden="true"></span> Communication
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="templates">
+                    <span class="bi template-icon" aria-hidden="true"></span> Templates
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="super-admins">
+                    <span class="bi template-icon" aria-hidden="true"></span> Super Admins
                 </NavLink>
             </div>
         </AuthorizeView>

@@ -13,6 +13,7 @@
  - Add or Remove Other Super Admins.
  - Configure Communication Templates
  - Change School Information
+ - Add Teachers
 
 ### Principal
  - Do what School Management can do at a specific school.
@@ -22,7 +23,7 @@
  - Can query results
  - Can query communication
 
-### Admin
+### Administrator
  - Can Add Edit or Deactivate Learners
  - Can Add Edit or Remove Parents on Learners
  - Can send Progress Feedback

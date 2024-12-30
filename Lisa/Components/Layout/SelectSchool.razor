@@ -1,0 +1,29 @@
+@using Lisa.Services
+@inherits ComponentBase
+@inject SchoolService SchoolService;
+@rendermode InteractiveServer
+
+<div>
+    Select School
+   <select @onchange="HandleSelect">
+        @foreach (var school in schools)
+        {
+            <option value="@school.Id">@school.Title</option>
+        }
+    </select>
+</div>
+
+@code {
+    List<Services.School> schools = new List<Services.School>();
+    protected override void OnInitialized()
+    {
+        schools = SchoolService.GetSchools();
+    }
+
+    private void HandleSelect(ChangeEventArgs e)
+    {
+        var selectedSchoolId = int.Parse(e.Value!.ToString()!);
+        SchoolService.SetCurrentSchool(selectedSchoolId);
+        Console.WriteLine($"Selected School ID: {selectedSchoolId}");
+    }
+}

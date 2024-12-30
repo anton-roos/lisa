@@ -1,0 +1,22 @@
+@page "/results"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = Roles.Teacher)]
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+
+<PageTitle>Capture Marks</PageTitle>
+
+<h1>Capture Marks</h1>
+
+<FluentCard>
+    <h2>Mathematics</h2>
+    <FluentButton Appearance="@Appearance.Accent" @onclick="() => NavigateToSubject(1)">Capture Marks</FluentButton>
+
+</FluentCard>
+
+@code {
+    private void NavigateToSubject(int subjectId)
+    {
+        Navigation.NavigateTo($"results/subject/{subjectId}");
+    }
+}

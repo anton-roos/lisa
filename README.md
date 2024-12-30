@@ -27,6 +27,9 @@
  - Can Add Edit or Deactivate Learners
  - Can Add Edit or Remove Parents on Learners
  - Can send Progress Feedback
+   - `The Progress Feedback must be scheduled at a certain time`
+   - `Ensure that the emails are staggered so that you do not hit limit`
+   - `Microsoft 365 limit is 30 mails per minute`
  - Can setup Subject Combinations
  - Can Add or Edit Grades
 

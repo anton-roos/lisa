@@ -1,7 +1,7 @@
 # Learner Information System Administrator (LISA)
 
 ## User Types
- - Super Administrator
+ - System Administrator
  - Principal
  - Administrator
  - School Management
@@ -32,5 +32,27 @@
 
 ### Teacher
  - Can capture marks for their subjects
- - Can monitor session behaviour
- - Can manage session attendance
+ - Can monitor period behaviour
+ - Can manage period attendance
+
+# Credentials
+
+## Impact
+portali@impactindependent.co.za
+Portal@II
+
+## Destiny
+portalDISK@destiny-kemptonpark.co.za
+Portal@DISK
+
+## Greenacres
+portalGA@broadlands-schools.co.za
+Portal@GA
+
+## Broadlands
+protalBL@broadlands-schools.co.za
+Portal@BL
+
+## DCEG
+portalDCEG@dcegroup.co.za
+Portal@DCEG

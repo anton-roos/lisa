@@ -228,12 +228,14 @@ public class School
     public ICollection<Teacher>? Teachers { get; set; }
 }
 
-public class SchoolType {
+public class SchoolType
+{
     public int Id { get; set; }
     public string? Name { get; set; }
 }
 
-public class Cirriculum {
+public class Cirriculum
+{
     public int Id { get; set; }
     public string? Name { get; set; }
 }
@@ -356,8 +358,7 @@ public class Teacher : User
     public string FirstName { get; set; }
     public string LastName { get; set; }
 
-    public School School { get; set; }
-    public ICollection<TeacherSubject> TeacherSubjects { get; set; }
+
 }
 
 public class TeacherSubject
@@ -421,4 +422,6 @@ public class User
     public string LastName { get; set; }
     public string PasswordHash { get; set; }
     public DateTime CreatedAt { get; set; }
+    public School School { get; set; }
+    public ICollection<TeacherSubject> TeacherSubjects { get; set; }
 }

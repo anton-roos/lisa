@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
 using Lisa.Middleware;
+using Hangfire;
+using Hangfire.PostgreSql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +26,14 @@ builder.Services.AddDbContext<UserDbContext>(options =>
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<UserDbContext>()
     .AddDefaultTokenProviders();
+
+builder.Services.AddHangfire(config =>
+    config.UsePostgreSqlStorage(options =>
+    {
+        options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("Hangfire"));
+    }));
+builder.Services.AddHangfireServer();
+
 
 builder.Services.Configure<IdentityOptions>(options =>
 {
@@ -71,6 +81,7 @@ builder.Services.AddFluentUIComponents();
 builder.Services.AddDataGridEntityFrameworkAdapter();
 
 builder.Services.AddScoped<SchoolService>();
+builder.Services.AddScoped<EmailService>();
 
 var app = builder.Build();
 
@@ -89,7 +100,10 @@ app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<BlazorCookieLoginMiddleware>();
-
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = [new HangfireAuthorizationFilter()]
+});
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

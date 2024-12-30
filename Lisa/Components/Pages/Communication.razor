@@ -1,9 +1,19 @@
 @page "/communication"
+@using Lisa.Services
 @rendermode InteractiveServer
+@inject EmailService EmailService
 
 <PageTitle>Communication</PageTitle>
 <h1>Communication</h1>
+<button @onclick="SendEmail">Send Email</button>
 
 @code {
-    // Send out communication List of Communications for the CURRENT school.
+    private void SendEmail()
+    {
+        var To = "antonroos992@gmail.com";
+        var Subject = "Test Email";
+        var Body = "This is a test email";
+
+        EmailService.QueueEmail(to: To, subject: Subject, body: Body, schoolId: 1);
+    }
 }

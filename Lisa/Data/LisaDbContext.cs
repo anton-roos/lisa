@@ -2,34 +2,27 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Data;
 
-public class LisaDbContext : DbContext
+public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<LisaDbContext> logger) : DbContext(options)
 {
-    private readonly ILogger<LisaDbContext> _logger;
-
-    public LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<LisaDbContext> logger)
-        : base(options)
-    {
-        _logger = logger;
-    }
-
-    public DbSet<User> Users { get; set; }
-    public DbSet<SystemAdministrator> SystemAdministrators { get; set; }
-    public DbSet<Principal> Principals { get; set; }
-    public DbSet<SchoolManagement> SchoolManagements { get; set; }
-    public DbSet<Administrator> Administrators { get; set; }
-    public DbSet<Teacher> Teachers { get; set; }
-    public DbSet<School> Schools { get; set; }
-    public DbSet<SchoolType> SchoolTypes { get; set; }
-    public DbSet<SchoolCurriculum> SchoolCurriculums { get; set; }
-    public DbSet<Grade> Grades { get; set; }
-    public DbSet<Learner> Learners { get; set; }
-    public DbSet<LearnerParent> LearnerParents { get; set; }
-    public DbSet<RegisterClass> RegisterClasses { get; set; }
-    public DbSet<SubjectCombination> SubjectCombinations { get; set; }
-    public DbSet<Subject> Subjects { get; set; }
-    public DbSet<SubjectCombinationSubject> SubjectCombinationSubjects { get; set; }
-    public DbSet<Period> Periods { get; set; }
-    public DbSet<Result> Results { get; set; }
+    private readonly ILogger<LisaDbContext> _logger = logger;
+    public DbSet<User> Users { get; set; } = null!;
+    public DbSet<SystemAdministrator> SystemAdministrators { get; set; } = null!;
+    public DbSet<Principal> Principals { get; set; } = null!;
+    public DbSet<SchoolManagement> SchoolManagements { get; set; } = null!;
+    public DbSet<Administrator> Administrators { get; set; } = null!;
+    public DbSet<Teacher> Teachers { get; set; } = null!;
+    public DbSet<School> Schools { get; set; } = null!;
+    public DbSet<SchoolType> SchoolTypes { get; set; } = null!;
+    public DbSet<SchoolCurriculum> SchoolCurriculums { get; set; } = null!;
+    public DbSet<Grade> Grades { get; set; } = null!;
+    public DbSet<Learner> Learners { get; set; } = null!;
+    public DbSet<LearnerParent> LearnerParents { get; set; } = null!;
+    public DbSet<RegisterClass> RegisterClasses { get; set; } = null!;
+    public DbSet<SubjectCombination> SubjectCombinations { get; set; } = null!;
+    public DbSet<Subject> Subjects { get; set; } = null!;
+    public DbSet<SubjectCombinationSubject> SubjectCombinationSubjects { get; set; } = null!;
+    public DbSet<Period> Periods { get; set; } = null!;
+    public DbSet<Result> Results { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -172,9 +165,27 @@ public class LisaDbContext : DbContext
         modelBuilder.Entity<RegisterClass>()
             .HasIndex(rc => rc.Name)
             .IsUnique();
+        modelBuilder.Entity<RegisterClass>()
+            .HasMany(rc => rc.CompulsorySubjects)
+            .WithMany()
+            .UsingEntity<Dictionary<string, object>>( 
+                "RegisterClassSubject",
+                j => j.HasOne<Subject>()
+                    .WithMany()
+                    .HasForeignKey("SubjectId")
+                    .OnDelete(DeleteBehavior.Restrict),
+                j => j.HasOne<RegisterClass>()
+                    .WithMany()
+                    .HasForeignKey("RegisterClassId")
+                    .OnDelete(DeleteBehavior.Cascade));
 
         modelBuilder.Entity<SubjectCombination>()
             .HasKey(sc => sc.Id);
+        modelBuilder.Entity<SubjectCombination>()
+            .HasOne(sc => sc.Grade) // Navigation property in SubjectCombination
+            .WithMany(g => g.SubjectCombinations) // Collection in Grade
+            .HasForeignKey(sc => sc.GradeId) // Foreign key in SubjectCombination
+            .OnDelete(DeleteBehavior.Restrict); // Do not cascade delete
 
         modelBuilder.Entity<Subject>()
             .HasKey(s => s.Id);
@@ -383,6 +394,7 @@ public class Grade
     public Guid SchoolId { get; set; }
     public School? School { get; set; }
     public ICollection<RegisterClass>? RegisterClasses { get; set; }
+    public ICollection<SubjectCombination>? SubjectCombinations { get; set; }
 }
 
 public class Learner
@@ -412,6 +424,8 @@ public class LearnerParent
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
     public string? CellNumber { get; set; }
+    public string? WhatsAppNumber { get; set; }
+    public string? Relationship { get; set; }
     public Guid LearnerId { get; set; }
     public Learner? Learner { get; set; }
 }
@@ -426,12 +440,15 @@ public class RegisterClass
     public ICollection<Learner>? Learners { get; set; }
     public Guid TeacherId { get; set; }
     public Teacher? Teacher { get; set; }
+    public ICollection<Subject>? CompulsorySubjects { get; set; }
 }
 
 public class SubjectCombination
 {
     public Guid Id { get; set; }
     public string? Name { get; set; }
+    public Guid GradeId { get; set; }
+    public Grade? Grade { get; set; }
     public ICollection<SubjectCombinationSubject>? SubjectCombinationSubjects { get; set; }
 }
 
@@ -487,6 +504,11 @@ public class Result
     public Guid SubjectId { get; set; }
     public decimal Score { get; set; }
     public DateTime ResultDate { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public Guid CapturedBy { get; set; }
+    public bool Absent { get; set; }
+    public string? AbsentReason { get; set; }
     public Learner? Learner { get; set; }
     public Subject? Subject { get; set; }
 }

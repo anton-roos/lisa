@@ -43,22 +43,25 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .HasBaseType<User>();
         modelBuilder.Entity<Principal>()
             .HasOne(p => p.School)
-            .WithMany()
-            .HasForeignKey(p => p.SchoolId);
+            .WithMany(s => s.Principals)
+            .HasForeignKey(p => p.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Administrator>()
             .HasBaseType<User>();
         modelBuilder.Entity<Administrator>()
             .HasOne(a => a.School)
-            .WithMany()
-            .HasForeignKey(a => a.SchoolId);
+            .WithMany(s => s.Administrators)
+            .HasForeignKey(a => a.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<SchoolManagement>()
             .HasBaseType<User>();
         modelBuilder.Entity<SchoolManagement>()
             .HasOne(sm => sm.School)
-            .WithMany()
-            .HasForeignKey(sm => sm.SchoolId);
+            .WithMany(s => s.SchoolManagements)
+            .HasForeignKey(sm => sm.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<SystemAdministrator>()
             .HasBaseType<User>();
@@ -119,10 +122,11 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .Property(l => l.Code)
             .HasMaxLength(20);
         modelBuilder.Entity<Learner>()
-            .HasOne(l => l.RegisterClass)
-            .WithMany()
+            .HasOne(r => r.RegisterClass)
+            .WithMany(l => l.Learners)
             .HasForeignKey(l => l.RegisterClassId)
-            .IsRequired(false);
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<Learner>()
             .HasOne(l => l.CareGroup)
             .WithMany(cg => cg.CareGroupMembers)
@@ -146,8 +150,11 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .HasIndex(lp => lp.SecondaryEmail);
         modelBuilder.Entity<LearnerParent>()
             .HasOne(lp => lp.Learner)
-            .WithMany()
-            .HasForeignKey(lp => lp.LearnerId);
+            .WithMany(l => l.LearnerParents)
+            .HasForeignKey(lp => lp.LearnerId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<LearnerParent>()
+            .HasQueryFilter(lp => lp.Learner!.Active);
 
         // Classes and Subjects
         modelBuilder.Entity<RegisterClass>()
@@ -156,8 +163,9 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .HasIndex(rc => rc.GradeId);
         modelBuilder.Entity<RegisterClass>()
             .HasOne(rc => rc.Grade)
-            .WithMany()
-            .HasForeignKey(rc => rc.GradeId);
+            .WithMany(g => g.RegisterClasses)
+            .HasForeignKey(rc => rc.GradeId)
+            .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<RegisterClass>()
             .HasOne(rc => rc.Teacher)
             .WithMany()
@@ -232,7 +240,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .HasConversion<int>()
             .HasDefaultValue(PeriodStatus.Scheduled);
         modelBuilder.Entity<Period>()
-            .ToTable(t => t.HasCheckConstraint("CK_Period_StartTime_EndTime", "[PeriodStartTime] < [PeriodEndTime]"));
+            .ToTable(t => t.HasCheckConstraint("CK_Period_StartTime_EndTime", "\"PeriodStartTime\" < \"PeriodEndTime\""));
 
         // Results
         modelBuilder.Entity<Result>()
@@ -243,7 +251,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .HasIndex(r => r.SubjectId);
         modelBuilder.Entity<Result>()
             .HasOne(r => r.Learner)
-            .WithMany()
+            .WithMany(r => r.Results)
             .HasForeignKey(r => r.LearnerId);
         modelBuilder.Entity<Result>()
             .HasOne(r => r.Subject)
@@ -252,6 +260,8 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
         modelBuilder.Entity<Result>()
             .Property(r => r.Score)
             .HasColumnType("decimal(5, 2)");
+        modelBuilder.Entity<Result>()
+            .HasQueryFilter(r => r.Learner!.Active);
     }
 
 

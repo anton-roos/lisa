@@ -3,8 +3,8 @@
 ## User Types
  - System Administrator
  - Principal
- - Administrator
  - School Management
+ - Administrator
  - Teacher
 
 ## User Type Priveleges
@@ -13,6 +13,9 @@
  - Add or Remove Other Super Admins.
  - Configure Communication Templates
  - Change School Information
+   - Add Cirriculum Information
+   - Add School Color
+   - Add Care Groups to School
  - Add Teachers
 
 ### Principal
@@ -30,8 +33,10 @@
    - `The Progress Feedback must be scheduled at a certain time`
    - `Ensure that the emails are staggered so that you do not hit limit`
    - `Microsoft 365 limit is 30 mails per minute`
+   - `Error handling when SMTP details are not configured for a school.`
  - Can setup Subject Combinations
  - Can Add or Edit Grades
+ - Move Students Between Care Groups
 
 ### Teacher
  - Can capture marks for their subjects
@@ -59,3 +64,8 @@ Portal@BL
 ## DCEG
 portalDCEG@dcegroup.co.za
 Portal@DCEG
+
+# Workflow
+ 1. Seed the Database (Roles, Admin User, School Types)
+ 1. Setup the System Administrator (When app runs with DB Seed)
+ 2. Setup the School

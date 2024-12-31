@@ -111,8 +111,7 @@ app.MapRazorComponents<App>()
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    await DatabaseSeed.SeedRoles(services);
-    await DatabaseSeed.SeedAdmin(services);
+    await DatabaseSeed.Seed(services);
 }
 
 app.Run();

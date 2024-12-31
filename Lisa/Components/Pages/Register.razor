@@ -43,7 +43,11 @@
         </div>
     }
 
-    <button type="submit" class="btn btn-primary">Register</button>
+    <button type="submit" class="btn btn-primary" disabled="@isLoading">Register</button>
+    @if (isLoading)
+    {
+        <div>Loading...</div>
+    }
 </EditForm>
 
 @code {
@@ -54,6 +58,7 @@
     private async Task HandleRegister()
     {
         isLoading = true;
+        
         if (registerModel.Password != registerModel.ConfirmPassword)
         {
             registerError = "Passwords do not match.";
@@ -62,7 +67,7 @@
         }
 
         var user = new IdentityUser { UserName = registerModel.Email, Email = registerModel.Email };
-        var result = await UserManager.CreateAsync(user, registerModel.Password);
+        var result = await UserManager.CreateAsync(user, registerModel.Password!);
 
         if (result.Succeeded)
         {

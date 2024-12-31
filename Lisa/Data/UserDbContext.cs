@@ -3,10 +3,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Data;
 
-public class UserDbContext : IdentityDbContext
+public class UserDbContext(DbContextOptions<UserDbContext> options) : IdentityDbContext(options)
 {
-    public UserDbContext(DbContextOptions<UserDbContext> options)
-        : base(options)
-    {
-    }
 }

@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Identity;
-using System.Linq;
 
 namespace Lisa.Data;
 
@@ -13,6 +12,8 @@ public static class DatabaseSeed
         await SeedRoles(serviceProvider);
         await SeedAdmin(serviceProvider);
         await SeedSchoolTypes(serviceProvider);
+        await SeedSchoolSubjects(serviceProvider);
+        await SeedSchoolCurriculum(serviceProvider);
     }
 
     private static async Task SeedRoles(IServiceProvider serviceProvider)
@@ -64,12 +65,12 @@ public static class DatabaseSeed
 
         if (!dbContext.SchoolTypes.Any())
         {
-            dbContext.SchoolTypes.AddRange(new[]
-            {
+            dbContext.SchoolTypes.AddRange(
+            [
                 new SchoolType { Name = "Primary School" },
                 new SchoolType { Name = "High School" },
                 new SchoolType { Name = "Combined School" }
-            });
+            ]);
 
             await dbContext.SaveChangesAsync();
         }
@@ -81,12 +82,12 @@ public static class DatabaseSeed
 
         if (!dbContext.SchoolCurriculums.Any())
         {
-            dbContext.SchoolCurriculums.AddRange(new[]
-            {
+            dbContext.SchoolCurriculums.AddRange(
+            [
                 new SchoolCurriculum { Name = "CAPS", Description = "Curriculum Assessment Policy Statements" },
                 new SchoolCurriculum { Name = "IEB", Description = "Independent Examinations Board" },
                 new SchoolCurriculum { Name = "CIE", Description = "Cambridge International Examinations" },
-            });
+            ]);
 
             await dbContext.SaveChangesAsync();
         }
@@ -98,15 +99,14 @@ public static class DatabaseSeed
 
         if (!dbContext.Subjects.Any())
         {
-            dbContext.Subjects.AddRange(new[]
-            {
+            dbContext.Subjects.AddRange(
+            [
                 new Subject { Name = "Natural Sciences and Technology" },
                 new Subject { Name = "Social Sciences" },
                 new Subject { Name = "Life Skills" },
                 new Subject { Name = "Natural Sciences" },
                 new Subject { Name = "Economic and Management Sciences" },
                 new Subject { Name = "Technology" },
-                new Subject { Name = "Life Orientation" },
                 new Subject { Name = "Creative Arts" },
                 new Subject { Name = "Afrikaans Home Language" },
                 new Subject { Name = "English Home Language" },
@@ -163,8 +163,6 @@ public static class DatabaseSeed
                 new Subject { Name = "Religion Studies" },
                 new Subject { Name = "Agricultural Management Practices" },
                 new Subject { Name = "Dance Studies Grade" },
-                new Subject { Name = "Design" },
-                new Subject { Name = "Music Visual Arts" },
                 new Subject { Name = "English" },
                 new Subject { Name = "English Literature" },
                 new Subject { Name = "Science" },
@@ -185,7 +183,7 @@ public static class DatabaseSeed
                 new Subject { Name = "Foreign Languages" },
                 new Subject { Name = "Design and Technology" },
                 new Subject { Name = "Drama" },
-            });
+            ]);
 
             await dbContext.SaveChangesAsync();
         }

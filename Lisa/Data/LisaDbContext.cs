@@ -27,7 +27,7 @@ public class LisaDbContext : DbContext
     public DbSet<RegisterClass> RegisterClasses { get; set; }
     public DbSet<SubjectCombination> SubjectCombinations { get; set; }
     public DbSet<Subject> Subjects { get; set; }
-    public DbSet<SubjectCombinationSubject> SubjectCombinationSubjects { get; set; }    public ICollection<Learner>? Learners { get; set; }
+    public DbSet<SubjectCombinationSubject> SubjectCombinationSubjects { get; set; }
     public DbSet<Period> Periods { get; set; }
     public DbSet<Result> Results { get; set; }
 

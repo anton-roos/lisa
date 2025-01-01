@@ -4,10 +4,11 @@
 
 <PageTitle>Schools</PageTitle>
 
-<h1>Schools</h1>
 
 @if (school == null)
 {
+    <h1>School</h1>
+
     @for (int i = 0; i < 3; i++)
     {
         <div class="card skeleton">
@@ -22,14 +23,14 @@
 }
 else
 {
-    <p>@school.Title</p>
+    <h1>@school.</h1>
 }
 
 @code {
-    private Lisa.Services.School? school;
+    private Lisa.Data.School? school;
 
     [Parameter]
-    public int SchoolId { get; set; }
+    public Guid SchoolId { get; set; }
 
     protected override async Task OnInitializedAsync()
     {

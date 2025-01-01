@@ -1,0 +1,84 @@
+﻿@page "/learners"
+@inject SchoolService SchoolService
+@inject LearnerService LearnerService
+@inject NavigationManager NavigationManager
+
+<h3>Learners</h3>
+
+@if (SelectedSchool != null && Learners.Any())
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Grade</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var learner in Learners)
+            {
+                <tr>
+                    <td>@learner.FirstName @learner.LastName</td>
+                    <td>@learner.RegisterClass?.Grade?.Name</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => EditLearner(learner.Id)">Edit</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else if (SelectedSchool != null && !Learners.Any())
+{
+    <p>No learners found for the @SelectedSchool.ShortName</p>
+}
+else
+{
+    <p>Please select a school to view its learners.</p>
+}
+
+@code {
+    private List<Learner> Learners = new();
+    private School? SelectedSchool;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SchoolService.SchoolSelected += HandleSchoolChanged;
+
+        SelectedSchool = SchoolService.GetCurrentSchool();
+        if (SelectedSchool != null)
+        {
+            await LoadLearnersForSelectedSchool(SelectedSchool.Id);
+        }
+    }
+
+    private void HandleSchoolChanged()
+    {
+        SelectedSchool = SchoolService.GetCurrentSchool();
+        InvokeAsync(async () =>
+        {
+            if (SelectedSchool != null)
+            {
+                await LoadLearnersForSelectedSchool(SelectedSchool.Id);
+            }
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadLearnersForSelectedSchool(Guid schoolId)
+    {
+        Learners = await LearnerService.GetLearnersBySchoolAsync(schoolId);
+    }
+
+    private void EditLearner(Guid learnerId)
+    {
+        NavigationManager.NavigateTo($"/learners/edit/{learnerId}");
+    }
+
+    public void Dispose()
+    {
+        // Unsubscribe from the event to prevent memory leaks
+        SchoolService.SchoolsUpdated -= HandleSchoolChanged;
+    }
+}

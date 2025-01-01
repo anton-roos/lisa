@@ -79,6 +79,7 @@ builder.Services.AddDataGridEntityFrameworkAdapter();
 
 builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<LearnerService>();
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();

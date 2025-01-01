@@ -1,10 +1,11 @@
 ﻿@page "/schools"
-@inject Lisa.Data.LisaDbContext DbContext
+@using Lisa.Services
 @inject NavigationManager NavigationManager
+@inject SchoolService SchoolService
 
 <h3>Schools</h3>
 <FluentButton Primary="true" @onclick="() => AddSchool()">
-Add School
+    Add School
 </FluentButton>
 @if (schools == null)
 {
@@ -31,7 +32,10 @@ else
                 <tr>
                     <td>@school.ShortName</td>
                     <td>@school.LongName</td>
-                    <td>@school.Color</td>
+                    <td>
+                        <div class="color-box" style="background-color:@(school.Color);"></div>
+                        @school.Color
+                    </td>
                     <td>
                         <button @onclick="() => EditSchool(school.Id)">Edit</button>
                         <button @onclick="() => DeleteSchool(school.Id)">Delete</button>
@@ -47,23 +51,21 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Load data from DbContext
-        schools = await Task.Run(() => DbContext.Schools.ToList());
+        schools = await SchoolService.GetSchoolsAsync();
     }
 
     private void EditSchool(Guid id)
     {
-        // Navigate to the edit page (optional implementation)
+        NavigationManager.NavigateTo($"schools/edit/{id}");
     }
 
     private async Task DeleteSchool(Guid id)
     {
-        var school = DbContext.Schools.Find(id);
+        var school = await SchoolService.GetSchoolAsync(id);
         if (school != null)
         {
-            DbContext.Schools.Remove(school);
-            await DbContext.SaveChangesAsync();
-            schools = await Task.Run(() => DbContext.Schools.ToList());
+            await SchoolService.DeleteSchoolAsync(school);
+            schools = await SchoolService.GetSchoolsAsync();
         }
     }
 

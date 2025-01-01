@@ -1,0 +1,10 @@
+.select-school {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+}
+
+.select-school-text {
+    margin-right: 8px;
+}

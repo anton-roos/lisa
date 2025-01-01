@@ -14,132 +14,139 @@
 <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
     <Authorized>
         <h3>Teachers</h3>
-
-        <!-- Teachers List -->
-        <div class="mb-4">
-            <h4>Teachers List</h4>
-            @if (Teachers == null)
-            {
-                <p>Loading...</p>
-            }
-            else if (!Teachers.Any())
-            {
-                <p>No teachers found for this school.</p>
-            }
-            else
-            {
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var teacher in Teachers)
-                        {
+        @if (IsLoading)
+        {
+            <p>Loading...</p>
+        }
+        else
+        {
+            <!-- Teachers List -->
+            <div class="mb-4">
+                <h4>Teachers List</h4>
+                @if (Teachers == null)
+                {
+                    <p>Loading...</p>
+                }
+                else if (!Teachers.Any())
+                {
+                    <p>No teachers found for this school.</p>
+                }
+                else
+                {
+                    <table class="table table-striped">
+                        <thead>
                             <tr>
-                                <td>@teacher.FirstName @teacher.LastName</td>
-                                <td>@teacher.</td>
-                                <td>
-                                    <button class="btn btn-danger btn-sm" @onclick="async () => { await DeleteTeacher(teacher.Id);}">Delete</button>
-                                </td>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Actions</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
-            }
-        </div>
+                        </thead>
+                        <tbody>
+                            @foreach (var teacher in Teachers)
+                            {
+                                <tr>
+                                    <td>@teacher.FirstName @teacher.LastName</td>
+                                    <td>@teacher.</td>
+                                    <td>
+                                        <button class="btn btn-danger btn-sm"
+                                            @onclick="async () => { await DeleteTeacher(teacher.Id);}">Delete</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
 
-        <!-- Add Teacher Form -->
-        <div>
-            <h4>Add Teacher</h4>
-            <EditForm @Context="addContext" Model="NewTeacher" OnValidSubmit="AddTeacher">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
+            <!-- Add Teacher Form -->
+            <div>
+                <h4>Add Teacher</h4>
+                <EditForm @Context="addContext" Model="NewTeacher" OnValidSubmit="AddTeacher">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
 
-                <div class="form-group">
-                    <label for="firstName">First Name</label>
-                    <InputText id="firstName" class="form-control" @bind-Value="NewTeacher.FirstName" />
-                </div>
-                <div class="form-group">
-                    <label for="lastName">Last Name</label>
-                    <InputText id="lastName" class="form-control" @bind-Value="NewTeacher.LastName" />
-                </div>
-                <div class="form-group">
-                    <label for="email">Email</label>
-                    <InputText id="email" class="form-control" @bind-Value="NewTeacher.Email" />
-                </div>
+                    <div class="form-group">
+                        <label for="firstName">First Name</label>
+                        <InputText id="firstName" class="form-control" @bind-Value="NewTeacher.FirstName" />
+                    </div>
+                    <div class="form-group">
+                        <label for="lastName">Last Name</label>
+                        <InputText id="lastName" class="form-control" @bind-Value="NewTeacher.LastName" />
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <InputText id="email" class="form-control" @bind-Value="NewTeacher.Email" />
+                    </div>
 
-                <button type="submit" class="btn btn-primary">Add Teacher</button>
-            </EditForm>
-        </div>
+                    <button type="submit" class="btn btn-primary">Add Teacher</button>
+                </EditForm>
+            </div>
+        }
     </Authorized>
     <NotAuthorized>
         <p>You are not authorized to view this page.</p>
-    using Lisa.Services;
     </NotAuthorized>
 </AuthorizeView>
 
 @code {
     private List<Lisa.Data.Teacher>? Teachers;
-    private Lisa.Data.Teacher NewTeacher = new Teacher();
-    private Lisa.Data.School? CurrentSchool;
+    private Teacher NewTeacher = new Teacher();
+    private School? CurrentSchool;
+    private bool IsLoading = false;
 
     protected override async Task OnInitializedAsync()
     {
-        var user = HttpContextAccessor.HttpContext?.User != null 
-            ? await UserManager.GetUserAsync(HttpContextAccessor.HttpContext.User) 
-            : null;
+        IsLoading = true;
+        CurrentSchool = SchoolService.GetCurrentSchool();
+
+        var user = HttpContextAccessor.HttpContext?.User != null
+        ? await UserManager.GetUserAsync(HttpContextAccessor.HttpContext.User)
+        : null;
 
         if (user != null)
         {
-            var currentSchool = SchoolService.GetCurrentSchool();
-
             if (CurrentSchool != null)
             {
-                // Load teachers for the current school
                 Teachers = await DbContext.Teachers
-                    .Where(t => t.SchoolId == CurrentSchool.Id)
-                    .ToListAsync();
+                .Where(t => t.SchoolId == CurrentSchool.Id)
+                .ToListAsync();
             }
         }
+        IsLoading = false;
     }
 
     private async Task AddTeacher()
     {
+        IsLoading = true;
         if (CurrentSchool != null)
         {
-            // Assign the teacher to the current school
             NewTeacher.SchoolId = CurrentSchool.Id;
 
-            // Save the new teacher
             DbContext.Teachers.Add(NewTeacher);
             await DbContext.SaveChangesAsync();
 
-            // Refresh the teachers list
             Teachers = await DbContext.Teachers
-                .Where(t => t.SchoolId == CurrentSchool.Id)
-                .ToListAsync();
+            .Where(t => t.SchoolId == CurrentSchool.Id)
+            .ToListAsync();
 
-            // Reset the form
             NewTeacher = new Teacher();
         }
+        IsLoading = false;
     }
 
     private async Task DeleteTeacher(Guid teacherId)
     {
+        IsLoading = true;
         var teacher = await DbContext.Teachers.FindAsync(teacherId);
         if (teacher != null)
         {
             DbContext.Teachers.Remove(teacher);
             await DbContext.SaveChangesAsync();
 
-            // Refresh the teachers list
             Teachers = await DbContext.Teachers
-                .Where(t => CurrentSchool != null && t.SchoolId == CurrentSchool.Id)
-                .ToListAsync();
+            .Where(t => CurrentSchool != null && t.SchoolId == CurrentSchool.Id)
+            .ToListAsync();
         }
+        IsLoading = false;
     }
 }

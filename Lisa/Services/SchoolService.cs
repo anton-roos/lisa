@@ -1,25 +1,19 @@
-using Microsoft.AspNetCore.Components;
+using Lisa.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
 public class SchoolService
 {
-    private readonly NavigationManager _navigationManager;
     private School _currentSchool;
+    private readonly LisaDbContext _context;
+    public event Action? SchoolsUpdated;
+    public event Action? SchoolSelected;
 
-
-    public SchoolService(NavigationManager navigationManager)
+    public SchoolService(LisaDbContext context)
     {
-        _navigationManager = navigationManager;
-        _currentSchool = new() // Ensure that the current school is always set grab the first school from the database.
-        {
-            Id = 1,
-            Title = "Impact Independent",
-            Description = "Impact Independent High School",
-            Image = "https://dcegroup.co.za/wp-content/uploads/2021/01/Impact-10.jpg",
-            Url = "/impact",
-            Color = "#C00000"
-        };
+        _context = context;
+        _currentSchool = _context.Schools.FirstOrDefault() ?? new School { ShortName = "No School" };
     }
 
     public School GetCurrentSchool()
@@ -27,82 +21,38 @@ public class SchoolService
         return _currentSchool;
     }
 
-    public void SetCurrentSchool(int schoolId)
+    public void SetCurrentSchool(Guid schoolId)
     {
-        _currentSchool = schools.Single(s => s.Id == schoolId);
+        _currentSchool = _context.Schools.Single(s => s.Id == schoolId);
+        SchoolSelected?.Invoke();
     }
 
-    public async Task<School> GetSchoolAsync(int id)
+    public async Task<School?> GetSchoolAsync(Guid id) => await _context.Schools.FindAsync(id);
+
+    public async Task<List<School>> GetSchoolsAsync() => await _context.Schools.ToListAsync();
+
+    public async Task<List<SchoolType>> GetSchoolTypesAsync() => await _context.SchoolTypes.ToListAsync();
+
+    public async Task<List<SchoolCurriculum>> GetSchoolCurriculumsAsync() => await _context.SchoolCurriculums.ToListAsync();
+
+    public async Task DeleteSchoolAsync(School school)
     {
-        await Task.Delay(1000); // Simulate a delay
-        return await Task.Run(() => schools.Single(s => s.Id == id));
+        _context.Schools.Remove(school);
+        await _context.SaveChangesAsync();
+        SchoolsUpdated?.Invoke();
     }
 
-
-    public List<School> GetSchools() => schools;
-
-    private readonly List<School> schools = new()
+    public async Task AddSchoolAsync(School school)
     {
-        new()
-        {
-            Id = 1,
-            Title = "Impact Independent",
-            Description = "Impact Independent High School",
-            Image = "https://dcegroup.co.za/wp-content/uploads/2021/01/Impact-10.jpg",
-            Url = "/impact",
-            Color = "#C00000"
-        },
-        new()
-        {
-            Id = 2,
-            Title = "Destiny Independent",
-            Description = "Destiny Independent School Kempton Park",
-            Image = "https://dcegroup.co.za/wp-content/uploads/2021/01/Destiny-Gen-25.jpg",
-            Url = "/destiny",
-            Color = "#640E27"
-        },
-        new()
-        {
-            Id = 3,
-            Title = "Broadlands",
-            Description = "Broadlands Private School",
-            Image ="https://dcegroup.co.za/wp-content/uploads/2024/04/WhatsApp-Image-2024-02-27-at-14.23.24.jpeg" ,
-            Url = "/broadlands",
-            Color = "#10315E"
-        },
-        new()
-        {
-            Id = 4,
-            Title = "Greenacres",
-            Description = "Greenacres Private College",
-            Image = "https://dcegroup.co.za/wp-content/uploads/2024/04/WhatsApp-Image-2024-02-27-at-14.23.18-2.jpeg",
-            Url = "/greenacres",
-            Color = "#24763D"
-        },
-        new()
-        {
-            Id = 5,
-            Title = "Dream Distance",
-            Description = "Dream Distance Education",
-            Image
-            ="https://dcegroup.co.za/wp-content/uploads/elementor/thumbs/Home-School-8-p6m2fsewq8zjst76dnf8o3y3ievg9tozcf4qgpca6s.jpg",
-            Url = "/distance",
-            Color = "#21BDA1"
-        }
-    };
-}
+        _context.Schools.Add(school);
+        await _context.SaveChangesAsync();
+        SchoolsUpdated?.Invoke();
+    }
 
-
-public class School
-{
-    public int Id { get; set; }
-    public string? Title { get; set; }
-    public string? Description { get; set; }
-    public string? Image { get; set; }
-    public string? Url { get; set; }
-    public string? Color { get; set; }
-    public void OnGet(int id)
+    public async Task UpdateSchoolAsync(School school)
     {
-        Id = id;  // This binds the route parameter to the property
+        _context.Schools.Update(school);
+        await _context.SaveChangesAsync();
+        SchoolsUpdated?.Invoke();
     }
 }

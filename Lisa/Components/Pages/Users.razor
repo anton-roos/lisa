@@ -209,7 +209,7 @@
 
     public class UserModel
     {
-        public string Id { get; set; }
+        public string? Id { get; set; }
         [Required(ErrorMessage = "Email is required.")]
         [EmailAddress(ErrorMessage = "Invalid email address.")]
         public string? Email { get; set; }

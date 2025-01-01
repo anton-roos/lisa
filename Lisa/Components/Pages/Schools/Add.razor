@@ -1,7 +1,9 @@
 @page "/schools/add"
+@using Lisa.Components.Layout
+@using Lisa.Services
 @using Microsoft.EntityFrameworkCore
-@inject LisaDbContext DbContext
 @inject NavigationManager Navigation
+@inject SchoolService SchoolService
 
 <AuthorizeView Context="authContext">
     <Authorized>
@@ -64,18 +66,13 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Load School Types and Curriculums for dropdowns
-        SchoolTypes = await DbContext.SchoolTypes.ToListAsync();
-        Curriculums = await DbContext.SchoolCurriculums.ToListAsync();
+        SchoolTypes = await SchoolService.GetSchoolTypesAsync();
+        Curriculums = await SchoolService.GetSchoolCurriculumsAsync();
     }
 
     private async Task HandleValidSubmit()
     {
-        // Save the school to the database
-        DbContext.Schools.Add(School);
-        await DbContext.SaveChangesAsync();
-
-        // Navigate back to the list of schools
+        await SchoolService.AddSchoolAsync(School);
         Navigation.NavigateTo("/schools");
     }
 

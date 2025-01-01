@@ -1,28 +1,49 @@
 @using Lisa.Services
 @inherits ComponentBase
-@inject SchoolService SchoolService;
+@inject SchoolService SchoolService
 
-<div>
-    Select School
-   <select @onchange="HandleSelect">
-        @foreach (var school in schools)
-        {
-            <option value="@school.Id">@school.Title</option>
-        }
-    </select>
+<div class="select-school">
+    <div class="select-school-text">
+        Select School
+    </div>
+    <div class="select-school-dropdown">
+        <FluentSelect TOption="string" @bind-Value="SelectedSchoolId" @onchange="HandleSelect">
+            @foreach (var school in schools)
+            {
+                <FluentOption Value="@school.Id.ToString()">@school.ShortName</FluentOption>
+            }
+        </FluentSelect>
+    </div>
 </div>
-
 @code {
-    List<Services.School> schools = new List<Services.School>();
-    protected override void OnInitialized()
+    private List<School> schools = new();
+    private string? SelectedSchoolId;
+
+    protected override async Task OnInitializedAsync()
     {
-        schools = SchoolService.GetSchools();
+        SchoolService.SchoolsUpdated += OnSchoolsUpdated;
+        await LoadSchoolsAsync();
+    }
+
+    private async Task LoadSchoolsAsync()
+    {
+        schools = await SchoolService.GetSchoolsAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnSchoolsUpdated()
+    {
+        _ = LoadSchoolsAsync();
     }
 
     private void HandleSelect(ChangeEventArgs e)
     {
-        var selectedSchoolId = int.Parse(e.Value!.ToString()!);
+        var selectedSchoolId = Guid.Parse(e.Value!.ToString()!);
         SchoolService.SetCurrentSchool(selectedSchoolId);
-        Console.WriteLine($"Selected School ID: {selectedSchoolId}");
+    }
+    
+    public void Dispose()
+    {
+        SchoolService.SchoolsUpdated -= OnSchoolsUpdated; // Unsubscribe to avoid memory leaks
     }
 }

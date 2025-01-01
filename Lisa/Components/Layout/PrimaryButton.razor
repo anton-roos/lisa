@@ -1,0 +1,17 @@
+@using Lisa.Services
+@inherits ComponentBase
+
+<button class="btn btn-primary" @onclick="HandleClick">@Title</button>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = "Primary Button";
+
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+
+    private async Task HandleClick()
+    {
+        await OnClick.InvokeAsync();
+    }
+}

@@ -1,17 +1,16 @@
 @page "/register"
 @using Microsoft.AspNetCore.Identity
-@inject UserManager<IdentityUser> UserManager
-@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<User> UserManager
+@inject SignInManager<User> SignInManager
 @inject NavigationManager NavigationManager
 @using Microsoft.AspNetCore.Components.Forms
 @using System.ComponentModel.DataAnnotations
-@rendermode InteractiveServer
 
 <h3>Register</h3>
 
 
 
-<EditForm Model="@registerModel" OnValidSubmit="HandleRegister" FormName="registerForm">
+<EditForm Context="editContext" Model="@registerModel" OnValidSubmit="HandleRegister" FormName="registerForm">
     <DataAnnotationsValidator />
 
     <div>
@@ -66,7 +65,7 @@
             return;
         }
 
-        var user = new IdentityUser { UserName = registerModel.Email, Email = registerModel.Email };
+        var user = new User { UserName = registerModel.Email, Email = registerModel.Email };
         var result = await UserManager.CreateAsync(user, registerModel.Password!);
 
         if (result.Succeeded)

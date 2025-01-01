@@ -1,0 +1,87 @@
+@page "/schools/add"
+@using Microsoft.EntityFrameworkCore
+@inject LisaDbContext DbContext
+@inject NavigationManager Navigation
+
+<AuthorizeView Context="authContext">
+    <Authorized>
+        <h3>Add School</h3>
+
+        <EditForm Context="editContext" Model="School" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="form-group">
+                <label for="shortName">Short Name</label>
+                <InputText id="shortName" class="form-control" @bind-Value="School.ShortName" />
+            </div>
+
+            <div class="form-group">
+                <label for="longName">Long Name</label>
+                <InputText id="longName" class="form-control" @bind-Value="School.LongName" />
+            </div>
+
+            <div class="form-group">
+                <label for="color">Color</label>
+                <InputText id="color" class="form-control" @bind-Value="School.Color" />
+            </div>
+
+            <div class="form-group">
+                <label for="schoolType">School Type</label>
+                <InputSelect id="schoolType" class="form-control" @bind-Value="School.SchoolTypeId">
+                    <option value="">Select School Type</option>
+                    @foreach (var type in SchoolTypes)
+                    {
+                        <option value="@type.Id">@type.Name</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="form-group">
+                <label for="curriculum">Curriculum</label>
+                <InputSelect id="curriculum" class="form-control" @bind-Value="School.SchoolCurriculumId">
+                    <option value="">Select Curriculum</option>
+                    @foreach (var curriculum in Curriculums)
+                    {
+                        <option value="@curriculum.Id">@curriculum.Name</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+        </EditForm>
+    </Authorized>
+    <NotAuthorized>
+        <h3>You are not authorized to access this page.</h3>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private School School = new();
+    private List<SchoolType> SchoolTypes = new();
+    private List<SchoolCurriculum> Curriculums = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load School Types and Curriculums for dropdowns
+        SchoolTypes = await DbContext.SchoolTypes.ToListAsync();
+        Curriculums = await DbContext.SchoolCurriculums.ToListAsync();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        // Save the school to the database
+        DbContext.Schools.Add(School);
+        await DbContext.SaveChangesAsync();
+
+        // Navigate back to the list of schools
+        Navigation.NavigateTo("/schools");
+    }
+
+    private void Cancel()
+    {
+        // Navigate back to the list of schools
+        Navigation.NavigateTo("/schools");
+    }
+}

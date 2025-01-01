@@ -1,0 +1,74 @@
+﻿@page "/schools"
+@inject Lisa.Data.LisaDbContext DbContext
+@inject NavigationManager NavigationManager
+
+<h3>Schools</h3>
+<FluentButton Primary="true" @onclick="() => AddSchool()">
+Add School
+</FluentButton>
+@if (schools == null)
+{
+    <p>Loading...</p>
+}
+else if (schools.Count == 0)
+{
+    <p>No records found.</p>
+}
+else
+{
+    <table>
+        <thead>
+            <tr>
+                <th>Short Name</th>
+                <th>Long Name</th>
+                <th>Color</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var school in schools)
+            {
+                <tr>
+                    <td>@school.ShortName</td>
+                    <td>@school.LongName</td>
+                    <td>@school.Color</td>
+                    <td>
+                        <button @onclick="() => EditSchool(school.Id)">Edit</button>
+                        <button @onclick="() => DeleteSchool(school.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Lisa.Data.School>? schools;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load data from DbContext
+        schools = await Task.Run(() => DbContext.Schools.ToList());
+    }
+
+    private void EditSchool(Guid id)
+    {
+        // Navigate to the edit page (optional implementation)
+    }
+
+    private async Task DeleteSchool(Guid id)
+    {
+        var school = DbContext.Schools.Find(id);
+        if (school != null)
+        {
+            DbContext.Schools.Remove(school);
+            await DbContext.SaveChangesAsync();
+            schools = await Task.Run(() => DbContext.Schools.ToList());
+        }
+    }
+
+    private void AddSchool()
+    {
+        NavigationManager.NavigateTo("schools/add");
+    }
+}

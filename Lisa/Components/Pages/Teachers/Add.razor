@@ -1,0 +1,78 @@
+@page "/add-teacher"
+@using Microsoft.AspNetCore.Authorization
+@using Lisa.Data
+@using Microsoft.EntityFrameworkCore
+@inject NavigationManager Navigation
+@inject LisaDbContext DbContext
+
+<AuthorizeView Context="authContext" Roles="SystemAdmin">
+    <Authorized>
+        <h3>Add Teacher</h3>
+
+        <EditForm Context="editContext" Model="Teacher" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="form-group">
+                <label for="firstName">First Name</label>
+                <InputText id="firstName" class="form-control" @bind-Value="Teacher.FirstName" />
+            </div>
+
+            <div class="form-group">
+                <label for="lastName">Last Name</label>
+                <InputText id="lastName" class="form-control" @bind-Value="Teacher.LastName" />
+            </div>
+
+            <div class="form-group">
+                <label for="school">School</label>
+                <InputSelect id="school" class="form-control" @bind-Value="Teacher.SchoolId">
+                    <option value="">Select a School</option>
+                    @foreach (var school in Schools)
+                    {
+                        <option value="@school.Id">@school.LongName (@school.ShortName)</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+        </EditForm>
+    </Authorized>
+    <NotAuthorized>
+        <h3>You are not authorized to access this page.</h3>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private Teacher Teacher { get; set; } = new Teacher();
+    private List<School> Schools { get; set; } = new List<School>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load the list of schools
+        Schools = await DbContext.Schools.AsNoTracking().ToListAsync();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            // Add teacher to database
+            DbContext.Teachers.Add(Teacher);
+            await DbContext.SaveChangesAsync();
+
+            // Navigate back to a teachers list or a success page
+            Navigation.NavigateTo("/teachers");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+
+    private void Cancel()
+    {
+        // Navigate back to the previous page or a teachers list
+        Navigation.NavigateTo("/teachers");
+    }
+}

@@ -1,12 +1,11 @@
 ﻿@page "/"
 @rendermode InteractiveServer
-@inject NavigationManager NavigationManager
 
 <PageTitle>DCEG Portal</PageTitle>
 
-<AuthorizeView>
+<AuthorizeView Context="authContext">
     <Authorized>
-        <p>Hello, @context.User.Identity.Name!</p>
+        <p>Hello</p>
         <p>You can see this because you are authenticated.</p>
     </Authorized>
     <NotAuthorized>
@@ -15,13 +14,13 @@
     </NotAuthorized>
 </AuthorizeView>
 
-<AuthorizeView Roles="@Roles.Teacher">
+<AuthorizeView Context="authContext" Roles="@Roles.Teacher">
     <Authorized>
         <p>You are a Teacher</p>
     </Authorized>
 </AuthorizeView>
 
-<AuthorizeView Roles="@Roles.SystemAdministrator">
+<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
     <Authorized>
         <p>You are a System Administrator</p>
     </Authorized>

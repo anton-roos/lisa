@@ -16,7 +16,7 @@
             </NavLink>
         </div>
 
-        <AuthorizeView Roles="@Roles.Teacher">
+        <AuthorizeView  Context="authContext" Roles="@Roles.Teacher">
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="results">
@@ -26,7 +26,7 @@
             </Authorized>
         </AuthorizeView>
 
-        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="learners">
                     <span class="bi bi-mortarboard-nav-menu" aria-hidden="true"></span> Learners
@@ -45,7 +45,7 @@
         </AuthorizeView>
 
 
-        <AuthorizeView Roles="@Roles.SystemAdministrator">
+        <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="schools">
                     <span class="bi bi-mortarboard-nav-menu" aria-hidden="true"></span> Schools

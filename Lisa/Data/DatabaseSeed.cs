@@ -18,7 +18,7 @@ public static class DatabaseSeed
 
     private static async Task SeedRoles(IServiceProvider serviceProvider)
     {
-        var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 
         var roles = new[]
         {
@@ -33,19 +33,19 @@ public static class DatabaseSeed
         {
             if (!await roleManager.RoleExistsAsync(role))
             {
-                await roleManager.CreateAsync(new IdentityRole(role));
+                await roleManager.CreateAsync(new IdentityRole<Guid>(role));
             }
         }
     }
 
     private static async Task SeedAdmin(IServiceProvider serviceProvider)
     {
-        var userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
+        var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
 
         var adminUser = await userManager.FindByEmailAsync(AdminEmail);
         if (adminUser == null)
         {
-            var user = new IdentityUser
+            var user = new User
             {
                 UserName = AdminEmail,
                 Email = AdminEmail

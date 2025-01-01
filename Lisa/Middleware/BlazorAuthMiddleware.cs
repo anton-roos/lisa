@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Lisa.Data;
 using Microsoft.AspNetCore.Identity;
 
 namespace Lisa.Middleware;
@@ -10,20 +11,14 @@ public class LoginInfo
     public string? Password { get; set; }
 }
 
-public class BlazorCookieLoginMiddleware
+public class BlazorAuthMiddleware(RequestDelegate next)
 {
     public static IDictionary<Guid, LoginInfo> Logins { get; private set; }
         = new ConcurrentDictionary<Guid, LoginInfo>();
 
+    private readonly RequestDelegate _next = next;
 
-    private readonly RequestDelegate _next;
-
-    public BlazorCookieLoginMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
-
-    public async Task Invoke(HttpContext context, SignInManager<IdentityUser> signInManager)
+    public async Task Invoke(HttpContext context, SignInManager<User> signInManager)
     {
         if (context.Request.Path == "/login" && context.Request.Query.ContainsKey("key"))
         {

@@ -2,11 +2,10 @@
 @using Lisa.Middleware
 @using Microsoft.AspNetCore.Identity
 @using System.ComponentModel.DataAnnotations
-@inject SignInManager<IdentityUser> SignInManager
+@inject SignInManager<User> SignInManager
 @inject NavigationManager NavigationManager
-@rendermode InteractiveServer
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject UserManager<IdentityUser> UserManager
+@inject UserManager<User> UserManager
 
 <h3>Login</h3>
 
@@ -24,7 +23,7 @@
 }
 else
 {
-    <EditForm Model="@loginModel" OnValidSubmit="HandleLogin" FormName="loginForm">
+    <EditForm Context="editContext" Model="@loginModel" OnValidSubmit="HandleLogin" FormName="loginForm">
         <DataAnnotationsValidator />
 
         <div>
@@ -88,7 +87,7 @@ else
             {
                 isLoading = false;
                 Guid key = Guid.NewGuid();
-                BlazorCookieLoginMiddleware.Logins[key] = new LoginInfo { Email = loginModel.Email, Password = loginModel.Password };
+                BlazorAuthMiddleware.Logins[key] = new LoginInfo { Email = loginModel.Email, Password = loginModel.Password };
                 NavigationManager.NavigateTo($"/login?key={key}", true);
             }
             else

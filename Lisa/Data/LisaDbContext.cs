@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Data;
 
-public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<LisaDbContext> logger) : DbContext(options)
+public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<LisaDbContext> logger) 
+    : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options)
 {
     private readonly ILogger<LisaDbContext> _logger = logger;
-    public DbSet<User> Users { get; set; } = null!;
+    public new DbSet<User> Users { get; set; } = null!;
     public DbSet<SystemAdministrator> SystemAdministrators { get; set; } = null!;
     public DbSet<Principal> Principals { get; set; } = null!;
     public DbSet<SchoolManagement> SchoolManagements { get; set; } = null!;
@@ -318,9 +321,8 @@ public interface IValidatable
     void Validate();
 }
 
-public class User
+public class User : IdentityUser<Guid>
 {
-    public Guid Id { get; set; }
 }
 
 public class SystemAdministrator : User

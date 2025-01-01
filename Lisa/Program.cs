@@ -20,11 +20,8 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddDbContext<LisaDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Lisa")));
 
-builder.Services.AddDbContext<UserDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Identity")));
-
-builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
-    .AddEntityFrameworkStores<UserDbContext>()
+builder.Services.AddIdentity<User, IdentityRole<Guid>>(options => options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores<LisaDbContext>()
     .AddDefaultTokenProviders();
 
 builder.Services.AddHangfire(config =>
@@ -82,6 +79,7 @@ builder.Services.AddDataGridEntityFrameworkAdapter();
 
 builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
@@ -99,7 +97,7 @@ app.UseHttpsRedirection();
 app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseMiddleware<BlazorCookieLoginMiddleware>();
+app.UseMiddleware<BlazorAuthMiddleware>();
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
 {
     Authorization = [new HangfireAuthorizationFilter()]

@@ -1,8 +1,7 @@
 @page "/users"
-@rendermode InteractiveServer
 @using Microsoft.AspNetCore.Identity
 @using System.ComponentModel.DataAnnotations
-@inject UserManager<IdentityUser> UserManager
+@inject UserManager<User> UserManager
 @inject RoleManager<IdentityRole> RoleManager
 @inject NavigationManager NavigationManager
 
@@ -14,7 +13,7 @@
 
 @if (showAddUserForm)
 {
-    <EditForm Model="@newUser" OnValidSubmit="HandleAddUser">
+    <EditForm Context="editContext" Model="@newUser" OnValidSubmit="HandleAddUser">
 
         <div>
             <label for="email">Email</label>
@@ -57,7 +56,7 @@
 
 @if (showEditUserForm)
 {
-    <EditForm Model="@editUser" OnValidSubmit="HandleEditUser">
+    <EditForm Context="editContext" Model="@editUser" OnValidSubmit="HandleEditUser">
 
         <div>
             <label for="email">Email</label>
@@ -103,7 +102,7 @@
         {
             var userModel = new UserModel
             {
-                Id = user.Id,
+                Id = user.Id.ToString(),
                 Email = user.Email,
                 Roles = await UserManager.GetRolesAsync(user)
             };
@@ -130,7 +129,7 @@
 
     private async Task HandleAddUser()
     {
-        var user = new IdentityUser { UserName = newUser.Email, Email = newUser.Email };
+        var user = new User { UserName = newUser.Email, Email = newUser.Email };
         var result = await UserManager.CreateAsync(user, newUser.Password!);
         if (result.Succeeded)
         {
@@ -210,7 +209,7 @@
 
     public class UserModel
     {
-        public string? Id { get; set; }
+        public string Id { get; set; }
         [Required(ErrorMessage = "Email is required.")]
         [EmailAddress(ErrorMessage = "Invalid email address.")]
         public string? Email { get; set; }

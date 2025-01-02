@@ -41,8 +41,7 @@
         var selectedSchoolId = Guid.Parse(e.Value!.ToString()!);
         SchoolService.SetCurrentSchool(selectedSchoolId);
     }
-    
-    public void Dispose()
+        public void Dispose()
     {
         SchoolService.SchoolsUpdated -= OnSchoolsUpdated; // Unsubscribe to avoid memory leaks
     }

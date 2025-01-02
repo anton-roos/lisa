@@ -33,8 +33,10 @@ else
                     <td class="align-middle">@school.ShortName</td>
                     <td class="align-middle">@school.LongName</td>
                     <td class="align-middle">
-                        <div class="color-box" style="background-color:@(school.Color);"></div>
-                        @school.Color
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="color-box" style="background-color:@(school.Color);"></div>
+                            @school.Color
+                        </div>
                     </td>
                     <td class="align-middle">
                         <button type="button" class="btn btn-secondary btn-sm" @onclick="() => EditSchool(school.Id)">

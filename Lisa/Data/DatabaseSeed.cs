@@ -1,3 +1,4 @@
+using Lisa.Models.Entities;
 using Microsoft.AspNetCore.Identity;
 
 namespace Lisa.Data;

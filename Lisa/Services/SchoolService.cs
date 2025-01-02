@@ -1,4 +1,5 @@
 using Lisa.Data;
+using Lisa.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;

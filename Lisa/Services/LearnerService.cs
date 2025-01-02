@@ -1,4 +1,5 @@
 using Lisa.Data;
+using Lisa.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
@@ -14,7 +15,7 @@ public class LearnerService(LisaDbContext context)
     {
         return await _context.Learners
             .Where(l => l.RegisterClass != null && l.RegisterClass.Grade != null && l.RegisterClass.Grade.SchoolId == schoolId)
-            .Include(l => l.RegisterClass)
+            .Include(l => l.RegisterClass!)
             .ThenInclude(rc => rc.Grade!)
             .ToListAsync();
     }

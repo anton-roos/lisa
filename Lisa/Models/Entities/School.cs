@@ -1,0 +1,20 @@
+namespace Lisa.Models.Entities;
+
+public class School
+{
+    public Guid Id { get; set; }
+    public string? ShortName { get; set; }
+    public string? LongName { get; set; }
+    public string? Color { get; set; }
+    public Guid SchoolTypeId { get; set; }
+    public Guid SchoolCurriculumId { get; set; }
+    public SchoolType? SchoolType { get; set; }
+    public SchoolCurriculum? Curriculum { get; set; }
+    public SmtpDetails? SmtpDetails { get; set; }
+    public ICollection<Grade>? Grades { get; set; }
+    public ICollection<RegisterClass>? RegisterClasses { get; set; }
+    public ICollection<Teacher>? Teachers { get; set; }
+    public ICollection<Principal>? Principals { get; set; }
+    public ICollection<Administrator>? Administrators { get; set; }
+    public ICollection<SchoolManagement>? SchoolManagements { get; set; }
+}

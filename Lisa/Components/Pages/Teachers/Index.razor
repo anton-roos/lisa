@@ -1,5 +1,6 @@
 @page "/teachers"
 @using Lisa.Data
+@using Lisa.Models.Entities
 @using Lisa.Services
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
@@ -89,7 +90,7 @@
 </AuthorizeView>
 
 @code {
-    private List<Lisa.Data.Teacher>? Teachers;
+    private List<Lisa.Models.Entities.Teacher>? Teachers;
     private Teacher NewTeacher = new Teacher();
     private School? CurrentSchool;
     private bool IsLoading = false;

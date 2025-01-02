@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Lisa.Middleware;
 using Hangfire;
 using Hangfire.PostgreSql;
+using Lisa.Models.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 

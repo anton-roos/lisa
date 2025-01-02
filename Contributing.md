@@ -18,3 +18,8 @@ Change the following connection string to work with your local database in appse
  1. dotnet tool install --global dotnet-ef
  2. change directory to Lisa where the Lisa.csproj is located
  3. run `dotnet ef databse update` to update the database and apply migrations.
+   
+
+# Standards & Architecture
+ - All Code tries to adhere to SOLID principles
+ - Written in C# 12 and .NET 9

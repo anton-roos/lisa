@@ -1,0 +1,20 @@
+namespace Lisa.Models.Entities;
+
+public class Learner
+{
+    public Guid Id { get; set; }
+    public string? Code { get; set; }
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
+    public bool Active { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public Guid? RegisterClassId { get; set; }
+    public RegisterClass? RegisterClass { get; set; }
+    public ICollection<LearnerParent>? LearnerParents { get; set; }
+    public ICollection<Result>? Results { get; set; }
+    public Guid? CareGroupId { get; set; }
+    public CareGroup? CareGroup { get; set; }
+    public Guid SubjectCombinationId { get; set; }
+    public SubjectCombination? SubjectCombination { get; set; }
+}

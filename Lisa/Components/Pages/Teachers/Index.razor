@@ -98,7 +98,7 @@
     protected override async Task OnInitializedAsync()
     {
         IsLoading = true;
-        CurrentSchool = SchoolService.GetCurrentSchool();
+        CurrentSchool = SchoolService.SelectedSchool;
 
         var user = HttpContextAccessor.HttpContext?.User != null
         ? await UserManager.GetUserAsync(HttpContextAccessor.HttpContext.User)

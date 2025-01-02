@@ -15,6 +15,8 @@ public class Learner
     public ICollection<Result>? Results { get; set; }
     public Guid? CareGroupId { get; set; }
     public CareGroup? CareGroup { get; set; }
-    public Guid SubjectCombinationId { get; set; }
+    public Guid? SubjectCombinationId { get; set; }
     public SubjectCombination? SubjectCombination { get; set; }
+    public Guid SchoolId { get; set; }
+    public School? School { get; set; }
 }

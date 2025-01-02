@@ -5,6 +5,7 @@
 @inject NavigationManager NavigationManager
 
 <h3>Learners</h3>
+<button class="btn btn-primary" @onclick="AddLearner">Add Learner</button>
 @if (SelectedSchool != null && Learners.Any())
 {
     <table class="table table-striped">
@@ -46,7 +47,7 @@ else
     {
         SchoolService.SchoolSelected += HandleSchoolChanged;
 
-        SelectedSchool = SchoolService.GetCurrentSchool();
+        SelectedSchool = SchoolService.SelectedSchool;
         if (SelectedSchool != null)
         {
             await LoadLearnersForSelectedSchool(SelectedSchool.Id);
@@ -55,7 +56,7 @@ else
 
     private void HandleSchoolChanged()
     {
-        SelectedSchool = SchoolService.GetCurrentSchool();
+        SelectedSchool = SchoolService.SelectedSchool;
         InvokeAsync(async () =>
         {
             if (SelectedSchool != null)
@@ -81,4 +82,9 @@ else
         // Unsubscribe from the event to prevent memory leaks
         SchoolService.SchoolsUpdated -= HandleSchoolChanged;
     }
+
+    private void AddLearner()
+    {
+        NavigationManager.NavigateTo("/learners/add");
+    }   
 }

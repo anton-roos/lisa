@@ -1,18 +1,19 @@
 @page "/users"
-@using Lisa.Models.Entities
+@* @using Lisa.Models.Entities
 @using Microsoft.AspNetCore.Identity
 @using System.ComponentModel.DataAnnotations
 @inject UserManager<User> UserManager
 @inject RoleManager<IdentityRole> RoleManager
-@inject NavigationManager NavigationManager
+@inject NavigationManager NavigationManager *@
 
 <h3>User Management</h3>
+<p>COMMING SOON!!!</p>
 
-<div>
+@* <div>
     <button class="btn btn-primary" @onclick="ShowAddUserForm">Add User</button>
-</div>
+</div> *@
 
-@if (showAddUserForm)
+@* @if (showAddUserForm)
 {
     <EditForm Context="editContext" Model="@newUser" OnValidSubmit="HandleAddUser">
 
@@ -218,4 +219,4 @@
         public string? Password { get; set; }
         public IList<string> Roles { get; set; } = new List<string>();
     }
-}
+} *@

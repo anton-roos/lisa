@@ -4,33 +4,51 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class SchoolService
+public class SchoolService(LisaDbContext context, IServiceProvider serviceProvider)
 {
-    private School _currentSchool;
-    private readonly LisaDbContext _context;
+    private School? _selectedSchool;
+    private List<School>? _schools;
+    private readonly LisaDbContext _context = context;
     public event Action? SchoolsUpdated;
     public event Action? SchoolSelected;
+    private readonly IServiceProvider _serviceProvider = serviceProvider;
 
-    public SchoolService(LisaDbContext context)
+    public School? SelectedSchool
     {
-        _context = context;
-        _currentSchool = _context.Schools.FirstOrDefault() ?? new School { ShortName = "No School" };
+        get
+        {
+            if (_selectedSchool == null)
+            {
+                InitializeSelectedSchool();
+            }
+            return _selectedSchool;
+        }
+        set
+        {
+            _selectedSchool = value;
+            SchoolSelected?.Invoke();
+        }
     }
 
-    public School GetCurrentSchool()
+    public List<School>? Schools
     {
-        return _currentSchool;
+        get
+        {
+            if (_schools == null)
+            {
+                IntiliazeSchools();
+            }
+            return _schools;
+        }
     }
 
     public void SetCurrentSchool(Guid schoolId)
     {
-        _currentSchool = _context.Schools.Single(s => s.Id == schoolId);
+        _selectedSchool = _context.Schools.Single(s => s.Id == schoolId);
         SchoolSelected?.Invoke();
     }
 
     public async Task<School?> GetSchoolAsync(Guid id) => await _context.Schools.FindAsync(id);
-
-    public async Task<List<School>> GetSchoolsAsync() => await _context.Schools.ToListAsync();
 
     public async Task<List<SchoolType>> GetSchoolTypesAsync() => await _context.SchoolTypes.ToListAsync();
 
@@ -55,5 +73,31 @@ public class SchoolService
         _context.Schools.Update(school);
         await _context.SaveChangesAsync();
         SchoolsUpdated?.Invoke();
+    }
+
+    private void InitializeSelectedSchool()
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
+
+        _selectedSchool = dbContext.Schools.FirstOrDefault();
+        SchoolSelected?.Invoke();
+        scope.Dispose();
+    }
+
+    public void IntiliazeSchools()
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
+        _schools = [.. dbContext.Schools];
+        if (_schools != null)
+        {
+            SchoolsUpdated?.Invoke();
+        }
+        else
+        {
+            _schools = [new School { ShortName = "No Schools in DB" }];
+        }
+        scope.Dispose();
     }
 }

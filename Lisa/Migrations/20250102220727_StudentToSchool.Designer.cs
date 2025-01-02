@@ -3,6 +3,7 @@ using System;
 using Lisa.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Lisa.Migrations
 {
     [DbContext(typeof(LisaDbContext))]
-    partial class LisaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250102220727_StudentToSchool")]
+    partial class StudentToSchool
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -745,7 +748,7 @@ namespace Lisa.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Lisa.Models.Entities.School", "School")
-                        .WithMany("Learners")
+                        .WithMany()
                         .HasForeignKey("SchoolId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1066,8 +1069,6 @@ namespace Lisa.Migrations
                     b.Navigation("Administrators");
 
                     b.Navigation("Grades");
-
-                    b.Navigation("Learners");
 
                     b.Navigation("Principals");
 

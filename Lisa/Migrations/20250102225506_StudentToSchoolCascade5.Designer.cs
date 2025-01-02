@@ -3,6 +3,7 @@ using System;
 using Lisa.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Lisa.Migrations
 {
     [DbContext(typeof(LisaDbContext))]
-    partial class LisaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250102225506_StudentToSchoolCascade5")]
+    partial class StudentToSchoolCascade5
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

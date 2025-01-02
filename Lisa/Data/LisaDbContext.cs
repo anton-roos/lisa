@@ -28,6 +28,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
     public DbSet<SubjectCombinationSubject> SubjectCombinationSubjects { get; set; } = null!;
     public DbSet<Period> Periods { get; set; } = null!;
     public DbSet<Result> Results { get; set; } = null!;
+    public DbSet<CareGroup> CareGroups { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -93,6 +94,11 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
         modelBuilder.Entity<School>()
             .Property(s => s.ShortName)
             .HasMaxLength(20);
+        modelBuilder.Entity<School>()
+            .HasMany(cg => cg.Learners)
+            .WithOne(s => s.School)
+            .HasForeignKey(l => l.SchoolId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<CareGroup>()
             .HasKey(cg => cg.Id);
@@ -144,6 +150,10 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .WithMany()
             .HasForeignKey(l => l.SubjectCombinationId)
             .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Learner>()
+            .HasOne(l => l.School)
+            .WithMany(s => s.Learners)
+            .HasForeignKey(l => l.SchoolId);
 
         modelBuilder.Entity<LearnerParent>()
             .HasKey(lp => lp.Id);

@@ -17,4 +17,5 @@ public class School
     public ICollection<Principal>? Principals { get; set; }
     public ICollection<Administrator>? Administrators { get; set; }
     public ICollection<SchoolManagement>? SchoolManagements { get; set; }
+    public ICollection<Learner>? Learners { get; set; }
 }

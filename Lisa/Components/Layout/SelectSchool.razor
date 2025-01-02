@@ -9,7 +9,7 @@
     </div>
     <div class="select-school-dropdown">
         <FluentSelect TOption="string" @bind-Value="SelectedSchoolId" @onchange="HandleSelect">
-            @foreach (var school in schools)
+            @foreach (var school in schools!)
             {
                 <FluentOption Value="@school.Id.ToString()">@school.ShortName</FluentOption>
             }
@@ -17,18 +17,19 @@
     </div>
 </div>
 @code {
-    private List<School> schools = new();
+    private List<School>? schools;
     private string? SelectedSchoolId;
 
     protected override async Task OnInitializedAsync()
     {
+        schools = SchoolService.Schools;
         SchoolService.SchoolsUpdated += OnSchoolsUpdated;
         await LoadSchoolsAsync();
     }
 
     private async Task LoadSchoolsAsync()
     {
-        //schools = await SchoolService.GetSchoolsAsync();
+        schools = SchoolService.Schools;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -44,6 +45,6 @@
     }
         public void Dispose()
     {
-        SchoolService.SchoolsUpdated -= OnSchoolsUpdated; // Unsubscribe to avoid memory leaks
+        SchoolService.SchoolsUpdated -= OnSchoolsUpdated;
     }
 }

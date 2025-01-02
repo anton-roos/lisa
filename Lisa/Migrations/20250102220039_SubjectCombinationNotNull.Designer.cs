@@ -3,6 +3,7 @@ using System;
 using Lisa.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Lisa.Migrations
 {
     [DbContext(typeof(LisaDbContext))]
-    partial class LisaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250102220039_SubjectCombinationNotNull")]
+    partial class SubjectCombinationNotNull
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -94,9 +97,6 @@ namespace Lisa.Migrations
                     b.Property<Guid?>("RegisterClassId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("SchoolId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid?>("SubjectCombinationId")
                         .HasColumnType("uuid");
 
@@ -111,8 +111,6 @@ namespace Lisa.Migrations
                         .IsUnique();
 
                     b.HasIndex("RegisterClassId");
-
-                    b.HasIndex("SchoolId");
 
                     b.HasIndex("SubjectCombinationId");
 
@@ -744,12 +742,6 @@ namespace Lisa.Migrations
                         .HasForeignKey("RegisterClassId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Lisa.Models.Entities.School", "School")
-                        .WithMany("Learners")
-                        .HasForeignKey("SchoolId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Lisa.Models.Entities.SubjectCombination", "SubjectCombination")
                         .WithMany()
                         .HasForeignKey("SubjectCombinationId")
@@ -758,8 +750,6 @@ namespace Lisa.Migrations
                     b.Navigation("CareGroup");
 
                     b.Navigation("RegisterClass");
-
-                    b.Navigation("School");
 
                     b.Navigation("SubjectCombination");
                 });
@@ -1066,8 +1056,6 @@ namespace Lisa.Migrations
                     b.Navigation("Administrators");
 
                     b.Navigation("Grades");
-
-                    b.Navigation("Learners");
 
                     b.Navigation("Principals");
 

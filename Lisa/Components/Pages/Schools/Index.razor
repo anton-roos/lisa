@@ -17,7 +17,7 @@ else if (schools.Count == 0)
 }
 else
 {
-    <table>
+    <table class="table table-striped">
         <thead>
             <tr>
                 <th>Short Name</th>
@@ -30,15 +30,19 @@ else
             @foreach (var school in schools)
             {
                 <tr>
-                    <td>@school.ShortName</td>
-                    <td>@school.LongName</td>
-                    <td>
+                    <td class="align-middle">@school.ShortName</td>
+                    <td class="align-middle">@school.LongName</td>
+                    <td class="align-middle">
                         <div class="color-box" style="background-color:@(school.Color);"></div>
                         @school.Color
                     </td>
-                    <td>
-                        <button @onclick="() => EditSchool(school.Id)">Edit</button>
-                        <button @onclick="() => DeleteSchool(school.Id)">Delete</button>
+                    <td class="align-middle">
+                        <button type="button" class="btn btn-secondary btn-sm" @onclick="() => EditSchool(school.Id)">
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm" @onclick="() => DeleteSchool(school.Id)">
+                            <i class="bi bi-trash3-fill"></i>
+                        </button>
                     </td>
                 </tr>
             }

@@ -28,7 +28,7 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options => options.SignIn
 builder.Services.AddHangfire(config =>
     config.UsePostgreSqlStorage(options =>
     {
-        options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("Hangfire"));
+        options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("Lisa"));
     }));
 builder.Services.AddHangfireServer();
 

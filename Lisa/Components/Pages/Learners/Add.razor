@@ -1,8 +1,9 @@
 @page "/learners/add"
 @using Lisa.Models.Entities
-@inject NavigationManager NavigationManager
-@inject LearnerService _learnerService
-@inject SchoolService _schoolService
+@inject NavigationManager navigationManager
+@inject LearnerService learnerService
+@inject SchoolService schoolService
+@inject IToastService ToastService
 
 <h3>Add Learner</h3>
 
@@ -75,16 +76,18 @@
 
     protected override async Task OnInitializedAsync()
     {
-        registerClasses = await _learnerService.GetRegisterClasses();
-        careGroups = await _learnerService.GetCareGroups();
-        subjectCombinations = await _learnerService.GetSubjectCombinations();
-        school = _schoolService.SelectedSchool;
+        registerClasses = await learnerService.GetRegisterClasses();
+        careGroups = await learnerService.GetCareGroups();
+        subjectCombinations = await learnerService.GetSubjectCombinations();
+        school = schoolService.SelectedSchool;
     }
 
     private async Task HandleValidSubmit()
     {
         learner.SchoolId = school.Id;
-        await _learnerService.AddLearner(learner);
-        NavigationManager.NavigateTo("/learners");
+        await learnerService.AddLearner(learner);
+        ToastService.ShowToast(ToastIntent.Success, "Learner added successfully");
+        await Task.Delay(1000);
+        navigationManager.NavigateTo("/learners");
     }
 }

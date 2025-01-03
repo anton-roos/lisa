@@ -1,0 +1,86 @@
+@page "/grades"
+@using Lisa.Models.Entities
+@using Lisa.Models.ViewModels
+@inject SchoolService SchoolService
+@inject NavigationManager Navigation
+
+<h3>Grades for @SelectedSchool?.ShortName</h3>
+
+@if (Grades?.Count == 0)
+{
+    <div class="alert alert-info">
+        No grades found for this school.
+    </div>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Sequence Number</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var grade in Grades)
+            {
+                <tr>
+                    <td>@grade.Name</td>
+                    <td>@grade.SequenceNumber</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => EditGrade(grade.Id)">Edit</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<button class="btn btn-success" @onclick="GoToAddGrade">Add Grade</button>
+
+@code {
+    private School? SelectedSchool;
+    private List<Grade> Grades = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Subscribe to school change events if you need to react 
+        // whenever the user changes the school in some other part of the app
+        SchoolService.SchoolSelected += HandleSchoolChanged;
+
+        SelectedSchool = SchoolService.SelectedSchool;
+        await LoadGrades();
+    }
+
+    private async Task LoadGrades()
+    {
+        if (SelectedSchool != null)
+        {
+            Grades = await SchoolService.GetGradesForSchool(SelectedSchool.Id);
+        }
+        Grades = Grades.OrderBy(g => g.SequenceNumber).ToList();
+    }
+
+    private void GoToAddGrade()
+    {
+        // Navigate to the Add Grade page
+        Navigation.NavigateTo("/grades/add");
+    }
+
+    private void EditGrade(Guid id)
+    {
+        // Navigate to the Edit Grade page for that ID
+        Navigation.NavigateTo($"/grades/edit/{id}");
+    }
+
+    private void HandleSchoolChanged()
+    {
+        SelectedSchool = SchoolService.SelectedSchool;
+        InvokeAsync(async () =>
+        {
+            await LoadGrades();
+            StateHasChanged();
+        });
+    }
+}

@@ -1,0 +1,70 @@
+@page "/grades/add"
+@inject SchoolService SchoolService
+@inject NavigationManager Navigation
+@using Lisa.Models.Entities
+@using Lisa.Models.ViewModels
+@using Microsoft.AspNetCore.Components.Forms
+
+<h3>Add Grade for @SelectedSchool?.ShortName</h3>
+
+@if (SelectedSchool is null)
+{
+    <div class="alert alert-warning">
+        No school selected. Please select a school first.
+    </div>
+}
+else
+{
+    <EditForm Context="edit" Model="@NewGrade" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">Grade Name</label>
+            <InputText class="form-control" @bind-Value="NewGrade.Name" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Sequence Number</label>
+            <InputNumber class="form-control" @bind-Value="NewGrade.SequenceNumber" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    private School? SelectedSchool;
+    private GradeViewModel NewGrade = new();
+
+    protected override void OnInitialized()
+    {
+        SelectedSchool = SchoolService.SelectedSchool;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (SelectedSchool == null)
+            return;
+
+        // Build the new Grade entity
+        var gradeEntity = new Lisa.Models.Entities.Grade
+        {
+            Id = Guid.NewGuid(),
+            Name = NewGrade.Name,
+            SequenceNumber = NewGrade.SequenceNumber,
+            SchoolId = SelectedSchool.Id
+        };
+
+        // Save via the service (replace with your actual method)
+        await SchoolService.AddGradeToSchool(gradeEntity);
+
+        // Navigate back to the grades list
+        Navigation.NavigateTo("/grades");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/grades");
+    }
+}

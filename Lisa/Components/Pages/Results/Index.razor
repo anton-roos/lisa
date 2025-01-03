@@ -1,0 +1,219 @@
+@page "/results"
+@using System.ComponentModel.DataAnnotations
+@using Lisa.Models.Entities
+@using Lisa.Models.ViewModels
+@inject NavigationManager Navigation
+@inject SchoolService SchoolService
+@inject LearnerService LearnerService
+
+<h1>Capture Marks</h1>
+
+<!-- 1. Select Grade -->
+@if (Grades.Count == 0)
+{
+    <div class="alert alert-warning" role="alert">
+        <strong>No Grades for School!</strong> Please add Grades to @SelectedSchool.ShortName! to Capture Marks.
+    </div>
+}
+else if (Subjects.Count == 0)
+{
+    <div class="alert alert-warning" role="alert">
+        <strong>No Subjects for School!</strong> Please add Subjects to @SelectedSchool.ShortName! to Capture Marks.
+    </div>
+}
+else
+{
+    <div>
+        <label>Select Grade:</label>
+        <select class="form-select" @bind="SelectedGradeId">
+            <option value="">-- Choose Grade --</option>
+            @foreach (var grade in Grades)
+            {
+                <option value="@grade.Id">@grade.Name</option>
+            }
+        </select>
+    </div>
+    <!-- 2. Select Subject -->
+    <div>
+        <label>Select Subject:</label>
+        <select class="form-select" @bind="SelectedSubjectId">
+            <option value="">-- Choose Subject --</option>
+            @foreach (var subject in Subjects)
+            {
+                <option value="@subject.Id">@subject.Name</option>
+            }
+        </select>
+    </div>
+    <!-- Load learners when both grade and subject are selected -->
+    <div>
+        <button class="btn btn-primary" @onclick="async () => await LoadLearners()">Load Learners</button>
+    </div>
+}
+
+<!-- 3. Display a list of Learners (students), each with a ResultViewModel -->
+@if (LearnerResults?.Count > 0)
+{
+    <hr />
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Student</th>
+                <th>Score</th>
+                <th>Absent?</th>
+                <th>Reason</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entry in LearnerResults)
+            {
+                <tr>
+                    <td>@entry.LearnerName</td>
+                    <td>
+                        <InputNumber @bind-Value="entry.ResultViewModel.Score" class="form-control" min="0" max="100"
+                            step="1" />
+                    </td>
+                    <td>
+                        <InputCheckbox @bind-Value="entry.ResultViewModel.Absent" />
+                    </td>
+                    <td>
+                        @if (entry.ResultViewModel.Absent)
+                        {
+                            <InputText @bind-Value="entry.ResultViewModel.AbsentReason" class="form-control" />
+                        }
+                        else
+                        {
+                            <InputText style="display:none;" @bind-Value="entry.ResultViewModel.AbsentReason"
+                                class="form-control" />
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <button class="btn btn-primary" @onclick="SaveResults">Save Results</button>
+}
+
+@code {
+    // You’ll probably have actual entity models/DTOs from your DB or services:
+    // e.g., List<Grade> Grades, List<Subject> Subjects, etc.
+    private List<Grade> Grades = new();
+    private List<Subject> Subjects = new();
+
+    private School? SelectedSchool;
+
+    // This is the backing list for the table of Learners
+    private List<LearnerResult> LearnerResults = new();
+
+    // These are the currently-selected GradeId and SubjectId
+    private Guid SelectedGradeId { get; set; }
+    private Guid SelectedSubjectId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SchoolService.SchoolSelected += HandleSchoolChanged;
+        SelectedSchool = SchoolService.SelectedSchool;
+
+        // Typically you'd call a service to load Grades & Subjects:
+        // e.g. Grades = await gradeService.GetAllAsync();
+        // Subjects = await subjectService.GetAllAsync();
+
+        // For illustration, just mock them:
+        Grades = await SchoolService.GetGradesForSchool(SelectedSchool.Id);
+
+        Subjects = new()
+{
+new Subject { Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), Name = "Math" },
+new Subject { Id = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), Name = "English" },
+};
+    }
+
+    private async Task HandleGradeSelect(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out Guid gradeId))
+        {
+            SelectedGradeId = gradeId;
+        }
+    }
+
+    private void HandleSchoolChanged()
+    {
+        SelectedSchool = SchoolService.SelectedSchool;
+        InvokeAsync(async () =>
+        {
+            await LoadGrades();
+            await LoadSubjects();
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadGrades()
+    {
+        Grades = await SchoolService.GetGradesForSchool(SelectedSchool.Id);
+    }
+
+
+    private async Task LoadSubjects()
+    {
+        if (SelectedSchool != null)
+        {
+            Subjects = await SchoolService.GetSubjects();
+        }
+    }
+
+    private async Task LoadLearners()
+    {
+        if (SelectedGradeId == Guid.Empty || SelectedSubjectId == Guid.Empty)
+            return;
+
+
+        var learners = await LearnerService.GetLearnersByGradeAsync(SelectedGradeId);
+
+
+        // Build the list that we will bind to the table
+        LearnerResults = learners.Select(l => new LearnerResult
+            {
+                LearnerId = l.Id,
+                LearnerName = l.FirstName,
+                ResultViewModel = new ResultViewModel()
+            }).ToList();
+    }
+
+    private async Task SaveResults()
+    {
+        // Typically you'd capture the current user’s ID from
+        // your authentication context for CapturedBy:
+        Guid userId = Guid.Parse("55555555-5555-5555-5555-555555555555"); // example
+
+        // 4. Save each learner’s Result
+        foreach (var entry in LearnerResults)
+        {
+            var result = new Result
+                {
+                    Id = Guid.NewGuid(),
+                    LearnerId = entry.LearnerId,
+                    SubjectId = SelectedSubjectId,
+                    Score = entry.ResultViewModel.Score,
+                    Absent = entry.ResultViewModel.Absent,
+                    AbsentReason = entry.ResultViewModel.AbsentReason,
+                    ResultDate = DateTime.UtcNow, // or whichever date you want
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    CapturedBy = userId
+                };
+
+            // Use your data/service layer to save:
+            // await resultService.CreateResultAsync(result);
+        }
+
+        // Possibly navigate to a confirmation page or show success message
+        // Navigation.NavigateTo("/results/success");
+    }
+
+    private class LearnerResult
+    {
+        public Guid LearnerId { get; set; }
+        public string LearnerName { get; set; } = string.Empty;
+        public ResultViewModel ResultViewModel { get; set; } = new();
+    }
+}

@@ -100,4 +100,43 @@ public class SchoolService(LisaDbContext context, IServiceProvider serviceProvid
         }
         scope.Dispose();
     }
+
+    public async Task<List<Grade>> GetGradesForSchool(Guid schoolId)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
+        var grades = await dbContext.Grades
+            .Where(s => s.SchoolId == schoolId)
+            .ToListAsync();
+        return grades;
+    }
+
+    public async Task<Grade?> GetGradeByIdAsync(Guid gradeId)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
+        return await dbContext.Grades.SingleOrDefaultAsync(s => s.Id == gradeId);
+    }
+
+    public Task AddGradeToSchool(Grade newGrade)
+    {
+        _context.Grades.Add(newGrade);
+        return _context.SaveChangesAsync();
+    }
+
+    public Task UpdateGrade(Grade grade)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
+        dbContext.Grades.Update(grade);
+        return dbContext.SaveChangesAsync();
+    }
+
+    public async Task<List<Subject>> GetSubjects()
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
+        var subjects = await dbContext.Subjects.ToListAsync();
+        return subjects;
+    }
 }

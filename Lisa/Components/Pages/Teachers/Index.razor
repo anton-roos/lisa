@@ -14,16 +14,15 @@
 
 <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
     <Authorized>
-        <h3>Teachers</h3>
+        <h1>Teachers</h1>
         @if (IsLoading)
         {
             <p>Loading...</p>
         }
         else
         {
-            <!-- Teachers List -->
             <div class="mb-4">
-                <h4>Teachers List</h4>
+                <h3>Teachers for @SelectedSchool.ShortName</h3>
                 @if (Teachers == null)
                 {
                     <p>Loading...</p>
@@ -47,7 +46,7 @@
                             {
                                 <tr>
                                     <td>@teacher.FirstName @teacher.LastName</td>
-                                    <td>@teacher.</td>
+                                    <td>@teacher.Email</td>
                                     <td>
                                         <button class="btn btn-danger btn-sm"
                                             @onclick="async () => { await DeleteTeacher(teacher.Id);}">Delete</button>
@@ -79,6 +78,11 @@
                         <InputText id="email" class="form-control" @bind-Value="NewTeacher.Email" />
                     </div>
 
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <InputText type="password" id="password" class="form-control" @bind-Value="NewTeacher.PasswordHash" />
+                    </div>
+
                     <button type="submit" class="btn btn-primary">Add Teacher</button>
                 </EditForm>
             </div>
@@ -92,13 +96,14 @@
 @code {
     private List<Lisa.Models.Entities.Teacher>? Teachers;
     private Teacher NewTeacher = new Teacher();
-    private School? CurrentSchool;
+    private School? SelectedSchool;
     private bool IsLoading = false;
 
     protected override async Task OnInitializedAsync()
     {
         IsLoading = true;
-        CurrentSchool = SchoolService.SelectedSchool;
+        SchoolService.SchoolSelected += HandleSchoolChanged;
+        SelectedSchool = SchoolService.SelectedSchool;
 
         var user = HttpContextAccessor.HttpContext?.User != null
         ? await UserManager.GetUserAsync(HttpContextAccessor.HttpContext.User)
@@ -106,10 +111,10 @@
 
         if (user != null)
         {
-            if (CurrentSchool != null)
+            if (SelectedSchool != null)
             {
                 Teachers = await DbContext.Teachers
-                .Where(t => t.SchoolId == CurrentSchool.Id)
+                .Where(t => t.SchoolId == SelectedSchool.Id)
                 .ToListAsync();
             }
         }
@@ -119,20 +124,26 @@
     private async Task AddTeacher()
     {
         IsLoading = true;
-        if (CurrentSchool != null)
+        if (SelectedSchool != null)
         {
-            NewTeacher.SchoolId = CurrentSchool.Id;
+            NewTeacher.SchoolId = SelectedSchool.Id;
 
             DbContext.Teachers.Add(NewTeacher);
             await DbContext.SaveChangesAsync();
 
             Teachers = await DbContext.Teachers
-            .Where(t => t.SchoolId == CurrentSchool.Id)
+            .Where(t => t.SchoolId == SelectedSchool.Id)
             .ToListAsync();
 
             NewTeacher = new Teacher();
         }
         IsLoading = false;
+    }
+
+    private void HandleSchoolChanged()
+    {
+        SelectedSchool = SchoolService.SelectedSchool;
+        StateHasChanged();
     }
 
     private async Task DeleteTeacher(Guid teacherId)
@@ -145,7 +156,7 @@
             await DbContext.SaveChangesAsync();
 
             Teachers = await DbContext.Teachers
-            .Where(t => CurrentSchool != null && t.SchoolId == CurrentSchool.Id)
+            .Where(t => SelectedSchool != null && t.SchoolId == SelectedSchool.Id)
             .ToListAsync();
         }
         IsLoading = false;

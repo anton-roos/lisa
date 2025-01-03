@@ -4,6 +4,7 @@
 @inject SchoolService SchoolService
 @inject NavigationManager Navigation
 
+<h1>Grades</h1>
 <h3>Grades for @SelectedSchool?.ShortName</h3>
 
 @if (Grades?.Count == 0)
@@ -45,10 +46,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Subscribe to school change events if you need to react 
-        // whenever the user changes the school in some other part of the app
         SchoolService.SchoolSelected += HandleSchoolChanged;
-
         SelectedSchool = SchoolService.SelectedSchool;
         await LoadGrades();
     }

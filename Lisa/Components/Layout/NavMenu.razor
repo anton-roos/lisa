@@ -16,11 +16,16 @@
             </NavLink>
         </div>
 
-        <AuthorizeView  Context="authContext" Roles="@Roles.Teacher">
+        <AuthorizeView  Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="results">
-                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Capture Marks
+                        <span class="bi marks-icon" aria-hidden="true"></span> Capture Marks
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="results">
+                        <span class="bi period-icon" aria-hidden="true"></span> Periods
                     </NavLink>
                 </div>
             </Authorized>
@@ -52,13 +57,13 @@
                 </NavLink>
             </div>
             <div class="nav-item px-3">
-                <NavLink class="nav-link" href="users">
-                    <span class="bi bi-mortarboard-nav-menu" aria-hidden="true"></span> Users
+                <NavLink class="nav-link" href="subjects">
+                    <span class="bi subject-icon" aria-hidden="true"></span> Subjects
                 </NavLink>
             </div>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="teachers">
-                    <span class="bi bi-mortarboard-nav-menu" aria-hidden="true"></span> Teachers
+                    <span class="bi teacher-icon" aria-hidden="true"></span> Teachers
                 </NavLink>
             </div>
             <div class="nav-item px-3">
@@ -73,7 +78,17 @@
             </div>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="super-admins">
-                    <span class="bi template-icon" aria-hidden="true"></span> Super Admins
+                    <span class="bi admin-icon" aria-hidden="true"></span> Super Admins
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="principals">
+                    <span class="bi principal-icon" aria-hidden="true"></span> Principals
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="administrators">
+                    <span class="bi administrator-icon" aria-hidden="true"></span> Administrators
                 </NavLink>
             </div>
         </AuthorizeView>

@@ -1,0 +1,7 @@
+- Error Handling and validation when adding a student with the same CODE in Student Screen.
+- Add Marks -> Select Subject -> Not pulling the subjects from the database.
+- Add Marks -> Select Subject -> Implement Load Students.
+- Subject Page is not showing the list of subjects.
+- Teacher -> Add -> Email Validation is not working.
+- Teacher list does not distingish between schools.
+- Communication Page needs to be built.

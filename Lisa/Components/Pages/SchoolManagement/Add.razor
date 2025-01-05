@@ -1,0 +1,95 @@
+@page "/school-management/add/"
+@using Lisa.Models.ViewModels
+@using Microsoft.AspNetCore.Authorization
+@using Lisa.Models.Entities
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@inject NavigationManager Navigation
+@inject LisaDbContext DbContext
+@inject UserManager<User> UserManager
+@inject SchoolService SchoolService
+
+<AuthorizeView Roles="@Roles.SystemAdministrator,@Roles.Principal">
+    <Authorized>
+        <h3>Add School Management</h3>
+
+        <EditForm Model="Management" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="form-group">
+                <label for="firstName">First Name</label>
+                <InputText id="firstName" class="form-control" @bind-Value="Management.FirstName" />
+            </div>
+
+            <div class="form-group">
+                <label for="lastName">Last Name</label>
+                <InputText id="lastName" class="form-control" @bind-Value="Management.LastName" />
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <InputText id="password" class="form-control" @bind-Value="Management.Password" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+        </EditForm>
+    </Authorized>
+    <NotAuthorized>
+        <h3>You are not authorized to access this page.</h3>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private UserViewModel Management { get; set; } = new(); 
+    private School? SelectedSchool;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SchoolService.SchoolSelected += HandleSchoolChanged;
+        SelectedSchool = SchoolService.SelectedSchool;
+    }
+
+    private void HandleSchoolChanged()
+    {
+        SelectedSchool = SchoolService.SelectedSchool;
+        StateHasChanged();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            var userEntity = new User
+            {
+                FirstName = Management.FirstName,
+                LastName = Management.LastName,
+                Email = Management.Email,
+                UserName = Management.Email,
+                SchoolId = SelectedSchool?.Id
+            };
+
+            var result = await UserManager.CreateAsync(userEntity, Management.Password);
+            if (result.Succeeded)
+            {
+                await UserManager.AddToRoleAsync(userEntity, Roles.SchoolManagement);
+
+                Navigation.NavigateTo("/schoolmanagement");
+            }
+            else
+            {
+                // Handle errors
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/schoolmanagement");
+    }
+}

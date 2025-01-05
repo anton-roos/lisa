@@ -1,0 +1,110 @@
+@page "/subject-combination/edit/{id:guid}"
+@using Lisa.Models.ViewModels
+@using Lisa.Models.Entities
+@inject NavigationManager Navigation
+@inject SubjectCombinationService SubjectCombinationService
+@inject SubjectService SubjectService
+@inject SchoolService SchoolService
+@using Microsoft.AspNetCore.Components
+
+<h3>Edit Subject Combination</h3>
+
+<EditForm Model="@Combination" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <!-- Combination Name -->
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <InputText class="form-control" @bind-Value="Combination.Name" />
+    </div>
+
+    <!-- Grade Dropdown -->
+    <div class="mb-3">
+        <label class="form-label">Grade</label>
+        <select class="form-select" @bind="Combination.GradeId">
+            <option value="">-- Select Grade --</option>
+            @foreach (var grade in Grades)
+            {
+                <option value="@grade.Id">@grade.Name</option>
+            }
+        </select>
+    </div>
+
+    <!-- Subjects Multi-Select -->
+    <div class="mb-3">
+        <label class="form-label">Subjects</label>
+        <select multiple class="form-select" @onchange="HandleSubjectSelection">
+            @foreach (var subject in AllSubjects)
+            {
+                // Mark the option as selected if the subject's ID is in Combination.SubjectIds
+                <option value="@subject.Id" selected="@Combination.SubjectCombinationSubjects.Contains(subject.Id)">
+                    @subject.Name
+                </option>
+            }
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+    <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+</EditForm>
+
+@code {
+    [Parameter] public Guid Id { get; set; } 
+
+    private SubjectCombination Combination = new();
+    private List<Grade> Grades = new();
+    private List<Subject> AllSubjects = new();
+    private School CurrentSchool = new();   
+    
+
+    protected override async Task OnInitializedAsync()
+    {
+        CurrentSchool = SchoolService.SelectedSchool;
+        AllSubjects = await SubjectService.GetAllAsync();
+        Grades = await SchoolService.GetGradesForSchool(CurrentSchool.Id);
+        var existing = await SubjectCombinationService.GetByIdAsync(Id);
+        if (existing != null)
+        {
+            // Convert entity to your ViewModel
+            Combination = new SubjectCombination
+            {
+                Id = existing.Id,
+                Name = existing.Name,
+                GradeId = existing.GradeId,
+                SubjectCombinationSubjects = existing.SubjectCombinationSubjects
+            };
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        // Build an updated entity
+        var entity = new SubjectCombination
+        {
+            Id = Combination.Id,
+            Name = Combination.Name,
+            GradeId = Combination.GradeId
+        };
+
+        // Update in the service, passing the new subject IDs
+        await SubjectCombinationService.UpdateAsync(entity, Combination);
+
+        Navigation.NavigateTo("/subject-combination");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/subject-combination");
+    }
+
+    private void HandleSubjectSelection(ChangeEventArgs e)
+    {
+        if (e.Value is string[] selectedValues)
+        {
+            Combination.SubjectIds = selectedValues
+                .Select(val => Guid.Parse(val))
+                .ToList();
+        }
+    }
+}

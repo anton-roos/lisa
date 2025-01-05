@@ -1,0 +1,95 @@
+@page "/sysadmins/add/"
+@using Lisa.Models.ViewModels
+@using Microsoft.AspNetCore.Authorization
+@using Lisa.Models.Entities
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@inject NavigationManager Navigation
+@inject LisaDbContext DbContext
+@inject UserManager<User> UserManager
+@inject SchoolService SchoolService
+
+<AuthorizeView Roles="@Roles.SystemAdministrator">
+    <Authorized>
+        <h3>Add System Administrator</h3>
+
+        <EditForm Model="SysAdmin" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="form-group">
+                <label for="firstName">First Name</label>
+                <InputText id="firstName" class="form-control" @bind-Value="SysAdmin.FirstName" />
+            </div>
+
+            <div class="form-group">
+                <label for="lastName">Last Name</label>
+                <InputText id="lastName" class="form-control" @bind-Value="SysAdmin.LastName" />
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <InputText id="password" class="form-control" @bind-Value="SysAdmin.Password" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+        </EditForm>
+    </Authorized>
+    <NotAuthorized>
+        <h3>You are not authorized to access this page.</h3>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private UserViewModel SysAdmin { get; set; } = new(); 
+    private School? SelectedSchool;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SchoolService.SchoolSelected += HandleSchoolChanged;
+        SelectedSchool = SchoolService.SelectedSchool;
+    }
+
+    private void HandleSchoolChanged()
+    {
+        SelectedSchool = SchoolService.SelectedSchool;
+        StateHasChanged();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            var userEntity = new User
+            {
+                FirstName = SysAdmin.FirstName,
+                LastName = SysAdmin.LastName,
+                Email = SysAdmin.Email,
+                UserName = SysAdmin.Email,
+                SchoolId = SelectedSchool?.Id  // If relevant
+            };
+
+            var result = await UserManager.CreateAsync(userEntity, SysAdmin.Password);
+            if (result.Succeeded)
+            {
+                await UserManager.AddToRoleAsync(userEntity, Roles.SystemAdministrator);
+
+                Navigation.NavigateTo("/sysadmins");
+            }
+            else
+            {
+                // Handle errors
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/sysadmins");
+    }
+}

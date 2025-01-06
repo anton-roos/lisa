@@ -1,4 +1,4 @@
-@page "/subject-combination/edit/{id:guid}"
+@page "/combinations/edit/{id:guid}"
 @using Lisa.Models.ViewModels
 @using Lisa.Models.Entities
 @inject NavigationManager Navigation
@@ -110,12 +110,12 @@
         await SubjectCombinationService.UpdateAsync(entity, SelectedSubjectIds);
 
         // 6. Navigate back to the list
-        Navigation.NavigateTo("/subject-combination");
+        Navigation.NavigateTo("/combinations");
     }
 
     private void Cancel()
     {
-        Navigation.NavigateTo("/subject-combination");
+        Navigation.NavigateTo("/combinations");
     }
 
     private void HandleSubjectSelection(ChangeEventArgs e)

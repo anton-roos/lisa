@@ -1,10 +1,11 @@
 using Lisa.Data;
 using Lisa.Models.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class SchoolService(LisaDbContext context, IServiceProvider serviceProvider)
+public class SchoolService(LisaDbContext context, IServiceProvider serviceProvider, UserManager<User> userManager)
 {
     private School? _selectedSchool;
     private List<School>? _schools;
@@ -12,6 +13,7 @@ public class SchoolService(LisaDbContext context, IServiceProvider serviceProvid
     public event Action? SchoolsUpdated;
     public event Action? SchoolSelected;
     private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly UserManager<User> _userManager = userManager;
 
     public School? SelectedSchool
     {
@@ -139,4 +141,70 @@ public class SchoolService(LisaDbContext context, IServiceProvider serviceProvid
         var subjects = await dbContext.Subjects.ToListAsync();
         return subjects;
     }
+
+    public async Task<List<User>> GetUsersByRoleAndSchoolAsync(string roleName, Guid schoolId)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+
+        // 1. Get all users in the given role (as base User)
+        var allUsers = await userManager.GetUsersInRoleAsync(roleName);
+
+        // 2. Now switch on the role name, cast to the proper derived type, filter by school, then return
+        switch (roleName)
+        {
+            case Roles.Principal:
+                {
+                    // .OfType<Principal>() returns only those that really are Principals
+                    var principals = allUsers
+                        .OfType<Principal>()                 // cast to derived type
+                        .Where(p => p.SchoolId == schoolId)  // filter by school
+                        .ToList();
+
+                    // Return them as a List<User> if your method signature requires that
+                    return principals.Cast<User>().ToList();
+                }
+
+            case Roles.Administrator:
+                {
+                    var admins = allUsers
+                        .OfType<Administrator>()
+                        .Where(a => a.SchoolId == schoolId)
+                        .ToList();
+
+                    return admins.Cast<User>().ToList();
+                }
+
+            case Roles.SystemAdministrator:
+                {
+                    var sysAdmins = allUsers
+                        .OfType<SystemAdministrator>()
+                        .ToList();
+
+                    return sysAdmins.Cast<User>().ToList();
+                }
+
+            case Roles.SchoolManagement:
+                {
+                    var managementUsers = allUsers
+                        .OfType<SchoolManagement>()
+                        .Where(m => m.SchoolId == schoolId)
+                        .ToList();
+
+                    return managementUsers.Cast<User>().ToList();
+                }
+
+            default:
+                {
+                    // If the role name is unrecognized, or you want a fallback
+                    // Possibly no casting or no filtering if your base User doesn't store SchoolId
+                    // (or if the base user does have a SchoolId, you can do that filter here).
+                    // For example:
+                    var baseUsers = allUsers
+                        .ToList();
+                    return baseUsers.Cast<User>().ToList();
+                }
+        }
+    }
+
 }

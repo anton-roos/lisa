@@ -1,5 +1,92 @@
 @page "/principals"
+@using Lisa.Models.Entities
+@inject NavigationManager Navigation
+@inject SchoolService SchoolService
 
-<PageTitle>Principals</PageTitle>
-<h1>Principals</h1>
-<div>COMMING SOON!</div>
+<h3>Principals</h3>
+
+@if (CurrentSchool == null)
+{
+    <div class="alert alert-warning">
+        No school selected. Please select a school first.
+    </div>
+}
+else if (UsersInRole == null)
+{
+    <p>Loading...</p>
+}
+else if (UsersInRole.Count == 0)
+{
+    <p>No Principals found for @CurrentSchool.ShortName.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>School</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var Principal in Principals)
+            {
+                <tr>
+                    <td>@($"{Principal.FirstName} {Principal.LastName}")</td>
+                    <td>@CurrentSchool.ShortName</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<button class="btn btn-success" @onclick="GoToAddPrincipal" disabled="@IsSchoolNotSelected">
+    Add Principal
+</button>
+
+@code {
+    private School? CurrentSchool;
+    private List<User> UsersInRole = new();
+    private List<Principal> Principals = new();
+    private bool IsSchoolNotSelected => CurrentSchool == null || CurrentSchool.Id == Guid.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Listen for when the school changes
+        SchoolService.SchoolSelected += HandleSchoolChange;
+        CurrentSchool = SchoolService.SelectedSchool;
+
+        if (CurrentSchool != null)
+        {
+            // Load Principals
+            await LoadUsers();
+        }
+    }
+
+    private async Task LoadUsers()
+    {
+        // Retrieve all Principals for the current school
+        UsersInRole = await SchoolService.GetUsersByRoleAndSchoolAsync(Roles.Principal, CurrentSchool.Id);
+        Principals = UsersInRole.OfType<Principal>().ToList();
+    }
+
+    private void HandleSchoolChange()
+    {
+        // Called when SchoolService.SelectedSchool changes
+        CurrentSchool = SchoolService.SelectedSchool;
+        InvokeAsync(async () =>
+        {
+            if (CurrentSchool != null)
+            {
+                await LoadUsers();
+            }
+            StateHasChanged();
+        });
+    }
+
+    private void GoToAddPrincipal()
+    {
+        // Navigate to the add page for Principals
+        Navigation.NavigateTo("/principals/add");
+    }
+}

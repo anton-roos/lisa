@@ -82,6 +82,7 @@ builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<LearnerService>();
 builder.Services.AddScoped<SubjectCombinationService>();
+builder.Services.AddScoped<SubjectService>();
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();

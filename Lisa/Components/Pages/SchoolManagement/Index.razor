@@ -1,5 +1,85 @@
 @page "/school-management"
+@using Lisa.Models.Entities
+@inject NavigationManager Navigation
+@inject SchoolService SchoolService
 
-<PageTitle>School Management</PageTitle>
-<h1>School Management</h1>
-<div>COMMING SOON!</div>
+<h3>School Management</h3>
+
+@if (CurrentSchool == null)
+{
+    <div class="alert alert-warning">
+        No school selected. Please select a school first.
+    </div>
+}
+else if (UsersInRole == null)
+{
+    <p>Loading...</p>
+}
+else if (UsersInRole.Count == 0)
+{
+    <p>No School Management users found for @CurrentSchool.ShortName (@CurrentSchool.ShortName).</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>School</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in UsersInRole)
+            {
+                <tr>
+                    <td>@($"{user.FirstName} {user.LastName}")</td>
+                    <td>@CurrentSchool.ShortName</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<button class="btn btn-success" @onclick="GoToAddSchoolMgmt" disabled="@IsSchoolNotSelected">
+    Add School Management
+</button>
+
+@code {
+    private School? CurrentSchool;
+    private List<User> UsersInRole = new();
+    private bool IsSchoolNotSelected => CurrentSchool == null || CurrentSchool.Id == Guid.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SchoolService.SchoolSelected += HandleSchoolChange;
+        CurrentSchool = SchoolService.SelectedSchool;
+
+        if (CurrentSchool != null)
+        {
+            await LoadUsers();
+        }
+    }
+
+    private async Task LoadUsers()
+    {
+        UsersInRole = await SchoolService.GetUsersByRoleAndSchoolAsync(Roles.SchoolManagement, CurrentSchool.Id);
+    }
+
+    private void HandleSchoolChange()
+    {
+        CurrentSchool = SchoolService.SelectedSchool;
+        InvokeAsync(async () =>
+        {
+            if (CurrentSchool != null)
+            {
+                await LoadUsers();
+            }
+            StateHasChanged();
+        });
+    }
+
+    private void GoToAddSchoolMgmt()
+    {
+        Navigation.NavigateTo("/school-management/add");
+    }
+}

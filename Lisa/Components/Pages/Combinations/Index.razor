@@ -1,6 +1,60 @@
 @page "/combinations"
+@using Lisa.Models.Entities
+@inject NavigationManager Navigation
+@inject SubjectCombinationService SubjectCombinationService
 
-<PageTitle>Subject Combinations</PageTitle>
-<h1>Subject Combinations</h1>
-<div>COMMING SOON!</div>
-<button class="btn-primary">Add Subject Combination</button>
+<h3>Subject Combinations</h3>
+
+@if (SubjectCombinations == null)
+{
+    <p>Loading...</p>
+}
+else if (SubjectCombinations.Count == 0)
+{
+    <p>No Subject Combinations found.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Grade</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var combo in SubjectCombinations)
+            {
+                <tr>
+                    <td>@combo.Name</td>
+                    <td>@combo.Grade?.Name</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => EditCombination(combo.Id)">Edit</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<button class="btn btn-success" @onclick="GoToAddPage">Add Subject Combination</button>
+
+@code {
+    private List<SubjectCombination>? SubjectCombinations;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SubjectCombinations = await SubjectCombinationService.GetAllAsync();
+    }
+
+    private void GoToAddPage()
+    {
+        Navigation.NavigateTo("/combinations/add");
+    }
+
+    private void EditCombination(Guid id)
+    {
+        Navigation.NavigateTo($"/combinations/edit/{id}");
+    }
+}

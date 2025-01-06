@@ -28,6 +28,11 @@
             </div>
 
             <div class="form-group">
+                <label for="email">Email</label>
+                <InputText id="email" class="form-control" @bind-Value="SysAdmin.Email" />
+            </div>
+            
+            <div class="form-group">
                 <label for="password">Password</label>
                 <InputText id="password" class="form-control" @bind-Value="SysAdmin.Password" />
             </div>
@@ -42,7 +47,7 @@
 </AuthorizeView>
 
 @code {
-    private SystemAdminViewModel SysAdmin { get; set; } = new(); 
+    private SystemAdminViewModel SysAdmin { get; set; } = new();
     private School? SelectedSchool;
 
     protected override async Task OnInitializedAsync()
@@ -62,12 +67,12 @@
         try
         {
             var userEntity = new SystemAdministrator
-            {
-                FirstName = SysAdmin.FirstName,
-                LastName = SysAdmin.LastName,
-                Email = SysAdmin.Email,
-                UserName = SysAdmin.Email,
-            };
+                {
+                    FirstName = SysAdmin.FirstName,
+                    LastName = SysAdmin.LastName,
+                    Email = SysAdmin.Email,
+                    UserName = SysAdmin.Email,
+                };
 
             var result = await UserManager.CreateAsync(userEntity, SysAdmin.Password);
             if (result.Succeeded)

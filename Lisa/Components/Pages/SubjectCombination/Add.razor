@@ -8,7 +8,7 @@
 
 <h3>Add Subject Combination</h3>
 
-<EditForm Model="@NewCombination" OnValidSubmit="HandleValidSubmit">
+<EditForm Context="edit" Model="@NewCombination" OnValidSubmit="HandleValidSubmit">
     <DataAnnotationsValidator />
     <ValidationSummary />
 

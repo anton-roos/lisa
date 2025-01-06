@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Lisa.Models.ViewModels;
 
-public class PrincipalViewModel
+public class SystemAdminViewModel
 {
     public string? FirstName { get; set; }
     public string? LastName { get; set; }

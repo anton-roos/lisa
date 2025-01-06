@@ -9,11 +9,11 @@
 @inject UserManager<User> UserManager
 @inject SchoolService SchoolService
 
-<AuthorizeView Roles="@Roles.SystemAdministrator,@Roles.Principal">
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
     <Authorized>
         <h3>Add School Management</h3>
 
-        <EditForm Model="Management" OnValidSubmit="HandleValidSubmit">
+        <EditForm  Context="edit" Model="Management" OnValidSubmit="HandleValidSubmit">
             <DataAnnotationsValidator />
             <ValidationSummary />
 
@@ -42,7 +42,7 @@
 </AuthorizeView>
 
 @code {
-    private UserViewModel Management { get; set; } = new(); 
+    private SchoolManagementViewModel Management { get; set; } = new(); 
     private School? SelectedSchool;
 
     protected override async Task OnInitializedAsync()
@@ -61,13 +61,13 @@
     {
         try
         {
-            var userEntity = new User
+            var userEntity = new SchoolManagement
             {
                 FirstName = Management.FirstName,
                 LastName = Management.LastName,
                 Email = Management.Email,
                 UserName = Management.Email,
-                SchoolId = SelectedSchool?.Id
+                SchoolId = SelectedSchool.Id
             };
 
             var result = await UserManager.CreateAsync(userEntity, Management.Password);

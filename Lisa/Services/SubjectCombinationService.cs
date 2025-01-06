@@ -80,4 +80,11 @@ public class SubjectCombinationService
 
         await _dbContext.SaveChangesAsync();
     }
+
+    public async Task<List<SubjectCombination>> GetAllAsync()
+    {
+        return await _dbContext.SubjectCombinations
+            .Include(sc => sc.SubjectCombinationSubjects)
+            .ToListAsync();
+    }
 }

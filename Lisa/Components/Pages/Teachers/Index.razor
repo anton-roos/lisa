@@ -12,7 +12,7 @@
 
 <PageTitle>Teachers</PageTitle>
 
-<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+<AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
     <Authorized>
         <h1>Teachers</h1>
         @if (IsLoading)

@@ -9,7 +9,7 @@
 
 <h3>Edit Subject Combination</h3>
 
-<EditForm Model="@Combination" OnValidSubmit="HandleValidSubmit">
+<EditForm Context="edit" Model="@Combination" OnValidSubmit="HandleValidSubmit">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
@@ -37,8 +37,8 @@
         <select multiple class="form-select" @onchange="HandleSubjectSelection">
             @foreach (var subject in AllSubjects)
             {
-                // Mark the option as selected if the subject's ID is in Combination.SubjectIds
-                <option value="@subject.Id" selected="@Combination.SubjectCombinationSubjects.Contains(subject.Id)">
+                bool isSelected = SelectedSubjectIds.Contains(subject.Id);
+                <option value="@subject.Id" selected="@isSelected">
                     @subject.Name
                 </option>
             }
@@ -50,36 +50,55 @@
 </EditForm>
 
 @code {
-    [Parameter] public Guid Id { get; set; } 
+    [Parameter] public Guid Id { get; set; }
 
+    // The actual entity being edited
     private SubjectCombination Combination = new();
+
     private List<Grade> Grades = new();
     private List<Subject> AllSubjects = new();
-    private School CurrentSchool = new();   
-    
+    private School CurrentSchool = new();
+
+    // Holds the selected subject IDs from the multi-select
+    private List<Guid> SelectedSubjectIds = new();
 
     protected override async Task OnInitializedAsync()
     {
+        // 1. Get the current school from your SchoolService
         CurrentSchool = SchoolService.SelectedSchool;
+
+        // 2. Load all subjects (or filter if you want only certain ones)
         AllSubjects = await SubjectService.GetAllAsync();
+
+        // 3. Load all grades for this school
         Grades = await SchoolService.GetGradesForSchool(CurrentSchool.Id);
+
+        // 4. Get the existing SubjectCombination entity from the service
         var existing = await SubjectCombinationService.GetByIdAsync(Id);
         if (existing != null)
         {
-            // Convert entity to your ViewModel
+            // Map the retrieved entity to our local `Combination`
             Combination = new SubjectCombination
             {
                 Id = existing.Id,
                 Name = existing.Name,
-                GradeId = existing.GradeId,
-                SubjectCombinationSubjects = existing.SubjectCombinationSubjects
+                GradeId = existing.GradeId
             };
+
+            // Build the list of currently selected subject IDs
+            // from the existing links
+            if (existing.SubjectCombinationSubjects != null)
+            {
+                SelectedSubjectIds = existing.SubjectCombinationSubjects
+                    .Select(scs => scs.SubjectId)
+                    .ToList();
+            }
         }
     }
 
     private async Task HandleValidSubmit()
     {
-        // Build an updated entity
+        // Build an updated entity to pass to the service
         var entity = new SubjectCombination
         {
             Id = Combination.Id,
@@ -87,9 +106,10 @@
             GradeId = Combination.GradeId
         };
 
-        // Update in the service, passing the new subject IDs
-        await SubjectCombinationService.UpdateAsync(entity, Combination);
+        // 5. Update in the service, passing the new subject IDs
+        await SubjectCombinationService.UpdateAsync(entity, SelectedSubjectIds);
 
+        // 6. Navigate back to the list
         Navigation.NavigateTo("/subject-combination");
     }
 
@@ -100,9 +120,10 @@
 
     private void HandleSubjectSelection(ChangeEventArgs e)
     {
+        // Because it's a multiple-select, e.Value is a string[] of selected values
         if (e.Value is string[] selectedValues)
         {
-            Combination.SubjectIds = selectedValues
+            SelectedSubjectIds = selectedValues
                 .Select(val => Guid.Parse(val))
                 .ToList();
         }

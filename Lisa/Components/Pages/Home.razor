@@ -14,13 +14,13 @@
     </NotAuthorized>
 </AuthorizeView>
 
-<AuthorizeView Context="authContext" Roles="@Roles.Teacher">
+<AuthorizeView Context="authContext" Roles="@($"{Roles.Teacher}")">
     <Authorized>
         <p>You are a Teacher</p>
     </Authorized>
 </AuthorizeView>
 
-<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+<AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator}")">
     <Authorized>
         <p>You are a System Administrator</p>
     </Authorized>

@@ -9,7 +9,7 @@
 @inject UserManager<User> UserManager
 @inject SchoolService SchoolService
 
-<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+<AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
     <Authorized>
         <h3>Add Teacher</h3>
 

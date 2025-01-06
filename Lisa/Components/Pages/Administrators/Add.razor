@@ -9,7 +9,7 @@
 @inject UserManager<User> UserManager
 @inject SchoolService SchoolService
 
-<AuthorizeView Context="auth" Roles="@Roles.SystemAdministrator">
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
     <Authorized>
         <h3>Add Administrator</h3>
 
@@ -65,10 +65,9 @@
             {
                 FirstName = Administrator.FirstName,
                 LastName = Administrator.LastName,
-                Email = Administrator.Email,           // If you want email
-                UserName = Administrator.Email,         // Typically user name is email
-                SchoolId = SelectedSchool.Id,          // If needed
-                // Any other properties
+                Email = Administrator.Email,        
+                UserName = Administrator.Email,
+                SchoolId = SelectedSchool.Id,
             };
 
             var result = await UserManager.CreateAsync(userEntity, Administrator.Password);

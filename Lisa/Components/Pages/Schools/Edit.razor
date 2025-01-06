@@ -7,7 +7,7 @@
 
 <PageTitle>Edit School</PageTitle>
 
-<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+<AuthorizeView Context="authContext"Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
     <Authorized>
         <h3>Edit School</h3>
 

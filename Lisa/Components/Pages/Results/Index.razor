@@ -113,21 +113,9 @@ else
     {
         SchoolService.SchoolSelected += HandleSchoolChanged;
         SelectedSchool = SchoolService.SelectedSchool;
-
-        // Typically you'd call a service to load Grades & Subjects:
-        // e.g. Grades = await gradeService.GetAllAsync();
-        // Subjects = await subjectService.GetAllAsync();
-
-        // For illustration, just mock them:
         Grades = await SchoolService.GetGradesForSchool(SelectedSchool.Id);
-
-        Subjects = new()
-{
-new Subject { Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), Name = "Math" },
-new Subject { Id = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), Name = "English" },
-};
     }
-
+    
     private async Task HandleGradeSelect(ChangeEventArgs e)
     {
         if (Guid.TryParse(e.Value?.ToString(), out Guid gradeId))
@@ -136,6 +124,7 @@ new Subject { Id = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), Name = "E
         }
     }
 
+    
     private void HandleSchoolChanged()
     {
         SelectedSchool = SchoolService.SelectedSchool;

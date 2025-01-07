@@ -9,6 +9,14 @@
     Subjects are shared across schools.
 </div>
 
+<div class="mb-3">
+    <label class="form-label">Search Subjects</label>
+    <InputText class="form-control"
+               @bind-Value="searchText"
+               oninput="@OnInputChange"
+               placeholder="Type to filter subjects..." />
+</div>
+
 <button class="btn btn-primary" @onclick="AddSubject">Add Subject</button>
 
 <hr />
@@ -17,9 +25,9 @@
 {
     <p>Loading subjects...</p>
 }
-else if (subjects.Count == 0)
+else if (!FilteredSubjects.Any())
 {
-    <p>No subjects found.</p>
+    <p>No subjects found matching your search.</p>
 }
 else
 {
@@ -33,7 +41,7 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var subject in subjects)
+            @foreach (var subject in FilteredSubjects)
             {
                 <tr>
                     <td>@subject.Name</td>
@@ -52,12 +60,25 @@ else
 
 @code {
     private List<Subject>? subjects;
+    private string searchText = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
+        // Load subjects from your service
         subjects = await SubjectService.GetAllAsync();
         subjects = subjects.OrderBy(s => s.Name).ToList();
     }
+
+    // Computed property returning only subjects that match the search
+    private IEnumerable<Subject> FilteredSubjects
+        => subjects != null
+            ? subjects.Where(s =>
+                string.IsNullOrWhiteSpace(searchText)
+                || (s.Name != null && s.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                || (s.Code != null && s.Code.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                || (s.Description != null && s.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+            )
+            : Enumerable.Empty<Subject>();
 
     private void AddSubject()
     {
@@ -67,5 +88,10 @@ else
     private void EditSubject(Guid subjectId)
     {
         Navigation.NavigateTo($"/subjects/edit/{subjectId}");
+    }
+
+    private void OnInputChange(ChangeEventArgs e)
+    {
+        searchText = e.Value?.ToString() ?? string.Empty;
     }
 }

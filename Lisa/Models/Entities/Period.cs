@@ -5,8 +5,8 @@ namespace Lisa.Models.Entities;
 public class Period : IValidatable
 {
     public Guid Id { get; set; }
-    public DateTime PeriodStartTime { get; set; }
-    public DateTime PeriodEndTime { get; set; }
+    public DateTime StartTime { get; set; }
+    public DateTime EndTime { get; set; }
     public PeriodStatus Status { get; set; }
     public string? Description { get; set; }
     public Guid GradeId { get; set; }
@@ -17,7 +17,7 @@ public class Period : IValidatable
     public Subject? Subject { get; set; }
     public void Validate()
     {
-        if (PeriodStartTime >= PeriodEndTime)
+        if (StartTime >= EndTime)
         {
             throw new InvalidOperationException("Period start time must be before end time.");
         }

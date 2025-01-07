@@ -206,5 +206,58 @@ public class SchoolService(LisaDbContext context, IServiceProvider serviceProvid
                 }
         }
     }
+    public async Task<List<RegisterClass>> GetRegisterClassesAsync()
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
+        var registerClasses = await dbContext.RegisterClasses
+            .Include(rc => rc.Grade)
+            .Include(rc => rc.Teacher)
+            .Include(rc => rc.CompulsorySubjects)
+            .Include(rc => rc.Learners)
+            .ToListAsync();
+        return registerClasses;
+    }
 
+    public async Task<RegisterClass?> GetRegisterClassByIdAsync(Guid registerClassId)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
+        return await dbContext.RegisterClasses
+            .Include(rc => rc.Grade)
+            .Include(rc => rc.Teacher)
+            .Include(rc => rc.CompulsorySubjects)
+            .Include(rc => rc.Learners)
+            .SingleOrDefaultAsync(rc => rc.Id == registerClassId);
+    }
+
+    public Task DeleteRegisterClassAsync(RegisterClass registerClass)
+    {
+        _context.RegisterClasses.Remove(registerClass);
+        return _context.SaveChangesAsync();
+    }
+
+    public async Task<List<Teacher>> GetTeachersForSchoolAsync(Guid schoolId)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
+        var teachers = await dbContext.Teachers
+            .Where(t => t.SchoolId == schoolId)
+            .ToListAsync();
+        return teachers;
+    }
+
+    public async Task UpdateRegisterClassAsync(RegisterClass registerClass)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
+        dbContext.RegisterClasses.Update(registerClass);
+        await dbContext.SaveChangesAsync();
+    }
+
+    public async Task AddRegisterClassAsync(RegisterClass registerClass)
+    {
+        _context.RegisterClasses.Add(registerClass);
+        await _context.SaveChangesAsync();
+    }
 }

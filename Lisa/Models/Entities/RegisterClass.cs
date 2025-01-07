@@ -4,7 +4,6 @@ public class RegisterClass
 {
     public Guid Id { get; set; }
     public string? Name { get; set; }
-    public string? Description { get; set; }
     public Guid GradeId { get; set; }
     public Grade? Grade { get; set; }
     public ICollection<Learner>? Learners { get; set; }

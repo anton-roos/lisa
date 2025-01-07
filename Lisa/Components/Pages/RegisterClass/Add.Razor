@@ -1,1 +1,96 @@
 @page "/register-class/add"
+@inject SchoolService SchoolService
+@inject NavigationManager Navigation
+@using Lisa.Models.Entities
+@using Microsoft.AspNetCore.Components.Forms
+
+<h3>Add Register Class</h3>
+
+@if (SelectedSchool == null)
+{
+    <div class="alert alert-warning">
+        No school is selected. Please select a school first.
+    </div>
+}
+else
+{
+    <EditForm Model="@NewRegisterClass" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <!-- Class Name -->
+        <div class="mb-3">
+            <label class="form-label">Class Name</label>
+            <InputText class="form-control" @bind-Value="NewRegisterClass.Name" />
+        </div>
+
+        <!-- Grade Dropdown -->
+        <div class="mb-3">
+            <label class="form-label">Grade</label>
+            <select class="form-select" @bind="NewRegisterClass.GradeId">
+                <option value="">-- Select Grade --</option>
+                @if (Grades != null)
+                {
+                    @foreach (var grade in Grades)
+                    {
+                        <option value="@grade.Id">@grade.Name</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <!-- Teacher Dropdown -->
+        <div class="mb-3">
+            <label class="form-label">Teacher</label>
+            <select class="form-select" @bind="NewRegisterClass.TeacherId">
+                <option value="">-- Select Teacher --</option>
+                @if (Teachers != null)
+                {
+                    @foreach (var teacher in Teachers)
+                    {
+                        <option value="@teacher.Id">@($"{teacher.FirstName} {teacher.LastName}")</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <button class="btn btn-primary" type="submit">Save</button>
+        <button class="btn btn-secondary" type="button" @onclick="Cancel">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    private RegisterClass NewRegisterClass = new();
+    private School? SelectedSchool;
+    private List<Grade>? Grades;
+    private List<Teacher>? Teachers;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SelectedSchool = SchoolService.SelectedSchool;
+        if (SelectedSchool != null)
+        {
+            Grades = await SchoolService.GetGradesForSchool(SelectedSchool.Id);
+            Teachers = await SchoolService.GetTeachersForSchoolAsync(SelectedSchool.Id); // Or whatever method you have
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (SelectedSchool == null)
+        {
+            return;
+        }
+
+        NewRegisterClass.Id = Guid.NewGuid();
+        
+        await SchoolService.AddRegisterClassAsync(NewRegisterClass);
+
+        Navigation.NavigateTo("/register-class");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/register-class");
+    }
+}

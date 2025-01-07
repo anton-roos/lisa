@@ -24,6 +24,7 @@
                     <td>@learner.RegisterClass?.Grade?.Name</td>
                     <td>
                         <button class="btn btn-primary" @onclick="() => EditLearner(learner.Id)">Edit</button>
+                        <button class="btn btn-primary" @onclick="() => LearnerDetails(learner.Id)">View</button>
                     </td>
                 </tr>
             }
@@ -75,6 +76,11 @@ else
     private void EditLearner(Guid learnerId)
     {
         NavigationManager.NavigateTo($"/learners/edit/{learnerId}");
+    }
+
+    private void LearnerDetails(Guid learnerId)
+    {
+        NavigationManager.NavigateTo($"/learners/details/{learnerId}");
     }
 
     public void Dispose()

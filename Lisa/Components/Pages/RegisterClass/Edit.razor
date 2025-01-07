@@ -1,5 +1,115 @@
-@page "/register-classes/edit/{id:guid}"
+@page "/register-class/edit/{RegisterClassId:guid}"
+@using Lisa.Models.Entities
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components
+@inject SchoolService SchoolService
+@inject NavigationManager Navigation
+
+<h3>Edit Register Class</h3>
+
+@if (SelectedSchool == null)
+{
+    <div class="alert alert-warning">
+        No school is selected. Please select a school first.
+    </div>
+}
+else if (EditRegisterClass == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <EditForm Model="@EditRegisterClass" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <!-- Class Name -->
+        <div class="mb-3">
+            <label class="form-label">Class Name</label>
+            <InputText class="form-control" @bind-Value="EditRegisterClass.Name" />
+        </div>
+
+        <!-- Grade Dropdown -->
+        <div class="mb-3">
+            <label class="form-label">Grade</label>
+            <select class="form-select" @bind="EditRegisterClass.GradeId">
+                <option value="">-- Select Grade --</option>
+                @if (Grades != null)
+                {
+                    @foreach (var grade in Grades)
+                    {
+                        <option value="@grade.Id">@grade.Name</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <!-- Teacher Dropdown -->
+        <div class="mb-3">
+            <label class="form-label">Teacher</label>
+            <select class="form-select" @bind="EditRegisterClass.TeacherId">
+                <option value="">-- Select Teacher --</option>
+                @if (Teachers != null)
+                {
+                    @foreach (var teacher in Teachers)
+                    {
+                        <option value="@teacher.Id">@($"{teacher.FirstName} {teacher.LastName}")</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <button class="btn btn-primary" type="submit">Save</button>
+        <button class="btn btn-secondary" type="button" @onclick="Cancel">Cancel</button>
+    </EditForm>
+}
 
 @code {
-    [Parameter] public Guid Id { get; set; }
+    [Parameter]
+    public Guid RegisterClassId { get; set; }
+
+    private RegisterClass? EditRegisterClass;
+    private School? SelectedSchool;
+    private List<Grade>? Grades;
+    private List<Teacher>? Teachers;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SelectedSchool = SchoolService.SelectedSchool;
+        if (SelectedSchool == null)
+        {
+            return;
+        }
+
+        // Load the existing RegisterClass
+        var existingClass = await SchoolService.GetRegisterClassByIdAsync(RegisterClassId);
+        if (existingClass == null)
+        {
+            // Not found or error
+            Navigation.NavigateTo("/register-class");
+            return;
+        }
+
+        // Populate EditRegisterClass with the fetched data
+        EditRegisterClass = existingClass;
+
+        // Also load Grades/Teachers for drop-down
+        Grades = await SchoolService.GetGradesForSchool(SelectedSchool.Id);
+        Teachers = await SchoolService.GetTeachersForSchoolAsync(SelectedSchool.Id);
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (EditRegisterClass == null) return;
+
+        // Save changes
+        await SchoolService.UpdateRegisterClassAsync(EditRegisterClass);
+
+        Navigation.NavigateTo("/register-class");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/register-class");
+    }
 }

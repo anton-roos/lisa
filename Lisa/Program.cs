@@ -83,6 +83,7 @@ builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<LearnerService>();
 builder.Services.AddScoped<SubjectCombinationService>();
 builder.Services.AddScoped<SubjectService>();
+builder.Services.AddScoped<TeacherService>();
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();

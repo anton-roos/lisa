@@ -14,7 +14,6 @@
 
 <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
     <Authorized>
-        <h1>Teachers</h1>
         @if (IsLoading)
         {
             <p>Loading...</p>
@@ -23,13 +22,16 @@
         {
             <div class="mb-4">
                 <h3>Teachers for @SelectedSchool.ShortName</h3>
+                <button class="btn btn-primary" @onclick="AddTeacher">Add Teacher</button>
                 @if (Teachers == null)
                 {
                     <p>Loading...</p>
                 }
                 else if (!Teachers.Any())
                 {
-                    <p>No teachers found for this school.</p>
+                    <div class="alert alert-info">
+                        No teachers found for <strong>@SelectedSchool.ShortName</strong>.
+                    </div>
                 }
                 else
                 {
@@ -48,6 +50,10 @@
                                     <td>@teacher.FirstName @teacher.LastName</td>
                                     <td>@teacher.Email</td>
                                     <td>
+                                        <button class="btn btn-primary btn-sm"
+                                            @onclick="() =>  ViewTeacher(teacher.Id)">View</button>
+                                        <button class="btn btn-secondary btn-sm"
+                                            @onclick="() => EditTeacher(teacher.Id)">Edit</button>
                                         <button class="btn btn-danger btn-sm"
                                             @onclick="async () => { await DeleteTeacher(teacher.Id);}">Delete</button>
                                     </td>
@@ -58,7 +64,6 @@
                 }
             </div>
 
-            <!-- Add Teacher Form -->
             <div>
                 <h4>Add Teacher</h4>
                 <EditForm Context="addContext" Model="NewTeacher" OnValidSubmit="AddTeacher">
@@ -80,7 +85,8 @@
 
                     <div class="form-group">
                         <label for="password">Password</label>
-                        <InputText type="password" id="password" class="form-control" @bind-Value="NewTeacher.PasswordHash" />
+                        <InputText type="password" id="password" class="form-control"
+                            @bind-Value="NewTeacher.PasswordHash" />
                     </div>
 
                     <button type="submit" class="btn btn-primary">Add Teacher</button>
@@ -121,25 +127,6 @@
         IsLoading = false;
     }
 
-    private async Task AddTeacher()
-    {
-        IsLoading = true;
-        if (SelectedSchool != null)
-        {
-            NewTeacher.SchoolId = SelectedSchool.Id;
-
-            DbContext.Teachers.Add(NewTeacher);
-            await DbContext.SaveChangesAsync();
-
-            Teachers = await DbContext.Teachers
-            .Where(t => t.SchoolId == SelectedSchool.Id)
-            .ToListAsync();
-
-            NewTeacher = new Teacher();
-        }
-        IsLoading = false;
-    }
-
     private void HandleSchoolChanged()
     {
         SelectedSchool = SchoolService.SelectedSchool;
@@ -160,5 +147,19 @@
             .ToListAsync();
         }
         IsLoading = false;
+    }
+
+    private void AddTeacher()
+    {
+        NavigationManager.NavigateTo("/teachers/add");
+    }
+    private void EditTeacher(Guid teacherId)
+    {
+        NavigationManager.NavigateTo($"/teachers/edit/{teacherId}");
+    }
+
+    private void ViewTeacher(Guid teacherId)
+    {
+        NavigationManager.NavigateTo($"/teachers/details/{teacherId}");
     }
 }

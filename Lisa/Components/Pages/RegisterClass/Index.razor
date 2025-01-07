@@ -1,1 +1,115 @@
 @page "/register-class"
+@using Lisa.Models.Entities
+@inject SchoolService SchoolService
+@inject NavigationManager NavigationManager
+
+<h3>Register Classes</h3>
+<button class="btn btn-primary" @onclick="AddRegisterClass">Add Register Class</button>
+@if (SelectedSchool != null && RegisterClasses.Any())
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Grade</th>
+                <th>Learner Count</th>
+                <th>Teacher</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var registerClass in RegisterClasses)
+            {
+                <tr>
+                    <td>@registerClass.Name</td>
+                    <td>@registerClass.Grade.Name</td>
+                    <td>@registerClass.Learners.Count.ToString()</td>
+                    <td>@registerClass.Teacher.LastName</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => EditRegisterClass(registerClass.Id)">Edit</button>
+                        <button class="btn btn-primary" @onclick="() => ViewRegisterClass(registerClass.Id)">View</button>
+                        <button class="btn btn-primary" @onclick="() => DeleteRegisterClass(registerClass.Id)">Edit</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else if (SelectedSchool != null && !RegisterClasses.Any())
+{
+    <div class="alert alert-info">
+        No Register Classes found for <strong>@SelectedSchool.ShortName</strong>.
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        Please select a school to view its Register Classes.
+    </div>
+}
+
+@code {
+    private List<RegisterClass> RegisterClasses = new();
+    private School? SelectedSchool;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SchoolService.SchoolSelected += HandleSchoolChanged;
+
+        SelectedSchool = SchoolService.SelectedSchool;
+        if (SelectedSchool != null)
+        {
+            await LoadRegisterClasses(SelectedSchool.Id);
+        }
+    }
+
+    private void HandleSchoolChanged()
+    {
+        SelectedSchool = SchoolService.SelectedSchool;
+        InvokeAsync(async () =>
+        {
+            if (SelectedSchool != null)
+            {
+                await LoadRegisterClasses(SelectedSchool.Id);
+            }
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadRegisterClasses(Guid schoolId)
+    {
+        var unfiltedRegisterClasses = await SchoolService.GetRegisterClassesAsync();
+        RegisterClasses = unfiltedRegisterClasses.Where(rc => rc.Grade.SchoolId == schoolId).ToList();
+    }
+
+    private void EditRegisterClass(Guid registerclassId)
+    {
+        NavigationManager.NavigateTo($"/register-class/edit/{registerclassId}");
+    }
+
+    private void ViewRegisterClass(Guid registerclassId)
+    {
+        NavigationManager.NavigateTo($"/register-class/details/{registerclassId}");
+    }
+
+    public async Task DeleteRegisterClass(Guid registerclassId)
+    {
+        var registerClass = await SchoolService.GetRegisterClassByIdAsync(registerclassId);
+        if (registerClass != null)
+        {
+            await SchoolService.DeleteRegisterClassAsync(registerClass);
+            LoadRegisterClasses(SelectedSchool.Id);
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        SchoolService.SchoolsUpdated -= HandleSchoolChanged;
+    }
+
+    private void AddRegisterClass()
+    {
+        NavigationManager.NavigateTo("/register-class/add");
+    }
+}

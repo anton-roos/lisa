@@ -13,7 +13,7 @@
     <label class="form-label">Search Subjects</label>
     <InputText class="form-control"
                @bind-Value="searchText"
-               oninput="@OnInputChange"
+               @oninput="OnInputChange"
                placeholder="Type to filter subjects..." />
 </div>
 
@@ -64,12 +64,10 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Load subjects from your service
         subjects = await SubjectService.GetAllAsync();
         subjects = subjects.OrderBy(s => s.Name).ToList();
     }
 
-    // Computed property returning only subjects that match the search
     private IEnumerable<Subject> FilteredSubjects
         => subjects != null
             ? subjects.Where(s =>

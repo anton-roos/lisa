@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Data;
 
-public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<LisaDbContext> logger) 
+public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<LisaDbContext> logger)
     : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options)
 {
     private readonly ILogger<LisaDbContext> _logger = logger;
@@ -184,14 +184,15 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
         modelBuilder.Entity<RegisterClass>()
             .HasOne(rc => rc.Teacher)
             .WithMany()
-            .HasForeignKey(rc => rc.TeacherId);
+            .HasForeignKey(rc => rc.TeacherId)
+            .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<RegisterClass>()
             .HasIndex(rc => rc.Name)
             .IsUnique();
         modelBuilder.Entity<RegisterClass>()
             .HasMany(rc => rc.CompulsorySubjects)
             .WithMany()
-            .UsingEntity<Dictionary<string, object>>( 
+            .UsingEntity<Dictionary<string, object>>(
                 "RegisterClassSubject",
                 j => j.HasOne<Subject>()
                     .WithMany()
@@ -205,10 +206,10 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
         modelBuilder.Entity<SubjectCombination>()
             .HasKey(sc => sc.Id);
         modelBuilder.Entity<SubjectCombination>()
-            .HasOne(sc => sc.Grade) // Navigation property in SubjectCombination
-            .WithMany(g => g.SubjectCombinations) // Collection in Grade
-            .HasForeignKey(sc => sc.GradeId) // Foreign key in SubjectCombination
-            .OnDelete(DeleteBehavior.Restrict); // Do not cascade delete
+            .HasOne(sc => sc.Grade)
+            .WithMany(g => g.SubjectCombinations)
+            .HasForeignKey(sc => sc.GradeId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Subject>()
             .HasKey(s => s.Id);
@@ -242,13 +243,13 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .HasForeignKey(p => p.GradeId)
             .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<Period>()
-            .Property(p => p.PeriodStartTime)
+            .Property(p => p.StartTime)
             .IsRequired();
         modelBuilder.Entity<Period>()
-            .Property(p => p.PeriodEndTime)
+            .Property(p => p.EndTime)
             .IsRequired();
         modelBuilder.Entity<Period>()
-            .HasIndex(p => new { p.TeacherId, p.PeriodStartTime, p.PeriodEndTime })
+            .HasIndex(p => new { p.TeacherId, p.StartTime, p.EndTime })
             .IsUnique();
         modelBuilder.Entity<Period>()
             .Property(p => p.Status)
@@ -319,7 +320,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
                     }
                     catch (Exception exception)
                     {
-                        _logger.LogError(exception, "Validation failed for entity of type {EntityType} with values: {CurrentValues}.", entry.Entity.GetType().Name,  entry.CurrentValues);
+                        _logger.LogError(exception, "Validation failed for entity of type {EntityType} with values: {CurrentValues}.", entry.Entity.GetType().Name, entry.CurrentValues);
                         throw new InvalidOperationException($"Validation failed for entity of type {entry.Entity.GetType().Name}.", exception);
                     }
                 }

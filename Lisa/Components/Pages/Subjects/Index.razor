@@ -1,7 +1,71 @@
 @page "/subjects"
+@using Lisa.Models.Entities
+@inject NavigationManager Navigation
+@inject SubjectService SubjectService
 
 <h1>Subjects</h1>
+
 <div class="alert alert-info" role="alert">
     Subjects are shared across schools.
 </div>
-<button>Add Subject</button>
+
+<button class="btn btn-primary" @onclick="AddSubject">Add Subject</button>
+
+<hr />
+
+@if (subjects == null)
+{
+    <p>Loading subjects...</p>
+}
+else if (subjects.Count == 0)
+{
+    <p>No subjects found.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Code</th>
+                <th>Description</th>
+                <th style="width:150px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var subject in subjects)
+            {
+                <tr>
+                    <td>@subject.Name</td>
+                    <td>@subject.Code</td>
+                    <td>@subject.Description</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" @onclick="() => EditSubject(subject.Id)">
+                            Edit
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Subject>? subjects;
+
+    protected override async Task OnInitializedAsync()
+    {
+        subjects = await SubjectService.GetAllAsync();
+        subjects = subjects.OrderBy(s => s.Name).ToList();
+    }
+
+    private void AddSubject()
+    {
+        Navigation.NavigateTo("/subjects/add");
+    }
+
+    private void EditSubject(Guid subjectId)
+    {
+        Navigation.NavigateTo($"/subjects/edit/{subjectId}");
+    }
+}

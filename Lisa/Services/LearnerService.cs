@@ -18,6 +18,15 @@ public class LearnerService(LisaDbContext context, SchoolService schoolService, 
         var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
         return await dbContext.Learners.FindAsync(id);
     }
+    
+    public async Task<Learner?> GetLearnerWithParentsAsync(Guid id)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
+        return await dbContext.Learners
+            .Include(l => l.LearnerParents)
+            .FirstOrDefaultAsync(l => l.Id == id);
+    }
 
     public async Task<List<Learner>> GetLearnersBySchoolAsync(Guid schoolId)
     {

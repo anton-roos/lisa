@@ -16,7 +16,36 @@
             </NavLink>
         </div>
 
-        <AuthorizeView  Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
+        <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="schools">
+                    <span class="bi bi-mortarboard-nav-menu" aria-hidden="true"></span> Schools
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="grades">
+                    <span class="bi grades-icon" aria-hidden="true"></span> Grades
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="subjects">
+                    <span class="bi subject-icon" aria-hidden="true"></span> Subjects
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="communication">
+                    <span class="bi communication-icon" aria-hidden="true"></span> Communication
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="templates">
+                    <span class="bi template-icon" aria-hidden="true"></span> Templates
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="results">
@@ -31,7 +60,8 @@
             </Authorized>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+        <AuthorizeView Context="authContext"
+            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="learners">
                     <span class="bi bi-mortarboard-nav-menu" aria-hidden="true"></span> Learners
@@ -47,60 +77,56 @@
                     <span class="bi combination-icon" aria-hidden="true"></span> Combinations
                 </NavLink>
             </div>
-        </AuthorizeView>
+            <div class="nav-item px-3">
+                <a href="javascript:void(0)" class="nav-link d-flex justify-content-between align-items-center"
+                    @onclick="ToggleUserTypes">
+                    <span>
+                        <span class="bi bi-people-fill"></span> Manage Users
+                    </span>
 
+                    <span class="@(showUserTypes ? "bi-caret-down-fill" : "bi-caret-right-fill")"
+                        style="font-size: 0.8rem;"></span>
+                </a>
+            </div>
 
-        <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="grades">
-                    <span class="bi grades-icon" aria-hidden="true"></span> Grades
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="schools">
-                    <span class="bi bi-mortarboard-nav-menu" aria-hidden="true"></span> Schools
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="subjects">
-                    <span class="bi subject-icon" aria-hidden="true"></span> Subjects
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="teachers">
-                    <span class="bi teacher-icon" aria-hidden="true"></span> Teachers
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="communication">
-                    <span class="bi communication-icon" aria-hidden="true"></span> Communication
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="templates">
-                    <span class="bi template-icon" aria-hidden="true"></span> Templates
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="system-admins">
-                    <span class="bi admin-icon" aria-hidden="true"></span> System Admins
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="principals">
-                    <span class="bi principal-icon" aria-hidden="true"></span> Principals
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="administrators">
-                    <span class="bi administrator-icon" aria-hidden="true"></span> Administrators
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="school-management">
-                    <span class="bi administrator-icon" aria-hidden="true"></span> School Management
-                </NavLink>
-            </div>
+            @if (showUserTypes)
+            {
+                <div class="nav-item px-3 ms-3">
+                    <NavLink class="nav-link" href="system-admins">
+                        <span class="bi admin-icon" aria-hidden="true"></span> System Admins
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3 ms-3">
+                    <NavLink class="nav-link" href="principals">
+                        <span class="bi principal-icon" aria-hidden="true"></span> Principals
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3 ms-3">
+                    <NavLink class="nav-link" href="school-management">
+                        <span class="bi school-management-icon" aria-hidden="true"></span> SMT
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3 ms-3">
+                    <NavLink class="nav-link" href="administrators">
+                        <span class="bi administrator-icon" aria-hidden="true"></span> Administrators
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3 ms-3">
+                    <NavLink class="nav-link" href="teachers">
+                        <span class="bi teacher-icon" aria-hidden="true"></span> Teachers
+                    </NavLink>
+                </div>
+            }
         </AuthorizeView>
     </nav>
 </div>
+
+@code {
+    private bool showUserTypes = false;
+
+    private void ToggleUserTypes()
+    {
+        showUserTypes = !showUserTypes;
+        StateHasChanged();
+    }
+}

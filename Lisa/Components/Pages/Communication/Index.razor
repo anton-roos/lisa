@@ -9,10 +9,9 @@
 @code {
     private void SendEmail()
     {
-        var To = "antonroos992@gmail.com";
         var Subject = "Test Email";
         var Body = "This is a test email";
 
-        EmailService.QueueEmail(to: To, subject: Subject, body: Body, schoolId: 1);
+        EmailService.QueueLearnerProgressReportEmail(subject: Subject, body: Body, schoolId: new Guid(), learnerId: new Guid());
     }
 }

@@ -2,36 +2,99 @@ using System.Net;
 using System.Net.Mail;
 using Hangfire;
 
-namespace Lisa.Services;
-
-public class EmailService
+namespace Lisa.Services
 {
-    public void QueueEmail(string to, string subject, string body, int schoolId)
+    public class EmailService(SchoolService schoolService, LearnerService learnerService, ILogger<EmailService> logger)
     {
-        BackgroundJob.Schedule(() => SendEmail(to, subject, body, schoolId), TimeSpan.FromSeconds(2));
-    }
+        private readonly SchoolService _schoolService = schoolService;
+        private readonly LearnerService _learnerService = learnerService;
+        private readonly ILogger<EmailService> _logger = logger;
 
-    
-    [AutomaticRetry(Attempts = 5, OnAttemptsExceeded = AttemptsExceededAction.Fail)]
-    public void SendEmail(string to, string subject, string body, int schoolId)
-    {
-        var smtpClient = new SmtpClient("smtp.office365.com")
+        /// <summary>
+        /// Queues a job that will send a progress report email for the given learner.
+        /// The mail(s) will be sent to the learner’s parent(s), if they have valid addresses.
+        /// </summary>
+        public void QueueLearnerProgressReportEmail(Guid schoolId, Guid learnerId, string subject, string body)
         {
-            Port = 587,
-            Credentials = new NetworkCredential("portalDCEG@dcegroup.co.za", "Portal@DCEG"),
-            EnableSsl = true,
-        };
+            // Example: schedule to run 2 seconds later
+            BackgroundJob.Schedule(
+                () => SendLearnerProgressReportEmail(schoolId, learnerId, subject, body),
+                TimeSpan.FromSeconds(2)
+            );
+        }
 
-        var mailMessage = new MailMessage
+        /// <summary>
+        /// Actually sends the email(s) for the learner’s parents.
+        /// The method is called by Hangfire (hence the parameter signature is serializable).
+        /// </summary>
+        [AutomaticRetry(Attempts = 5, OnAttemptsExceeded = AttemptsExceededAction.Fail)]
+        public async Task SendLearnerProgressReportEmail(Guid schoolId, Guid learnerId, string subject, string body)
         {
-            From = new MailAddress("portalDCEG@dcegroup.co.za"),
-            Subject = subject,
-            Body = body,
-            IsBodyHtml = true,
-        };
+            var school = await _schoolService.GetSchoolAsync(schoolId);
+            if (school == null)
+            {
+                _logger.LogError("School with ID {schoolId} not found.", schoolId);
+                throw new Exception($"School with ID {schoolId} not found.");
+            }
 
-        mailMessage.To.Add(to);
+            if (school.SmtpDetails == null)
+            {
+                _logger.LogError("SMTP details not found for school with ID {schoolId}.", schoolId);
+                throw new Exception($"SMTP details not found for school with ID {schoolId}.");
+            }
+            
+            using var smtpClient = new SmtpClient(school.SmtpDetails.Host)
+            {
+                Port = school.SmtpDetails.Port,
+                Credentials = new NetworkCredential(school.SmtpDetails.Email, school.SmtpDetails.Password),
+                EnableSsl = true
+            };
 
-        smtpClient.Send(mailMessage);
+            var learner = await _learnerService.GetLearnerWithParentsAsync(learnerId);
+
+            if (learner == null)
+            {
+                _logger.LogError("Learner with ID {learnerId} not found.", learnerId);
+                throw new Exception($"Learner with ID {learnerId} not found.");
+            }
+
+            var parents = learner.LearnerParents;
+
+            if (parents == null || parents.Count == 0)
+            {
+                _logger.LogWarning("No parents found for learner with ID {learnerId}.", learnerId);
+                return;
+            }
+
+            foreach (var parent in parents)
+            {
+                var emailsToSend = new List<string>();
+                if (!string.IsNullOrWhiteSpace(parent.PrimaryEmail))
+                    emailsToSend.Add(parent.PrimaryEmail);
+
+                if (!string.IsNullOrWhiteSpace(parent.SecondaryEmail))
+                    emailsToSend.Add(parent.SecondaryEmail);
+
+                if (emailsToSend.Count == 0)
+                    continue;
+
+                var mailMessage = new MailMessage
+                {
+                    From = new MailAddress(school.SmtpDetails.Email!),
+                    Subject = subject,
+                    Body = body,
+                    IsBodyHtml = true
+                };
+
+                foreach (var email in emailsToSend)
+                {
+                    mailMessage.To.Add(email);
+                }
+
+                smtpClient.Send(mailMessage);
+
+                _logger.LogInformation("Email sent to parent(s) for learner {learnerId}.", learnerId);
+            }
+        }
     }
 }

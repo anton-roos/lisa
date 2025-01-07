@@ -85,15 +85,11 @@
         IsLoading = true;
         try
         {
-            // Load dropdown data
             SchoolTypes = await SchoolService.GetSchoolTypesAsync();
             Curriculums = await SchoolService.GetSchoolCurriculumsAsync();
-
-            // Load the school details
             school = await SchoolService.GetSchoolAsync(Id);
             if (school == null)
             {
-                // Navigate back if school is not found
                 NavigationManager.NavigateTo("/schools");
             }
         }
@@ -122,7 +118,6 @@
 
     private void Cancel()
     {
-        // Navigate back to the list of schools
         NavigationManager.NavigateTo("/schools");
     }
 }

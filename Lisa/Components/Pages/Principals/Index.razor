@@ -52,27 +52,23 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Listen for when the school changes
         SchoolService.SchoolSelected += HandleSchoolChange;
         CurrentSchool = SchoolService.SelectedSchool;
 
         if (CurrentSchool != null)
         {
-            // Load Principals
             await LoadUsers();
         }
     }
 
     private async Task LoadUsers()
     {
-        // Retrieve all Principals for the current school
         UsersInRole = await SchoolService.GetUsersByRoleAndSchoolAsync(Roles.Principal, CurrentSchool.Id);
         Principals = UsersInRole.OfType<Principal>().ToList();
     }
 
     private void HandleSchoolChange()
     {
-        // Called when SchoolService.SelectedSchool changes
         CurrentSchool = SchoolService.SelectedSchool;
         InvokeAsync(async () =>
         {
@@ -86,7 +82,6 @@ else
 
     private void GoToAddPrincipal()
     {
-        // Navigate to the add page for Principals
         Navigation.NavigateTo("/principals/add");
     }
 }

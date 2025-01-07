@@ -12,13 +12,11 @@
     <DataAnnotationsValidator />
     <ValidationSummary />
 
-    <!-- Combination Name -->
     <div class="mb-3">
         <label class="form-label">Name</label>
         <InputText class="form-control" @bind-Value="NewCombination.Name" />
     </div>
 
-    <!-- Grade Dropdown -->
     <div class="mb-3">
         <label class="form-label">Grade</label>
         <select class="form-select" @bind="NewCombination.GradeId">
@@ -30,13 +28,11 @@
         </select>
     </div>
 
-    <!-- Search / Filter Box -->
     <div class="mb-3">
         <label class="form-label">Search Subjects</label>
         <InputText class="form-control" oninput="@OnInputChange" @bind-Value="@searchText" placeholder="Type to filter subjects..." />
     </div>
 
-    <!-- Subject Checkboxes -->
     <div class="mb-3">
         <label class="form-label">Subjects</label>
 
@@ -44,7 +40,6 @@
         {
             @foreach (var subject in FilteredSubjects)
             {
-                // Check if this subject is currently selected
                 bool isChecked = NewCombination.SubjectIds.Contains(subject.Id);
 
                 <div>
@@ -72,41 +67,29 @@
     private List<Subject> AllSubjects = new();
     private School SelectedSchool = new();
     private event Action OnInputChanged;
-
-    // Stores the user’s search text
     private string searchText = string.Empty;
 
-    // A computed property that filters the subjects based on searchText
     private IEnumerable<Subject> FilteredSubjects =>
         AllSubjects.Where(s => string.IsNullOrEmpty(searchText)
             || (s.Name != null && s.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase)));
 
     protected override async Task OnInitializedAsync()
     {
-        // Get the current school from your SchoolService
         SelectedSchool = SchoolService.SelectedSchool;
-
-        // Load all subjects (or filter by school if needed)
         AllSubjects = await SubjectService.GetAllAsync();
-
-        // Load grades for the selected school
         Grades = await SchoolService.GetGradesForSchool(SelectedSchool.Id);
     }
 
     private async Task HandleValidSubmit()
     {
-        // Build the entity from the ViewModel
         var entity = new SubjectCombination
         {
-            Id = Guid.NewGuid(),
             Name = NewCombination.Name,
             GradeId = NewCombination.GradeId
         };
 
-        // Pass in the chosen subject IDs for linking
         await SubjectCombinationService.CreateAsync(entity, NewCombination.SubjectIds);
 
-        // Navigate back to combinations list
         Navigation.NavigateTo("/combinations");
     }
 
@@ -115,24 +98,20 @@
         Navigation.NavigateTo("/combinations");
     }
 
-    // Called whenever a checkbox is clicked
     private void ToggleSubject(Guid subjectId)
     {
         if (NewCombination.SubjectIds.Contains(subjectId))
         {
-            // Remove it if it's already selected
             NewCombination.SubjectIds.Remove(subjectId);
         }
         else
         {
-            // Otherwise, add it
             NewCombination.SubjectIds.Add(subjectId);
         }
     }
 
     private void OnInputChange(ChangeEventArgs e)
     {
-        // ✅ This correctly extracts the string from e.Value
         searchText = e?.Value?.ToString() ?? string.Empty;
     }
 }

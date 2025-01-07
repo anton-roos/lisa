@@ -5,7 +5,6 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject NavigationManager Navigation
-@inject LisaDbContext DbContext
 @inject UserManager<User> UserManager
 @inject SchoolService SchoolService
 
@@ -78,9 +77,7 @@
             var result = await UserManager.CreateAsync(userEntity, Administrator.Password);
             if (result.Succeeded)
             {
-                // Assign "Administrator" role to the user (if you use roles)
                 await UserManager.AddToRoleAsync(userEntity, Roles.Administrator);
-
                 Navigation.NavigateTo("/administrators");
             }
             else

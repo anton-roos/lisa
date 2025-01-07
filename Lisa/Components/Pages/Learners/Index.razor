@@ -79,7 +79,6 @@ else
 
     public void Dispose()
     {
-        // Unsubscribe from the event to prevent memory leaks
         SchoolService.SchoolsUpdated -= HandleSchoolChanged;
     }
 

@@ -47,7 +47,6 @@ else
         if (SelectedSchool == null)
             return;
 
-        // Build the new Grade entity
         var gradeEntity = new Lisa.Models.Entities.Grade
         {
             Id = Guid.NewGuid(),
@@ -56,10 +55,7 @@ else
             SchoolId = SelectedSchool.Id
         };
 
-        // Save via the service (replace with your actual method)
         await SchoolService.AddGradeToSchool(gradeEntity);
-
-        // Navigate back to the grades list
         Navigation.NavigateTo("/grades");
     }
 

@@ -1,11 +1,10 @@
-@page "/sysadmins/add/"
+@page "/system-administrators/add/"
 @using Lisa.Models.ViewModels
 @using Microsoft.AspNetCore.Authorization
 @using Lisa.Models.Entities
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject NavigationManager Navigation
-@inject LisaDbContext DbContext
 @inject UserManager<User> UserManager
 @inject SchoolService SchoolService
 
@@ -94,6 +93,6 @@
 
     private void Cancel()
     {
-        Navigation.NavigateTo("/sysadmins");
+        Navigation.NavigateTo("/system-administrators");
     }
 }

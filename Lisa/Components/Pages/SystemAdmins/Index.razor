@@ -23,13 +23,18 @@ else
         <thead>
             <tr>
                 <th>Name</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var user in UsersInRole)
             {
                 <tr>
-                    <td>@($"{user.FirstName ?? "Unknown"} {user.LastName}")</td>
+                    <td>@($"{user.FirstName} {user.LastName}")</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => EditSysAdmin(user.Id)">Edit</button>
+                        <button class="btn btn-danger" @onclick="() => DeleteSysAdmin(user.Id)">Delete</button>
+                    </td>
                 </tr>
             }
         </tbody>
@@ -47,5 +52,15 @@ else
     private void GoToAddSysAdmin()
     {
         Navigation.NavigateTo("/system-administrators/add");
+    }
+
+    private void EditSysAdmin(Guid id)
+    {
+        Navigation.NavigateTo($"/system-administrators/edit/{id}");
+    }
+
+    private void DeleteSysAdmin(Guid id)
+    {
+        Navigation.NavigateTo($"/system-administrators/delete/{id}");
     }
 }

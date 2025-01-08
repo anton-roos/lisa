@@ -1,13 +1,56 @@
 ﻿@page "/"
 @rendermode InteractiveServer
 @inject SentryService SentryService
+@using Lisa.Models.Entities
+@inherits LayoutComponentBase
+@inject SchoolService SchoolService
+
 
 <PageTitle>DCEG Portal</PageTitle>
 
-<AuthorizeView Context="authContext">
+<AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator}")">
     <Authorized>
-        <p>You can see this because you are authenticated.</p>
-
+        <div class="container mt-4">
+            <div class="text-center py-3">
+                <h3>Learner Information System Dashboard</h3>
+            </div>
+            <div class="row mt-4">
+                <div class="col">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h3 class="card-title">Welcome System Administrator</h3>
+                            <p class="card-text">An overview of all schools.</p>
+                        </div>
+                    </div>
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body bg-light">
+                                    <h4 class="card-title">Schools</h4>
+                                    <p class="card-text display-4">@Schools.Count()</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body bg-light">
+                                    <h4 class="card-title">Learners</h4>
+                                    <p class="card-text display-4">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body bg-light">
+                                    <h4 class="card-title">Results Submitted</h4>
+                                    <p class="card-text display-4">0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </Authorized>
     <NotAuthorized>
         <p>You are not authenticated.</p>
@@ -21,14 +64,11 @@
     </Authorized>
 </AuthorizeView>
 
-<AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator}")">
-    <Authorized>
-        <p>You are a System Administrator</p>
-    </Authorized>
-</AuthorizeView>
-
 @code {
-    protected override void OnInitialized()
+    List<School> Schools = new();
+
+    protected async override Task OnInitializedAsync()
     {
+        Schools = await SchoolService.GetAllAsync();
     }
 }

@@ -5,9 +5,8 @@
 @inject GradeService GradeService
 @inject NavigationManager Navigation
 
-<h1>Grades</h1>
 <h3>Grades for @SelectedSchool?.ShortName</h3>
-
+<button class="btn btn-primary" @onclick="GoToAddGrade">Add Grade</button>
 @if (Grades?.Count == 0)
 {
     <div class="alert alert-info">
@@ -39,7 +38,7 @@ else
     </table>
 }
 
-<button class="btn btn-success" @onclick="GoToAddGrade">Add Grade</button>
+
 
 @code {
     private School? SelectedSchool;

@@ -23,7 +23,7 @@ public class GradeService(IDbContextFactory<LisaDbContext> dbContextFactory)
             .FirstOrDefaultAsync(grade => grade.Id == id);
     }
 
-    public async Task<IEnumerable<Grade>> GetGradesAsync()
+    public async Task<IEnumerable<Grade>> GetAllAsync()
     {
         var _context = _dbContextFactory.CreateDbContext();
         return await _context.Grades

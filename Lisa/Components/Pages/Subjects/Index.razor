@@ -3,7 +3,9 @@
 @inject NavigationManager Navigation
 @inject SubjectService SubjectService
 
-<h1>Subjects</h1>
+<h3>Subjects</h3>
+
+<button class="btn btn-primary" @onclick="AddSubject">Add Subject</button>
 
 <div class="alert alert-info" role="alert">
     Subjects are shared across schools.
@@ -17,7 +19,6 @@
                placeholder="Type to filter subjects..." />
 </div>
 
-<button class="btn btn-primary" @onclick="AddSubject">Add Subject</button>
 
 <hr />
 

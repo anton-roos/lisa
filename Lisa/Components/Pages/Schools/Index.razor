@@ -4,16 +4,18 @@
 @inject SchoolService SchoolService
 
 <h3>Schools</h3>
-<FluentButton Primary="true" @onclick="() => AddSchool()">
+<button class="btn btn-primary" @onclick="() => AddSchool()">
     Add School
-</FluentButton>
+</button>
 @if (schools == null)
 {
     <p>Loading...</p>
 }
 else if (schools.Count == 0)
 {
-    <p>No records found.</p>
+     <div class="alert alert-info">
+        No Schools found, please add a School.
+    </div>
 }
 else
 {

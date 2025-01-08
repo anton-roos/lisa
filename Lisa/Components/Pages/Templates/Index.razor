@@ -1,5 +1,13 @@
 @page "/templates"
+@inject NavigationManager Navigation
 
 <PageTitle>Templates</PageTitle>
-<h1>Templates</h1>
-<div>COMMING SOON!!!</div>
+<h3>Templates</h3>
+<button class="btn btn-primary" @onclick="GoToAddTemplate">Add Template</button>
+
+@code {
+    private void GoToAddTemplate()
+    {
+        Navigation.NavigateTo("/templates/add");
+    }
+}

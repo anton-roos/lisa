@@ -33,7 +33,9 @@
 }
 else if (SelectedSchool != null && !Learners.Any())
 {
-    <p>No learners found for the @SelectedSchool.ShortName</p>
+    <div class="alert alert-info">
+        No learners found for @SelectedSchool.ShortName.
+    </div>
 }
 else
 {
@@ -91,5 +93,5 @@ else
     private void AddLearner()
     {
         NavigationManager.NavigateTo("/learners/add");
-    }   
+    }
 }

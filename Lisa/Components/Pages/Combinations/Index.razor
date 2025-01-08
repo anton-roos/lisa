@@ -2,16 +2,26 @@
 @using Lisa.Models.Entities
 @inject NavigationManager Navigation
 @inject CombinationService CombinationService
+@inject GradeService GradeService
 
 <h3>Subject Combinations</h3>
+<button class="btn btn-primary" @onclick="GoToAddPage">Add Subject Combination</button>
 
 @if (SubjectCombinations == null)
 {
     <p>Loading...</p>
 }
+else if (Grades == null || !Grades.Any())
+{
+    <div class="alert alert-warning">
+        No Grades found. Please add a grade first before adding Subject Combination.
+    </div>
+}
 else if (!SubjectCombinations.Any())
 {
-    <p>No Subject Combinations found.</p>
+    <div class="alert alert-info">
+        No Subject Combinations found.
+    </div>
 }
 else
 {
@@ -38,13 +48,14 @@ else
     </table>
 }
 
-<button class="btn btn-success" @onclick="GoToAddPage">Add Subject Combination</button>
 
 @code {
     private IEnumerable<Combination>? SubjectCombinations;
+    private IEnumerable<Grade>? Grades;
 
     protected override async Task OnInitializedAsync()
     {
+        Grades = await GradeService.GetAllAsync();
         SubjectCombinations = await CombinationService.GetAllAsync();
     }
 

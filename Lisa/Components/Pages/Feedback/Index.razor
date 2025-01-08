@@ -1,5 +1,14 @@
 @page "/feedback"
 
-<h1>Feedback
-</h1>
-<div>COMMING SOON!!!</div>
+<h3>Feedback</h3>
+<button class="btn btn-primary" @onclick="SendFeedback">Send Feedback</button>
+<div class="alert alert-info">
+    No feedback found.
+</div>
+
+@code {
+    private void SendFeedback()
+    {
+        // Send feedback
+    }
+}

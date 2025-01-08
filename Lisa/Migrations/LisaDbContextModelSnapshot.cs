@@ -22,6 +22,21 @@ namespace Lisa.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("CombinationSubject", b =>
+                {
+                    b.Property<Guid>("SubjectCombinationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("SubjectCombinationId", "SubjectId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.ToTable("CombinationSubject");
+                });
+
             modelBuilder.Entity("Lisa.Models.Entities.CareGroup", b =>
                 {
                     b.Property<Guid>("Id")
@@ -42,6 +57,25 @@ namespace Lisa.Migrations
                     b.HasIndex("SchoolId");
 
                     b.ToTable("CareGroups");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.Combination", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("GradeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GradeId");
+
+                    b.ToTable("Combinations");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.Grade", b =>
@@ -82,6 +116,9 @@ namespace Lisa.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<Guid?>("CombinationId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -97,9 +134,6 @@ namespace Lisa.Migrations
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("SubjectCombinationId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -110,16 +144,16 @@ namespace Lisa.Migrations
                     b.HasIndex("Code")
                         .IsUnique();
 
+                    b.HasIndex("CombinationId");
+
                     b.HasIndex("RegisterClassId");
 
                     b.HasIndex("SchoolId");
 
-                    b.HasIndex("SubjectCombinationId");
-
                     b.ToTable("Learners");
                 });
 
-            modelBuilder.Entity("Lisa.Models.Entities.LearnerParent", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.Parent", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -189,23 +223,18 @@ namespace Lisa.Migrations
                     b.Property<Guid>("TeacherId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("TeacherId1")
-                        .HasColumnType("uuid");
-
                     b.HasKey("Id");
 
                     b.HasIndex("GradeId");
 
                     b.HasIndex("SubjectId");
 
-                    b.HasIndex("TeacherId1");
-
                     b.HasIndex("TeacherId", "StartTime", "EndTime")
                         .IsUnique();
 
                     b.ToTable("Periods", t =>
                         {
-                            t.HasCheckConstraint("CK_Period_StartTime_EndTime", "\"PeriodStartTime\" < \"PeriodEndTime\"");
+                            t.HasCheckConstraint("CK_Period_StartTime_EndTime", "\"StartTime\" < \"EndTime\"");
                         });
                 });
 
@@ -227,9 +256,6 @@ namespace Lisa.Migrations
                     b.Property<Guid>("TeacherId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("TeacherId1")
-                        .HasColumnType("uuid");
-
                     b.HasKey("Id");
 
                     b.HasIndex("GradeId");
@@ -240,8 +266,6 @@ namespace Lisa.Migrations
                     b.HasIndex("SchoolId");
 
                     b.HasIndex("TeacherId");
-
-                    b.HasIndex("TeacherId1");
 
                     b.ToTable("RegisterClasses");
                 });
@@ -383,40 +407,6 @@ namespace Lisa.Migrations
                     b.HasIndex("TeacherId");
 
                     b.ToTable("Subjects");
-                });
-
-            modelBuilder.Entity("Lisa.Models.Entities.SubjectCombination", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("GradeId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GradeId");
-
-                    b.ToTable("SubjectCombinations");
-                });
-
-            modelBuilder.Entity("Lisa.Models.Entities.SubjectCombinationSubject", b =>
-                {
-                    b.Property<Guid>("SubjectCombinationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("SubjectId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("SubjectCombinationId", "SubjectId");
-
-                    b.HasIndex("SubjectId");
-
-                    b.ToTable("SubjectCombinationSubjects");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.User", b =>
@@ -718,6 +708,21 @@ namespace Lisa.Migrations
                     b.HasDiscriminator().HasValue("Teacher");
                 });
 
+            modelBuilder.Entity("CombinationSubject", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.Combination", null)
+                        .WithMany()
+                        .HasForeignKey("SubjectCombinationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.Subject", null)
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Lisa.Models.Entities.CareGroup", b =>
                 {
                     b.HasOne("Lisa.Models.Entities.School", "School")
@@ -727,6 +732,17 @@ namespace Lisa.Migrations
                         .IsRequired();
 
                     b.Navigation("School");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.Combination", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.Grade", "Grade")
+                        .WithMany("Combinations")
+                        .HasForeignKey("GradeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Grade");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.Grade", b =>
@@ -746,6 +762,11 @@ namespace Lisa.Migrations
                         .WithMany("CareGroupMembers")
                         .HasForeignKey("CareGroupId");
 
+                    b.HasOne("Lisa.Models.Entities.Combination", "Combination")
+                        .WithMany()
+                        .HasForeignKey("CombinationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Lisa.Models.Entities.RegisterClass", "RegisterClass")
                         .WithMany("Learners")
                         .HasForeignKey("RegisterClassId")
@@ -757,21 +778,16 @@ namespace Lisa.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Lisa.Models.Entities.SubjectCombination", "SubjectCombination")
-                        .WithMany()
-                        .HasForeignKey("SubjectCombinationId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("CareGroup");
+
+                    b.Navigation("Combination");
 
                     b.Navigation("RegisterClass");
 
                     b.Navigation("School");
-
-                    b.Navigation("SubjectCombination");
                 });
 
-            modelBuilder.Entity("Lisa.Models.Entities.LearnerParent", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.Parent", b =>
                 {
                     b.HasOne("Lisa.Models.Entities.Learner", "Learner")
                         .WithMany("LearnerParents")
@@ -797,14 +813,10 @@ namespace Lisa.Migrations
                         .IsRequired();
 
                     b.HasOne("Lisa.Models.Entities.Teacher", "Teacher")
-                        .WithMany()
+                        .WithMany("Periods")
                         .HasForeignKey("TeacherId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("Lisa.Models.Entities.Teacher", null)
-                        .WithMany("Periods")
-                        .HasForeignKey("TeacherId1");
 
                     b.Navigation("Grade");
 
@@ -826,14 +838,10 @@ namespace Lisa.Migrations
                         .HasForeignKey("SchoolId");
 
                     b.HasOne("Lisa.Models.Entities.Teacher", "Teacher")
-                        .WithMany()
+                        .WithMany("RegisterClasses")
                         .HasForeignKey("TeacherId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("Lisa.Models.Entities.Teacher", null)
-                        .WithMany("RegisterClasses")
-                        .HasForeignKey("TeacherId1");
 
                     b.Navigation("Grade");
 
@@ -910,36 +918,6 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.Teacher", null)
                         .WithMany("Subjects")
                         .HasForeignKey("TeacherId");
-                });
-
-            modelBuilder.Entity("Lisa.Models.Entities.SubjectCombination", b =>
-                {
-                    b.HasOne("Lisa.Models.Entities.Grade", "Grade")
-                        .WithMany("SubjectCombinations")
-                        .HasForeignKey("GradeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Grade");
-                });
-
-            modelBuilder.Entity("Lisa.Models.Entities.SubjectCombinationSubject", b =>
-                {
-                    b.HasOne("Lisa.Models.Entities.SubjectCombination", "SubjectCombination")
-                        .WithMany("SubjectCombinationSubjects")
-                        .HasForeignKey("SubjectCombinationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Lisa.Models.Entities.Subject", "Subject")
-                        .WithMany()
-                        .HasForeignKey("SubjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Subject");
-
-                    b.Navigation("SubjectCombination");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -1059,9 +1037,9 @@ namespace Lisa.Migrations
 
             modelBuilder.Entity("Lisa.Models.Entities.Grade", b =>
                 {
-                    b.Navigation("RegisterClasses");
+                    b.Navigation("Combinations");
 
-                    b.Navigation("SubjectCombinations");
+                    b.Navigation("RegisterClasses");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.Learner", b =>
@@ -1091,11 +1069,6 @@ namespace Lisa.Migrations
                     b.Navigation("SchoolManagements");
 
                     b.Navigation("Teachers");
-                });
-
-            modelBuilder.Entity("Lisa.Models.Entities.SubjectCombination", b =>
-                {
-                    b.Navigation("SubjectCombinationSubjects");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.Teacher", b =>

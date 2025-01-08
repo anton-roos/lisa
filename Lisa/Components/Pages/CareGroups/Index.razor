@@ -1,1 +1,66 @@
 @page "/care-groups"
+@using Lisa.Models.Entities
+@inject NavigationManager Navigation
+@inject CareGroupService CareGroupService
+@inject SchoolService SchoolService
+
+<h3>Care Groups</h3>
+<button class="btn btn-primary" @onclick="GoToAddPage">Add Subject Combination</button>
+@if (CareGroups == null)
+{
+    <p>Loading...</p>
+}
+else if (!CareGroups.Any())
+{
+   <div class="alert alert-warning">
+        No Care Groups for <strong>@CurrentSchool.ShortName</strong>.
+    </div>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Learner Count</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var careGroup in CareGroups)
+            {
+                <tr>
+                    <td>@careGroup.Name</td>
+                    <td>@careGroup.CareGroupMembers?.Count().ToString()</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => EditCombination(careGroup.Id)">View</button>
+                        <button class="btn btn-secondary" @onclick="() => EditCombination(careGroup.Id)">Edit</button>
+                        <button class="btn btn-danger" @onclick="() => EditCombination(careGroup.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IEnumerable<CareGroup>? CareGroupsToFilter;
+    private IEnumerable<CareGroup>? CareGroups;
+    private School CurrentSchool = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        CareGroupsToFilter = await CareGroupService.GetAllAsync();
+        CurrentSchool = SchoolService.GetSelectedSchool();
+        CareGroups = CareGroupsToFilter.Where(c => c.SchoolId == CurrentSchool.Id);
+    }
+
+    private void GoToAddPage()
+    {
+        Navigation.NavigateTo("/care-groups/add");
+    }
+
+    private void EditCombination(Guid id)
+    {
+        Navigation.NavigateTo($"/care-groups/edit/{id}");
+    }
+}

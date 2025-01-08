@@ -3,48 +3,72 @@
 @inherits ComponentBase
 @inject SchoolService SchoolService
 
-<div class="select-school">
-    <div class="select-school-text">
-        Select School
+@if (IsLoading)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="select-school">
+        <div class="select-school-text">
+            Select School
+        </div>
+        <div class="select-school-dropdown">
+            <FluentSelect TOption="string" @bind-Value="SelectedSchoolId">
+                @foreach (var school in schools!)
+                {
+                    <FluentOption Value="@school.Id.ToString()">@school.ShortName</FluentOption>
+                }
+            </FluentSelect>
+        </div>
     </div>
-    <div class="select-school-dropdown">
-        <FluentSelect TOption="string" @bind-Value="SelectedSchoolId" @onchange="HandleSelect">
-            @foreach (var school in schools!)
-            {
-                <FluentOption Value="@school.Id.ToString()">@school.ShortName</FluentOption>
-            }
-        </FluentSelect>
-    </div>
-</div>
+}
+
 @code {
     private List<School>? schools;
     private string? SelectedSchoolId;
+    private bool IsLoading = false;
+
 
     protected override async Task OnInitializedAsync()
     {
-        schools = SchoolService.Schools;
-        SchoolService.SchoolsUpdated += OnSchoolsUpdated;
+        IsLoading = true;
         await LoadSchoolsAsync();
+
+        // Subscribe to the event
+        SchoolService.SchoolsUpdated += HandleSchoolsUpdated;
+
+        IsLoading = false;
     }
 
     private async Task LoadSchoolsAsync()
     {
-        schools = SchoolService.Schools;
+        IsLoading = true;
+        schools = await SchoolService.GetAllAsync();
+        IsLoading = false;
         await InvokeAsync(StateHasChanged);
     }
 
-    private void OnSchoolsUpdated()
+    private void HandleSchoolsUpdated()
     {
-        _ = LoadSchoolsAsync();
+        _ = OnSchoolsUpdatedSafeAsync();
     }
 
-    private void HandleSelect(ChangeEventArgs e)
+    private async Task OnSchoolsUpdatedSafeAsync()
     {
-        var selectedSchoolId = Guid.Parse(e.Value!.ToString()!);
-        SchoolService.SetCurrentSchool(selectedSchoolId);
+        try
+        {
+            await LoadSchoolsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error updating schools: {ex.Message}");
+        }
     }
-        public void Dispose()
+
+    public void Dispose()
     {
-        SchoolService.SchoolsUpdated -= OnSchoolsUpdated;
+        // Unsubscribe from the event
+        SchoolService.SchoolsUpdated -= HandleSchoolsUpdated;
     }
 }

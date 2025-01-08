@@ -2,6 +2,7 @@
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
 @inject SchoolService SchoolService
+@inject GradeService GradeService
 @inject NavigationManager Navigation
 @using Microsoft.AspNetCore.Components
 
@@ -51,7 +52,7 @@
     protected override async Task OnParametersSetAsync()
     {
         // Load the grade from your service:
-        Grade = await SchoolService.GetGradeByIdAsync(Id);
+        Grade = await GradeService.GetByIdAsync(Id);
 
         if (Grade != null)
         {
@@ -74,7 +75,7 @@
         Grade.SequenceNumber = GradeModel.SequenceNumber;
 
         // Save changes to the database
-        await SchoolService.UpdateGrade(Grade);
+        await GradeService.UpdateGradeAsync(Grade);
 
         // Navigate back to the grades list
         Navigation.NavigateTo("/grades");

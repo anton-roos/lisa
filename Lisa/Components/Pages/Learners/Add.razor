@@ -3,6 +3,7 @@
 @inject NavigationManager navigationManager
 @inject LearnerService learnerService
 @inject SchoolService schoolService
+@inject CombinationService combinationService
 @inject IToastService ToastService
 
 <h3>Add Learner</h3>
@@ -55,9 +56,9 @@
 
     <div>
         <label for="SubjectCombinationId">Subject Combination</label>
-        <InputSelect id="SubjectCombinationId" class="form-control" @bind-Value="learner.SubjectCombinationId">
+        <InputSelect id="SubjectCombinationId" class="form-control" @bind-Value="learner.CombinationId">
             <option value="">Select Subject Combination</option>
-            @foreach (var subjectCombination in subjectCombinations)
+            @foreach (var subjectCombination in combinations)
             {
                 <option value="@subjectCombination.Id">@subjectCombination.Name</option>
             }
@@ -71,14 +72,14 @@
     private Learner learner = new Learner();
     private List<RegisterClass> registerClasses = new();
     private List<CareGroup> careGroups = new();
-    private List<SubjectCombination> subjectCombinations = new();
+    private IEnumerable<Combination> combinations;
     private School school = new();
 
     protected override async Task OnInitializedAsync()
     {
         registerClasses = await learnerService.GetRegisterClasses();
         careGroups = await learnerService.GetCareGroups();
-        subjectCombinations = await learnerService.GetSubjectCombinations();
+        combinations = await combinationService.GetAllAsync();
         school = schoolService.SelectedSchool;
     }
 

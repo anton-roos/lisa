@@ -5,6 +5,8 @@
 @inject NavigationManager Navigation
 @inject SchoolService SchoolService
 @inject LearnerService LearnerService
+@inject GradeService GradeService
+@inject SubjectService SubjectService
 
 <h1>Capture Marks</h1>
 
@@ -104,7 +106,7 @@ else
     {
         SchoolService.SchoolSelected += HandleSchoolChanged;
         SelectedSchool = SchoolService.SelectedSchool;
-        Grades = await SchoolService.GetGradesForSchool(SelectedSchool.Id);
+        Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
     }
     
     private async Task HandleGradeSelect(ChangeEventArgs e)
@@ -128,14 +130,14 @@ else
 
     private async Task LoadGrades()
     {
-        Grades = await SchoolService.GetGradesForSchool(SelectedSchool.Id);
+        Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
     }
 
     private async Task LoadSubjects()
     {
         if (SelectedSchool != null)
         {
-            Subjects = await SchoolService.GetSubjects();
+            Subjects = await SubjectService.GetAllAsync();
         }
     }
 

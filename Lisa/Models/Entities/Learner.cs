@@ -11,12 +11,12 @@ public class Learner
     public DateTime UpdatedAt { get; set; }
     public Guid? RegisterClassId { get; set; }
     public RegisterClass? RegisterClass { get; set; }
-    public ICollection<LearnerParent>? LearnerParents { get; set; }
+    public ICollection<Parent>? LearnerParents { get; set; }
     public ICollection<Result>? Results { get; set; }
     public Guid? CareGroupId { get; set; }
     public CareGroup? CareGroup { get; set; }
-    public Guid? SubjectCombinationId { get; set; }
-    public SubjectCombination? SubjectCombination { get; set; }
+    public Guid? CombinationId { get; set; }
+    public Combination? Combination { get; set; }
     public Guid SchoolId { get; set; }
     public School? School { get; set; }
 }

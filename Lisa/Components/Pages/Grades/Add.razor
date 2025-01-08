@@ -1,5 +1,6 @@
 @page "/grades/add"
 @inject SchoolService SchoolService
+@inject GradeService GradeService
 @inject NavigationManager Navigation
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
@@ -55,7 +56,7 @@ else
             SchoolId = SelectedSchool.Id
         };
 
-        await SchoolService.AddGradeToSchool(gradeEntity);
+        await GradeService.CreateGradeAsync(gradeEntity);
         Navigation.NavigateTo("/grades");
     }
 

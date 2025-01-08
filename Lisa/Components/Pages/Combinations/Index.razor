@@ -1,7 +1,7 @@
 @page "/combinations"
 @using Lisa.Models.Entities
 @inject NavigationManager Navigation
-@inject SubjectCombinationService SubjectCombinationService
+@inject CombinationService CombinationService
 
 <h3>Subject Combinations</h3>
 
@@ -9,7 +9,7 @@
 {
     <p>Loading...</p>
 }
-else if (SubjectCombinations.Count == 0)
+else if (!SubjectCombinations.Any())
 {
     <p>No Subject Combinations found.</p>
 }
@@ -41,11 +41,11 @@ else
 <button class="btn btn-success" @onclick="GoToAddPage">Add Subject Combination</button>
 
 @code {
-    private List<SubjectCombination>? SubjectCombinations;
+    private IEnumerable<Combination>? SubjectCombinations;
 
     protected override async Task OnInitializedAsync()
     {
-        SubjectCombinations = await SubjectCombinationService.GetAllAsync();
+        SubjectCombinations = await CombinationService.GetAllAsync();
     }
 
     private void GoToAddPage()

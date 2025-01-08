@@ -2,6 +2,7 @@
 @using Lisa.Models.Entities
 @inject NavigationManager Navigation
 @inject SchoolService SchoolService
+@inject UserService UserService
 
 <h3>School Management</h3>
 
@@ -62,7 +63,7 @@ else
 
     private async Task LoadUsers()
     {
-        UsersInRole = await SchoolService.GetUsersByRoleAndSchoolAsync(Roles.SchoolManagement, CurrentSchool.Id);
+        UsersInRole = await UserService.GetUsersByRoleAndSchoolAsync(Roles.SchoolManagement, CurrentSchool.Id);
     }
 
     private void HandleSchoolChange()

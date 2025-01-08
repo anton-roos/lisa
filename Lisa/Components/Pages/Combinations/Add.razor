@@ -2,9 +2,10 @@
 @using Lisa.Models.ViewModels
 @using Lisa.Models.Entities
 @inject NavigationManager Navigation
-@inject SubjectCombinationService SubjectCombinationService
+@inject CombinationService CombinationService
 @inject SubjectService SubjectService
 @inject SchoolService SchoolService
+@inject GradeService GradeService
 
 <h3>Add Subject Combination</h3>
 
@@ -77,18 +78,18 @@
     {
         SelectedSchool = SchoolService.SelectedSchool;
         AllSubjects = await SubjectService.GetAllAsync();
-        Grades = await SchoolService.GetGradesForSchool(SelectedSchool.Id);
+        Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
     }
 
     private async Task HandleValidSubmit()
     {
-        var entity = new SubjectCombination
+        var entity = new Combination
         {
             Name = NewCombination.Name,
             GradeId = NewCombination.GradeId
         };
 
-        await SubjectCombinationService.CreateAsync(entity, NewCombination.SubjectIds);
+        await CombinationService.CreateAsync(entity);
 
         Navigation.NavigateTo("/combinations");
     }

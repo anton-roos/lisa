@@ -2,23 +2,20 @@
 @using Lisa.Models.Entities
 @inject NavigationManager Navigation
 @inject SchoolService SchoolService
+@inject UserService UserService
 
 <h3>System Administrators</h3>
+<button class="btn btn-primary" @onclick="GoToAddSysAdmin">
+    Add System Administrator
+</button>
 
-@if (CurrentSchool == null)
-{
-    <div class="alert alert-info">
-        The concept of a "System Administrator" may not be tied to a school. 
-        But if you do link them to a school, you can display them here.
-    </div>
-}
-else if (UsersInRole == null)
+@if (UsersInRole == null)
 {
     <p>Loading...</p>
 }
 else if (UsersInRole.Count == 0)
 {
-    <p>No System Administrators found for @CurrentSchool.ShortName (@CurrentSchool.ShortName).</p>
+    <p>No System Administrators found.</p>
 }
 else
 {
@@ -26,57 +23,25 @@ else
         <thead>
             <tr>
                 <th>Name</th>
-                <th>School</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var user in UsersInRole)
             {
                 <tr>
-                    <td>@($"{user.FirstName} {user.LastName}")</td>
-                    <td>@CurrentSchool.ShortName</td>
+                    <td>@($"{user.FirstName ?? "Unknown"} {user.LastName}")</td>
                 </tr>
             }
         </tbody>
     </table>
 }
 
-<button class="btn btn-success" @onclick="GoToAddSysAdmin" disabled="@IsSchoolNotSelected">
-    Add System Administrator
-</button>
-
 @code {
-    private School? CurrentSchool;
     private List<User> UsersInRole = new();
-    private bool IsSchoolNotSelected => CurrentSchool == null || CurrentSchool.Id == Guid.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        SchoolService.SchoolSelected += HandleSchoolChange;
-        CurrentSchool = SchoolService.SelectedSchool;
-
-        if (CurrentSchool != null)
-        {
-            await LoadUsers();
-        }
-    }
-
-    private async Task LoadUsers()
-    {
-        UsersInRole = await SchoolService.GetUsersByRoleAndSchoolAsync(Roles.SystemAdministrator, CurrentSchool.Id);
-    }
-
-    private void HandleSchoolChange()
-    {
-        CurrentSchool = SchoolService.SelectedSchool;
-        InvokeAsync(async () =>
-        {
-            if (CurrentSchool != null)
-            {
-                await LoadUsers();
-            }
-            StateHasChanged();
-        });
+        UsersInRole = await UserService.GetUsersByRoleAndSchoolAsync(Roles.SystemAdministrator);
     }
 
     private void GoToAddSysAdmin()

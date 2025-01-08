@@ -49,7 +49,9 @@ public static class DatabaseSeed
             var user = new User
             {
                 UserName = AdminEmail,
-                Email = AdminEmail
+                Email = AdminEmail,
+                FirstName = "System",
+                LastName = "Admin",
             };
             await userManager.CreateAsync(user, AdminPassword);
         }

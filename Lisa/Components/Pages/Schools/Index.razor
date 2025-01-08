@@ -55,9 +55,9 @@ else
 @code {
     private List<Lisa.Models.Entities.School>? schools;
 
-    protected override void OnInitialized()
+    protected async override Task OnInitializedAsync()
     {
-        schools = SchoolService.Schools;
+        schools = await SchoolService.GetAllAsync();
     }
 
     private void EditSchool(Guid id)
@@ -70,8 +70,8 @@ else
         var school = await SchoolService.GetSchoolAsync(id);
         if (school != null)
         {
-            await SchoolService.DeleteSchoolAsync(school);
-            schools = SchoolService.Schools;
+            await SchoolService.DeleteAsync(school);
+            schools = await SchoolService.GetAllAsync();
         }
     }
 

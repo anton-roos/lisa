@@ -2,6 +2,7 @@
 @using Lisa.Models.Entities
 @inject SchoolService SchoolService
 @inject NavigationManager Navigation
+@inject RegisterClassService RegisterClassService
 @using Microsoft.AspNetCore.Components
 
 <h3>Register Class Details</h3>
@@ -67,7 +68,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        RegisterClass = await SchoolService.GetRegisterClassByIdAsync(RegisterClassId);
+        RegisterClass = await RegisterClassService.GetByIdAsync(RegisterClassId);
     }
 
     private void GoBack()

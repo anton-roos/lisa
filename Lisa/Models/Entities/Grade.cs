@@ -7,5 +7,5 @@ public class Grade
     public Guid SchoolId { get; set; }
     public School? School { get; set; }
     public ICollection<RegisterClass>? RegisterClasses { get; set; }
-    public ICollection<SubjectCombination>? SubjectCombinations { get; set; }
+    public ICollection<Combination>? Combinations { get; set; }
 }

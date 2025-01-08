@@ -73,7 +73,7 @@
 
     private async Task HandleValidSubmit()
     {
-        await SchoolService.AddSchoolAsync(School);
+        await SchoolService.AddAsync(School);
         Navigation.NavigateTo("/schools");
     }
 

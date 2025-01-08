@@ -67,6 +67,11 @@
         <AuthorizeView Context="authContext"
             Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
             <div class="nav-item px-3">
+                <NavLink class="nav-link" href="combinations">
+                    <span class="bi combination-icon" aria-hidden="true"></span> Combinations
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
                 <NavLink class="nav-link" href="register-class">
                     <span class="bi bi-mortarboard-nav-menu" aria-hidden="true"></span> Register Class
                 </NavLink>
@@ -79,11 +84,6 @@
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="feedback">
                     <span class="bi feedback-icon" aria-hidden="true"></span> Feedback
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="combinations">
-                    <span class="bi combination-icon" aria-hidden="true"></span> Combinations
                 </NavLink>
             </div>
             <div class="nav-item px-3">
@@ -101,7 +101,7 @@
             @if (showUserTypes)
             {
                 <div class="nav-item px-3 ms-3">
-                    <NavLink class="nav-link" href="system-admins">
+                    <NavLink class="nav-link" href="system-administrators">
                         <span class="bi admin-icon" aria-hidden="true"></span> System Admins
                     </NavLink>
                 </div>

@@ -1,6 +1,9 @@
 @page "/register-class/add"
 @inject SchoolService SchoolService
+@inject GradeService GradeService
+@inject TeacherService TeacherService
 @inject NavigationManager Navigation
+@inject RegisterClassService RegisterClassService
 @using Lisa.Models.Entities
 @using Microsoft.AspNetCore.Components.Forms
 
@@ -67,11 +70,11 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        SelectedSchool = SchoolService.SelectedSchool;
+        SelectedSchool = SchoolService.GetSelectedSchool();
         if (SelectedSchool != null)
         {
-            Grades = await SchoolService.GetGradesForSchool(SelectedSchool.Id);
-            Teachers = await SchoolService.GetTeachersForSchoolAsync(SelectedSchool.Id); // Or whatever method you have
+            Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+            Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id); // Or whatever method you have
         }
     }
 
@@ -84,7 +87,7 @@ else
 
         NewRegisterClass.Id = Guid.NewGuid();
         
-        await SchoolService.AddRegisterClassAsync(NewRegisterClass);
+        await RegisterClassService.CreateAsync(NewRegisterClass);
 
         Navigation.NavigateTo("/register-class");
     }

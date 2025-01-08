@@ -107,7 +107,7 @@
     {
         try
         {
-            await SchoolService.UpdateSchoolAsync(school!);            
+            await SchoolService.UpdateAsync(school!);            
             NavigationManager.NavigateTo("/schools");
         }
         catch (Exception ex)

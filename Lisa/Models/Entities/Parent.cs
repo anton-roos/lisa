@@ -1,6 +1,6 @@
 namespace Lisa.Models.Entities;
 
-public class LearnerParent
+public class Parent
 {
     public Guid Id { get; set; }
     public string? PrimaryEmail { get; set; }

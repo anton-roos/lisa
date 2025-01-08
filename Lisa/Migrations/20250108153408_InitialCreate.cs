@@ -109,13 +109,13 @@ namespace Lisa.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    FirstName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    LastName = table.Column<string>(type: "text", nullable: true),
                     UserType = table.Column<string>(type: "character varying(21)", maxLength: 21, nullable: false),
                     Administrator_SchoolId = table.Column<Guid>(type: "uuid", nullable: true),
                     Principal_SchoolId = table.Column<Guid>(type: "uuid", nullable: true),
                     SchoolManagement_SchoolId = table.Column<Guid>(type: "uuid", nullable: true),
                     SchoolId = table.Column<Guid>(type: "uuid", nullable: true),
-                    FirstName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    LastName = table.Column<string>(type: "text", nullable: true),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -161,7 +161,7 @@ namespace Lisa.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "CareGroup",
+                name: "CareGroups",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -170,9 +170,9 @@ namespace Lisa.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_CareGroup", x => x.Id);
+                    table.PrimaryKey("PK_CareGroups", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_CareGroup_Schools_SchoolId",
+                        name: "FK_CareGroups_Schools_SchoolId",
                         column: x => x.SchoolId,
                         principalTable: "Schools",
                         principalColumn: "Id",
@@ -305,12 +305,30 @@ namespace Lisa.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Combinations",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: true),
+                    GradeId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Combinations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Combinations_Grades_GradeId",
+                        column: x => x.GradeId,
+                        principalTable: "Grades",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "RegisterClasses",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: true),
-                    Description = table.Column<string>(type: "text", nullable: true),
                     GradeId = table.Column<Guid>(type: "uuid", nullable: false),
                     TeacherId = table.Column<Guid>(type: "uuid", nullable: false),
                     SchoolId = table.Column<Guid>(type: "uuid", nullable: true)
@@ -323,7 +341,7 @@ namespace Lisa.Migrations
                         column: x => x.TeacherId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_RegisterClasses_Grades_GradeId",
                         column: x => x.GradeId,
@@ -338,31 +356,12 @@ namespace Lisa.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "SubjectCombinations",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: true),
-                    GradeId = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SubjectCombinations", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_SubjectCombinations_Grades_GradeId",
-                        column: x => x.GradeId,
-                        principalTable: "Grades",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Periods",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    PeriodStartTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    PeriodEndTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    StartTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    EndTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Status = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     Description = table.Column<string>(type: "text", nullable: true),
                     GradeId = table.Column<Guid>(type: "uuid", nullable: false),
@@ -372,7 +371,7 @@ namespace Lisa.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Periods", x => x.Id);
-                    table.CheckConstraint("CK_Period_StartTime_EndTime", "\"PeriodStartTime\" < \"PeriodEndTime\"");
+                    table.CheckConstraint("CK_Period_StartTime_EndTime", "\"StartTime\" < \"EndTime\"");
                     table.ForeignKey(
                         name: "FK_Periods_AspNetUsers_TeacherId",
                         column: x => x.TeacherId,
@@ -391,6 +390,74 @@ namespace Lisa.Migrations
                         principalTable: "Subjects",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CombinationSubject",
+                columns: table => new
+                {
+                    SubjectCombinationId = table.Column<Guid>(type: "uuid", nullable: false),
+                    SubjectId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CombinationSubject", x => new { x.SubjectCombinationId, x.SubjectId });
+                    table.ForeignKey(
+                        name: "FK_CombinationSubject_Combinations_SubjectCombinationId",
+                        column: x => x.SubjectCombinationId,
+                        principalTable: "Combinations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_CombinationSubject_Subjects_SubjectId",
+                        column: x => x.SubjectId,
+                        principalTable: "Subjects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Learners",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Code = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    FirstName = table.Column<string>(type: "text", nullable: true),
+                    LastName = table.Column<string>(type: "text", nullable: true),
+                    Active = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    RegisterClassId = table.Column<Guid>(type: "uuid", nullable: true),
+                    CareGroupId = table.Column<Guid>(type: "uuid", nullable: true),
+                    CombinationId = table.Column<Guid>(type: "uuid", nullable: true),
+                    SchoolId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Learners", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Learners_CareGroups_CareGroupId",
+                        column: x => x.CareGroupId,
+                        principalTable: "CareGroups",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Learners_Combinations_CombinationId",
+                        column: x => x.CombinationId,
+                        principalTable: "Combinations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Learners_RegisterClasses_RegisterClassId",
+                        column: x => x.RegisterClassId,
+                        principalTable: "RegisterClasses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Learners_Schools_SchoolId",
+                        column: x => x.SchoolId,
+                        principalTable: "Schools",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -415,67 +482,6 @@ namespace Lisa.Migrations
                         principalTable: "Subjects",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Learners",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Code = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
-                    FirstName = table.Column<string>(type: "text", nullable: true),
-                    LastName = table.Column<string>(type: "text", nullable: true),
-                    Active = table.Column<bool>(type: "boolean", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    RegisterClassId = table.Column<Guid>(type: "uuid", nullable: true),
-                    CareGroupId = table.Column<Guid>(type: "uuid", nullable: true),
-                    SubjectCombinationId = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Learners", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Learners_CareGroup_CareGroupId",
-                        column: x => x.CareGroupId,
-                        principalTable: "CareGroup",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_Learners_RegisterClasses_RegisterClassId",
-                        column: x => x.RegisterClassId,
-                        principalTable: "RegisterClasses",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Learners_SubjectCombinations_SubjectCombinationId",
-                        column: x => x.SubjectCombinationId,
-                        principalTable: "SubjectCombinations",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "SubjectCombinationSubjects",
-                columns: table => new
-                {
-                    SubjectCombinationId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SubjectId = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SubjectCombinationSubjects", x => new { x.SubjectCombinationId, x.SubjectId });
-                    table.ForeignKey(
-                        name: "FK_SubjectCombinationSubjects_SubjectCombinations_SubjectCombi~",
-                        column: x => x.SubjectCombinationId,
-                        principalTable: "SubjectCombinations",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_SubjectCombinationSubjects_Subjects_SubjectId",
-                        column: x => x.SubjectId,
-                        principalTable: "Subjects",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -593,15 +599,25 @@ namespace Lisa.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_CareGroup_Name",
-                table: "CareGroup",
+                name: "IX_CareGroups_Name",
+                table: "CareGroups",
                 column: "Name",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_CareGroup_SchoolId",
-                table: "CareGroup",
+                name: "IX_CareGroups_SchoolId",
+                table: "CareGroups",
                 column: "SchoolId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Combinations_GradeId",
+                table: "Combinations",
+                column: "GradeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CombinationSubject_SubjectId",
+                table: "CombinationSubject",
+                column: "SubjectId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Grades_SchoolId",
@@ -635,14 +651,19 @@ namespace Lisa.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Learners_CombinationId",
+                table: "Learners",
+                column: "CombinationId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Learners_RegisterClassId",
                 table: "Learners",
                 column: "RegisterClassId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Learners_SubjectCombinationId",
+                name: "IX_Learners_SchoolId",
                 table: "Learners",
-                column: "SubjectCombinationId");
+                column: "SchoolId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Periods_GradeId",
@@ -655,9 +676,9 @@ namespace Lisa.Migrations
                 column: "SubjectId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Periods_TeacherId_PeriodStartTime_PeriodEndTime",
+                name: "IX_Periods_TeacherId_StartTime_EndTime",
                 table: "Periods",
-                columns: new[] { "TeacherId", "PeriodStartTime", "PeriodEndTime" },
+                columns: new[] { "TeacherId", "StartTime", "EndTime" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -713,16 +734,6 @@ namespace Lisa.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_SubjectCombinations_GradeId",
-                table: "SubjectCombinations",
-                column: "GradeId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_SubjectCombinationSubjects_SubjectId",
-                table: "SubjectCombinationSubjects",
-                column: "SubjectId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Subjects_Code",
                 table: "Subjects",
                 column: "Code",
@@ -759,6 +770,9 @@ namespace Lisa.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "CombinationSubject");
+
+            migrationBuilder.DropTable(
                 name: "LearnerParents");
 
             migrationBuilder.DropTable(
@@ -771,9 +785,6 @@ namespace Lisa.Migrations
                 name: "Results");
 
             migrationBuilder.DropTable(
-                name: "SubjectCombinationSubjects");
-
-            migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
@@ -783,13 +794,13 @@ namespace Lisa.Migrations
                 name: "Subjects");
 
             migrationBuilder.DropTable(
-                name: "CareGroup");
+                name: "CareGroups");
+
+            migrationBuilder.DropTable(
+                name: "Combinations");
 
             migrationBuilder.DropTable(
                 name: "RegisterClasses");
-
-            migrationBuilder.DropTable(
-                name: "SubjectCombinations");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");

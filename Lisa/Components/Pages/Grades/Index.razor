@@ -2,6 +2,7 @@
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
 @inject SchoolService SchoolService
+@inject GradeService GradeService
 @inject NavigationManager Navigation
 
 <h1>Grades</h1>
@@ -55,7 +56,7 @@ else
     {
         if (SelectedSchool != null)
         {
-            Grades = await SchoolService.GetGradesForSchool(SelectedSchool.Id);
+            Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
         }
         Grades = Grades.OrderBy(g => g.SequenceNumber).ToList();
     }

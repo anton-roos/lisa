@@ -49,13 +49,13 @@ else
     }
 
     <h4>Subject Combination</h4>
-    @if (Learner.SubjectCombination == null)
+    @if (Learner.Combination == null)
     {
         <p>No subject combination assigned.</p>
     }
     else
     {
-        <p>@Learner.SubjectCombination.Name</p>
+        <p>@Learner.Combination.Name</p>
     }
 
     <h4>Parents</h4>

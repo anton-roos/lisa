@@ -4,48 +4,49 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class SubjectService
+public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory)
 {
-    private readonly LisaDbContext _dbContext;
-
-    public SubjectService(LisaDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
 
     public async Task<List<Subject>> GetAllAsync()
     {
-        return await _dbContext.Subjects.ToListAsync();
+        var _context = _dbContextFactory.CreateDbContext();
+        return await _context.Subjects.ToListAsync();
     }
 
     public async Task CreateAsync(Subject subject)
     {
-        _dbContext.Subjects.Add(subject);
-        await _dbContext.SaveChangesAsync();
+        var _context = _dbContextFactory.CreateDbContext();
+        _context.Subjects.Add(subject);
+        await _context.SaveChangesAsync();
     }
 
     public async Task<Subject?> GetByIdAsync(Guid id)
     {
-        return await _dbContext.Subjects.FindAsync(id);
+        var _context = _dbContextFactory.CreateDbContext();
+        return await _context.Subjects.FindAsync(id);
     }
 
     public async Task UpdateAsync(Subject subject)
     {
-        var existing = await _dbContext.Subjects.FindAsync(subject.Id);
+        var _context = _dbContextFactory.CreateDbContext();
+        var existing = await _context.Subjects.FindAsync(subject.Id);
         if (existing == null) return;
 
         existing.Name = subject.Name;
         existing.Code = subject.Code;
 
-        await _dbContext.SaveChangesAsync();
+        await _context.SaveChangesAsync();
     }
 
     public async Task DeleteAsync(Guid id)
     {
-        var existing = await _dbContext.Subjects.FindAsync(id);
+        var _context = _dbContextFactory.CreateDbContext();
+        
+        var existing = await _context.Subjects.FindAsync(id);
         if (existing == null) return;
 
-        _dbContext.Subjects.Remove(existing);
-        await _dbContext.SaveChangesAsync();
+        _context.Subjects.Remove(existing);
+        await _context.SaveChangesAsync();
     }
 }

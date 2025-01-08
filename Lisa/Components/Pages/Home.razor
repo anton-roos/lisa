@@ -1,12 +1,13 @@
 ﻿@page "/"
 @rendermode InteractiveServer
+@inject SentryService SentryService
 
 <PageTitle>DCEG Portal</PageTitle>
 
 <AuthorizeView Context="authContext">
     <Authorized>
         <p>You can see this because you are authenticated.</p>
-        
+
     </Authorized>
     <NotAuthorized>
         <p>You are not authenticated.</p>
@@ -25,3 +26,9 @@
         <p>You are a System Administrator</p>
     </Authorized>
 </AuthorizeView>
+
+@code {
+    protected override void OnInitialized()
+    {
+    }
+}

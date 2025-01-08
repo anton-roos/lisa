@@ -1,6 +1,7 @@
 @page "/register-class"
 @using Lisa.Models.Entities
 @inject SchoolService SchoolService
+@inject RegisterClassService RegisterClassService
 @inject NavigationManager NavigationManager
 
 <h3>Register Classes</h3>
@@ -78,7 +79,7 @@ else
 
     private async Task LoadRegisterClasses(Guid schoolId)
     {
-        var unfiltedRegisterClasses = await SchoolService.GetRegisterClassesAsync();
+        var unfiltedRegisterClasses = await RegisterClassService.GetAllAsync();
         RegisterClasses = unfiltedRegisterClasses.Where(rc => rc.Grade.SchoolId == schoolId).ToList();
     }
 
@@ -94,10 +95,10 @@ else
 
     public async Task DeleteRegisterClass(Guid registerclassId)
     {
-        var registerClass = await SchoolService.GetRegisterClassByIdAsync(registerclassId);
+        var registerClass = await RegisterClassService.GetByIdAsync(registerclassId);
         if (registerClass != null)
         {
-            await SchoolService.DeleteRegisterClassAsync(registerClass);
+            await RegisterClassService.DeleteAsync(registerClass);
             LoadRegisterClasses(SelectedSchool.Id);
             StateHasChanged();
         }

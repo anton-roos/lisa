@@ -2,24 +2,27 @@ using Lisa.Data;
 using Lisa.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
-public class TeacherService(LisaDbContext dbContext)
+public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory)
 {
-    private readonly LisaDbContext _dbContext = dbContext;
+    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
 
     public async Task<List<Teacher>> GetAllAsync()
     {
-        return await _dbContext.Teachers.ToListAsync();
+        var _context = _dbContextFactory.CreateDbContext();
+        return await _context.Teachers.ToListAsync();
     }
 
     public async Task CreateAsync(Teacher teacher)
     {
-        _dbContext.Teachers.Add(teacher);
-        await _dbContext.SaveChangesAsync();
+        var _context = _dbContextFactory.CreateDbContext();
+        _context.Teachers.Add(teacher);
+        await _context.SaveChangesAsync();
     }
 
     public async Task<Teacher?> GetByIdAsync(Guid id)
     {
-        return await _dbContext.Teachers
+        var _context = _dbContextFactory.CreateDbContext();
+        return await _context.Teachers
             .Include(t => t.School)
             .Include(t => t.Subjects)
             .Include(t => t.RegisterClasses).ThenInclude(rc => rc.Grade)
@@ -29,7 +32,8 @@ public class TeacherService(LisaDbContext dbContext)
 
     public async Task UpdateAsync(Teacher teacher)
     {
-        var existing = await _dbContext.Teachers.FindAsync(teacher.Id);
+        var _context = _dbContextFactory.CreateDbContext();
+        var existing = await _context.Teachers.FindAsync(teacher.Id);
         if (existing == null) return;
 
         existing.FirstName = teacher.FirstName;
@@ -38,15 +42,25 @@ public class TeacherService(LisaDbContext dbContext)
         existing.PhoneNumber = teacher.PhoneNumber;
         existing.SchoolId = teacher.SchoolId;
 
-        await _dbContext.SaveChangesAsync();
+        await _context.SaveChangesAsync();
     }
 
     public async Task DeleteAsync(Guid id)
     {
-        var existing = await _dbContext.Teachers.FindAsync(id);
+        var _context = _dbContextFactory.CreateDbContext();
+        var existing = await _context.Teachers.FindAsync(id);
         if (existing == null) return;
 
-        _dbContext.Teachers.Remove(existing);
-        await _dbContext.SaveChangesAsync();
+        _context.Teachers.Remove(existing);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<List<Teacher>> GetTeachersForSchoolAsync(Guid schoolId)
+    {
+        var _context = _dbContextFactory.CreateDbContext();
+        var teachers = await _context.Teachers
+            .Where(t => t.SchoolId == schoolId)
+            .ToListAsync();
+        return teachers;
     }
 }

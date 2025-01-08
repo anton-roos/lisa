@@ -78,7 +78,7 @@ else
             return;
         }
 
-        Schools = SchoolService.Schools;
+        Schools = await SchoolService.GetAllAsync();
     }
 
     private async Task HandleValidSubmit()

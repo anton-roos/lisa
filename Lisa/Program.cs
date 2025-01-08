@@ -11,14 +11,32 @@ using Lisa.Models.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.UseSentry(o =>
+{
+    o.Dsn = "https://3f8a0819c96640c22558018a8c41f3ef@o4508607398150144.ingest.us.sentry.io/4508607411585024";
+    o.Debug = true;
+    o.TracesSampleRate = 1.0;
+});
+
+// Add Sentry to the logging system
+builder.Logging.AddSentry(options =>
+{
+    options.Dsn = "https://3f8a0819c96640c22558018a8c41f3ef@o4508607398150144.ingest.us.sentry.io/4508607411585024"; // Replace with your Sentry DSN
+    options.MinimumBreadcrumbLevel = LogLevel.Information; // Log breadcrumbs at Information level or higher
+    options.MinimumEventLevel = LogLevel.Error; // Log events at Error level or higher
+    options.Debug = true; // Enable debug output (optional, for development)
+    options.TracesSampleRate = 1.0; // Enable performance monitoring (0.0 to 1.0)
+});
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 
+
 // Add Database Context
-builder.Services.AddDbContext<LisaDbContext>(options =>
+builder.Services.AddDbContextFactory<LisaDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Lisa")));
 
 builder.Services.AddIdentity<User, IdentityRole<Guid>>(options => options.SignIn.RequireConfirmedAccount = true)
@@ -78,12 +96,19 @@ builder.Services.AddHttpClient();
 builder.Services.AddFluentUIComponents();
 builder.Services.AddDataGridEntityFrameworkAdapter();
 
-builder.Services.AddScoped<SchoolService>();
+builder.Services.AddScoped<CareGroupService>();
+builder.Services.AddScoped<CombinationService>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<GradeService>();
 builder.Services.AddScoped<LearnerService>();
-builder.Services.AddScoped<SubjectCombinationService>();
+builder.Services.AddScoped<ParentService>();
+builder.Services.AddScoped<RegisterClassService>();
+builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<SubjectService>();
 builder.Services.AddScoped<TeacherService>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddSingleton<SentryService>();
+
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
@@ -97,7 +122,6 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 
 app.UseAntiforgery();
 app.UseAuthentication();
@@ -116,5 +140,4 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     await DatabaseSeed.Seed(services);
 }
-
 app.Run();

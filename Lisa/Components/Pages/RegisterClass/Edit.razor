@@ -3,7 +3,10 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components
 @inject SchoolService SchoolService
+@inject RegisterClassService RegisterClassService
 @inject NavigationManager Navigation
+@inject GradeService GradeService
+@inject TeacherService TeacherService
 
 <h3>Edit Register Class</h3>
 
@@ -82,7 +85,7 @@ else
         }
 
         // Load the existing RegisterClass
-        var existingClass = await SchoolService.GetRegisterClassByIdAsync(RegisterClassId);
+        var existingClass = await RegisterClassService.GetByIdAsync(RegisterClassId);
         if (existingClass == null)
         {
             // Not found or error
@@ -94,8 +97,8 @@ else
         EditRegisterClass = existingClass;
 
         // Also load Grades/Teachers for drop-down
-        Grades = await SchoolService.GetGradesForSchool(SelectedSchool.Id);
-        Teachers = await SchoolService.GetTeachersForSchoolAsync(SelectedSchool.Id);
+        Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+        Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id);
     }
 
     private async Task HandleValidSubmit()
@@ -103,7 +106,7 @@ else
         if (EditRegisterClass == null) return;
 
         // Save changes
-        await SchoolService.UpdateRegisterClassAsync(EditRegisterClass);
+        await RegisterClassService.UpdateAsync(EditRegisterClass);
 
         Navigation.NavigateTo("/register-class");
     }

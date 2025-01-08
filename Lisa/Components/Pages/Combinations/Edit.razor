@@ -2,9 +2,10 @@
 @using Lisa.Models.ViewModels
 @using Lisa.Models.Entities
 @inject NavigationManager Navigation
-@inject SubjectCombinationService SubjectCombinationService
+@inject CombinationService CombinationService
 @inject SubjectService SubjectService
 @inject SchoolService SchoolService
+@inject GradeService GradeService
 @using Microsoft.AspNetCore.Components
 
 <h3>Edit Subject Combination</h3>
@@ -48,7 +49,7 @@
 
 @code {
     [Parameter] public Guid Id { get; set; }
-    private SubjectCombination Combination = new();
+    private Combination Combination = new();
     private List<Grade> Grades = new();
     private List<Subject> AllSubjects = new();
     private School CurrentSchool = new();
@@ -58,21 +59,21 @@
     {
         CurrentSchool = SchoolService.SelectedSchool;
         AllSubjects = await SubjectService.GetAllAsync();
-        Grades = await SchoolService.GetGradesForSchool(CurrentSchool.Id);
-        var existing = await SubjectCombinationService.GetByIdAsync(Id);
+        Grades = await GradeService.GetGradesForSchool(CurrentSchool.Id);
+        var existing = await CombinationService.GetByIdAsync(Id);
         if (existing != null)
         {
-            Combination = new SubjectCombination
+            Combination = new Combination
             {
                 Id = existing.Id,
                 Name = existing.Name,
                 GradeId = existing.GradeId
             };
 
-            if (existing.SubjectCombinationSubjects != null)
+            if (existing.Subjects != null)
             {
-                SelectedSubjectIds = existing.SubjectCombinationSubjects
-                    .Select(scs => scs.SubjectId)
+                SelectedSubjectIds = existing.Subjects
+                    .Select(scs => scs.Id)
                     .ToList();
             }
         }
@@ -80,14 +81,14 @@
 
     private async Task HandleValidSubmit()
     {
-        var entity = new SubjectCombination
+        var entity = new Combination
         {
             Id = Combination.Id,
             Name = Combination.Name,
             GradeId = Combination.GradeId
         };
 
-        await SubjectCombinationService.UpdateAsync(entity, SelectedSubjectIds);
+        await CombinationService.UpdateAsync(entity);
 
         Navigation.NavigateTo("/combinations");
     }

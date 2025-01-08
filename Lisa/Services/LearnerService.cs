@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class LearnerService(LisaDbContext context, SchoolService schoolService, IServiceProvider serviceProvider)
+public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, SchoolService schoolService, IServiceProvider serviceProvider)
 {
-    private readonly LisaDbContext _context = context;
+    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly SchoolService _schoolService = schoolService;
     private readonly IServiceProvider _serviceProvider = serviceProvider;
     public event Action? LearnersUpdated;
@@ -47,15 +47,7 @@ public class LearnerService(LisaDbContext context, SchoolService schoolService, 
             .ToListAsync();
     }
 
-    public async Task<List<SubjectCombination>> GetSubjectCombinations()
-    {
-        using var scope = _serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
-        return await dbContext.SubjectCombinations
-            .Where(sc => sc.Grade != null && sc.Grade.SchoolId == SelectedSchool!.Id)
-            .Include(sc => sc.Grade!)
-            .ToListAsync();
-    }
+
 
     public async Task<List<CareGroup>> GetCareGroups()
     {
@@ -68,6 +60,7 @@ public class LearnerService(LisaDbContext context, SchoolService schoolService, 
 
     public async Task AddLearner(Learner learner)
     {
+        var _context = _dbContextFactory.CreateDbContext();
         _context.Learners.Add(learner);
         await _context.SaveChangesAsync();
         LearnersUpdated?.Invoke();
@@ -86,10 +79,13 @@ public class LearnerService(LisaDbContext context, SchoolService schoolService, 
 
     public async Task<Learner?> LoadLearnerAsync(Guid learnerId)
     {
+        var _context = _dbContextFactory.CreateDbContext();
         return await _context.Learners
-            .Include(l => l.RegisterClass).ThenInclude(rc => rc.Grade)
+            .Include(l => l.RegisterClass)
+            .ThenInclude(rc => rc.Grade)
             .Include(l => l.LearnerParents)
-            .Include(l => l.Results).ThenInclude(r => r.Subject)
+            .Include(l => l.Results)
+            .ThenInclude(r => r.Subject)
             .FirstOrDefaultAsync(l => l.Id == learnerId);
     }
 }

@@ -1,0 +1,61 @@
+@inject SchoolService SchoolService
+@inject CareGroupService CareGroupService
+@inject NavigationManager Navigation
+@using Lisa.Models.Entities
+@using Lisa.Models.ViewModels
+@using Microsoft.AspNetCore.Components.Forms
+@page "/care-groups/add"
+
+<PageTitle>Add Care Group</PageTitle>
+<h3>Add Care Group for @SelectedSchool?.ShortName</h3>
+
+@if (SelectedSchool is null)
+{
+    <div class="alert alert-warning">
+        No school selected. Please select a school first.
+    </div>
+}
+else
+{
+    <EditForm Context="edit" Model="@NewCareGroup" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">Grade Name</label>
+            <InputText class="form-control" @bind-Value="NewCareGroup.Name" />
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    private School? SelectedSchool;
+    private CareGroupViewModel NewCareGroup = new();
+
+    protected override void OnInitialized()
+    {
+        SelectedSchool = SchoolService.GetSelectedSchool();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (SelectedSchool == null)
+            return;
+
+        var careGroupEntity = new Lisa.Models.Entities.CareGroup
+            {
+                Name = NewCareGroup.Name,
+                SchoolId = SelectedSchool.Id
+            };
+
+        await CareGroupService.CreateAsync(careGroupEntity);
+        Navigation.NavigateTo("/care-groups");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/care-groups");
+    }
+}

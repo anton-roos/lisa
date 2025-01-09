@@ -6,7 +6,7 @@
 @inherits EventAwareComponentBase
 
 <h3>Care Groups</h3>
-<button class="btn btn-primary" @onclick="GoToAddPage">Add Care Group</button>
+<button class="btn btn-primary" @onclick="AddCareGroup">Add Care Group</button>
 @if (CareGroups == null)
 {
     <p>Loading...</p>
@@ -19,11 +19,12 @@ else if (!CareGroups.Any())
 }
 else
 {
-    <table class="table">
+    <table class="table table-striped">
         <thead>
             <tr>
                 <th>Name</th>
                 <th>Learner Count</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -32,10 +33,16 @@ else
                 <tr>
                     <td>@careGroup.Name</td>
                     <td>@careGroup.CareGroupMembers?.Count().ToString()</td>
-                    <td>
-                        <button class="btn btn-primary" @onclick="() => EditCombination(careGroup.Id)">View</button>
-                        <button class="btn btn-secondary" @onclick="() => EditCombination(careGroup.Id)">Edit</button>
-                        <button class="btn btn-danger" @onclick="() => EditCombination(careGroup.Id)">Delete</button>
+                    <td class="align-middle">
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => ViewCareGroup(careGroup.Id)">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" @onclick="() => EditCareGroup(careGroup.Id)">
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm" @onclick="() => DeleteCareGroup(careGroup.Id)">
+                            <i class="bi bi-trash3-fill"></i>
+                        </button>
                     </td>
                 </tr>
             }
@@ -50,8 +57,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        CareGroupsToFilter = await CareGroupService.GetAllAsync();
         SelectedSchool = SchoolService.GetSelectedSchool();
+        CareGroupsToFilter = await CareGroupService.GetAllAsync();
         CareGroups = CareGroupsToFilter.Where(c => c.SchoolId == SelectedSchool.Id);
         SubscribeToEvent(UiEvents.SchoolSelected);
     }
@@ -63,17 +70,32 @@ else
             SelectedSchool = payload as School;
             CareGroups = CareGroupsToFilter.Where(c => c.SchoolId == SelectedSchool.Id);
         }
-        
+
         await base.HandleEventAsync(eventName, payload);
     }
 
-    private void GoToAddPage()
+    private void AddCareGroup()
     {
         Navigation.NavigateTo("/care-groups/add");
     }
 
-    private void EditCombination(Guid id)
+    private void EditCareGroup(Guid id)
     {
         Navigation.NavigateTo($"/care-groups/edit/{id}");
+    }
+    private void ViewCareGroup(Guid id)
+    {
+        Navigation.NavigateTo($"/care-groups/details/{id}");
+    }
+    private async Task DeleteCareGroup(Guid id)
+    {
+        var CareGroup = await CareGroupService.GetByIdAsync(id);
+        if (CareGroup != null)
+        {
+            await CareGroupService.DeleteAsync(CareGroup);
+            CareGroupsToFilter = await CareGroupService.GetAllAsync();
+            CareGroups = CareGroupsToFilter.Where(c => c.SchoolId == SelectedSchool.Id);
+            await InvokeAsync(StateHasChanged);
+        }
     }
 }

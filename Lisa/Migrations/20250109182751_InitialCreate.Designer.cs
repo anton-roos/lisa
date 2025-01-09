@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Lisa.Migrations
 {
     [DbContext(typeof(LisaDbContext))]
-    [Migration("20250108153408_InitialCreate")]
+    [Migration("20250109182751_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -462,6 +462,9 @@ namespace Lisa.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("SchoolId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
 
@@ -642,16 +645,7 @@ namespace Lisa.Migrations
                 {
                     b.HasBaseType("Lisa.Models.Entities.User");
 
-                    b.Property<Guid>("SchoolId")
-                        .HasColumnType("uuid");
-
                     b.HasIndex("SchoolId");
-
-                    b.ToTable("AspNetUsers", t =>
-                        {
-                            t.Property("SchoolId")
-                                .HasColumnName("Administrator_SchoolId");
-                        });
 
                     b.HasDiscriminator().HasValue("Administrator");
                 });
@@ -660,16 +654,7 @@ namespace Lisa.Migrations
                 {
                     b.HasBaseType("Lisa.Models.Entities.User");
 
-                    b.Property<Guid>("SchoolId")
-                        .HasColumnType("uuid");
-
                     b.HasIndex("SchoolId");
-
-                    b.ToTable("AspNetUsers", t =>
-                        {
-                            t.Property("SchoolId")
-                                .HasColumnName("Principal_SchoolId");
-                        });
 
                     b.HasDiscriminator().HasValue("Principal");
                 });
@@ -678,16 +663,7 @@ namespace Lisa.Migrations
                 {
                     b.HasBaseType("Lisa.Models.Entities.User");
 
-                    b.Property<Guid>("SchoolId")
-                        .HasColumnType("uuid");
-
                     b.HasIndex("SchoolId");
-
-                    b.ToTable("AspNetUsers", t =>
-                        {
-                            t.Property("SchoolId")
-                                .HasColumnName("SchoolManagement_SchoolId");
-                        });
 
                     b.HasDiscriminator().HasValue("SchoolManagement");
                 });
@@ -696,15 +672,14 @@ namespace Lisa.Migrations
                 {
                     b.HasBaseType("Lisa.Models.Entities.User");
 
+                    b.HasIndex("SchoolId");
+
                     b.HasDiscriminator().HasValue("SystemAdministrator");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.Teacher", b =>
                 {
                     b.HasBaseType("Lisa.Models.Entities.User");
-
-                    b.Property<Guid>("SchoolId")
-                        .HasColumnType("uuid");
 
                     b.HasIndex("SchoolId");
 
@@ -994,8 +969,7 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.School", "School")
                         .WithMany("Administrators")
                         .HasForeignKey("SchoolId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("School");
                 });
@@ -1005,8 +979,7 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.School", "School")
                         .WithMany("Principals")
                         .HasForeignKey("SchoolId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("School");
                 });
@@ -1016,8 +989,17 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.School", "School")
                         .WithMany("SchoolManagements")
                         .HasForeignKey("SchoolId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("School");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.SystemAdministrator", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .HasConstraintName("FK_AspNetUsers_Schools_SchoolId1");
 
                     b.Navigation("School");
                 });
@@ -1027,8 +1009,7 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.School", "School")
                         .WithMany("Teachers")
                         .HasForeignKey("SchoolId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("School");
                 });

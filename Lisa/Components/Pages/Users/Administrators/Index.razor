@@ -31,6 +31,7 @@ else
             <tr>
                 <th>Name</th>
                 <th>School</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -39,6 +40,17 @@ else
                 <tr>
                     <td>@($"{user.FirstName} {user.LastName}")</td>
                     <td>@SelectedSchool.ShortName</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => ViewAdministrator(user.Id)">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-secondary" @onclick="() => EditAdministrator(user.Id)">
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
+                        <button class="btn btn-danger"
+                            @onclick="async () => { await DeleteAdministrator(user.Id); }">
+                            <i class="bi bi-trash3-fill"></i></button>
+                    </td>
                 </tr>
             }
         </tbody>
@@ -85,5 +97,27 @@ else
     private void GoToAddAdministrator()
     {
         Navigation.NavigateTo("/administrators/add");
+    }
+
+    private void EditAdministrator(Guid id)
+    {
+        Navigation.NavigateTo($"/administrators/edit/{id}");
+    }
+
+    private void ViewAdministrator(Guid id)
+    {
+        Navigation.NavigateTo($"/administrators/details/{id}");
+    }
+
+    private async Task DeleteAdministrator(Guid id)
+    {
+        var user = await UserService.GetByIdAsync<Administrator>(id);
+        if (user != null)
+        {
+            //await UserService.DeleteAsync(user);
+            // delete logic
+            await LoadUsers();
+            StateHasChanged();
+        }
     }
 }

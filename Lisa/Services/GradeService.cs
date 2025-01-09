@@ -23,6 +23,16 @@ public class GradeService(IDbContextFactory<LisaDbContext> dbContextFactory)
             .FirstOrDefaultAsync(grade => grade.Id == id);
     }
 
+    public async Task<Grade?> GetGradeWithRegisterClassesAsync(Guid id)
+    {
+        var _context = _dbContextFactory.CreateDbContext();
+        return await _context.Grades
+            .Include(g => g.RegisterClasses)
+            .ThenInclude(rc => rc.Learners)
+            .Include(g => g.Combinations)
+            .FirstOrDefaultAsync(grade => grade.Id == id);
+    }
+
     public async Task<IEnumerable<Grade>> GetAllAsync()
     {
         var _context = _dbContextFactory.CreateDbContext();

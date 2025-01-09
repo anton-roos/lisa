@@ -111,11 +111,8 @@ namespace Lisa.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     FirstName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     LastName = table.Column<string>(type: "text", nullable: true),
-                    UserType = table.Column<string>(type: "character varying(21)", maxLength: 21, nullable: false),
-                    Administrator_SchoolId = table.Column<Guid>(type: "uuid", nullable: true),
-                    Principal_SchoolId = table.Column<Guid>(type: "uuid", nullable: true),
-                    SchoolManagement_SchoolId = table.Column<Guid>(type: "uuid", nullable: true),
                     SchoolId = table.Column<Guid>(type: "uuid", nullable: true),
+                    UserType = table.Column<string>(type: "character varying(21)", maxLength: 21, nullable: false),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -135,29 +132,16 @@ namespace Lisa.Migrations
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_AspNetUsers_Schools_Administrator_SchoolId",
-                        column: x => x.Administrator_SchoolId,
-                        principalTable: "Schools",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_AspNetUsers_Schools_Principal_SchoolId",
-                        column: x => x.Principal_SchoolId,
-                        principalTable: "Schools",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
                         name: "FK_AspNetUsers_Schools_SchoolId",
                         column: x => x.SchoolId,
                         principalTable: "Schools",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_AspNetUsers_Schools_SchoolManagement_SchoolId",
-                        column: x => x.SchoolManagement_SchoolId,
+                        name: "FK_AspNetUsers_Schools_SchoolId1",
+                        column: x => x.SchoolId,
                         principalTable: "Schools",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -573,24 +557,9 @@ namespace Lisa.Migrations
                 column: "NormalizedEmail");
 
             migrationBuilder.CreateIndex(
-                name: "IX_AspNetUsers_Administrator_SchoolId",
-                table: "AspNetUsers",
-                column: "Administrator_SchoolId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AspNetUsers_Principal_SchoolId",
-                table: "AspNetUsers",
-                column: "Principal_SchoolId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_AspNetUsers_SchoolId",
                 table: "AspNetUsers",
                 column: "SchoolId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AspNetUsers_SchoolManagement_SchoolId",
-                table: "AspNetUsers",
-                column: "SchoolManagement_SchoolId");
 
             migrationBuilder.CreateIndex(
                 name: "UserNameIndex",

@@ -32,8 +32,15 @@ else
                 <tr>
                     <td>@($"{user.FirstName} {user.LastName}")</td>
                     <td>
-                        <button class="btn btn-primary" @onclick="() => EditSysAdmin(user.Id)">Edit</button>
-                        <button class="btn btn-danger" @onclick="() => DeleteSysAdmin(user.Id)">Delete</button>
+                        <button class="btn btn-primary" @onclick="() => EditSysAdmin(user.Id)">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-secondary" @onclick="() => EditSysAdmin(user.Id)">
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
+                        <button class="btn btn-danger" @onclick="() => DeleteSysAdmin(user.Id)">
+                            <i class="bi bi-trash3-fill"></i>
+                        </button>
                     </td>
                 </tr>
             }

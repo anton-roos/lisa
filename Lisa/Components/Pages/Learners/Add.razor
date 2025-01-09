@@ -56,13 +56,21 @@
 
     <div>
         <label for="SubjectCombinationId">Subject Combination</label>
-        <InputSelect id="SubjectCombinationId" class="form-control" @bind-Value="learner.CombinationId">
+        @if (combinations == null)
+        {
+            <p>No Combinations for the current learner</p>
+        }
+        else
+        {
+            <InputSelect id="SubjectCombinationId" class="form-control" @bind-Value="learner.CombinationId">
             <option value="">Select Subject Combination</option>
             @foreach (var subjectCombination in combinations)
             {
                 <option value="@subjectCombination.Id">@subjectCombination.Name</option>
             }
         </InputSelect>
+        }
+        
     </div>
 
     <button type="submit" class="btn btn-primary">Add Learner</button>

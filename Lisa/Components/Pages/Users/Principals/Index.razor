@@ -28,6 +28,7 @@ else
             <tr>
                 <th>Name</th>
                 <th>School</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -36,6 +37,18 @@ else
                 <tr>
                     <td>@($"{Principal.FirstName} {Principal.LastName}")</td>
                     <td>@SelectedSchool.ShortName</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => ViewPrincipal(Principal.Id)">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-secondary" @onclick="() => EditPrincipal(Principal.Id)">
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
+                        <button class="btn btn-danger" @onclick="async () => { await DeletePrincipal(Principal.Id); }">
+                            <i class="bi bi-trash3-fill"></i>
+                            
+                        </button>
+                    </td>
                 </tr>
             }
         </tbody>
@@ -87,5 +100,26 @@ else
     private void GoToAddPrincipal()
     {
         Navigation.NavigateTo("/principals/add");
+    }
+
+    private void EditPrincipal(Guid id)
+    {
+        Navigation.NavigateTo($"/principals/edit/{id}");
+    }
+
+    private void ViewPrincipal(Guid id)
+    {
+        Navigation.NavigateTo($"/principals/details/{id}");
+    }
+
+    private async Task DeletePrincipal(Guid id)
+    {
+        var principal = Principals.FirstOrDefault(p => p.Id == id);
+        if (principal != null)
+        {
+            await UserService.DeleteAsync<Principal>(principal.Id);
+            await LoadUsers();
+            StateHasChanged();
+        }
     }
 }

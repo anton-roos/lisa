@@ -1,11 +1,13 @@
 using Lisa.Data;
 using Lisa.Models.Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
-public class UserService(UserManager<User> userManager)
+public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDbContext> dbContextFactory)
 {
     private readonly UserManager<User> _userManager = userManager;
+    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
 
     public async Task<List<User>> GetUsersByRoleAndSchoolAsync(string roleName, Guid? schoolId = null)
     {
@@ -61,6 +63,15 @@ public class UserService(UserManager<User> userManager)
         }
     }
 
+    public async Task<TUser> GetByIdAsync<TUser>(Guid id) where TUser : User
+    {
+
+        var _context = await _dbContextFactory.CreateDbContextAsync();
+        var user = await _context.Users.OfType<TUser>().FirstOrDefaultAsync(u => u.Id == id);
+        await _context.DisposeAsync();
+        return user;
+    }
+
     public async Task AddUser<TUser>(TUser user, string password)
     {
         switch (user)
@@ -110,5 +121,13 @@ public class UserService(UserManager<User> userManager)
                     break;
                 }
         }
+    }
+
+    public async Task DeleteAsync<TUser>(Guid id) where TUser : User
+    {
+        var user = await GetByIdAsync<TUser>(id);
+        if (user == null) return;
+
+        await _userManager.DeleteAsync(user);
     }
 }

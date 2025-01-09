@@ -1,11 +1,21 @@
 @using Lisa.Models.Entities
 @using Lisa.Services
-@inherits ComponentBase
 @inject SchoolService SchoolService
+@inherits EventAwareComponentBase
+@inject IUiEventService UiEventService
 
 @if (IsLoading)
 {
-    <p>Loading...</p>
+    <div class="select-school">
+        <div class="select-school-text">
+            Select School
+        </div>
+        <div class="select-school-dropdown">
+            <FluentSelect TOption="string">
+                    <FluentOption>Loading...</FluentOption>
+            </FluentSelect>
+        </div>
+    </div>
 }
 else
 {
@@ -14,7 +24,7 @@ else
             Select School
         </div>
         <div class="select-school-dropdown">
-            <FluentSelect TOption="string" @bind-Value="SelectedSchoolId">
+            <FluentSelect TOption="string" @bind-Value="SelectedSchoolId" @onchange="OnSchoolSelected">
                 @foreach (var school in schools!)
                 {
                     <FluentOption Value="@school.Id.ToString()">@school.ShortName</FluentOption>
@@ -32,43 +42,40 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        IsLoading = true;
         await LoadSchoolsAsync();
-
-        // Subscribe to the event
-        SchoolService.SchoolsUpdated += HandleSchoolsUpdated;
-
-        IsLoading = false;
+        SubscribeToEvent(UiEvents.SchoolsUpdated);
     }
 
     private async Task LoadSchoolsAsync()
     {
         IsLoading = true;
+        await InvokeAsync(StateHasChanged);
+        Thread.Sleep(500);
         schools = await SchoolService.GetAllAsync();
+        schools = schools.OrderBy(s => s.Id).ToList();
         IsLoading = false;
         await InvokeAsync(StateHasChanged);
     }
 
-    private void HandleSchoolsUpdated()
+    protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        _ = OnSchoolsUpdatedSafeAsync();
+        // Handle the events and update the state
+        switch (eventName)
+        {
+            case UiEvents.SchoolsUpdated:
+                // Reload Schools to reflect changes.
+                await LoadSchoolsAsync();
+                break;
+        }
+
+        // Ensure state change
+        await base.HandleEventAsync(eventName, payload);
     }
 
-    private async Task OnSchoolsUpdatedSafeAsync()
+    public async Task OnSchoolSelected(ChangeEventArgs e)
     {
-        try
-        {
-            await LoadSchoolsAsync();
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"Error updating schools: {ex.Message}");
-        }
-    }
-
-    public void Dispose()
-    {
-        // Unsubscribe from the event
-        SchoolService.SchoolsUpdated -= HandleSchoolsUpdated;
+        SelectedSchoolId = e.Value?.ToString();
+        var SelectedSchool = await SchoolService.SetCurrentSchool(Guid.Parse(SelectedSchoolId));
+        await IUiEventService.PublishAsync(UiEvents.SchoolSelected, SelectedSchool);
     }
 }

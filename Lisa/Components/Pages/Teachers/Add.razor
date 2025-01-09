@@ -5,13 +5,17 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject NavigationManager Navigation
-@inject UserManager<User> UserManager
+@inject UserService UserService
 @inject SchoolService SchoolService
+@inherits EventAwareComponentBase
 
 <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
     <Authorized>
         <h3>Add Teacher</h3>
-
+        @if (ErrorMessage != string.Empty)
+        {
+            <div class='alert alert-danger'>@ErrorMessage</div>
+        }
         <EditForm Context="editContext" Model="Teacher" OnValidSubmit="HandleValidSubmit">
             <DataAnnotationsValidator />
             <ValidationSummary />
@@ -33,7 +37,7 @@
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <InputText id="password" type="password" class="form-control" @bind-Value="Teacher.Email" />
+                <InputText id="password" type="password" class="form-control" @bind-Value="Teacher.Password" />
             </div>
 
             <button type="submit" class="btn btn-primary">Save</button>
@@ -48,17 +52,27 @@
 @code {
     private TeacherViewModel Teacher { get; set; } = new();
     private School SelectedSchool { get; set; } = new();
+    private string ErrorMessage { get; set; } = string.Empty;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        SchoolService.SchoolSelected += HandleSchoolChanged;
-        SelectedSchool = SchoolService.SelectedSchool;
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        SelectedSchool = SchoolService.GetSelectedSchool();
     }
 
-
-    private void HandleSchoolChanged()
+    protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        StateHasChanged();
+        // Handle the events and update the state
+        switch (eventName)
+        {
+            case UiEvents.SchoolSelected:
+                // Cast Payload to a School
+                SelectedSchool = payload as School;
+                break;
+        }
+
+        // Ensure state change
+        await base.HandleEventAsync(eventName, payload);
     }
 
     private async Task HandleValidSubmit()
@@ -70,21 +84,21 @@
                     FirstName = Teacher.FirstName,
                     Email = Teacher.Email,
                     LastName = Teacher.LastName,
-                    SchoolId = SelectedSchool.Id
+                    SchoolId = SelectedSchool.Id,
+                    UserName = Teacher.Email
                 };
-            UserManager.CreateAsync(TeacherModel, Teacher.Password);
-
+            await UserService.AddUser(TeacherModel, Teacher.Password);
             Navigation.NavigateTo("/teachers");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            ErrorMessage = $"Error: {ex.Message}";
+            await InvokeAsync(StateHasChanged);
         }
     }
 
     private void Cancel()
     {
-        // Navigate back to the previous page or a teachers list
         Navigation.NavigateTo("/teachers");
     }
 }

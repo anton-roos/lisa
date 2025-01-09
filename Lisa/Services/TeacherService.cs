@@ -1,10 +1,12 @@
 using Lisa.Data;
 using Lisa.Models.Entities;
+using Lisa.Services;
 using Microsoft.EntityFrameworkCore;
 
-public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory)
+public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory, IUiEventService uiEventService)
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
+    private readonly IUiEventService _uiEventService = uiEventService;
 
     public async Task<List<Teacher>> GetAllAsync()
     {
@@ -17,6 +19,8 @@ public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory)
         var _context = _dbContextFactory.CreateDbContext();
         _context.Teachers.Add(teacher);
         await _context.SaveChangesAsync();
+        await _context.DisposeAsync();
+        await _uiEventService.PublishAsync(UiEvents.TeachersUpdated);
     }
 
     public async Task<Teacher?> GetByIdAsync(Guid id)
@@ -43,6 +47,8 @@ public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory)
         existing.SchoolId = teacher.SchoolId;
 
         await _context.SaveChangesAsync();
+        await _context.DisposeAsync();
+        await _uiEventService.PublishAsync(UiEvents.TeachersUpdated);
     }
 
     public async Task DeleteAsync(Guid id)
@@ -53,6 +59,8 @@ public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory)
 
         _context.Teachers.Remove(existing);
         await _context.SaveChangesAsync();
+        await _context.DisposeAsync();
+        await _uiEventService.PublishAsync(UiEvents.TeachersUpdated);
     }
 
     public async Task<List<Teacher>> GetTeachersForSchoolAsync(Guid schoolId)
@@ -61,6 +69,7 @@ public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory)
         var teachers = await _context.Teachers
             .Where(t => t.SchoolId == schoolId)
             .ToListAsync();
+        await _context.DisposeAsync();
         return teachers;
     }
 }

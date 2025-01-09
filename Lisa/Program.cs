@@ -108,6 +108,7 @@ builder.Services.AddScoped<SubjectService>();
 builder.Services.AddScoped<TeacherService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddSingleton<SentryService>();
+builder.Services.AddScoped<IUiEventService, UiEventService>();
 
 builder.Services.AddHttpContextAccessor();
 

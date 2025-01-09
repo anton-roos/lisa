@@ -4,6 +4,7 @@
 @inject SchoolService SchoolService
 @inject GradeService GradeService
 @inject NavigationManager Navigation
+@inherits EventAwareComponentBase
 
 <h3>Grades for @SelectedSchool?.ShortName</h3>
 <button class="btn btn-primary" @onclick="GoToAddGrade">Add Grade</button>
@@ -38,16 +39,14 @@ else
     </table>
 }
 
-
-
 @code {
     private School? SelectedSchool;
     private List<Grade> Grades = new();
 
     protected override async Task OnInitializedAsync()
     {
-        SchoolService.SchoolSelected += HandleSchoolChanged;
-        SelectedSchool = SchoolService.SelectedSchool;
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        SelectedSchool = SchoolService.GetSelectedSchool();
         await LoadGrades();
     }
 
@@ -62,23 +61,26 @@ else
 
     private void GoToAddGrade()
     {
-        // Navigate to the Add Grade page
         Navigation.NavigateTo("/grades/add");
     }
 
     private void EditGrade(Guid id)
     {
-        // Navigate to the Edit Grade page for that ID
         Navigation.NavigateTo($"/grades/edit/{id}");
     }
 
-    private void HandleSchoolChanged()
+    protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        SelectedSchool = SchoolService.SelectedSchool;
-        InvokeAsync(async () =>
+        // Handle the events and update the state
+        switch (eventName)
         {
-            await LoadGrades();
-            StateHasChanged();
-        });
+            case UiEvents.SchoolSelected:
+                // Cast Payload to a School
+                SelectedSchool = payload as School;
+                break;
+        }
+
+        // Ensure state change
+        await base.HandleEventAsync(eventName, payload);
     }
 }

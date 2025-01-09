@@ -40,7 +40,7 @@ else
 
     protected override void OnInitialized()
     {
-        SelectedSchool = SchoolService.SelectedSchool;
+        SelectedSchool = SchoolService.GetSelectedSchool();
     }
 
     private async Task HandleValidSubmit()

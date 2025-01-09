@@ -7,12 +7,13 @@
 @inject NavigationManager Navigation
 @inject UserManager<User> UserManager
 @inject SchoolService SchoolService
+@inherits EventAwareComponentBase
 
 <AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
     <Authorized>
         <h3>Add Principal</h3>
 
-        <EditForm  Context="edit" Model="Principal" OnValidSubmit="HandleValidSubmit">
+        <EditForm Context="edit" Model="Principal" OnValidSubmit="HandleValidSubmit">
             <DataAnnotationsValidator />
             <ValidationSummary />
 
@@ -46,19 +47,28 @@
 </AuthorizeView>
 
 @code {
-    private PrincipalViewModel Principal { get; set; } = new(); 
+    private PrincipalViewModel Principal { get; set; } = new();
     private School? SelectedSchool;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        SchoolService.SchoolSelected += HandleSchoolChanged;
-        SelectedSchool = SchoolService.SelectedSchool;
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        SelectedSchool = SchoolService.GetSelectedSchool();
     }
 
-    private void HandleSchoolChanged()
+    protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        SelectedSchool = SchoolService.SelectedSchool;
-        StateHasChanged();
+        // Handle the events and update the state
+        switch (eventName)
+        {
+            case UiEvents.SchoolSelected:
+                // Cast Payload to a School
+                SelectedSchool = payload as School;
+                break;
+        }
+
+        // Ensure state change
+        await base.HandleEventAsync(eventName, payload);
     }
 
     private async Task HandleValidSubmit()
@@ -66,13 +76,13 @@
         try
         {
             var userEntity = new Principal
-            {
-                FirstName = Principal.FirstName,
-                LastName = Principal.LastName,
-                Email = Principal.Email,
-                UserName = Principal.Email,
-                SchoolId = SelectedSchool.Id
-            };
+                {
+                    FirstName = Principal.FirstName,
+                    LastName = Principal.LastName,
+                    Email = Principal.Email,
+                    UserName = Principal.Email,
+                    SchoolId = SelectedSchool.Id
+                };
 
             var result = await UserManager.CreateAsync(userEntity, Principal.Password);
             if (result.Succeeded)

@@ -7,6 +7,7 @@
 @inject NavigationManager Navigation
 @inject UserManager<User> UserManager
 @inject SchoolService SchoolService
+@inherits EventAwareComponentBase
 
 <AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
     <Authorized>
@@ -30,7 +31,7 @@
                 <label for="email">Email</label>
                 <InputText id="email" class="form-control" @bind-Value="SysAdmin.Email" />
             </div>
-            
+
             <div class="form-group">
                 <label for="password">Password</label>
                 <InputText id="password" class="form-control" @bind-Value="SysAdmin.Password" />
@@ -49,16 +50,25 @@
     private SystemAdminViewModel SysAdmin { get; set; } = new();
     private School? SelectedSchool;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        SchoolService.SchoolSelected += HandleSchoolChanged;
-        SelectedSchool = SchoolService.SelectedSchool;
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        SelectedSchool = SchoolService.GetSelectedSchool();
     }
 
-    private void HandleSchoolChanged()
+    protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        SelectedSchool = SchoolService.SelectedSchool;
-        StateHasChanged();
+        // Handle the events and update the state
+        switch (eventName)
+        {
+            case UiEvents.SchoolSelected:
+                // Cast Payload to a School
+                SelectedSchool = payload as School;
+                break;
+        }
+
+        // Ensure state change
+        await base.HandleEventAsync(eventName, payload);
     }
 
     private async Task HandleValidSubmit()

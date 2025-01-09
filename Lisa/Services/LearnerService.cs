@@ -10,7 +10,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, S
     private readonly SchoolService _schoolService = schoolService;
     private readonly IServiceProvider _serviceProvider = serviceProvider;
     public event Action? LearnersUpdated;
-    public School? SelectedSchool => _schoolService.SelectedSchool;
+    private School? SelectedSchool => _schoolService.GetSelectedSchool();
 
     public async Task<Learner?> GetLearnerAsync(Guid id)
     {

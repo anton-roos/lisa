@@ -8,22 +8,22 @@ public class SchoolService
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory;
     private School? _selectedSchool;
-    public event Action? SchoolsUpdated;
-    public event Action? SchoolSelected;
-    public School SelectedSchool { get; set; }
+    private readonly IUiEventService _uiEventService;
 
-    public SchoolService(IDbContextFactory<LisaDbContext> dbContextFactory)
+    public SchoolService(IDbContextFactory<LisaDbContext> dbContextFactory, IUiEventService uiEventService)
     {
         _dbContextFactory = dbContextFactory;
         InitializeSelectedSchool();
-        SelectedSchool = _selectedSchool ?? new School { ShortName = "No Schools in DB" };
+        _uiEventService = uiEventService;
     }
 
-    public void SetCurrentSchool(Guid schoolId)
+    public async Task<School> SetCurrentSchool(Guid schoolId)
     {
         var _context = _dbContextFactory.CreateDbContext();
-        _selectedSchool = _context.Schools.Single(s => s.Id == schoolId);
-        SchoolSelected?.Invoke();
+        _selectedSchool = await _context.Schools.SingleAsync(s => s.Id == schoolId);
+        await _context.DisposeAsync();
+        await _uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
+        return _selectedSchool;
     }
 
     public School GetSelectedSchool()
@@ -63,7 +63,8 @@ public class SchoolService
         var _context = _dbContextFactory.CreateDbContext();
         _context.Schools.Remove(school);
         await _context.SaveChangesAsync();
-        SchoolsUpdated?.Invoke();
+        _context.Dispose();
+        await _uiEventService.PublishAsync(UiEvents.SchoolsUpdated, school);
     }
 
     public async Task AddAsync(School school)
@@ -71,7 +72,8 @@ public class SchoolService
         var _context = _dbContextFactory.CreateDbContext();
         _context.Schools.Add(school);
         await _context.SaveChangesAsync();
-        SchoolsUpdated?.Invoke();
+        _context.Dispose();
+        await _uiEventService.PublishAsync(UiEvents.SchoolsUpdated, school);
     }
 
     public async Task UpdateAsync(School school)
@@ -79,7 +81,16 @@ public class SchoolService
         var _context = _dbContextFactory.CreateDbContext();
         _context.Schools.Update(school);
         await _context.SaveChangesAsync();
-        SchoolsUpdated?.Invoke();
+        await _context.DisposeAsync();
+        try
+        {
+            await _uiEventService.PublishAsync(UiEvents.SchoolsUpdated, school);
+        }
+        catch (Exception ex)
+        {
+            // Log the exception
+            Console.WriteLine($"Failed to publish event: {ex.Message}");
+        }
     }
 
     private void InitializeSelectedSchool()
@@ -87,6 +98,5 @@ public class SchoolService
         var _context = _dbContextFactory.CreateDbContext();
         _selectedSchool = _context.Schools.FirstOrDefault() ?? new School { ShortName = "No Schools in DB", LongName = "No Schools in DB" };
         _context.Dispose();
-        SchoolSelected?.Invoke();
     }
 }

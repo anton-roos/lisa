@@ -5,3 +5,7 @@
 - Teacher -> Add -> Email Validation is not working.
 - Teacher list does not distingish between schools.
 - Communication Page needs to be built.
+
+# Bugs
+When editing a school the previously selected school is selected on other pages but the dropdown
+is on the edited school.

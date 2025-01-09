@@ -6,9 +6,10 @@
 @using Microsoft.EntityFrameworkCore
 @inject NavigationManager NavigationManager
 @inject UserManager<User> UserManager
-@inject LisaDbContext DbContext
 @inject IHttpContextAccessor HttpContextAccessor
 @inject SchoolService SchoolService
+@inherits EventAwareComponentBase
+@inject TeacherService TeacherService
 
 <PageTitle>Teachers</PageTitle>
 
@@ -79,8 +80,9 @@
     protected override async Task OnInitializedAsync()
     {
         IsLoading = true;
-        SchoolService.SchoolSelected += HandleSchoolChanged;
-        SelectedSchool = SchoolService.SelectedSchool;
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        SubscribeToEvent(UiEvents.SchoolsUpdated);
+        SelectedSchool = SchoolService.GetSelectedSchool();
 
         var user = HttpContextAccessor.HttpContext?.User != null
         ? await UserManager.GetUserAsync(HttpContextAccessor.HttpContext.User)
@@ -90,33 +92,39 @@
         {
             if (SelectedSchool != null)
             {
-                Teachers = await DbContext.Teachers
-                .Where(t => t.SchoolId == SelectedSchool.Id)
-                .ToListAsync();
+                Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id);
             }
         }
         IsLoading = false;
     }
 
-    private void HandleSchoolChanged()
+    protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        SelectedSchool = SchoolService.SelectedSchool;
-        StateHasChanged();
+        // Handle the events and update the state
+        switch (eventName)
+        {
+            case UiEvents.SchoolSelected:
+                // Cast Payload to a School
+                SelectedSchool = payload as School;
+                Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id);
+                break;
+            case UiEvents.TeachersUpdated:
+                Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id);
+                break;
+            case UiEvents.SchoolsUpdated:
+                SelectedSchool = SchoolService.GetSelectedSchool();
+                Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id);
+                break;
+        }
+
+        // Ensure state change
+        await base.HandleEventAsync(eventName, payload);
     }
 
     private async Task DeleteTeacher(Guid teacherId)
     {
         IsLoading = true;
-        var teacher = await DbContext.Teachers.FindAsync(teacherId);
-        if (teacher != null)
-        {
-            DbContext.Teachers.Remove(teacher);
-            await DbContext.SaveChangesAsync();
-
-            Teachers = await DbContext.Teachers
-            .Where(t => SelectedSchool != null && t.SchoolId == SelectedSchool.Id)
-            .ToListAsync();
-        }
+        await TeacherService.DeleteAsync(teacherId);
         IsLoading = false;
     }
 

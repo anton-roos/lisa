@@ -60,4 +60,55 @@ public class UserService(UserManager<User> userManager)
                 }
         }
     }
+
+    public async Task AddUser<TUser>(TUser user, string password)
+    {
+        switch (user)
+        {
+            case Principal principal:
+                {
+                    await _userManager.CreateAsync(principal, password);
+                    await _userManager.AddToRoleAsync(principal, Roles.Principal);
+                    break;
+                }
+
+            case Administrator admin:
+                {
+                    await _userManager.CreateAsync(admin, password);
+                    await _userManager.AddToRoleAsync(admin, Roles.Administrator);
+                    break;
+                }
+
+            case SchoolManagement management:
+                {
+                    await _userManager.CreateAsync(management, password);
+                    await _userManager.AddToRoleAsync(management, Roles.SchoolManagement);
+                    break;
+                }
+
+            case SystemAdministrator sysAdmin:
+                {
+                    await _userManager.CreateAsync(sysAdmin, password);
+                    await _userManager.AddToRoleAsync(sysAdmin, Roles.SystemAdministrator);
+                    break;
+                }
+            case Teacher teacher:
+                {
+                    var result = await _userManager.CreateAsync(teacher, password);
+                    if (!result.Succeeded)
+                    {
+                        var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                        throw new Exception($"Failed to create user: {errors}");
+                    }
+                    await _userManager.AddToRoleAsync(teacher, Roles.Teacher);
+                    break;
+                }
+            case User baseUser:
+                {
+                    await _userManager.CreateAsync(baseUser, password);
+                    await _userManager.AddToRoleAsync(baseUser, Roles.SystemAdministrator);
+                    break;
+                }
+        }
+    }
 }

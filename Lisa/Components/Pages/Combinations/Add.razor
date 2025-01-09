@@ -31,7 +31,7 @@
 
     <div class="mb-3">
         <label class="form-label">Search Subjects</label>
-        <InputText class="form-control" oninput="@OnInputChange" @bind-Value="@searchText" placeholder="Type to filter subjects..." />
+        <InputText class="form-control" @oninput="@OnInputChange" @bind-Value="@searchText" placeholder="Type to filter subjects..." />
     </div>
 
     <div class="mb-3">
@@ -67,7 +67,6 @@
     private List<Grade> Grades = new();
     private List<Subject> AllSubjects = new();
     private School SelectedSchool = new();
-    private event Action OnInputChanged;
     private string searchText = string.Empty;
 
     private IEnumerable<Subject> FilteredSubjects =>
@@ -76,7 +75,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        SelectedSchool = SchoolService.SelectedSchool;
+        SelectedSchool = SchoolService.GetSelectedSchool();
         AllSubjects = await SubjectService.GetAllAsync();
         Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
     }

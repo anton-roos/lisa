@@ -3,17 +3,18 @@
 @inject NavigationManager Navigation
 @inject CareGroupService CareGroupService
 @inject SchoolService SchoolService
+@inherits EventAwareComponentBase
 
 <h3>Care Groups</h3>
-<button class="btn btn-primary" @onclick="GoToAddPage">Add Subject Combination</button>
+<button class="btn btn-primary" @onclick="GoToAddPage">Add Care Group</button>
 @if (CareGroups == null)
 {
     <p>Loading...</p>
 }
 else if (!CareGroups.Any())
 {
-   <div class="alert alert-warning">
-        No Care Groups for <strong>@CurrentSchool.ShortName</strong>.
+    <div class="alert alert-warning">
+        No Care Groups for <strong>@SelectedSchool.ShortName</strong>.
     </div>
 }
 else
@@ -45,13 +46,25 @@ else
 @code {
     private IEnumerable<CareGroup>? CareGroupsToFilter;
     private IEnumerable<CareGroup>? CareGroups;
-    private School CurrentSchool = new();
+    private School SelectedSchool = new();
 
     protected override async Task OnInitializedAsync()
     {
         CareGroupsToFilter = await CareGroupService.GetAllAsync();
-        CurrentSchool = SchoolService.GetSelectedSchool();
-        CareGroups = CareGroupsToFilter.Where(c => c.SchoolId == CurrentSchool.Id);
+        SelectedSchool = SchoolService.GetSelectedSchool();
+        CareGroups = CareGroupsToFilter.Where(c => c.SchoolId == SelectedSchool.Id);
+        SubscribeToEvent(UiEvents.SchoolSelected);
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected)
+        {
+            SelectedSchool = payload as School;
+            CareGroups = CareGroupsToFilter.Where(c => c.SchoolId == SelectedSchool.Id);
+        }
+        
+        await base.HandleEventAsync(eventName, payload);
     }
 
     private void GoToAddPage()

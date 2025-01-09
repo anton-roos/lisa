@@ -3,10 +3,11 @@
 @inject NavigationManager Navigation
 @inject SchoolService SchoolService
 @inject UserService UserService
+@inherits EventAwareComponentBase
 
 <h3>Principals</h3>
 
-@if (CurrentSchool == null)
+@if (SelectedSchool == null)
 {
     <div class="alert alert-warning">
         No school selected. Please select a school first.
@@ -18,7 +19,7 @@ else if (UsersInRole == null)
 }
 else if (UsersInRole.Count == 0)
 {
-    <p>No Principals found for @CurrentSchool.ShortName.</p>
+    <p>No Principals found for @SelectedSchool.ShortName.</p>
 }
 else
 {
@@ -34,29 +35,29 @@ else
             {
                 <tr>
                     <td>@($"{Principal.FirstName} {Principal.LastName}")</td>
-                    <td>@CurrentSchool.ShortName</td>
+                    <td>@SelectedSchool.ShortName</td>
                 </tr>
             }
         </tbody>
     </table>
 }
 
-<button class="btn btn-success" @onclick="GoToAddPrincipal" disabled="@IsSchoolNotSelected">
+<button class="btn btn-success" @onclick="GoToAddPrincipal" disabled="@(SelectedSchool == null)">
     Add Principal
 </button>
 
 @code {
-    private School? CurrentSchool;
+    private School? SelectedSchool;
     private List<User> UsersInRole = new();
     private List<Principal> Principals = new();
-    private bool IsSchoolNotSelected => CurrentSchool == null || CurrentSchool.Id == Guid.Empty;
+    private bool IsSchoolNotSelected => SelectedSchool == null || SelectedSchool.Id == Guid.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        SchoolService.SchoolSelected += HandleSchoolChange;
-        CurrentSchool = SchoolService.SelectedSchool;
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        SelectedSchool = SchoolService.GetSelectedSchool();
 
-        if (CurrentSchool != null)
+        if (SelectedSchool != null)
         {
             await LoadUsers();
         }
@@ -64,21 +65,23 @@ else
 
     private async Task LoadUsers()
     {
-        UsersInRole = await UserService.GetUsersByRoleAndSchoolAsync(Roles.Principal, CurrentSchool.Id);
+        UsersInRole = await UserService.GetUsersByRoleAndSchoolAsync(Roles.Principal, SelectedSchool.Id);
         Principals = UsersInRole.OfType<Principal>().ToList();
     }
 
-    private void HandleSchoolChange()
+    protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        CurrentSchool = SchoolService.SelectedSchool;
-        InvokeAsync(async () =>
+        // Handle the events and update the state
+        switch (eventName)
         {
-            if (CurrentSchool != null)
-            {
-                await LoadUsers();
-            }
-            StateHasChanged();
-        });
+            case UiEvents.SchoolSelected:
+                // Cast Payload to a School
+                SelectedSchool = payload as School;
+                break;
+        }
+
+        // Ensure state change
+        await base.HandleEventAsync(eventName, payload);
     }
 
     private void GoToAddPrincipal()

@@ -7,6 +7,7 @@
 @inject LearnerService LearnerService
 @inject GradeService GradeService
 @inject SubjectService SubjectService
+@inherits EventAwareComponentBase
 
 <h3>Capture Marks</h3>
 
@@ -104,8 +105,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        SchoolService.SchoolSelected += HandleSchoolChanged;
-        SelectedSchool = SchoolService.SelectedSchool;
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        SelectedSchool = SchoolService.GetSelectedSchool();
         Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
     }
     
@@ -117,15 +118,19 @@ else
         }
     }
 
-    private void HandleSchoolChanged()
+    protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        SelectedSchool = SchoolService.SelectedSchool;
-        InvokeAsync(async () =>
+        // Handle the events and update the state
+        switch (eventName)
         {
-            await LoadGrades();
-            await LoadSubjects();
-            StateHasChanged();
-        });
+            case UiEvents.SchoolSelected:
+                // Cast Payload to a School
+                SelectedSchool = payload as School;
+                break;
+        }
+
+        // Ensure state change
+        await base.HandleEventAsync(eventName, payload);
     }
 
     private async Task LoadGrades()

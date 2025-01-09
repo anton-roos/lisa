@@ -73,19 +73,19 @@
     private List<RegisterClass> registerClasses = new();
     private List<CareGroup> careGroups = new();
     private IEnumerable<Combination> combinations;
-    private School school = new();
+    private School? SelectedSchool = new();
 
     protected override async Task OnInitializedAsync()
     {
         registerClasses = await learnerService.GetRegisterClasses();
         careGroups = await learnerService.GetCareGroups();
         combinations = await combinationService.GetAllAsync();
-        school = schoolService.SelectedSchool;
+        SelectedSchool = schoolService.GetSelectedSchool();
     }
 
     private async Task HandleValidSubmit()
     {
-        learner.SchoolId = school.Id;
+        learner.SchoolId = SelectedSchool.Id;
         await learnerService.AddLearner(learner);
         ToastService.ShowToast(ToastIntent.Success, "Learner added successfully");
         await Task.Delay(1000);

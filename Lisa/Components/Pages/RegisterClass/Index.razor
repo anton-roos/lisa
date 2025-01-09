@@ -3,6 +3,7 @@
 @inject SchoolService SchoolService
 @inject RegisterClassService RegisterClassService
 @inject NavigationManager NavigationManager
+@inherits EventAwareComponentBase
 
 <h3>Register Classes</h3>
 <button class="btn btn-primary" @onclick="AddRegisterClass">Add Register Class</button>
@@ -55,26 +56,27 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        SchoolService.SchoolSelected += HandleSchoolChanged;
-
-        SelectedSchool = SchoolService.SelectedSchool;
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        SelectedSchool = SchoolService.GetSelectedSchool();
         if (SelectedSchool != null)
         {
             await LoadRegisterClasses(SelectedSchool.Id);
         }
     }
 
-    private void HandleSchoolChanged()
+    protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        SelectedSchool = SchoolService.SelectedSchool;
-        InvokeAsync(async () =>
+        // Handle the events and update the state
+        switch (eventName)
         {
-            if (SelectedSchool != null)
-            {
-                await LoadRegisterClasses(SelectedSchool.Id);
-            }
-            StateHasChanged();
-        });
+            case UiEvents.SchoolSelected:
+                // Cast Payload to a School
+                SelectedSchool = payload as School;
+                break;
+        }
+
+        // Ensure state change
+        await base.HandleEventAsync(eventName, payload);
     }
 
     private async Task LoadRegisterClasses(Guid schoolId)
@@ -99,14 +101,9 @@ else
         if (registerClass != null)
         {
             await RegisterClassService.DeleteAsync(registerClass);
-            LoadRegisterClasses(SelectedSchool.Id);
+            await LoadRegisterClasses(SelectedSchool.Id);
             StateHasChanged();
         }
-    }
-
-    public void Dispose()
-    {
-        SchoolService.SchoolsUpdated -= HandleSchoolChanged;
     }
 
     private void AddRegisterClass()

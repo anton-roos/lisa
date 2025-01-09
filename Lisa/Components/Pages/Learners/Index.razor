@@ -3,6 +3,7 @@
 @inject SchoolService SchoolService
 @inject LearnerService LearnerService
 @inject NavigationManager NavigationManager
+@inherits EventAwareComponentBase
 
 <h3>Learners</h3>
 <button class="btn btn-primary" @onclick="AddLearner">Add Learner</button>
@@ -48,26 +49,26 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        SchoolService.SchoolSelected += HandleSchoolChanged;
-
-        SelectedSchool = SchoolService.SelectedSchool;
+        SelectedSchool = SchoolService.GetSelectedSchool();
         if (SelectedSchool != null)
         {
             await LoadLearnersForSelectedSchool(SelectedSchool.Id);
         }
     }
 
-    private void HandleSchoolChanged()
+    protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        SelectedSchool = SchoolService.SelectedSchool;
-        InvokeAsync(async () =>
+        // Handle the events and update the state
+        switch (eventName)
         {
-            if (SelectedSchool != null)
-            {
-                await LoadLearnersForSelectedSchool(SelectedSchool.Id);
-            }
-            StateHasChanged();
-        });
+            case UiEvents.SchoolSelected:
+                // Cast Payload to a School
+                SelectedSchool = payload as School;
+                break;
+        }
+
+        // Ensure state change
+        await base.HandleEventAsync(eventName, payload);
     }
 
     private async Task LoadLearnersForSelectedSchool(Guid schoolId)
@@ -83,11 +84,6 @@ else
     private void LearnerDetails(Guid learnerId)
     {
         NavigationManager.NavigateTo($"/learners/details/{learnerId}");
-    }
-
-    public void Dispose()
-    {
-        SchoolService.SchoolsUpdated -= HandleSchoolChanged;
     }
 
     private void AddLearner()

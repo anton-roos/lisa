@@ -8,7 +8,7 @@
 - Make sure that all Authentication and Authorization works
 - Force go to every page with every user type to see that everything is working
 - Test all roles capabilities
-
+- Setup Database Backups in SharePoint
 
 # Bugs
 When editing a school the previously selected school is selected on other pages but the dropdown

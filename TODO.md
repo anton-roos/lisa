@@ -5,6 +5,10 @@
 - Teacher -> Add -> Email Validation is not working.
 - Teacher list does not distingish between schools.
 - Communication Page needs to be built.
+- Make sure that all Authentication and Authorization works
+- Force go to every page with every user type to see that everything is working
+- Test all roles capabilities
+
 
 # Bugs
 When editing a school the previously selected school is selected on other pages but the dropdown

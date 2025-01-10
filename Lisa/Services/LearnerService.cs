@@ -83,9 +83,9 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, S
         var learner = await _context.Learners
             .Include(l => l.Combination)
             .Include(l => l.CareGroup)
-            .Include(l => l.RegisterClass)
-            .ThenInclude(rc => rc.Grade)
             .Include(l => l.LearnerParents)
+            .Include(l => l.RegisterClass!)
+                .ThenInclude(rc => rc.Grade)
             .FirstOrDefaultAsync(l => l.Id == learnerId);
         await _context.DisposeAsync();
         return learner;    

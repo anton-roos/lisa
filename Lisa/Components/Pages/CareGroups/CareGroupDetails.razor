@@ -1,4 +1,4 @@
-@page "/care-groups/details/{Id:guid}"
+@page "/care-groups/view/{Id:guid}"
 @using Lisa.Models.Entities
 @inject CareGroupService CareGroupService
 
@@ -17,8 +17,7 @@ else
 @code {
     [Parameter]
     public Guid Id { get; set; }
-    public CareGroup CareGroup { get; set; }
-
+    public CareGroup? CareGroup { get; set; }
 
     protected override async Task OnInitializedAsync()
     {

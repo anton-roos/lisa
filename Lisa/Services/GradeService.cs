@@ -27,7 +27,7 @@ public class GradeService(IDbContextFactory<LisaDbContext> dbContextFactory)
     {
         var _context = _dbContextFactory.CreateDbContext();
         return await _context.Grades
-            .Include(g => g.RegisterClasses)
+            .Include(g => g.RegisterClasses!)
             .ThenInclude(rc => rc.Learners)
             .Include(g => g.Combinations)
             .FirstOrDefaultAsync(grade => grade.Id == id);

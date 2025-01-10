@@ -29,9 +29,10 @@ public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         return await _context.Teachers
             .Include(t => t.School)
             .Include(t => t.Subjects)
-            .Include(t => t.RegisterClasses).ThenInclude(rc => rc.Grade)
+            .Include(t => (IEnumerable<RegisterClass>)t.RegisterClasses!)
+                .ThenInclude(rc => rc.Grade)
             .Include(t => t.Periods)
-            .FirstOrDefaultAsync(t => t.Id == id); ;
+            .FirstOrDefaultAsync(t => t.Id == id);
     }
 
     public async Task UpdateAsync(Teacher teacher)

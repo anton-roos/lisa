@@ -4,6 +4,7 @@
 @inject SchoolService SchoolService
 @inject UserService UserService
 @inherits EventAwareComponentBase
+@inject ILogger<SchoolManagement> Logger
 
 <h3>School Management</h3>
 <button class="btn btn-primary" @onclick="AddSchoolManagement" disabled="@(SelectedSchool == null)">
@@ -39,8 +40,8 @@ else
                 <tr>
                     <td>@($"{schoolManagement.FirstName} {schoolManagement.LastName}")</td>
                     <td>@SelectedSchool.ShortName</td>
-                    <ActionButtons TEntity="SchoolManagement" Entity="schoolManagement" OnView="ViewSchoolManagement" OnEdit="EditSchoolManagement"
-                        OnDelete="DeleteSchoolManagement" />
+                    <ActionButtons TEntity="SchoolManagement" Entity="schoolManagement" OnView="ViewSchoolManagement"
+                        OnEdit="EditSchoolManagement" OnDelete="DeleteSchoolManagement" />
                 </tr>
             }
         </tbody>
@@ -64,7 +65,14 @@ else
 
     private async Task LoadUsers()
     {
-        SchoolManagements = await UserService.GetAllByRoleAndSchoolAsync<SchoolManagement>(SelectedSchool.Id);
+        if (SelectedSchool != null)
+        {
+            SchoolManagements = await UserService.GetAllByRoleAndSchoolAsync<SchoolManagement>(SelectedSchool.Id);
+        }
+        else
+        {
+            Logger.LogError("SelectedSchool was null when trying to load users.");
+        }
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
@@ -100,7 +108,14 @@ else
     private async Task DeleteSchoolManagement(SchoolManagement schoolManagement)
     {
         await UserService.DeleteAsync<SchoolManagement>(schoolManagement.Id);
-        SchoolManagements = await UserService.GetAllByRoleAndSchoolAsync<SchoolManagement>(SelectedSchool.Id);
-        await InvokeAsync(StateHasChanged);
+        if (SelectedSchool != null)
+        {
+            SchoolManagements = await UserService.GetAllByRoleAndSchoolAsync<SchoolManagement>(SelectedSchool.Id);
+            await InvokeAsync(StateHasChanged);
+        }
+        else
+        {
+            Logger.LogError("SelectedSchool was null when trying to load users.");
+        }
     }
 }

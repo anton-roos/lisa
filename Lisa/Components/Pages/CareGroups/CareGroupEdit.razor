@@ -4,6 +4,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @inject CareGroupService CareGroupService
 @inject NavigationManager Navigation
+@inject ILogger<CareGroupEdit> Logger
 
 <h3>Edit Care Group</h3>
 
@@ -30,7 +31,7 @@ else
     [Parameter]
     public Guid Id { get; set; }
 
-    private CareGroup careGroup;
+    private CareGroup? careGroup;
 
     protected override async Task OnInitializedAsync()
     {
@@ -39,7 +40,15 @@ else
 
     private async Task HandleValidSubmit()
     {
-        await CareGroupService.UpdateAsync(careGroup);
-        Navigation.NavigateTo("/care-groups");
+        if (careGroup != null)
+        {
+            await CareGroupService.UpdateAsync(careGroup);
+            Navigation.NavigateTo($"/care-groups/view/{careGroup.Id}");
+        }
+        else
+        {
+            Logger.LogError("Care Group was null when trying to edit it.");
+            Navigation.NavigateTo("/care-groups");
+        }
     }
 }

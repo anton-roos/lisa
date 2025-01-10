@@ -80,7 +80,7 @@
     private Learner learner = new Learner();
     private List<RegisterClass> registerClasses = new();
     private List<CareGroup> careGroups = new();
-    private IEnumerable<Combination> combinations;
+    private IEnumerable<Combination>? combinations;
     private School? SelectedSchool = new();
 
     protected override async Task OnInitializedAsync()
@@ -93,6 +93,11 @@
 
     private async Task HandleValidSubmit()
     {
+        if (SelectedSchool == null)
+        {
+            ToastService.ShowToast(ToastIntent.Error, "Please select a school");
+            return;
+        }
         learner.SchoolId = SelectedSchool.Id;
         await learnerService.AddLearner(learner);
         ToastService.ShowToast(ToastIntent.Success, "Learner added successfully");

@@ -8,10 +8,18 @@
 @inject GradeService GradeService
 @inject SubjectService SubjectService
 @inherits EventAwareComponentBase
+@inject ILogger<Result> Logger
+@inject UserService UserService
 
 <h3>Capture Marks</h3>
 
-@if (Grades.Count == 0)
+@if (SelectedSchool == null)
+{
+    <div class="alert alert-warning" role="alert">
+        <strong>No School Selected!</strong> Please select a school to Capture Marks.
+    </div>
+}
+else if (Grades.Count == 0)
 {
     <div class="alert alert-warning" role="alert">
         <strong>No Grades for School!</strong> Please add Grades to @SelectedSchool.ShortName! to Capture Marks.
@@ -110,7 +118,7 @@ else
         Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
     }
     
-    private async Task HandleGradeSelect(ChangeEventArgs e)
+    private void HandleGradeSelect(ChangeEventArgs e)
     {
         if (Guid.TryParse(e.Value?.ToString(), out Guid gradeId))
         {
@@ -135,7 +143,14 @@ else
 
     private async Task LoadGrades()
     {
-        Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+        if (SelectedSchool != null)
+        {
+            Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+        }
+        else
+        {
+            Logger.LogError("SelectedSchool was null when trying to load grades.");
+        }
     }
 
     private async Task LoadSubjects()
@@ -156,14 +171,20 @@ else
         LearnerResults = learners.Select(l => new LearnerResult
             {
                 LearnerId = l.Id,
-                LearnerName = l.FirstName,
+                LearnerName = l.FirstName ?? string.Empty,
                 ResultViewModel = new ResultViewModel()
             }).ToList();
     }
 
     private async Task SaveResults()
     {
-        Guid userId = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        var user = await UserService.GetLoggedInUserAsync<User>();
+
+        if (user == null)
+        {
+            Logger.LogError("User is null when trying to save results.");
+            return;
+        }
 
         foreach (var entry in LearnerResults)
         {
@@ -178,7 +199,7 @@ else
                 ResultDate = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                CapturedBy = userId
+                CapturedBy = user.Id
             };
         }
     }

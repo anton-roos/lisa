@@ -28,9 +28,9 @@ public class CareGroupService(IDbContextFactory<LisaDbContext> dbContextFactory)
     {
         var _context = _dbContextFactory.CreateDbContext();
         
-        return await _context.CareGroups
+        return (await _context.CareGroups
             .Include(c => c.CareGroupMembers)
-            .FirstOrDefaultAsync(c => c.Id == id);
+            .FirstOrDefaultAsync(c => c.Id == id))!;
     }
 
     public async Task<CareGroup> UpdateAsync(CareGroup careGroup)

@@ -1,4 +1,4 @@
-@page "/system-administrators/add/"
+@page "/administrators/add/"
 @using Lisa.Models.ViewModels
 @using Microsoft.AspNetCore.Authorization
 @using Lisa.Models.Entities
@@ -11,30 +11,30 @@
 
 <AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
     <Authorized>
-        <h3>Add System Administrator</h3>
+        <h3>Add Administrator</h3>
 
-        <EditForm Context="edit" Model="SysAdmin" OnValidSubmit="HandleValidSubmit">
+        <EditForm Context="edit" Model="Administrator" OnValidSubmit="HandleValidSubmit">
             <DataAnnotationsValidator />
             <ValidationSummary />
 
             <div class="form-group">
                 <label for="firstName">First Name</label>
-                <InputText id="firstName" class="form-control" @bind-Value="SysAdmin.FirstName" />
+                <InputText id="firstName" class="form-control" @bind-Value="Administrator.FirstName" />
             </div>
 
             <div class="form-group">
                 <label for="lastName">Last Name</label>
-                <InputText id="lastName" class="form-control" @bind-Value="SysAdmin.LastName" />
+                <InputText id="lastName" class="form-control" @bind-Value="Administrator.LastName" />
             </div>
 
             <div class="form-group">
                 <label for="email">Email</label>
-                <InputText id="email" class="form-control" @bind-Value="SysAdmin.Email" />
+                <InputText id="email" class="form-control" @bind-Value="Administrator.Email" />
             </div>
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <InputText id="password" type="password" class="form-control" @bind-Value="SysAdmin.Password" />
+                <InputText id="password" type="password" class="form-control" @bind-Value="Administrator.Password" />
             </div>
 
             <button type="submit" class="btn btn-primary">Save</button>
@@ -47,7 +47,7 @@
 </AuthorizeView>
 
 @code {
-    private SystemAdminViewModel SysAdmin { get; set; } = new();
+    private AdministratorViewModel Administrator { get; set; } = new();
     private School? SelectedSchool;
 
     protected override void OnInitialized()
@@ -56,39 +56,33 @@
         SelectedSchool = SchoolService.GetSelectedSchool();
     }
 
-    protected override async Task HandleEventAsync(string eventName, object? payload)
-    {
-        // Handle the events and update the state
-        switch (eventName)
-        {
-            case UiEvents.SchoolSelected:
-                // Cast Payload to a School
-                SelectedSchool = payload as School;
-                break;
-        }
-
-        // Ensure state change
-        await base.HandleEventAsync(eventName, payload);
-    }
-
     private async Task HandleValidSubmit()
     {
         try
         {
-            var userEntity = new SystemAdministrator
+            if (SelectedSchool == null)
+            {
+                throw new Exception("No Selected School while trying to add an Administrator.");
+            }
+            var userEntity = new Administrator
                 {
-                    FirstName = SysAdmin.FirstName,
-                    LastName = SysAdmin.LastName,
-                    Email = SysAdmin.Email,
-                    UserName = SysAdmin.Email,
+                    FirstName = Administrator.FirstName,
+                    LastName = Administrator.LastName,
+                    Email = Administrator.Email,
+                    UserName = Administrator.Email,
+                    SchoolId = SelectedSchool.Id,
                 };
 
-            var result = await UserManager.CreateAsync(userEntity, SysAdmin.Password);
+            if (string.IsNullOrWhiteSpace(Administrator.Password))
+            {
+                throw new Exception("Password is required.");
+            }
+            
+            var result = await UserManager.CreateAsync(userEntity, Administrator.Password);
             if (result.Succeeded)
             {
-                await UserManager.AddToRoleAsync(userEntity, Roles.SystemAdministrator);
-
-                Navigation.NavigateTo("/system-administrators");
+                await UserManager.AddToRoleAsync(userEntity, Roles.Administrator);
+                Navigation.NavigateTo("/administrators");
             }
             else
             {
@@ -101,8 +95,18 @@
         }
     }
 
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected)
+        {
+            SelectedSchool = payload as School;
+        }
+        await base.HandleEventAsync(eventName, payload);
+    }
+
     private void Cancel()
     {
-        Navigation.NavigateTo("/system-administrators");
+        Navigation.NavigateTo("/administrators");
     }
 }

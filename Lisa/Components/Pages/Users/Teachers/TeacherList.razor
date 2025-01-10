@@ -9,6 +9,7 @@
 @inject SchoolService SchoolService
 @inherits EventAwareComponentBase
 @inject UserService UserService
+@inject Logger<Teacher> Logger
 
 <PageTitle>Teachers</PageTitle>
 
@@ -21,7 +22,14 @@
         else
         {
             <div class="mb-4">
-                <h3>Teachers for @SelectedSchool.ShortName</h3>
+                @if (SelectedSchool != null)
+                {
+                    <h3>Teachers for @SelectedSchool.ShortName</h3>
+                }
+                else
+                {
+                    <h3>Teachers</h3>
+                }
                 <button class="btn btn-primary" @onclick="AddTeacher">Add Teacher</button>
                 @if (Teachers == null)
                 {
@@ -29,9 +37,18 @@
                 }
                 else if (!Teachers.Any())
                 {
-                    <div class="alert alert-info">
-                        No teachers found for <strong>@SelectedSchool.ShortName</strong>.
-                    </div>
+                    @if (SelectedSchool != null)
+                    {
+                        <div class="alert alert-info">
+                            No teachers found for <strong>@SelectedSchool.ShortName</strong>.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            No teachers found.
+                        </div>
+                    }
                 }
                 else
                 {
@@ -90,9 +107,16 @@
 
     public async Task LoadTeachers()
     {
-        Teachers = await UserService.GetAllByRoleAndSchoolAsync<Teacher>(SelectedSchool.Id);
+        if (SelectedSchool != null)
+        {
+            Teachers = await UserService.GetAllByRoleAndSchoolAsync<Teacher>(SelectedSchool.Id);
+            await InvokeAsync(StateHasChanged);
+        }
+        else
+        {
+            Logger.LogError("SelectedSchool was null when trying to load teachers.");
+        }
     }
-
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
         // Handle the events and update the state

@@ -57,10 +57,18 @@ else
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        if (eventName == UiEvents.SchoolSelected)
+        switch (eventName)
         {
-            SelectedSchool = payload as School;
-            CareGroups = CareGroupsToFilter.Where(c => c.SchoolId == SelectedSchool.Id);
+            case UiEvents.SchoolSelected:
+                if (payload is School school)
+                {
+                    SelectedSchool = school;
+                    if (CareGroupsToFilter != null)
+                    {
+                        CareGroups = CareGroupsToFilter.Where(c => c.SchoolId == SelectedSchool.Id);
+                    }
+                }
+                break;
         }
 
         await base.HandleEventAsync(eventName, payload);

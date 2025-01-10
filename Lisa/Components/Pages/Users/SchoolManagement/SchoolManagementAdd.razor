@@ -14,7 +14,7 @@
     <Authorized>
         <h3>Add School Management</h3>
 
-        <EditForm  Context="edit" Model="Management" OnValidSubmit="HandleValidSubmit">
+        <EditForm Context="edit" Model="Management" OnValidSubmit="HandleValidSubmit">
             <DataAnnotationsValidator />
             <ValidationSummary />
 
@@ -48,10 +48,10 @@
 </AuthorizeView>
 
 @code {
-    private SchoolManagementViewModel Management { get; set; } = new(); 
+    private SchoolManagementViewModel Management { get; set; } = new();
     private School? SelectedSchool;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         SubscribeToEvent(UiEvents.SchoolSelected);
         SelectedSchool = SchoolService.GetSelectedSchool();
@@ -76,15 +76,25 @@
     {
         try
         {
-            var userEntity = new SchoolManagement
+            if (SelectedSchool == null)
             {
-                FirstName = Management.FirstName,
-                LastName = Management.LastName,
-                Email = Management.Email,
-                UserName = Management.Email,
-                SchoolId = SelectedSchool.Id
-            };
+                throw new Exception("No Selected School while trying to add a School Management.");
+            }
+            
+            var userEntity = new SchoolManagement
+                {
+                    FirstName = Management.FirstName,
+                    LastName = Management.LastName,
+                    Email = Management.Email,
+                    UserName = Management.Email,
+                    SchoolId = SelectedSchool.Id
+                };
 
+            if (string.IsNullOrWhiteSpace(Management.Password))
+            {
+                throw new Exception("Password is required.");
+            }
+            
             var result = await UserManager.CreateAsync(userEntity, Management.Password);
             if (result.Succeeded)
             {

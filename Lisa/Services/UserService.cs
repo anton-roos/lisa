@@ -43,6 +43,10 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
         var _context = await _dbContextFactory.CreateDbContextAsync();
         var user = await _context.Users.OfType<TUser>().FirstOrDefaultAsync(u => u.Id == id);
         await _context.DisposeAsync();
+        if (user == null)
+        {
+            throw new Exception("User not found");
+        }   
         return user;
     }
 

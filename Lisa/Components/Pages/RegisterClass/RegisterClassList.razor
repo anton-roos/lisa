@@ -4,6 +4,7 @@
 @inject RegisterClassService RegisterClassService
 @inject NavigationManager NavigationManager
 @inherits EventAwareComponentBase
+@inject Logger<RegisterClass> Logger
 
 <h3>Register Classes</h3>
 <button class="btn btn-primary" @onclick="AddRegisterClass">Add Register Class</button>
@@ -24,11 +25,32 @@
             {
                 <tr>
                     <td>@registerClass.Name</td>
-                    <td>@registerClass.Grade.Name</td>
-                    <td>@registerClass.Learners.Count.ToString()</td>
-                    <td>@registerClass.Teacher.LastName</td>
-                    <ActionButtons TEntity="RegisterClass" Entity="registerClass" OnView="ViewRegisterClass" OnEdit="EditRegisterClass"
-                        OnDelete="DeleteRegisterClass" />
+                    @if (registerClass.Grade != null)
+                    {
+                        <td>@registerClass.Grade.Name</td>
+                    }
+                    else
+                    {
+                        <td>Grade not found</td>
+                    }
+                    @if (registerClass.Learners != null)
+                    {
+                        <td>@registerClass.Learners.Count.ToString()</td>
+                    }
+                    else
+                    {
+                        <td>Learners not found</td>
+                    }
+                    @if (registerClass.Teacher != null)
+                    {
+                        <td>@registerClass.Teacher.FirstName</td>
+                    }
+                    else
+                    {
+                        <td>Teacher not found</td>
+                    }
+                    <ActionButtons TEntity="RegisterClass" Entity="registerClass" OnView="ViewRegisterClass"
+                        OnEdit="EditRegisterClass" OnDelete="DeleteRegisterClass" />
                 </tr>
             }
         </tbody>
@@ -55,31 +77,35 @@ else
     {
         SubscribeToEvent(UiEvents.SchoolSelected);
         SelectedSchool = SchoolService.GetSelectedSchool();
-        if (SelectedSchool != null)
-        {
-            await LoadRegisterClasses(SelectedSchool.Id);
-        }
+        await LoadRegisterClasses();
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        // Handle the events and update the state
         switch (eventName)
         {
             case UiEvents.SchoolSelected:
-                // Cast Payload to a School
                 SelectedSchool = payload as School;
                 break;
         }
 
-        // Ensure state change
         await base.HandleEventAsync(eventName, payload);
     }
 
-    private async Task LoadRegisterClasses(Guid schoolId)
+    private async Task LoadRegisterClasses()
     {
         var unfiltedRegisterClasses = await RegisterClassService.GetAllAsync();
-        RegisterClasses = unfiltedRegisterClasses.Where(rc => rc.Grade.SchoolId == schoolId).ToList();
+        if (SelectedSchool == null)
+        {
+            Logger.LogError("SelectedSchool was null when trying to load register classes.");
+            return;
+        }
+        if (unfiltedRegisterClasses != null)
+        {
+            RegisterClasses = unfiltedRegisterClasses
+            .Where(rc => rc.Grade != null && rc.Grade.SchoolId == SelectedSchool.Id)
+            .ToList();
+        }
     }
 
     private void EditRegisterClass(RegisterClass registerClass)
@@ -97,8 +123,9 @@ else
         if (registerClass != null)
         {
             await RegisterClassService.DeleteAsync(registerClass);
-            await LoadRegisterClasses(SelectedSchool.Id);
-            StateHasChanged();
+
+            await LoadRegisterClasses();
+            await InvokeAsync(StateHasChanged);
         }
     }
 

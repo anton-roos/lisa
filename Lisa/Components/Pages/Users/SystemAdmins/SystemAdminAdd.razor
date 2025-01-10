@@ -1,43 +1,40 @@
-@page "/teachers/add/"
+@page "/system-administrators/add/"
 @using Lisa.Models.ViewModels
 @using Microsoft.AspNetCore.Authorization
 @using Lisa.Models.Entities
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject NavigationManager Navigation
-@inject UserService UserService
+@inject UserManager<User> UserManager
 @inject SchoolService SchoolService
 @inherits EventAwareComponentBase
 
-<AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
     <Authorized>
-        <h3>Add Teacher</h3>
-        @if (ErrorMessage != string.Empty)
-        {
-            <div class='alert alert-danger'>@ErrorMessage</div>
-        }
-        <EditForm Context="editContext" Model="Teacher" OnValidSubmit="HandleValidSubmit">
+        <h3>Add System Administrator</h3>
+
+        <EditForm Context="edit" Model="SysAdmin" OnValidSubmit="HandleValidSubmit">
             <DataAnnotationsValidator />
             <ValidationSummary />
 
             <div class="form-group">
                 <label for="firstName">First Name</label>
-                <InputText id="firstName" class="form-control" @bind-Value="Teacher.FirstName" />
+                <InputText id="firstName" class="form-control" @bind-Value="SysAdmin.FirstName" />
             </div>
 
             <div class="form-group">
                 <label for="lastName">Last Name</label>
-                <InputText id="lastName" class="form-control" @bind-Value="Teacher.LastName" />
+                <InputText id="lastName" class="form-control" @bind-Value="SysAdmin.LastName" />
             </div>
 
             <div class="form-group">
                 <label for="email">Email</label>
-                <InputText id="email" class="form-control" @bind-Value="Teacher.Email" />
+                <InputText id="email" class="form-control" @bind-Value="SysAdmin.Email" />
             </div>
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <InputText id="password" type="password" class="form-control" @bind-Value="Teacher.Password" />
+                <InputText id="password" type="password" class="form-control" @bind-Value="SysAdmin.Password" />
             </div>
 
             <button type="submit" class="btn btn-primary">Save</button>
@@ -50,9 +47,8 @@
 </AuthorizeView>
 
 @code {
-    private TeacherViewModel Teacher { get; set; } = new();
-    private School SelectedSchool { get; set; } = new();
-    private string ErrorMessage { get; set; } = string.Empty;
+    private SystemAdminViewModel SysAdmin { get; set; } = new();
+    private School? SelectedSchool;
 
     protected override void OnInitialized()
     {
@@ -79,26 +75,39 @@
     {
         try
         {
-            var TeacherModel = new Teacher
+            var userEntity = new SystemAdministrator
                 {
-                    FirstName = Teacher.FirstName,
-                    Email = Teacher.Email,
-                    LastName = Teacher.LastName,
-                    SchoolId = SelectedSchool.Id,
-                    UserName = Teacher.Email
+                    FirstName = SysAdmin.FirstName,
+                    LastName = SysAdmin.LastName,
+                    Email = SysAdmin.Email,
+                    UserName = SysAdmin.Email,
                 };
-            await UserService.AddUser(TeacherModel, Teacher.Password);
-            Navigation.NavigateTo("/teachers");
+
+            if (string.IsNullOrWhiteSpace(SysAdmin.Password))
+            {
+                throw new Exception("Password is required.");
+            }
+            
+            var result = await UserManager.CreateAsync(userEntity, SysAdmin.Password);
+            if (result.Succeeded)
+            {
+                await UserManager.AddToRoleAsync(userEntity, Roles.SystemAdministrator);
+
+                Navigation.NavigateTo("/system-administrators");
+            }
+            else
+            {
+                // Handle errors
+            }
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Error: {ex.Message}";
-            await InvokeAsync(StateHasChanged);
+            Console.WriteLine($"Error: {ex.Message}");
         }
     }
 
     private void Cancel()
     {
-        Navigation.NavigateTo("/teachers");
+        Navigation.NavigateTo("/system-administrators");
     }
 }

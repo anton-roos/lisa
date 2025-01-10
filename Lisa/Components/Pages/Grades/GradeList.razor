@@ -5,6 +5,7 @@
 @inject GradeService GradeService
 @inject NavigationManager Navigation
 @inherits EventAwareComponentBase
+@inject ILogger<Grade> Logger
 
 <h3>Grades for @SelectedSchool?.ShortName</h3>
 <button class="btn btn-primary" @onclick="AddGrade">Add Grade</button>
@@ -25,14 +26,23 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var grade in Grades)
+            @if (Grades == null)
             {
                 <tr>
-                    <td>@grade.Name</td>
-                    <td>@grade.SequenceNumber</td>
-                    <ActionButtons TEntity="Grade" Entity="grade" OnView="ViewGrade" OnEdit="EditGrade"
-                        OnDelete="DeleteGrade" />
+                    <td>No Grades Found</td>
                 </tr>
+            }
+            else
+            {
+                @foreach (var grade in Grades)
+                {
+                    <tr>
+                        <td>@grade.Name</td>
+                        <td>@grade.SequenceNumber</td>
+                        <ActionButtons TEntity="Grade" Entity="grade" OnView="ViewGrade" OnEdit="EditGrade"
+                            OnDelete="DeleteGrade" />
+                    </tr>
+                }
             }
         </tbody>
     </table>
@@ -40,7 +50,7 @@ else
 
 @code {
     private School? SelectedSchool;
-    private List<Grade> Grades = new();
+    private List<Grade>? Grades;
 
     protected override async Task OnInitializedAsync()
     {
@@ -55,7 +65,15 @@ else
         {
             Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
         }
-        Grades = Grades.OrderBy(g => g.SequenceNumber).ToList();
+        else
+        {
+            Logger.LogError("SelectedSchool was null when trying to load grades.");
+        }
+
+        if (Grades != null)
+        {
+            Grades = Grades.OrderBy(g => g.SequenceNumber).ToList();
+        }
     }
 
     private void AddGrade()
@@ -67,7 +85,7 @@ else
     {
         Navigation.NavigateTo($"/grades/details/{grade.Id}");
     }
-    
+
     private void EditGrade(Grade grade)
     {
         Navigation.NavigateTo($"/grades/edit/{grade.Id}");
@@ -76,9 +94,15 @@ else
     private async Task DeleteGrade(Grade grade)
     {
         await GradeService.DeleteGradeAsync(grade.Id);
-        Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id); 
+        if (SelectedSchool != null)
+        {
+            Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+        }
+        else
+        {
+            Logger.LogError("SelectedSchool was null when trying to load grades.");
+        }
         await InvokeAsync(StateHasChanged);
-
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)

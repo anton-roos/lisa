@@ -1,13 +1,13 @@
-@page "/principals"
+@page "/administrators"
 @using Lisa.Models.Entities
 @inject NavigationManager Navigation
 @inject SchoolService SchoolService
 @inject UserService UserService
 @inherits EventAwareComponentBase
 
-<h3>Principals</h3>
-<button class="btn btn-primary" @onclick="GoToAddPrincipal" disabled="@(SelectedSchool == null)">
-    Add Principal
+<h3>Administrators</h3>
+<button class="btn btn-primary" @onclick="GoToAddAdministrator" disabled="@(SelectedSchool == null)">
+    Add Administrator
 </button>
 
 @if (SelectedSchool == null)
@@ -16,13 +16,13 @@
         No school selected. Please select a school first.
     </div>
 }
-else if (Principals == null)
+else if (Administrators == null)
 {
     <p>Loading...</p>
 }
-else if (Principals.Count == 0)
+else if (Administrators.Count == 0)
 {
-    <p>No Principals found for @SelectedSchool.ShortName.</p>
+    <p>No Administrators found for @SelectedSchool.ShortName.</p>
 }
 else
 {
@@ -35,13 +35,13 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var Principal in Principals)
+            @foreach (var administrator in Administrators)
             {
                 <tr>
-                    <td>@($"{Principal.FirstName} {Principal.LastName}")</td>
+                    <td>@($"{administrator.FirstName} {administrator.LastName}")</td>
                     <td>@SelectedSchool.ShortName</td>
-                    <ActionButtons TEntity="Principal" Entity="Principal" OnView="ViewPrincipal" OnEdit="EditPrincipal"
-                        OnDelete="DeletePrincipal" />
+                    <ActionButtons TEntity="Administrator" Entity="administrator" OnView="ViewAdministrator" OnEdit="EditAdministrator"
+                        OnDelete="DeleteAdministrator" />
                 </tr>
             }
         </tbody>
@@ -50,7 +50,7 @@ else
 
 @code {
     private School? SelectedSchool;
-    private List<Principal>? Principals;
+    private List<Administrator> Administrators = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -65,7 +65,11 @@ else
 
     private async Task LoadUsers()
     {
-        Principals = await UserService.GetAllByRoleAndSchoolAsync<Principal>(SelectedSchool.Id);
+        if (SelectedSchool == null)
+        {
+            throw new InvalidOperationException("No school selected.");
+        }
+        Administrators = await UserService.GetAllByRoleAndSchoolAsync<Administrator>(SelectedSchool.Id);
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
@@ -83,26 +87,28 @@ else
         await base.HandleEventAsync(eventName, payload);
     }
 
-    private void GoToAddPrincipal()
+    private void GoToAddAdministrator()
     {
-        Navigation.NavigateTo("/principals/add");
+        Navigation.NavigateTo("/administrators/add");
     }
 
-    private void EditPrincipal(Principal principal)
+    private void EditAdministrator(Administrator administrator)
     {
-        Navigation.NavigateTo($"/principals/edit/{principal.Id}");
+        Navigation.NavigateTo($"/administrators/edit/{administrator.Id}");
     }
 
-    private void ViewPrincipal(Principal principal)
+    private void ViewAdministrator(Administrator administrator)
     {
-        Navigation.NavigateTo($"/principals/details/{principal.Id}");
+        Navigation.NavigateTo($"/administrators/details/{administrator.Id}");
     }
 
-    private async Task DeletePrincipal(Principal principal)
+    private async Task DeleteAdministrator(Administrator administrator)
     {
-        if (principal != null)
+        var user = await UserService.GetByIdAsync<Administrator>(administrator.Id);
+        if (user != null)
         {
-            await UserService.DeleteAsync<Principal>(principal.Id);
+            //await UserService.DeleteAsync(user);
+            // delete logic
             await LoadUsers();
             StateHasChanged();
         }

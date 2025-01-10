@@ -3,6 +3,7 @@
 @inject SchoolService SchoolService
 @inherits EventAwareComponentBase
 @inject IUiEventService UiEventService
+@inject ILogger<SelectSchool> _logger
 
 @if (IsLoading)
 {
@@ -75,7 +76,14 @@ else
     public async Task OnSchoolSelected(ChangeEventArgs e)
     {
         SelectedSchoolId = e.Value?.ToString();
-        var SelectedSchool = await SchoolService.SetCurrentSchool(Guid.Parse(SelectedSchoolId));
-        await IUiEventService.PublishAsync(UiEvents.SchoolSelected, SelectedSchool);
+        if (SelectedSchoolId != null)
+        {
+            var SelectedSchool = await SchoolService.SetCurrentSchool(Guid.Parse(SelectedSchoolId));
+            await IUiEventService.PublishAsync(UiEvents.SchoolSelected, SelectedSchool);
+        }
+        else
+        {
+            _logger.LogError("SelectedSchoolId is null");
+        }
     }
 }

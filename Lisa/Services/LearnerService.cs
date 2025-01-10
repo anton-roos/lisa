@@ -33,6 +33,8 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, S
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
         return await dbContext.Learners
+        .Include(l => l.RegisterClass!)
+            .ThenInclude(rc => rc.Grade)
             .Where(l => l.SchoolId == schoolId)
             .ToListAsync();
     }

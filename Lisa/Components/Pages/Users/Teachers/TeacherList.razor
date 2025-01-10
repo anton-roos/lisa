@@ -9,7 +9,7 @@
 @inject SchoolService SchoolService
 @inherits EventAwareComponentBase
 @inject UserService UserService
-@inject Logger<Teacher> Logger
+@inject ILogger<TeacherList> Logger
 
 <PageTitle>Teachers</PageTitle>
 
@@ -93,9 +93,6 @@
         SubscribeToEvent(UiEvents.SchoolSelected);
         SubscribeToEvent(UiEvents.SchoolsUpdated);
         SelectedSchool = SchoolService.GetSelectedSchool();
-
-
-
 
         if (SelectedSchool != null)
         {

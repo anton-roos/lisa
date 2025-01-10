@@ -31,7 +31,7 @@ else
             {
                 <tr>
                     <td>@($"{systemAdministrator.FirstName} {systemAdministrator.LastName}")</td>
-                    <ActionButtons TEntity="SystemAdministrator" Entity="systemAdministrator" OnView="ViewSystemAdministrator"
+                    <ActionButtons TEntity="User" Entity="systemAdministrator" OnView="ViewSystemAdministrator"
                         OnEdit="EditSystemAdministrator" OnDelete="DeleteSystemAdministrator" />
                 </tr>
             }
@@ -40,11 +40,11 @@ else
 }
 
 @code {
-    private List<SystemAdministrator>? SystemAdministrators;
+    private List<User>? SystemAdministrators;
 
     protected override async Task OnInitializedAsync()
     {
-        SystemAdministrators = await UserService.GetAllByRoleAndSchoolAsync<SystemAdministrator>();
+        SystemAdministrators = await UserService.GetAllByRoleAndSchoolAsync<User>();
     }
 
     private void AddSystemAdministrator()
@@ -52,17 +52,17 @@ else
         Navigation.NavigateTo("/system-administrators/add");
     }
 
-    private void EditSystemAdministrator(SystemAdministrator systemAdministrator)
+    private void EditSystemAdministrator(User systemAdministrator)
     {
         Navigation.NavigateTo($"/system-administrators/edit/{systemAdministrator.Id}");
     }
 
-    private void DeleteSystemAdministrator(SystemAdministrator systemAdministrator)
+    private void DeleteSystemAdministrator(User systemAdministrator)
     {
         Navigation.NavigateTo($"/system-administrators/edit/{systemAdministrator.Id}");
     }
 
-    private void ViewSystemAdministrator(SystemAdministrator systemAdministrator)
+    private void ViewSystemAdministrator(User systemAdministrator)
     {
         Navigation.NavigateTo($"/system-administrators/view/{systemAdministrator.Id}");
     }

@@ -39,7 +39,7 @@ else
             {
                 <tr>
                     <td>@($"{Principal.FirstName} {Principal.LastName}")</td>
-                    <td>@SelectedSchool.ShortName</td>
+                    <td>@Principal.School?.ShortName</td>
                     <ActionButtons TEntity="Principal" Entity="Principal" OnView="ViewPrincipal" OnEdit="EditPrincipal"
                         OnDelete="DeletePrincipal" />
                 </tr>
@@ -78,8 +78,8 @@ else
         switch (eventName)
         {
             case UiEvents.SchoolSelected:
-                // Cast Payload to a School
                 SelectedSchool = payload as School;
+                await LoadUsers();
                 break;
         }
 

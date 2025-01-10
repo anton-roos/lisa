@@ -47,11 +47,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        SelectedSchool = SchoolService.GetSelectedSchool();
-        if (SelectedSchool != null)
-        {
-            await LoadLearnersForSelectedSchool(SelectedSchool.Id);
-        }
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        await LoadLearners();
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
@@ -60,8 +57,8 @@ else
         switch (eventName)
         {
             case UiEvents.SchoolSelected:
-                // Cast Payload to a School
                 SelectedSchool = payload as School;
+                await LoadLearners();
                 break;
         }
 
@@ -69,9 +66,10 @@ else
         await base.HandleEventAsync(eventName, payload);
     }
 
-    private async Task LoadLearnersForSelectedSchool(Guid schoolId)
+    private async Task LoadLearners()
     {
-        Learners = await LearnerService.GetLearnersBySchoolAsync(schoolId);
+        SelectedSchool = SchoolService.GetSelectedSchool();
+        Learners = await LearnerService.GetLearnersBySchoolAsync(SelectedSchool.Id);
     }
 
     private void EditLearner(Learner learner)

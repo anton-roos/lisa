@@ -3,6 +3,8 @@
 @inject NavigationManager Navigation
 @inject CombinationService CombinationService
 @inject GradeService GradeService
+@inherits EventAwareComponentBase
+@inject SchoolService SchoolService
 
 <h3>Subject Combinations</h3>
 <button class="btn btn-primary" @onclick="AddCombination">Add Subject Combination</button>
@@ -51,11 +53,33 @@ else
 @code {
     private IEnumerable<Combination>? SubjectCombinations;
     private IEnumerable<Grade>? Grades;
+    private School? SelectedSchool;
+
 
     protected override async Task OnInitializedAsync()
     {
-        Grades = await GradeService.GetAllAsync();
-        SubjectCombinations = await CombinationService.GetAllAsync();
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        await LoadCombinations();
+    }
+
+    public async Task LoadCombinations()
+    {
+        SelectedSchool = SchoolService.GetSelectedSchool();
+        Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+        SubjectCombinations = await CombinationService.GetSubjectCombinationsForSchool(SelectedSchool);
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        switch (eventName)
+        {
+            case UiEvents.SchoolSelected:
+                SelectedSchool = payload as School;
+                await LoadCombinations();
+                break;
+        }
+
+        await base.HandleEventAsync(eventName, payload);
     }
 
     private void AddCombination()

@@ -39,6 +39,17 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Combination>> GetSubjectCombinationsForSchool(School school)
+    {
+        var _context = _dbContextFactory.CreateDbContext();
+        return await _context.Combinations
+            .Include(sc => sc.Subjects)
+            .Include(sc => sc.Grade)
+                .ThenInclude(g => g!.School)
+            .Where(sc => sc.Grade!.SchoolId == school.Id)
+            .ToListAsync();
+    }
+
     public async Task<Combination> UpdateAsync(Combination subjectCombination)
     {
         var _context = _dbContextFactory.CreateDbContext();

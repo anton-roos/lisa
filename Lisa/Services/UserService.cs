@@ -14,11 +14,11 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
     {
         var user = (_httpContextAccessor.HttpContext?.User != null
             ? await _userManager.GetUserAsync(_httpContextAccessor.HttpContext.User)
-            : null) 
+            : null)
             ?? throw new Exception("User not found");
-        
+
         var _context = await _dbContextFactory.CreateDbContextAsync();
-        var userEntity = await _context.Users.OfType<TUser>().FirstOrDefaultAsync(u => u.Id == user.Id) 
+        var userEntity = await _context.Users.OfType<TUser>().FirstOrDefaultAsync(u => u.Id == user.Id)
             ?? throw new Exception("User not found in Database");
 
         await _context.DisposeAsync();
@@ -28,13 +28,37 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
     public async Task<List<TUser>> GetAllByRoleAndSchoolAsync<TUser>(Guid? schoolId = null) where TUser : User
     {
         var _context = await _dbContextFactory.CreateDbContextAsync();
-        var users = await _context.Users.OfType<TUser>().ToListAsync();
+        IQueryable<TUser> query = _context.Users.OfType<TUser>();
+
+        switch (typeof(TUser))
+        {
+            case Type t when t == typeof(Principal):
+                query = query.Cast<Principal>().Include(p => p.School).Cast<TUser>();
+                break;
+            case Type t when t == typeof(Administrator):
+                query = query.Cast<Administrator>().Include(a => a.School).Cast<TUser>();
+                break;
+            case Type t when t == typeof(SchoolManagement):
+                query = query.Cast<SchoolManagement>().Include(m => m.School).Cast<TUser>();
+                break;
+            case Type t when t == typeof(Teacher):
+                query = query.Cast<Teacher>().Include(t => t.School).Cast<TUser>();
+                break;
+            case Type t when t == typeof(Learner):
+                query = query.Cast<Learner>().Include(l => l.School).Cast<TUser>();
+                break;
+        }
+
+        var users = await query.ToListAsync();
+
         if (schoolId != null)
         {
-            users = users.Where(u => u.SchoolId == schoolId).ToList();
+            return users.Where(u => u.SchoolId == schoolId).ToList();
         }
-        await _context.DisposeAsync();
-        return users;
+        else
+        {
+            return await _context.Users.Where(u => u.UserType == "User").ToListAsync() as List<TUser> ?? [];
+        }
     }
 
     public async Task<TUser> GetByIdAsync<TUser>(Guid id) where TUser : User
@@ -46,7 +70,7 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
         if (user == null)
         {
             throw new Exception("User not found");
-        }   
+        }
         return user;
     }
 

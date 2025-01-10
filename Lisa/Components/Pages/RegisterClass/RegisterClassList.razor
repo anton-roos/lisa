@@ -4,7 +4,7 @@
 @inject RegisterClassService RegisterClassService
 @inject NavigationManager NavigationManager
 @inherits EventAwareComponentBase
-@inject Logger<RegisterClass> Logger
+@inject ILogger<RegisterClassList> Logger
 
 <h3>Register Classes</h3>
 <button class="btn btn-primary" @onclick="AddRegisterClass">Add Register Class</button>
@@ -86,6 +86,7 @@ else
         {
             case UiEvents.SchoolSelected:
                 SelectedSchool = payload as School;
+                await LoadRegisterClasses();
                 break;
         }
 

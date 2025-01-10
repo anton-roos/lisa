@@ -48,11 +48,8 @@ else
                     <td>@subject.Name</td>
                     <td>@subject.Code</td>
                     <td>@subject.Description</td>
-                    <td>
-                        <button class="btn btn-sm btn-primary" @onclick="() => EditSubject(subject.Id)">
-                            Edit
-                        </button>
-                    </td>
+                    <ActionButtons TEntity="Subject" Entity="subject" OnView="ViewSubject" OnEdit="EditSubject"
+                        OnDelete="DeleteSubject" />
                 </tr>
             }
         </tbody>
@@ -84,9 +81,24 @@ else
         Navigation.NavigateTo("/subjects/add");
     }
 
-    private void EditSubject(Guid subjectId)
+    private void ViewSubject(Subject subject)
     {
-        Navigation.NavigateTo($"/subjects/edit/{subjectId}");
+        Navigation.NavigateTo($"/subjects/details/{subject.Id}");
+    }
+
+    private void EditSubject(Subject subject)
+    {
+        Navigation.NavigateTo($"/subjects/edit/{subject.Id}");
+    }
+
+    private async Task DeleteSubject(Subject subject)
+    {
+        if (subject != null)
+        {
+            await SubjectService.DeleteAsync(subject.Id);
+            subjects = await SubjectService.GetAllAsync();
+            subjects = subjects.OrderBy(s => s.Name).ToList();
+        }
     }
 
     private void OnInputChange(ChangeEventArgs e)

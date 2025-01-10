@@ -6,6 +6,9 @@
 @inherits EventAwareComponentBase
 
 <h3>Principals</h3>
+<button class="btn btn-primary" @onclick="GoToAddPrincipal" disabled="@(SelectedSchool == null)">
+    Add Principal
+</button>
 
 @if (SelectedSchool == null)
 {
@@ -13,11 +16,11 @@
         No school selected. Please select a school first.
     </div>
 }
-else if (UsersInRole == null)
+else if (Principals == null)
 {
     <p>Loading...</p>
 }
-else if (UsersInRole.Count == 0)
+else if (Principals.Count == 0)
 {
     <p>No Principals found for @SelectedSchool.ShortName.</p>
 }
@@ -37,33 +40,17 @@ else
                 <tr>
                     <td>@($"{Principal.FirstName} {Principal.LastName}")</td>
                     <td>@SelectedSchool.ShortName</td>
-                    <td>
-                        <button class="btn btn-primary" @onclick="() => ViewPrincipal(Principal.Id)">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                        <button class="btn btn-secondary" @onclick="() => EditPrincipal(Principal.Id)">
-                            <i class="bi bi-pencil-fill"></i>
-                        </button>
-                        <button class="btn btn-danger" @onclick="async () => { await DeletePrincipal(Principal.Id); }">
-                            <i class="bi bi-trash3-fill"></i>
-                            
-                        </button>
-                    </td>
+                    <ActionButtons TEntity="Principal" Entity="Principal" OnView="ViewPrincipal" OnEdit="EditPrincipal"
+                        OnDelete="DeletePrincipal" />
                 </tr>
             }
         </tbody>
     </table>
 }
 
-<button class="btn btn-success" @onclick="GoToAddPrincipal" disabled="@(SelectedSchool == null)">
-    Add Principal
-</button>
-
 @code {
     private School? SelectedSchool;
-    private List<User> UsersInRole = new();
-    private List<Principal> Principals = new();
-    private bool IsSchoolNotSelected => SelectedSchool == null || SelectedSchool.Id == Guid.Empty;
+    private List<Principal>? Principals;
 
     protected override async Task OnInitializedAsync()
     {
@@ -78,8 +65,7 @@ else
 
     private async Task LoadUsers()
     {
-        UsersInRole = await UserService.GetUsersByRoleAndSchoolAsync(Roles.Principal, SelectedSchool.Id);
-        Principals = UsersInRole.OfType<Principal>().ToList();
+        Principals = await UserService.GetAllByRoleAndSchoolAsync<Principal>(SelectedSchool.Id);
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
@@ -102,19 +88,18 @@ else
         Navigation.NavigateTo("/principals/add");
     }
 
-    private void EditPrincipal(Guid id)
+    private void EditPrincipal(Principal principal)
     {
-        Navigation.NavigateTo($"/principals/edit/{id}");
+        Navigation.NavigateTo($"/principals/edit/{principal.Id}");
     }
 
-    private void ViewPrincipal(Guid id)
+    private void ViewPrincipal(Principal principal)
     {
-        Navigation.NavigateTo($"/principals/details/{id}");
+        Navigation.NavigateTo($"/principals/details/{principal.Id}");
     }
 
-    private async Task DeletePrincipal(Guid id)
+    private async Task DeletePrincipal(Principal principal)
     {
-        var principal = Principals.FirstOrDefault(p => p.Id == id);
         if (principal != null)
         {
             await UserService.DeleteAsync<Principal>(principal.Id);

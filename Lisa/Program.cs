@@ -11,14 +11,6 @@ using Lisa.Models.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseSentry(o =>
-{
-    o.Dsn = "https://3f8a0819c96640c22558018a8c41f3ef@o4508607398150144.ingest.us.sentry.io/4508607411585024";
-    o.Debug = true;
-    o.TracesSampleRate = 1.0;
-});
-
-// Add Sentry to the logging system
 builder.Logging.AddSentry(options =>
 {
     options.Dsn = "https://3f8a0819c96640c22558018a8c41f3ef@o4508607398150144.ingest.us.sentry.io/4508607411585024"; // Replace with your Sentry DSN
@@ -107,7 +99,6 @@ builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<SubjectService>();
 builder.Services.AddScoped<TeacherService>();
 builder.Services.AddScoped<UserService>();
-builder.Services.AddSingleton<SentryService>();
 builder.Services.AddScoped<IUiEventService, UiEventService>();
 
 builder.Services.AddHttpContextAccessor();

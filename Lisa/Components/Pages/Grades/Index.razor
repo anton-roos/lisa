@@ -30,17 +30,8 @@ else
                 <tr>
                     <td>@grade.Name</td>
                     <td>@grade.SequenceNumber</td>
-                    <td class="align-middle">
-                        <button class="btn btn-primary" @onclick="() => ViewGrade(grade.Id)">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                        <button class="btn btn-secondary" @onclick="() => EditGrade(grade.Id)">
-                            <i class="bi bi-pencil-fill"></i>
-                        </button>
-                        <button class="btn btn-danger" @onclick="() => DeleteGrade(grade.Id)">
-                            <i class="bi bi-trash3-fill"></i>
-                        </button>
-                    </td>
+                    <ActionButtons TEntity="Grade" Entity="grade" OnView="ViewGrade" OnEdit="EditGrade"
+                        OnDelete="DeleteGrade" />
                 </tr>
             }
         </tbody>
@@ -72,19 +63,19 @@ else
         Navigation.NavigateTo("/grades/add");
     }
 
-    private void ViewGrade(Guid id)
+    private void ViewGrade(Grade grade)
     {
-        Navigation.NavigateTo($"/grades/details/{id}");
+        Navigation.NavigateTo($"/grades/details/{grade.Id}");
     }
     
-    private void EditGrade(Guid id)
+    private void EditGrade(Grade grade)
     {
-        Navigation.NavigateTo($"/grades/edit/{id}");
+        Navigation.NavigateTo($"/grades/edit/{grade.Id}");
     }
 
-    private async Task DeleteGrade(Guid id)
+    private async Task DeleteGrade(Grade grade)
     {
-        await GradeService.DeleteGradeAsync(id);
+        await GradeService.DeleteGradeAsync(grade.Id);
         Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id); 
         await InvokeAsync(StateHasChanged);
 

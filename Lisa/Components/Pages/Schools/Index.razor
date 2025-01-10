@@ -1,4 +1,5 @@
 ﻿@page "/schools"
+@using Lisa.Models.Entities
 @using Lisa.Services
 @inject NavigationManager NavigationManager
 @inject SchoolService SchoolService
@@ -40,17 +41,8 @@ else
                             @school.Color
                         </div>
                     </td>
-                    <td class="align-middle">
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => ViewSchool(school.Id)">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                        <button type="button" class="btn btn-secondary btn-sm" @onclick="() => EditSchool(school.Id)">
-                            <i class="bi bi-pencil-fill"></i>
-                        </button>
-                        <button type="button" class="btn btn-danger btn-sm" @onclick="() => DeleteSchool(school.Id)">
-                            <i class="bi bi-trash3-fill"></i>
-                        </button>
-                    </td>
+                    <ActionButtons TEntity="School" Entity="school" OnView="ViewSchool" OnEdit="EditSchool"
+                        OnDelete="DeleteSchool" />
                 </tr>
             }
         </tbody>
@@ -65,19 +57,18 @@ else
         schools = await SchoolService.GetAllAsync();
     }
 
-    private void EditSchool(Guid id)
+    private void EditSchool(School school)
     {
-        NavigationManager.NavigateTo($"schools/edit/{id}");
+        NavigationManager.NavigateTo($"schools/edit/{school.Id}");
     }
    
-    private void ViewSchool(Guid id)
+    private void ViewSchool(School school)
     {
-        NavigationManager.NavigateTo($"schools/details/{id}");
+        NavigationManager.NavigateTo($"schools/details/{school.Id}");
     }
 
-    private async Task DeleteSchool(Guid id)
+    private async Task DeleteSchool(School school)
     {
-        var school = await SchoolService.GetSchoolAsync(id);
         if (school != null)
         {
             await SchoolService.DeleteAsync(school);

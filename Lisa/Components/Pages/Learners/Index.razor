@@ -23,10 +23,8 @@
                 <tr>
                     <td>@learner.FirstName @learner.LastName</td>
                     <td>@learner.RegisterClass?.Grade?.Name</td>
-                    <td>
-                        <button class="btn btn-primary" @onclick="() => EditLearner(learner.Id)">Edit</button>
-                        <button class="btn btn-primary" @onclick="() => LearnerDetails(learner.Id)">View</button>
-                    </td>
+                    <ActionButtons TEntity="Learner" Entity="learner" OnView="ViewLearner" OnEdit="EditLearner"
+                        OnDelete="DeleteLearner" />
                 </tr>
             }
         </tbody>
@@ -76,18 +74,23 @@ else
         Learners = await LearnerService.GetLearnersBySchoolAsync(schoolId);
     }
 
-    private void EditLearner(Guid learnerId)
+    private void EditLearner(Learner learner)
     {
-        NavigationManager.NavigateTo($"/learners/edit/{learnerId}");
+        NavigationManager.NavigateTo($"/learners/edit/{learner.Id}");
     }
 
-    private void LearnerDetails(Guid learnerId)
+    private void ViewLearner(Learner learner)
     {
-        NavigationManager.NavigateTo($"/learners/details/{learnerId}");
+        NavigationManager.NavigateTo($"/learners/details/{learner.Id}");
     }
 
     private void AddLearner()
     {
         NavigationManager.NavigateTo("/learners/add");
+    }
+
+    private void DeleteLearner(Learner learner)
+    {
+        NavigationManager.NavigateTo($"/learners/delete/{learner.Id}");
     }
 }

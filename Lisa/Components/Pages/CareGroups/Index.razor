@@ -32,18 +32,10 @@ else
             {
                 <tr>
                     <td>@careGroup.Name</td>
-                    <td>@careGroup.CareGroupMembers?.Count().ToString()</td>
-                    <td class="align-middle">
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => ViewCareGroup(careGroup.Id)">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                        <button type="button" class="btn btn-secondary btn-sm" @onclick="() => EditCareGroup(careGroup.Id)">
-                            <i class="bi bi-pencil-fill"></i>
-                        </button>
-                        <button type="button" class="btn btn-danger btn-sm" @onclick="() => DeleteCareGroup(careGroup.Id)">
-                            <i class="bi bi-trash3-fill"></i>
-                        </button>
+                    <td>@careGroup.CareGroupMembers?.Count().ToString()
                     </td>
+                    <ActionButtons TEntity="CareGroup" Entity="careGroup" OnView="ViewCareGroup" OnEdit="EditCareGroup"
+                        OnDelete="DeleteCareGroup" />
                 </tr>
             }
         </tbody>
@@ -79,17 +71,17 @@ else
         Navigation.NavigateTo("/care-groups/add");
     }
 
-    private void EditCareGroup(Guid id)
+    private void EditCareGroup(CareGroup careGroup)
     {
-        Navigation.NavigateTo($"/care-groups/edit/{id}");
+        Navigation.NavigateTo($"/care-groups/edit/{careGroup.Id}");
     }
-    private void ViewCareGroup(Guid id)
+    private void ViewCareGroup(CareGroup careGroup)
     {
-        Navigation.NavigateTo($"/care-groups/details/{id}");
+        Navigation.NavigateTo($"/care-groups/details/{careGroup.Id}");
     }
-    private async Task DeleteCareGroup(Guid id)
+    private async Task DeleteCareGroup(CareGroup careGroup)
     {
-        var CareGroup = await CareGroupService.GetByIdAsync(id);
+        var CareGroup = await CareGroupService.GetByIdAsync(careGroup.Id);
         if (CareGroup != null)
         {
             await CareGroupService.DeleteAsync(CareGroup);

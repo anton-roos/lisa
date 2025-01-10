@@ -5,15 +5,15 @@
 @inject UserService UserService
 
 <h3>System Administrators</h3>
-<button class="btn btn-primary" @onclick="GoToAddSysAdmin">
+<button class="btn btn-primary" @onclick="AddSystemAdministrator">
     Add System Administrator
 </button>
 
-@if (UsersInRole == null)
+@if (SystemAdministrators == null)
 {
     <p>Loading...</p>
 }
-else if (UsersInRole.Count == 0)
+else if (SystemAdministrators.Count == 0)
 {
     <p>No System Administrators found.</p>
 }
@@ -27,21 +27,12 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var user in UsersInRole)
+            @foreach (var systemAdministrator in SystemAdministrators)
             {
                 <tr>
-                    <td>@($"{user.FirstName} {user.LastName}")</td>
-                    <td>
-                        <button class="btn btn-primary" @onclick="() => EditSysAdmin(user.Id)">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                        <button class="btn btn-secondary" @onclick="() => EditSysAdmin(user.Id)">
-                            <i class="bi bi-pencil-fill"></i>
-                        </button>
-                        <button class="btn btn-danger" @onclick="() => DeleteSysAdmin(user.Id)">
-                            <i class="bi bi-trash3-fill"></i>
-                        </button>
-                    </td>
+                    <td>@($"{systemAdministrator.FirstName} {systemAdministrator.LastName}")</td>
+                    <ActionButtons TEntity="SystemAdministrator" Entity="systemAdministrator" OnView="ViewSystemAdministrator"
+                        OnEdit="EditSystemAdministrator" OnDelete="DeleteSystemAdministrator" />
                 </tr>
             }
         </tbody>
@@ -49,25 +40,30 @@ else
 }
 
 @code {
-    private List<User> UsersInRole = new();
+    private List<SystemAdministrator>? SystemAdministrators;
 
     protected override async Task OnInitializedAsync()
     {
-        UsersInRole = await UserService.GetUsersByRoleAndSchoolAsync(Roles.SystemAdministrator);
+        SystemAdministrators = await UserService.GetAllByRoleAndSchoolAsync<SystemAdministrator>();
     }
 
-    private void GoToAddSysAdmin()
+    private void AddSystemAdministrator()
     {
         Navigation.NavigateTo("/system-administrators/add");
     }
 
-    private void EditSysAdmin(Guid id)
+    private void EditSystemAdministrator(SystemAdministrator systemAdministrator)
     {
-        Navigation.NavigateTo($"/system-administrators/edit/{id}");
+        Navigation.NavigateTo($"/system-administrators/edit/{systemAdministrator.Id}");
     }
 
-    private void DeleteSysAdmin(Guid id)
+    private void DeleteSystemAdministrator(SystemAdministrator systemAdministrator)
     {
-        Navigation.NavigateTo($"/system-administrators/delete/{id}");
+        Navigation.NavigateTo($"/system-administrators/edit/{systemAdministrator.Id}");
+    }
+
+    private void ViewSystemAdministrator(SystemAdministrator systemAdministrator)
+    {
+        Navigation.NavigateTo($"/system-administrators/view/{systemAdministrator.Id}");
     }
 }

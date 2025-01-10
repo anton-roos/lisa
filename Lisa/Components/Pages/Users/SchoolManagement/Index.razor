@@ -6,18 +6,20 @@
 @inherits EventAwareComponentBase
 
 <h3>School Management</h3>
-
+<button class="btn btn-primary" @onclick="AddSchoolManagement" disabled="@(SelectedSchool == null)">
+    Add School Management
+</button>
 @if (SelectedSchool == null)
 {
     <div class="alert alert-warning">
         No school selected. Please select a school first.
     </div>
 }
-else if (UsersInRole == null)
+else if (SchoolManagements == null)
 {
     <p>Loading...</p>
 }
-else if (UsersInRole.Count == 0)
+else if (SchoolManagements.Count == 0)
 {
     <p>No School Management users found for @SelectedSchool.ShortName (@SelectedSchool.ShortName).</p>
 }
@@ -28,28 +30,26 @@ else
             <tr>
                 <th>Name</th>
                 <th>School</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var user in UsersInRole)
+            @foreach (var schoolManagement in SchoolManagements)
             {
                 <tr>
-                    <td>@($"{user.FirstName} {user.LastName}")</td>
+                    <td>@($"{schoolManagement.FirstName} {schoolManagement.LastName}")</td>
                     <td>@SelectedSchool.ShortName</td>
+                    <ActionButtons TEntity="SchoolManagement" Entity="schoolManagement" OnView="ViewSchoolManagement" OnEdit="EditSchoolManagement"
+                        OnDelete="DeleteSchoolManagement" />
                 </tr>
             }
         </tbody>
     </table>
 }
 
-<button class="btn btn-success" @onclick="GoToAddSchoolMgmt" disabled="@IsSchoolNotSelected">
-    Add School Management
-</button>
-
 @code {
     private School? SelectedSchool;
-    private List<User> UsersInRole = new();
-    private bool IsSchoolNotSelected => SelectedSchool == null || SelectedSchool.Id == Guid.Empty;
+    private List<SchoolManagement>? SchoolManagements;
 
     protected override async Task OnInitializedAsync()
     {
@@ -64,7 +64,7 @@ else
 
     private async Task LoadUsers()
     {
-        UsersInRole = await UserService.GetUsersByRoleAndSchoolAsync(Roles.SchoolManagement, SelectedSchool.Id);
+        SchoolManagements = await UserService.GetAllByRoleAndSchoolAsync<SchoolManagement>(SelectedSchool.Id);
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
@@ -82,8 +82,25 @@ else
         await base.HandleEventAsync(eventName, payload);
     }
 
-    private void GoToAddSchoolMgmt()
+    private void AddSchoolManagement()
     {
         Navigation.NavigateTo("/school-management/add");
+    }
+
+    private void EditSchoolManagement(SchoolManagement schoolManagement)
+    {
+        Navigation.NavigateTo($"/school-management/edit/{schoolManagement.Id}");
+    }
+
+    private void ViewSchoolManagement(SchoolManagement schoolManagement)
+    {
+        Navigation.NavigateTo($"/school-management/details/{schoolManagement.Id}");
+    }
+
+    private async Task DeleteSchoolManagement(SchoolManagement schoolManagement)
+    {
+        await UserService.DeleteAsync<SchoolManagement>(schoolManagement.Id);
+        SchoolManagements = await UserService.GetAllByRoleAndSchoolAsync<SchoolManagement>(SelectedSchool.Id);
+        await InvokeAsync(StateHasChanged);
     }
 }

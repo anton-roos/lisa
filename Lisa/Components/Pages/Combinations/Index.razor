@@ -5,7 +5,7 @@
 @inject GradeService GradeService
 
 <h3>Subject Combinations</h3>
-<button class="btn btn-primary" @onclick="GoToAddPage">Add Subject Combination</button>
+<button class="btn btn-primary" @onclick="AddCombination">Add Subject Combination</button>
 
 @if (SubjectCombinations == null)
 {
@@ -14,7 +14,7 @@
 else if (Grades == null || !Grades.Any())
 {
     <div class="alert alert-warning">
-        No Grades found. Please add a grade first before adding Subject Combination.
+        No Grades found. Please add a grade first before adding Subject combination.
     </div>
 }
 else if (!SubjectCombinations.Any())
@@ -34,14 +34,13 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var combo in SubjectCombinations)
+            @foreach (var combination in SubjectCombinations)
             {
                 <tr>
-                    <td>@combo.Name</td>
-                    <td>@combo.Grade?.Name</td>
-                    <td>
-                        <button class="btn btn-primary" @onclick="() => EditCombination(combo.Id)">Edit</button>
-                    </td>
+                    <td>@combination.Name</td>
+                    <td>@combination.Grade?.Name</td>
+                    <ActionButtons TEntity="Combination" Entity="combination" OnView="ViewCombination" OnEdit="EditCombination"
+                        OnDelete="DeleteCombination" />
                 </tr>
             }
         </tbody>
@@ -59,13 +58,23 @@ else
         SubjectCombinations = await CombinationService.GetAllAsync();
     }
 
-    private void GoToAddPage()
+    private void AddCombination()
     {
         Navigation.NavigateTo("/combinations/add");
     }
 
-    private void EditCombination(Guid id)
+    private void ViewCombination(Combination combination)
     {
-        Navigation.NavigateTo($"/combinations/edit/{id}");
+        Navigation.NavigateTo($"/combinations/view/{combination.Id}");
+    }
+
+    private void EditCombination(Combination combination)
+    {
+        Navigation.NavigateTo($"/combinations/edit/{combination.Id}");
+    }
+
+    private void DeleteCombination(Combination combination)
+    {
+        Navigation.NavigateTo($"/combinations/delete/{combination.Id}");
     }
 }

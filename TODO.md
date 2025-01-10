@@ -11,5 +11,27 @@
 - Setup Database Backups in SharePoint
 
 # Bugs
-When editing a school the previously selected school is selected on other pages but the dropdown
-is on the edited school.
+State management is broken on selecting schools for grades.
+State management is broken on selecting schools for register class.
+Description for Subjuct is not pulling through in Index.razor
+Grade is not pulling through for Combination on Index.razor
+Combination details page is broken.
+Edit Combinations should have the tickboxes instead of list select.
+Adding Learner -> Combinations for other schools are pulling through.
+Learner Grade is not pulling through on the Index Page.
+System Administrators -> No System Administrators Found
+State Management is an issue when you are viewing a list of principals.
+Fitlering is incorrect on School Management for the schools selected.
+
+# TODO
+## Results
+1. Select a Grade
+2. Select a Subject
+3. (System) Filters the students for that Grade and Subject
+    - Use the Register Class for the student to understand what Grade they are in.
+4. Show a list of students to capture results for.
+
+# Tests
+Deactivate a student and see if they come up in Results when filter by the grade and subject for that student.
+ - Pass: Student is not showing
+ - Fail: Student is displaying

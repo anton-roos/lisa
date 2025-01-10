@@ -6,7 +6,7 @@
 @inherits EventAwareComponentBase
 
 <h3>Administrators</h3>
-<button class="btn btn-success" @onclick="GoToAddAdministrator" disabled="@(SelectedSchool == null)">
+<button class="btn btn-primary" @onclick="GoToAddAdministrator" disabled="@(SelectedSchool == null)">
     Add Administrator
 </button>
 
@@ -16,11 +16,11 @@
         No school selected. Please select a school first.
     </div>
 }
-else if (UsersInRole == null)
+else if (Administrators == null)
 {
     <p>Loading...</p>
 }
-else if (UsersInRole.Count == 0)
+else if (Administrators.Count == 0)
 {
     <p>No Administrators found for @SelectedSchool.ShortName.</p>
 }
@@ -35,22 +35,13 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var user in Administrators)
+            @foreach (var administrator in Administrators)
             {
                 <tr>
-                    <td>@($"{user.FirstName} {user.LastName}")</td>
+                    <td>@($"{administrator.FirstName} {administrator.LastName}")</td>
                     <td>@SelectedSchool.ShortName</td>
-                    <td>
-                        <button class="btn btn-primary" @onclick="() => ViewAdministrator(user.Id)">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                        <button class="btn btn-secondary" @onclick="() => EditAdministrator(user.Id)">
-                            <i class="bi bi-pencil-fill"></i>
-                        </button>
-                        <button class="btn btn-danger"
-                            @onclick="async () => { await DeleteAdministrator(user.Id); }">
-                            <i class="bi bi-trash3-fill"></i></button>
-                    </td>
+                    <ActionButtons TEntity="Administrator" Entity="administrator" OnView="ViewAdministrator" OnEdit="EditAdministrator"
+                        OnDelete="DeleteAdministrator" />
                 </tr>
             }
         </tbody>
@@ -59,7 +50,6 @@ else
 
 @code {
     private School? SelectedSchool;
-    private List<User> UsersInRole = new();
     private List<Administrator> Administrators = new();
 
     protected override async Task OnInitializedAsync()
@@ -75,8 +65,7 @@ else
 
     private async Task LoadUsers()
     {
-        UsersInRole = await UserService.GetUsersByRoleAndSchoolAsync(Roles.Administrator, SelectedSchool.Id);
-        Administrators = UsersInRole.Select(u => (Administrator)u).ToList();
+        Administrators = await UserService.GetAllByRoleAndSchoolAsync<Administrator>(SelectedSchool.Id);
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
@@ -99,19 +88,19 @@ else
         Navigation.NavigateTo("/administrators/add");
     }
 
-    private void EditAdministrator(Guid id)
+    private void EditAdministrator(Administrator administrator)
     {
-        Navigation.NavigateTo($"/administrators/edit/{id}");
+        Navigation.NavigateTo($"/administrators/edit/{administrator.Id}");
     }
 
-    private void ViewAdministrator(Guid id)
+    private void ViewAdministrator(Administrator administrator)
     {
-        Navigation.NavigateTo($"/administrators/details/{id}");
+        Navigation.NavigateTo($"/administrators/details/{administrator.Id}");
     }
 
-    private async Task DeleteAdministrator(Guid id)
+    private async Task DeleteAdministrator(Administrator administrator)
     {
-        var user = await UserService.GetByIdAsync<Administrator>(id);
+        var user = await UserService.GetByIdAsync<Administrator>(administrator.Id);
         if (user != null)
         {
             //await UserService.DeleteAsync(user);

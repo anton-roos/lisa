@@ -28,7 +28,6 @@ public class RegisterClassService(IDbContextFactory<LisaDbContext> dbContextFact
             .Include(rc => rc.CompulsorySubjects)
             .Include(rc => rc.Learners)
             .ToListAsync();
-            //xception thrown: 'Npgsql.PostgresException' in System.Private.CoreLib.dll: '42703: column l.CombinationId does not exist
         return registerClasses;
     }
 

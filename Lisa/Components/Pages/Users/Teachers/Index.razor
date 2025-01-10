@@ -1,15 +1,14 @@
 @page "/teachers"
+@using Lisa.Components.Layout
 @using Lisa.Data
 @using Lisa.Models.Entities
 @using Lisa.Services
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject NavigationManager NavigationManager
-@inject UserManager<User> UserManager
-@inject IHttpContextAccessor HttpContextAccessor
 @inject SchoolService SchoolService
 @inherits EventAwareComponentBase
-@inject TeacherService TeacherService
+@inject UserService UserService
 
 <PageTitle>Teachers</PageTitle>
 
@@ -50,14 +49,8 @@
                                 <tr>
                                     <td>@teacher.FirstName @teacher.LastName</td>
                                     <td>@teacher.Email</td>
-                                    <td>
-                                        <button class="btn btn-primary btn-sm"
-                                            @onclick="() =>  ViewTeacher(teacher.Id)">View</button>
-                                        <button class="btn btn-secondary btn-sm"
-                                            @onclick="() => EditTeacher(teacher.Id)">Edit</button>
-                                        <button class="btn btn-danger btn-sm"
-                                            @onclick="async () => { await DeleteTeacher(teacher.Id);}">Delete</button>
-                                    </td>
+                                    <ActionButtons TEntity="Teacher" Entity="teacher" OnView="ViewTeacher" OnEdit="EditTeacher"
+                                        OnDelete="DeleteTeacher" />
                                 </tr>
                             }
                         </tbody>
@@ -84,18 +77,20 @@
         SubscribeToEvent(UiEvents.SchoolsUpdated);
         SelectedSchool = SchoolService.GetSelectedSchool();
 
-        var user = HttpContextAccessor.HttpContext?.User != null
-        ? await UserManager.GetUserAsync(HttpContextAccessor.HttpContext.User)
-        : null;
 
-        if (user != null)
+
+
+        if (SelectedSchool != null)
         {
-            if (SelectedSchool != null)
-            {
-                Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id);
-            }
+            Teachers = await UserService.GetAllByRoleAndSchoolAsync<Teacher>(SelectedSchool.Id);
         }
+
         IsLoading = false;
+    }
+
+    public async Task LoadTeachers()
+    {
+        Teachers = await UserService.GetAllByRoleAndSchoolAsync<Teacher>(SelectedSchool.Id);
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
@@ -106,14 +101,14 @@
             case UiEvents.SchoolSelected:
                 // Cast Payload to a School
                 SelectedSchool = payload as School;
-                Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id);
+                await LoadTeachers();
                 break;
             case UiEvents.TeachersUpdated:
-                Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id);
+                await LoadTeachers();
                 break;
             case UiEvents.SchoolsUpdated:
                 SelectedSchool = SchoolService.GetSelectedSchool();
-                Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id);
+                await LoadTeachers();
                 break;
         }
 
@@ -121,10 +116,10 @@
         await base.HandleEventAsync(eventName, payload);
     }
 
-    private async Task DeleteTeacher(Guid teacherId)
+    private async Task DeleteTeacher(Teacher teacher)
     {
         IsLoading = true;
-        await TeacherService.DeleteAsync(teacherId);
+        await UserService.DeleteAsync<Teacher>(teacher.Id);
         IsLoading = false;
     }
 
@@ -132,13 +127,13 @@
     {
         NavigationManager.NavigateTo("/teachers/add");
     }
-    private void EditTeacher(Guid teacherId)
+    private void EditTeacher(Teacher teacher)
     {
-        NavigationManager.NavigateTo($"/teachers/edit/{teacherId}");
+        NavigationManager.NavigateTo($"/teachers/edit/{teacher.Id}");
     }
 
-    private void ViewTeacher(Guid teacherId)
+    private void ViewTeacher(Teacher teacher)
     {
-        NavigationManager.NavigateTo($"/teachers/details/{teacherId}");
+        NavigationManager.NavigateTo($"/teachers/details/{teacher.Id}");
     }
 }

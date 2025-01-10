@@ -27,11 +27,8 @@
                     <td>@registerClass.Grade.Name</td>
                     <td>@registerClass.Learners.Count.ToString()</td>
                     <td>@registerClass.Teacher.LastName</td>
-                    <td>
-                        <button class="btn btn-primary" @onclick="() => EditRegisterClass(registerClass.Id)">Edit</button>
-                        <button class="btn btn-primary" @onclick="() => ViewRegisterClass(registerClass.Id)">View</button>
-                        <button class="btn btn-primary" @onclick="() => DeleteRegisterClass(registerClass.Id)">Edit</button>
-                    </td>
+                    <ActionButtons TEntity="RegisterClass" Entity="registerClass" OnView="ViewRegisterClass" OnEdit="EditRegisterClass"
+                        OnDelete="DeleteRegisterClass" />
                 </tr>
             }
         </tbody>
@@ -85,19 +82,18 @@ else
         RegisterClasses = unfiltedRegisterClasses.Where(rc => rc.Grade.SchoolId == schoolId).ToList();
     }
 
-    private void EditRegisterClass(Guid registerclassId)
+    private void EditRegisterClass(RegisterClass registerClass)
     {
-        NavigationManager.NavigateTo($"/register-class/edit/{registerclassId}");
+        NavigationManager.NavigateTo($"/register-class/edit/{registerClass.Id}");
     }
 
-    private void ViewRegisterClass(Guid registerclassId)
+    private void ViewRegisterClass(RegisterClass registerClass)
     {
-        NavigationManager.NavigateTo($"/register-class/details/{registerclassId}");
+        NavigationManager.NavigateTo($"/register-class/details/{registerClass.Id}");
     }
 
-    public async Task DeleteRegisterClass(Guid registerclassId)
+    public async Task DeleteRegisterClass(RegisterClass registerClass)
     {
-        var registerClass = await RegisterClassService.GetByIdAsync(registerclassId);
         if (registerClass != null)
         {
             await RegisterClassService.DeleteAsync(registerClass);

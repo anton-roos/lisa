@@ -4,63 +4,37 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
-public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDbContext> dbContextFactory)
+public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDbContext> dbContextFactory, IHttpContextAccessor httpContextAccessor)
 {
     private readonly UserManager<User> _userManager = userManager;
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
+    private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
 
-    public async Task<List<User>> GetUsersByRoleAndSchoolAsync(string roleName, Guid? schoolId = null)
+    public async Task<TUser> GetLoggedInUserAsync<TUser>() where TUser : User
     {
-        var allUsers = await _userManager.GetUsersInRoleAsync(roleName);
+        var user = (_httpContextAccessor.HttpContext?.User != null
+            ? await _userManager.GetUserAsync(_httpContextAccessor.HttpContext.User)
+            : null) 
+            ?? throw new Exception("User not found");
+        
+        var _context = await _dbContextFactory.CreateDbContextAsync();
+        var userEntity = await _context.Users.OfType<TUser>().FirstOrDefaultAsync(u => u.Id == user.Id) 
+            ?? throw new Exception("User not found in Database");
 
-        switch (roleName)
+        await _context.DisposeAsync();
+        return userEntity;
+    }
+
+    public async Task<List<TUser>> GetAllByRoleAndSchoolAsync<TUser>(Guid? schoolId = null) where TUser : User
+    {
+        var _context = await _dbContextFactory.CreateDbContextAsync();
+        var users = await _context.Users.OfType<TUser>().ToListAsync();
+        if (schoolId != null)
         {
-            case Roles.Principal:
-                {
-                    var principals = allUsers
-                        .OfType<Principal>()
-                        .Where(p => p.SchoolId == schoolId)
-                        .ToList();
-
-                    return principals.Cast<User>().ToList();
-                }
-
-            case Roles.Administrator:
-                {
-                    var admins = allUsers
-                        .OfType<Administrator>()
-                        .Where(a => a.SchoolId == schoolId)
-                        .ToList();
-
-                    return admins.Cast<User>().ToList();
-                }
-
-            case Roles.SystemAdministrator:
-                {
-                    var sysAdmins = allUsers
-                        .OfType<User>()
-                        .ToList();
-
-                    return sysAdmins.Cast<User>().ToList();
-                }
-
-            case Roles.SchoolManagement:
-                {
-                    var managementUsers = allUsers
-                        .OfType<SchoolManagement>()
-                        .Where(m => m.SchoolId == schoolId)
-                        .ToList();
-
-                    return managementUsers.Cast<User>().ToList();
-                }
-
-            default:
-                {
-                    var baseUsers = allUsers
-                        .ToList();
-                    return baseUsers.Cast<User>().ToList();
-                }
+            users = users.Where(u => u.SchoolId == schoolId).ToList();
         }
+        await _context.DisposeAsync();
+        return users;
     }
 
     public async Task<TUser> GetByIdAsync<TUser>(Guid id) where TUser : User

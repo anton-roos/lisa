@@ -7,7 +7,7 @@
 @inject ILogger<RegisterClassList> Logger
 
 <h3>Register Classes</h3>
-<button class="btn btn-primary" @onclick="AddRegisterClass">Add Register Class</button>
+<button class="btn btn-primary mb-3" @onclick="AddRegisterClass">Add Register Class</button>
 @if (SelectedSchool != null && RegisterClasses.Any())
 {
     <table class="table table-striped">
@@ -43,7 +43,7 @@
                     }
                     @if (registerClass.Teacher != null)
                     {
-                        <td>@registerClass.Teacher.FirstName</td>
+                        <td>@registerClass.Teacher.FirstName @registerClass.Teacher.LastName</td>
                     }
                     else
                     {

@@ -7,7 +7,7 @@
 @inject ILogger<SchoolManagement> Logger
 
 <h3>School Management</h3>
-<button class="btn btn-primary" @onclick="AddSchoolManagement" disabled="@(SelectedSchool == null)">
+<button class="btn btn-primary mb-3" @onclick="AddSchoolManagement" disabled="@(SelectedSchool == null)">
     Add School Management
 </button>
 @if (SelectedSchool == null)

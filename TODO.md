@@ -27,6 +27,12 @@ Fitlering is incorrect on School Management for the schools selected.
     - Use the Register Class for the student to understand what Grade they are in.
 4. Show a list of students to capture results for.
 
+## Subject Comb
+ - Needs a button to duplicate a subject combination 
+   - (After duplication it will go to add page)
+   - (On Add page the grade will be deselected)
+
+
 # Tests
 Deactivate a student and see if they come up in Results when filter by the grade and subject for that student.
  - Pass: Student is not showing

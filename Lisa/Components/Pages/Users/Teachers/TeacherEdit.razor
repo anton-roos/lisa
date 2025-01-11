@@ -36,12 +36,6 @@ else
             <InputText class="form-control" @bind-Value="teacher.Email" />
         </div>
 
-        <!-- Username -->
-        <div class="mb-3">
-            <label class="form-label">Username</label>
-            <InputText class="form-control" @bind-Value="teacher.UserName" />
-        </div>
-
         <!-- (Optional) School Dropdown -->
         <div class="mb-3">
             <label class="form-label">School</label>
@@ -84,6 +78,8 @@ else
     private async Task HandleValidSubmit()
     {
         if (teacher == null) return;
+
+        teacher.UserName = teacher.Email;
 
         await TeacherService.UpdateAsync(teacher);
 

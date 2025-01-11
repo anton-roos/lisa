@@ -25,11 +25,11 @@ public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory, I
 
     public async Task<Teacher?> GetByIdAsync(Guid id)
     {
-        var _context = _dbContextFactory.CreateDbContext();
+        await using var _context = _dbContextFactory.CreateDbContext();
         return await _context.Teachers
             .Include(t => t.School)
             .Include(t => t.Subjects)
-            .Include(t => (IEnumerable<RegisterClass>)t.RegisterClasses!)
+            .Include(t => t.RegisterClasses!)
                 .ThenInclude(rc => rc.Grade)
             .Include(t => t.Periods)
             .FirstOrDefaultAsync(t => t.Id == id);

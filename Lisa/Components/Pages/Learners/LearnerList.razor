@@ -6,35 +6,62 @@
 @inherits EventAwareComponentBase
 
 <h3>Learners</h3>
-<button class="btn btn-primary" @onclick="AddLearner">Add Learner</button>
-@if (SelectedSchool != null && Learners.Any())
+
+@if (SelectedSchool != null)
 {
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Grade</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var learner in Learners)
-            {
-                <tr>
-                    <td>@learner.FirstName @learner.LastName</td>
-                    <td>@learner.RegisterClass?.Grade?.Name</td>
-                    <ActionButtons TEntity="Learner" Entity="learner" OnView="ViewLearner" OnEdit="EditLearner"
-                        OnDelete="DeleteLearner" />
-                </tr>
-            }
-        </tbody>
-    </table>
-}
-else if (SelectedSchool != null && !Learners.Any())
-{
-    <div class="alert alert-info">
-        No learners found for @SelectedSchool.ShortName.
+    <div class="row mb-3">
+        <div class="col-12 col-md-4 mb-2">
+            <label for="gradeFilter" class="form-label">Filter by Grade</label>
+            <select id="gradeFilter" class="form-select" @bind="SelectedGradeId">
+                <option value="">All Grades</option>
+                @if (AvailableGrades != null)
+                {
+                    @foreach (var grade in AvailableGrades)
+                    {
+                        <option value="@grade.Id">@grade.Name</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="col-12 col-md-4 mb-2">
+            <!-- Name Search -->
+            <label for="nameSearch" class="form-label">Search by Name</label>
+            <input id="nameSearch" type="text" class="form-control" @bind="SearchTerm" placeholder="Type name..." />
+        </div>
+        <div class="col-12 col-md-4 mb-2 d-flex align-items-end">
+            <button class="btn btn-primary mb-3" @onclick="AddLearner">Add Learner</button>
+        </div>
     </div>
+
+    @if (FilteredLearners.Any())
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Grade</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var learner in FilteredLearners)
+                {
+                    <tr>
+                        <td>@learner.FirstName @learner.LastName</td>
+                        <td>@learner.RegisterClass?.Grade?.Name</td>
+                        <ActionButtons TEntity="Learner" Entity="learner" OnView="ViewLearner" OnEdit="EditLearner"
+                            OnDelete="DeleteLearner" />
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            No learners found for @SelectedSchool.ShortName with the current filters.
+        </div>
+    }
 }
 else
 {
@@ -43,7 +70,12 @@ else
 
 @code {
     private List<Learner> Learners = new();
+    private IEnumerable<Learner> FilteredLearners => ApplyFilters();
     private School? SelectedSchool;
+
+    private string? SelectedGradeId { get; set; }
+    private string? SearchTerm { get; set; }
+    private List<Grade>? AvailableGrades { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -53,7 +85,6 @@ else
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        // Handle the events and update the state
         switch (eventName)
         {
             case UiEvents.SchoolSelected:
@@ -62,14 +93,47 @@ else
                 break;
         }
 
-        // Ensure state change
         await base.HandleEventAsync(eventName, payload);
     }
 
     private async Task LoadLearners()
     {
         SelectedSchool = SchoolService.GetSelectedSchool();
-        Learners = await LearnerService.GetLearnersBySchoolAsync(SelectedSchool.Id);
+        if (SelectedSchool?.Id != null)
+        {
+            Learners = await LearnerService.GetLearnersBySchoolAsync(SelectedSchool.Id);
+
+            AvailableGrades = Learners
+            .Where(l => l.RegisterClass?.Grade != null)
+            .Select(l => l.RegisterClass!.Grade!)
+            .DistinctBy(g => g.Id)
+            .ToList();
+        }
+        else
+        {
+            Learners = new List<Learner>();
+            AvailableGrades = new List<Grade>();
+        }
+    }
+
+    private IEnumerable<Learner> ApplyFilters()
+    {
+        var query = Learners.AsEnumerable();
+        
+        if (!string.IsNullOrEmpty(SelectedGradeId))
+        {
+            query = query.Where(l => l.RegisterClass?.Grade != null
+            && l.RegisterClass.Grade.Id == Guid.Parse(SelectedGradeId));
+        }
+
+        if (!string.IsNullOrEmpty(SearchTerm))
+        {
+            var term = SearchTerm.Trim().ToLower();
+            query = query.Where(l =>
+            ($"{l.FirstName} {l.LastName}").ToLower().Contains(term));
+        }
+
+        return query;
     }
 
     private void EditLearner(Learner learner)

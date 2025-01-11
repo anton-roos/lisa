@@ -1,0 +1,247 @@
+@page "/results"
+@using System.ComponentModel.DataAnnotations
+@using Lisa.Models.Entities
+@using Lisa.Models.ViewModels
+@using Lisa.Services
+@inject NavigationManager Navigation
+@inject SchoolService SchoolService
+@inject LearnerService LearnerService
+@inject GradeService GradeService
+@inject SubjectService SubjectService
+@inherits EventAwareComponentBase
+@inject ILogger<Result> Logger
+@inject UserService UserService
+@inject ResultService ResultService
+
+<h3>Capture Marks</h3>
+
+@if (SelectedSchool == null)
+{
+    <div class="alert alert-warning" role="alert">
+        <strong>No School Selected!</strong> Please select a school to Capture Marks.
+    </div>
+}
+else if (Grades.Count == 0)
+{
+    <div class="alert alert-warning" role="alert">
+        <strong>No Grades for School!</strong> Please add Grades to @SelectedSchool.ShortName! to Capture Marks.
+    </div>
+}
+else if (Subjects.Count == 0)
+{
+    <div class="alert alert-warning" role="alert">
+        <strong>No Subjects for School!</strong> Please add Subjects to @SelectedSchool.ShortName! to Capture Marks.
+    </div>
+}
+else
+{
+    <div>
+        <label>Select Grade:</label>
+        <select class="form-select" @bind="SelectedGradeId">
+            <option value="">-- Choose Grade --</option>
+            @foreach (var grade in Grades)
+            {
+                <option value="@grade.Id">@grade.Name</option>
+            }
+        </select>
+    </div>
+
+    <div>
+        <label>Select Subject:</label>
+        <select class="form-select" @bind="SelectedSubjectId">
+            <option value="">-- Choose Subject --</option>
+            @foreach (var subject in Subjects)
+            {
+                <option value="@subject.Id">@subject.Name</option>
+            }
+        </select>
+    </div>
+
+    <div>
+        <button class="btn btn-primary mb-3" @onclick="async () => await LoadLearners()">Load Learners</button>
+    </div>
+}
+
+@if (LearnerResults?.Count > 0)
+{
+    <hr />
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Student</th>
+                <th>Score</th>
+                <th>Absent?</th>
+                <th>Reason</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entry in LearnerResults)
+            {
+                <tr>
+                    <td>@entry.LearnerName</td>
+                    <td>
+                        <InputNumber @bind-Value="entry.ResultViewModel.Score" class="form-control" min="0" max="100"
+                            step="1" />
+                    </td>
+                    <td>
+                        <InputCheckbox @bind-Value="entry.ResultViewModel.Absent" />
+                    </td>
+                    <td>
+                        @if (entry.ResultViewModel.Absent)
+                        {
+                            <InputText @bind-Value="entry.ResultViewModel.AbsentReason" class="form-control" />
+                        }
+                        else
+                        {
+                            <InputText style="display:none;" @bind-Value="entry.ResultViewModel.AbsentReason"
+                                class="form-control" />
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <button class="btn btn-primary mb-3" @onclick="SaveResults">Save Results</button>
+}
+
+@code {
+    private List<Grade> Grades = new();
+    private List<Subject> Subjects = new();
+    private School? SelectedSchool;
+    private List<LearnerResult> LearnerResults = new();
+    private Guid SelectedGradeId { get; set; }
+    private Guid SelectedSubjectId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        SelectedSchool = SchoolService.GetSelectedSchool();
+        Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+        await LoadSubjects();
+    }
+
+    private void HandleGradeSelect(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out Guid gradeId))
+        {
+            SelectedGradeId = gradeId;
+        }
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        switch (eventName)
+        {
+            case UiEvents.SchoolSelected:
+                SelectedSchool = payload as School;
+                break;
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadGrades()
+    {
+        if (SelectedSchool != null)
+        {
+            Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+        }
+        else
+        {
+            Logger.LogError("SelectedSchool was null when trying to load grades.");
+        }
+    }
+
+    private async Task LoadSubjects()
+    {
+        if (SelectedSchool != null)
+        {
+            Subjects = await SubjectService.GetAllAsync();
+        }
+        else
+        {
+            Subjects = new List<Subject>();
+            Logger.LogError("SelectedSchool was null when trying to load subjects on combination page.");
+        }
+    }
+
+    private async Task LoadLearners()
+    {
+        if (SelectedGradeId == Guid.Empty || SelectedSubjectId == Guid.Empty)
+            return;
+
+        var learners = await LearnerService.GetLearnersWithTheirSubjectsByGradeAsync(SelectedGradeId);
+
+        LearnerResults = new List<LearnerResult>();
+
+        foreach (var learner in learners)
+        {
+            var combinationSubjects = learner.Combination?.Subjects ?? new List<Subject>();
+
+            if (!combinationSubjects.Any() && learner.RegisterClass?.CompulsorySubjects != null)
+            {
+                combinationSubjects = learner.RegisterClass.CompulsorySubjects.ToList();
+            }
+
+            bool hasSelectedSubject = combinationSubjects.Any(s => s.Id == SelectedSubjectId);
+
+            if (hasSelectedSubject)
+            {
+                LearnerResults.Add(new LearnerResult
+                    {
+                        LearnerId = learner.Id,
+                        LearnerName = $"{learner.FirstName} {learner.LastName}",
+                        ResultViewModel = new ResultViewModel()
+                    });
+            }
+        }
+
+        if (!LearnerResults.Any())
+        {
+            Logger.LogInformation("No learners found with the selected subject in the selected grade.");
+        }
+    }
+
+
+    private async Task SaveResults()
+    {
+        var user = await UserService.GetLoggedInUserAsync<User>();
+
+        if (user == null)
+        {
+            Logger.LogError("User is null when trying to save results.");
+            return;
+        }
+
+        foreach (var entry in LearnerResults)
+        {
+            var result = new Result
+                {
+                    Id = Guid.NewGuid(),
+                    LearnerId = entry.LearnerId,
+                    SubjectId = SelectedSubjectId,
+                    Score = entry.ResultViewModel.Score,
+                    Absent = entry.ResultViewModel.Absent,
+                    AbsentReason = entry.ResultViewModel.AbsentReason,
+                    ResultDate = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    CapturedBy = user.Id
+                };
+            await ResultService.CreateAsync(result);
+
+            Logger.LogInformation($"Result for {entry.LearnerName} saved successfully.");
+
+        }
+        
+        Navigation.NavigateTo($"/results/list/{SelectedSchool!.Id}/{SelectedGradeId}/{SelectedSubjectId}");
+    }
+
+    private class LearnerResult
+    {
+        public Guid LearnerId { get; set; }
+        public string LearnerName { get; set; } = string.Empty;
+        public ResultViewModel ResultViewModel { get; set; } = new();
+    }
+}

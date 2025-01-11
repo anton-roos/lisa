@@ -99,6 +99,7 @@ builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<SubjectService>();
 builder.Services.AddScoped<TeacherService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<ResultService>();
 builder.Services.AddScoped<IUiEventService, UiEventService>();
 
 builder.Services.AddHttpContextAccessor();

@@ -79,6 +79,23 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, S
         return learners;
     }
 
+    public async Task<List<Learner>> GetLearnersWithTheirSubjectsByGradeAsync(Guid gradeId)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
+
+        var learners = await dbContext.Learners
+            .Where(l => l.RegisterClass != null && l.RegisterClass.GradeId == gradeId)
+            .Include(l => l.RegisterClass!)
+                .ThenInclude(rc => rc.CompulsorySubjects)
+            .Include(l => l.Combination!)
+                .ThenInclude(c => c.Subjects)
+            .ToListAsync();
+
+        return learners;
+    }
+
+
     public async Task<Learner?> LoadLearnerAsync(Guid learnerId)
     {
         var _context = await _dbContextFactory.CreateDbContextAsync();
@@ -90,6 +107,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, S
                 .ThenInclude(rc => rc.Grade)
             .FirstOrDefaultAsync(l => l.Id == learnerId);
         await _context.DisposeAsync();
-        return learner;    
+        return learner;
     }
 }

@@ -26,7 +26,8 @@
         <div class="col-12 col-md-4 mb-2">
             <!-- Name Search -->
             <label for="nameSearch" class="form-label">Search by Name</label>
-            <input id="nameSearch" type="text" class="form-control" @bind="SearchTerm" placeholder="Type name..." />
+            <input id="nameSearch" type="text" class="form-control" @oninput="OnSearchTermChanged" @bind="SearchTerm"
+                placeholder="Type name..." />
         </div>
         <div class="col-12 col-md-4 mb-2 d-flex align-items-end">
             <button class="btn btn-primary mb-3" @onclick="AddLearner">Add Learner</button>
@@ -119,7 +120,7 @@ else
     private IEnumerable<Learner> ApplyFilters()
     {
         var query = Learners.AsEnumerable();
-        
+
         if (!string.IsNullOrEmpty(SelectedGradeId))
         {
             query = query.Where(l => l.RegisterClass?.Grade != null
@@ -134,6 +135,12 @@ else
         }
 
         return query;
+    }
+
+    private async Task OnSearchTermChanged(ChangeEventArgs e)
+    {
+        SearchTerm = e.Value?.ToString();
+        await InvokeAsync(StateHasChanged);
     }
 
     private void EditLearner(Learner learner)

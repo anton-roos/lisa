@@ -35,10 +35,10 @@ Fitlering is incorrect on School Management for the schools selected.
    - (After duplication it will go to add page)
    - (On Add page the grade will be deselected)
 
-
-
-
 # Tests
 Deactivate a student and see if they come up in Results when filter by the grade and subject for that student.
  - Pass: Student is not showing
  - Fail: Student is displaying
+
+# Questions
+Should we incldue [X] Active tickbox when adding a Learner?

@@ -33,11 +33,16 @@
     </div>
 
     <div class="mb-3">
+        <label class="form-label">Search Subjects</label>
+        <InputText class="form-control" @oninput="OnInputChange" @bind-Value="searchText" placeholder="Type to filter subjects..." />
+    </div>
+
+    <div class="mb-3">
         <label class="form-label">Subjects</label>
 
-        @if (AllSubjects.Any())
+        @if (FilteredSubjects.Any())
         {
-            @foreach (var subject in AllSubjects)
+            @foreach (var subject in FilteredSubjects)
             {
                 bool isChecked = SelectedSubjectIds.Contains(subject.Id);
 
@@ -51,7 +56,7 @@
         }
         else
         {
-            <div>No subjects available.</div>
+            <div>No matching subjects found.</div>
         }
         <small>Select the subjects for this combination.</small>
     </div>
@@ -67,6 +72,11 @@
     private List<Subject> AllSubjects = new();
     private School CurrentSchool = new();
     private List<Guid> SelectedSubjectIds = new();
+    private string searchText = string.Empty;
+
+    private IEnumerable<Subject> FilteredSubjects =>
+        AllSubjects.Where(s => string.IsNullOrEmpty(searchText) ||
+                               (s.Name != null && s.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase)));
 
     protected override async Task OnInitializedAsync()
     {
@@ -113,10 +123,10 @@
             existingCombination.Name = Combination.Name;
             existingCombination.GradeId = Combination.GradeId;
 
-            existingCombination.Subjects.Clear();
+            existingCombination.Subjects?.Clear();
             foreach (var subject in selectedSubjects)
             {
-                existingCombination.Subjects.Add(subject);
+                existingCombination.Subjects?.Add(subject);
             }
 
             await _context.SaveChangesAsync();
@@ -140,5 +150,10 @@
         {
             SelectedSubjectIds.Add(subjectId);
         }
+    }
+
+    private void OnInputChange(ChangeEventArgs e)
+    {
+        searchText = e?.Value?.ToString() ?? string.Empty;
     }
 }

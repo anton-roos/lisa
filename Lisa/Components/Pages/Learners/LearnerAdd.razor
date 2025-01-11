@@ -5,6 +5,7 @@
 @inject SchoolService schoolService
 @inject CombinationService combinationService
 @inject IToastService ToastService
+@inherits EventAwareComponentBase
 
 <h3>Add Learner</h3>
 
@@ -96,31 +97,32 @@
                             <label>Primary Email</label>
                             <InputText class="form-control" @bind-Value="parent.PrimaryEmail" />
                         </div>
-                       
+
                         <div class="mb-2">
                             <label>Secondary Email <span class="text-muted">(Optional)</span></label>
                             <InputText class="form-control" @bind-Value="parent.SecondaryEmail" />
                         </div>
-                        
+
                         <div class="mb-2">
                             <label>Phone Number</label>
                             <InputText class="form-control" @bind-Value="parent.CellNumber" />
                         </div>
-                       
+
                         <div class="mb-2">
                             <label>WhatsApp Number</label>
                             <InputText class="form-control" @bind-Value="parent.WhatsAppNumber" />
                         </div>
 
-                        <button type="button" class="btn btn-danger w-100 mt-2"
-                            @onclick="@(() => RemoveParent(parent))"> <i class="bi bi-trash me-1"></i> Remove</button>
+                        <button type="button" class="btn btn-danger w-100 mt-2" @onclick="@(() => RemoveParent(parent))"> <i
+                                class="bi bi-trash me-1"></i> Remove</button>
                     </div>
                 </div>
             </div>
         }
     </div>
 
-    <button type="button" class="btn btn-secondary mb-3" @onclick="AddParent"> <i class="bi bi-person-plus me-1"></i> Add Parent</button>
+    <button type="button" class="btn btn-secondary mb-3" @onclick="AddParent"> <i class="bi bi-person-plus me-1"></i>
+        Add Parent</button>
 
     <button type="submit" class="btn btn-primary mb-3"> <i class="bi bi-save me-1"></i> Save Learner</button>
 </EditForm>
@@ -135,10 +137,38 @@
 
     protected override async Task OnInitializedAsync()
     {
+        SubscribeToEvent(UiEvents.SchoolSelected);
         registerClasses = await learnerService.GetRegisterClasses();
         careGroups = await learnerService.GetCareGroups();
         combinations = await combinationService.GetAllAsync();
         SelectedSchool = schoolService.GetSelectedSchool();
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected)
+        {
+            SelectedSchool = payload as School;
+            await LoadDropdowns();
+            StateHasChanged();
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadDropdowns()
+    {
+        if (SelectedSchool != null)
+        {
+            registerClasses = await learnerService.GetRegisterClassesBySchoolId(SelectedSchool.Id);
+            combinations = await combinationService.GetCombinationsBySchoolId(SelectedSchool.Id);
+            careGroups = await learnerService.GetCareGroupsBySchoolId(SelectedSchool.Id);
+        }
+        else
+        {
+            registerClasses.Clear();
+            combinations = Enumerable.Empty<Combination>();
+        }
     }
 
     private void AddParent()

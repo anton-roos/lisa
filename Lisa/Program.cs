@@ -8,6 +8,7 @@ using Lisa.Middleware;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Lisa.Models.Entities;
+using RazorLight;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +19,14 @@ builder.Logging.AddSentry(options =>
     options.MinimumEventLevel = LogLevel.Error; // Log events at Error level or higher
     options.Debug = true; // Enable debug output (optional, for development)
     options.TracesSampleRate = 1.0; // Enable performance monitoring (0.0 to 1.0)
+});
+
+builder.Services.AddSingleton<IRazorLightEngine>(provider =>
+{
+    return new RazorLightEngineBuilder()
+        .UseEmbeddedResourcesProject(typeof(Program))
+        .UseMemoryCachingProvider()
+        .Build();
 });
 
 builder.Services.AddRazorComponents()
@@ -101,6 +110,7 @@ builder.Services.AddScoped<TeacherService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ResultService>();
 builder.Services.AddScoped<IUiEventService, UiEventService>();
+builder.Services.AddScoped<IEmailTemplateService, EmailTemplateService>();
 
 builder.Services.AddHttpContextAccessor();
 

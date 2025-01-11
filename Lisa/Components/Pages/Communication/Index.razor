@@ -1,6 +1,11 @@
 @page "/communication"
+@using Lisa.Models.EmailModels
 @using Lisa.Services
+@using RazorLight
 @inject EmailService EmailService
+@inject IEmailTemplateService _emailTemplateService
+@inject RazorLightEngine _razorLightEngine
+@inject ResultService _resultService
 
 <PageTitle>Communication</PageTitle>
 <h3>Communication</h3>
@@ -10,11 +15,29 @@
 <button class="btn btn-primary" @onclick="SendEmail">View Templates</button>
 
 @code {
-    private void SendEmail()
+    private async Task SendEmail()
     {
         var Subject = "Test Email";
         var Body = "This is a test email";
 
-        EmailService.QueueLearnerProgressReportEmail(subject: Subject, body: Body, schoolId: new Guid(), learnerId: new Guid());
+        var results = await _resultService.GetAllAsync();
+
+        var model = new ProgressReportModel
+            {
+                ParentName = "Mr. Smith",
+                ChildName = "John Smith",
+                Results = results
+            };
+
+        var template = await _emailTemplateService.GetTemplateAsync("WelcomeEmail");
+        string emailBody = await _razorLightEngine.CompileRenderStringAsync("WelcomeEmail", template.Content, model);
+
+        EmailService.QueueLearnerProgressFeedbackEmail
+        (
+        subject: Subject,
+        body: Body,
+        schoolId: new Guid(),
+        learnerId: new Guid()
+        );
     }
 }

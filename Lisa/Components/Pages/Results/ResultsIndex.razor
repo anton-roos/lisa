@@ -58,7 +58,13 @@ else
     </div>
 
     <div>
-        <button class="btn btn-primary mb-3" @onclick="async () => await LoadLearners()">Load Learners</button>
+        <label for="resultDate" class="form-label">Select the Date of the Test or Assignment:</label>
+        <InputDate @bind-Value="SelectedResultDate" class="form-control" id="resultDate" />
+    </div>
+
+    <div class="d-flex justify-content-start mt-3">
+        <button class="btn btn-primary me-3" @onclick="async () => await LoadLearners()">Load Learners</button>
+        <button class="btn btn-primary" @onclick="ViewResults">View Results</button>
     </div>
 }
 
@@ -112,6 +118,7 @@ else
     private List<LearnerResult> LearnerResults = new();
     private Guid SelectedGradeId { get; set; }
     private Guid SelectedSubjectId { get; set; }
+    private DateTime SelectedResultDate { get; set; } = DateTime.Today;
 
     protected override async Task OnInitializedAsync()
     {
@@ -203,6 +210,13 @@ else
         }
     }
 
+    private void ViewResults()
+    {
+        if (SelectedGradeId == Guid.Empty || SelectedSubjectId == Guid.Empty)
+            return;
+
+        Navigation.NavigateTo($"/results/list/{SelectedSchool!.Id}/{SelectedGradeId}/{SelectedSubjectId}");
+    }
 
     private async Task SaveResults()
     {
@@ -224,7 +238,7 @@ else
                     Score = entry.ResultViewModel.Score,
                     Absent = entry.ResultViewModel.Absent,
                     AbsentReason = entry.ResultViewModel.AbsentReason,
-                    ResultDate = DateTime.UtcNow,
+                    ResultDate = DateTime.SpecifyKind(SelectedResultDate, DateTimeKind.Utc),
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                     CapturedBy = user.Id
@@ -234,7 +248,7 @@ else
             Logger.LogInformation($"Result for {entry.LearnerName} saved successfully.");
 
         }
-        
+
         Navigation.NavigateTo($"/results/list/{SelectedSchool!.Id}/{SelectedGradeId}/{SelectedSubjectId}");
     }
 

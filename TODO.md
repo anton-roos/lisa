@@ -27,10 +27,15 @@ Fitlering is incorrect on School Management for the schools selected.
     - Use the Register Class for the student to understand what Grade they are in.
 4. Show a list of students to capture results for.
 
+# Validation
+ - Ensure Result date is not past today's date.
+
 ## Subject Comb
  - Needs a button to duplicate a subject combination 
    - (After duplication it will go to add page)
    - (On Add page the grade will be deselected)
+
+
 
 
 # Tests

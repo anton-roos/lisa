@@ -59,7 +59,7 @@ else
     }
 
     <h4>Parents</h4>
-    @if (Learner.LearnerParents == null || !Learner.LearnerParents.Any())
+    @if (Learner.Parents == null || !Learner.Parents.Any())
     {
         <p>No parents associated.</p>
     }
@@ -76,7 +76,7 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (var lp in Learner.LearnerParents)
+                @foreach (var lp in Learner.Parents)
                 {
                     <tr>
                         <td>@(lp.FirstName ?? "Unknown") @(lp.LastName ?? "Unkown")</td>

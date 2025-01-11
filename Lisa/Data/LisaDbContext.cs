@@ -20,7 +20,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
     public DbSet<SchoolCurriculum> SchoolCurriculums { get; set; } = null!;
     public DbSet<Grade> Grades { get; set; } = null!;
     public DbSet<Learner> Learners { get; set; } = null!;
-    public DbSet<Parent> LearnerParents { get; set; } = null!;
+    public DbSet<Parent> Parents { get; set; } = null!;
     public DbSet<RegisterClass> RegisterClasses { get; set; } = null!;
     public DbSet<Combination> Combinations { get; set; } = null!;
     public DbSet<Subject> Subjects { get; set; } = null!;
@@ -163,7 +163,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .HasIndex(lp => lp.SecondaryEmail);
         modelBuilder.Entity<Parent>()
             .HasOne(lp => lp.Learner)
-            .WithMany(l => l.LearnerParents)
+            .WithMany(l => l.Parents)
             .HasForeignKey(lp => lp.LearnerId)
             .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<Parent>()

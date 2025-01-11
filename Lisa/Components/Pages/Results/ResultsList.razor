@@ -21,6 +21,8 @@ else if (Results.Any())
                     <th>Student</th>
                     <th>Subject</th>
                     <th>Score</th>
+                    <th>Date</th>
+                    <th>Created On</th>
                     <th>Absent?</th>
                     <th>Reason</th>
                     <th>Actions</th>
@@ -30,9 +32,11 @@ else if (Results.Any())
             @foreach (var result in Results)
             {
                         <tr>
-                            <td>@result.Learner.FirstName @result.Learner.LastName</td>
-                            <td>@result.Subject.Name</td>
+                            <td>@result.Learner?.FirstName @result.Learner?.LastName</td>
+                            <td>@result.Subject?.Name</td>
                             <td>@result.Score</td>
+                            <td>@result.ResultDate.ToString("yyyy-MM-dd")</td>
+                            <td>@result.CreatedAt</td>
                             <td>@(result.Absent ? "Yes" : "No")</td>
                             <td>@result.AbsentReason</td>
                             <td>

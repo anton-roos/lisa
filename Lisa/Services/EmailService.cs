@@ -58,7 +58,7 @@ namespace Lisa.Services
                 throw new Exception($"Learner with ID {learnerId} not found.");
             }
 
-            var parents = learner.LearnerParents;
+            var parents = learner.Parents;
 
             if (parents == null || parents.Count == 0)
             {

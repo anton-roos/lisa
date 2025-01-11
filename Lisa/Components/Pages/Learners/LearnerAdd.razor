@@ -63,14 +63,46 @@
         else
         {
             <InputSelect id="SubjectCombinationId" class="form-control" @bind-Value="learner.CombinationId">
-            <option value="">Select Subject Combination</option>
-            @foreach (var subjectCombination in combinations)
-            {
-                <option value="@subjectCombination.Id">@subjectCombination.Name</option>
-            }
-        </InputSelect>
+                <option value="">Select Subject Combination</option>
+                @foreach (var subjectCombination in combinations)
+                {
+                    <option value="@subjectCombination.Id">@subjectCombination.Name</option>
+                }
+            </InputSelect>
         }
-        
+
+        <h4 class="mt-3">Parent Information</h4>
+
+        @foreach (var parent in Parents)
+        {
+            <h5>Parent @(Parents.IndexOf(parent) + 1)</h5>
+            <div class="border p-3 mb-3">
+                <div>
+                    <label>First Name</label>
+                    <InputText class="form-control" @bind-Value="parent.FirstName" />
+                </div>
+
+                <div>
+                    <label>Last Name</label>
+                    <InputText class="form-control" @bind-Value="parent.LastName" />
+                </div>
+
+                <div>
+                    <label>Phone Number</label>
+                    <InputText class="form-control" @bind-Value="parent.CellNumber" />
+                </div>
+
+                <div>
+                    <label>Email</label>
+                    <InputText class="form-control" @bind-Value="parent.PrimaryEmail" />
+                </div>
+
+                <button type="button" class="btn btn-danger mt-2" @onclick="@(() => RemoveParent(parent))">Remove
+                    Parent</button>
+            </div>
+        }
+
+        <button type="button" class="btn btn-secondary mb-3" @onclick="AddParent">Add Parent</button>
     </div>
 
     <button type="submit" class="btn btn-primary">Add Learner</button>
@@ -78,6 +110,7 @@
 
 @code {
     private Learner learner = new Learner();
+    private List<Parent> Parents = new();
     private List<RegisterClass> registerClasses = new();
     private List<CareGroup> careGroups = new();
     private IEnumerable<Combination>? combinations;
@@ -91,6 +124,18 @@
         SelectedSchool = schoolService.GetSelectedSchool();
     }
 
+    private void AddParent()
+    {
+        Parents.Add(new Parent());
+        StateHasChanged();
+    }
+
+    private void RemoveParent(Parent parent)
+    {
+        Parents.Remove(parent);
+        StateHasChanged();
+    }
+
     private async Task HandleValidSubmit()
     {
         if (SelectedSchool == null)
@@ -98,9 +143,18 @@
             ToastService.ShowToast(ToastIntent.Error, "Please select a school");
             return;
         }
+
         learner.SchoolId = SelectedSchool.Id;
+
         await learnerService.AddLearner(learner);
-        ToastService.ShowToast(ToastIntent.Success, "Learner added successfully");
+
+        foreach (var parent in Parents)
+        {
+            parent.LearnerId = learner.Id;
+            await learnerService.AddParentToLearnerAsync(parent);
+        }
+
+        ToastService.ShowToast(ToastIntent.Success, "Learner and Parents added successfully");
         await Task.Delay(1000);
         navigationManager.NavigateTo("/learners");
     }

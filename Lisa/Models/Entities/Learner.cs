@@ -11,7 +11,7 @@ public class Learner
     public DateTime UpdatedAt { get; set; }
     public Guid? RegisterClassId { get; set; }
     public RegisterClass? RegisterClass { get; set; }
-    public ICollection<Parent>? LearnerParents { get; set; }
+    public ICollection<Parent>? Parents { get; set; }
     public ICollection<Result>? Results { get; set; }
     public Guid? CareGroupId { get; set; }
     public CareGroup? CareGroup { get; set; }

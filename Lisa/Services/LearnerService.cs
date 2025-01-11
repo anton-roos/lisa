@@ -24,8 +24,15 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, S
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
         return await dbContext.Learners
-            .Include(l => l.LearnerParents)
+            .Include(l => l.Parents)
             .FirstOrDefaultAsync(l => l.Id == id);
+    }
+
+    public async Task AddParentToLearnerAsync(Parent parent)
+    {
+        await using var context = _dbContextFactory.CreateDbContext();
+        context.Parents.Add(parent);
+        await context.SaveChangesAsync();
     }
 
     public async Task<List<Learner>> GetLearnersBySchoolAsync(Guid schoolId)
@@ -102,7 +109,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, S
         var learner = await _context.Learners
             .Include(l => l.Combination)
             .Include(l => l.CareGroup)
-            .Include(l => l.LearnerParents)
+            .Include(l => l.Parents)
             .Include(l => l.RegisterClass!)
                 .ThenInclude(rc => rc.Grade)
             .FirstOrDefaultAsync(l => l.Id == learnerId);

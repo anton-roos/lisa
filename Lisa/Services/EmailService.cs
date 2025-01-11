@@ -14,13 +14,13 @@ namespace Lisa.Services
         /// Queues a job that will send a progress report email for the given learner.
         /// The mail(s) will be sent to the learner’s parent(s), if they have valid addresses.
         /// </summary>
-        public void QueueLearnerProgressReportEmail(Guid schoolId, Guid learnerId, string subject, string body)
+        public void QueueLearnerProgressFeedbackEmail(Guid schoolId, Guid learnerId, string subject, string body)
         {
-            // Example: schedule to run 2 seconds later
             BackgroundJob.Schedule(
-                () => SendLearnerProgressReportEmail(schoolId, learnerId, subject, body),
-                TimeSpan.FromSeconds(2)
+                () => SendLearnerProgressFeedbackEmail(schoolId, learnerId, subject, body),
+                TimeSpan.FromSeconds(5)
             );
+            Thread.Sleep(5000);
         }
 
         /// <summary>
@@ -28,7 +28,7 @@ namespace Lisa.Services
         /// The method is called by Hangfire (hence the parameter signature is serializable).
         /// </summary>
         [AutomaticRetry(Attempts = 5, OnAttemptsExceeded = AttemptsExceededAction.Fail)]
-        public async Task SendLearnerProgressReportEmail(Guid schoolId, Guid learnerId, string subject, string body)
+        public async Task SendLearnerProgressFeedbackEmail(Guid schoolId, Guid learnerId, string subject, string body)
         {
             var school = await _schoolService.GetSchoolAsync(schoolId);
             if (school == null)
@@ -89,6 +89,7 @@ namespace Lisa.Services
                 foreach (var email in emailsToSend)
                 {
                     mailMessage.To.Add(email);
+                    // NOT Correct, needs to send individual emails to each parent
                 }
 
                 smtpClient.Send(mailMessage);

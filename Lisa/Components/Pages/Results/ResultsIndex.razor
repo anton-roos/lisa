@@ -76,6 +76,8 @@ else
             <tr>
                 <th>Student</th>
                 <th>Score</th>
+                <th>Assessment Type</th>
+                <th>Assessment Topic</th>
                 <th>Absent?</th>
                 <th>Reason</th>
             </tr>
@@ -88,6 +90,12 @@ else
                     <td>
                         <InputNumber @bind-Value="entry.ResultViewModel.Score" class="form-control" min="0" max="100"
                             step="1" />
+                    </td>
+                    <td>
+                        <InputText @bind-Value="entry.ResultViewModel.AssessmentType" class="form-control" />
+                    </td>
+                    <td>
+                        <InputText @bind-Value="entry.ResultViewModel.AssessmentTopic" class="form-control" />
                     </td>
                     <td>
                         <InputCheckbox @bind-Value="entry.ResultViewModel.Absent" />
@@ -123,9 +131,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         SubscribeToEvent(UiEvents.SchoolSelected);
-        SelectedSchool = SchoolService.GetSelectedSchool();
-        Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
-        await LoadSubjects();
+        await LoadDropdowns();
     }
 
     private void HandleGradeSelect(ChangeEventArgs e)
@@ -142,6 +148,7 @@ else
         {
             case UiEvents.SchoolSelected:
                 SelectedSchool = payload as School;
+                await LoadDropdowns();
                 break;
         }
 
@@ -160,11 +167,14 @@ else
         }
     }
 
-    private async Task LoadSubjects()
+    private async Task LoadDropdowns()
     {
+        SelectedSchool = SchoolService.GetSelectedSchool();
+        
         if (SelectedSchool != null)
         {
             Subjects = await SubjectService.GetAllAsync();
+            Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
         }
         else
         {
@@ -236,6 +246,8 @@ else
                     LearnerId = entry.LearnerId,
                     SubjectId = SelectedSubjectId,
                     Score = entry.ResultViewModel.Score,
+                    AssessmentType = entry.ResultViewModel.AssessmentType,
+                    AssessmentTopic = entry.ResultViewModel.AssessmentTopic,
                     Absent = entry.ResultViewModel.Absent,
                     AbsentReason = entry.ResultViewModel.AbsentReason,
                     ResultDate = DateTime.SpecifyKind(SelectedResultDate, DateTimeKind.Utc),

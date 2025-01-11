@@ -11,48 +11,63 @@
 
 @if (IsLoading)
 {
-        <p>Loading results...</p>
+    <p>Loading results...</p>
 }
 else if (Results.Any())
 {
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Student</th>
-                    <th>Subject</th>
-                    <th>Score</th>
-                    <th>Date</th>
-                    <th>Created On</th>
-                    <th>Absent?</th>
-                    <th>Reason</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Student</th>
+                <th>Subject</th>
+                <th>Score</th>
+                <th>Date</th>
+                <th>Assessment Type</th>
+                <th>Topic</th>
+                <th>Created On</th>
+                <th>Absent?</th>
+                <th>Reason</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
             @foreach (var result in Results)
             {
-                        <tr>
-                            <td>@result.Learner?.FirstName @result.Learner?.LastName</td>
-                            <td>@result.Subject?.Name</td>
-                            <td>@result.Score</td>
-                            <td>@result.ResultDate.ToString("yyyy-MM-dd")</td>
-                            <td>@result.CreatedAt</td>
-                            <td>@(result.Absent ? "Yes" : "No")</td>
-                            <td>@result.AbsentReason</td>
-                            <td>
-                                <button class="btn btn-sm btn-primary" @onclick="() => EditResult(result.Id)">Edit</button>
-                                <button class="btn btn-sm btn-danger" @onclick="() => DeleteResult(result.Id)">Delete</button>
-                            </td>
-                        </tr>
+                <tr>
+                    <td>@result.Learner?.FirstName @result.Learner?.LastName</td>
+                    <td>@result.Subject?.Name</td>
+                    <td>
+                        @if (result.Absent)
+                        {
+                            <div>Absent</div>
+                        }
+                        else
+                        {
+                            <div>
+                                @result.Score.ToString("0")
+                            </div>
+                        }
+                    </td>
+                    <td>@result.ResultDate.ToString("yyyy-MM-dd")</td>
+                    <td>@result.AssessmentType</td>
+                    <td>@result.AssessmentTopic</td>
+                    <td>@result.CreatedAt</td>
+                    <td>@(result.Absent ? "Yes" : "No")</td>
+                    <td>@result.AbsentReason</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" @onclick="() => EditResult(result.Id)">Edit</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteResult(result.Id)">Delete</button>
+                    </td>
+                </tr>
             }
-            </tbody>
-        </table>
+        </tbody>
+    </table>
 }
 else
 {
-        <div class="alert alert-info">
-            No results found for the selected filters.
-        </div>
+    <div class="alert alert-info">
+        No results found for the selected filters.
+    </div>
 }
 
 @code {

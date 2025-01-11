@@ -72,7 +72,9 @@ else
                     <th>Relationship</th>
                     <th>Primary Email</th>
                     <th>Secondary Email</th>
-                    <th>Cell Number</th>
+                    <th>Primary Number</th>
+                    <th>Secondary Number</th>
+                    <th>WhatsApp Number</th>
                 </tr>
             </thead>
             <tbody>
@@ -83,7 +85,9 @@ else
                         <td>@(lp.Relationship ?? "Unknown")</td>
                         <td>@(lp.PrimaryEmail ?? "Unknown")</td>
                         <td>@(lp.SecondaryEmail ?? "Unknown")</td>
-                        <td>@(lp.CellNumber ?? "Unknown")</td>
+                        <td>@(lp.PrimaryCellNumber ?? "Unknown")</td>
+                        <td>@(lp.SecondaryCellNumber ?? "Unknown")</td>
+                        <td>@(lp.WhatsAppNumber ?? "Unknown")</td>
                     </tr>
                 }
             </tbody>

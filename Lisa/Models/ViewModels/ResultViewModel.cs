@@ -9,4 +9,6 @@ public class ResultViewModel
     public decimal Score { get; set; }
     public bool Absent { get; set; } = false;
     public string? AbsentReason { get; set; }
+    public string? AssessmentType { get; set; }
+    public string? AssessmentTopic { get; set; }
 }

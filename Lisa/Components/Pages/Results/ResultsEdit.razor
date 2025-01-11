@@ -1,0 +1,114 @@
+@page "/results/edit/{ResultId:guid}"
+@using Lisa.Models.Entities
+@inject ResultService ResultService
+@inject ILogger<ResultsEdit> Logger
+@inject NavigationManager NavigationManager
+@inject SchoolService SchoolService
+
+<PageTitle>Edit Result</PageTitle>
+
+@if (IsLoading)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <EditForm Model="Result" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-group">
+            <label for="LearnerId">Learner</label>
+            <div>@Result.Learner?.FirstName @Result.Learner?.LastName</div>
+        </div>
+
+        <div class="form-group">
+            <label for="SubjectId">Subject</label>
+            <div>@Result.Subject?.Name</div>
+        </div>
+
+        @if (!Result.Absent)
+        {
+            <label>Score</label>
+            <InputNumber @bind-Value="@Result.Score" class="form-control" min="0" max="100" step="1" />
+        }
+
+        <div class="form-group">
+            <label>Assessment Type</label>
+            <InputText @bind-Value="Result.AssessmentType" />
+        </div>
+
+        <div class="form-group">
+            <label>Assessment Topic</label>
+            <InputText @bind-Value="Result.AssessmentTopic" />
+        </div>
+
+        <div class="form-group">
+            <label for="Absent">Absent</label>
+            <InputCheckbox id="Absent" @bind-Value="Result.Absent" @onchange="HandleEvent" />
+        </div>
+
+        @if (Result.Absent)
+        {
+            <div class="form-group">
+                <label for="AbsentReason">Absent Reason</label>
+                <InputText id="AbsentReason" @bind-Value="Result.AbsentReason" />
+            </div>
+        }
+        else
+        {
+            <div style="display:none">
+                <label for="AbsentReason">Absent Reason</label>
+                <InputText id="AbsentReason" @bind-Value="Result.AbsentReason" />
+            </div>
+        }
+
+        <button type="submit" class="btn btn-primary">Save</button>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public Guid ResultId { get; set; }
+    private Result Result = new();
+    private bool IsLoading = true;
+    private School? SelectedSchool;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadResult();
+    }
+
+    private async Task LoadResult()
+    {
+        try
+        {
+            IsLoading = true;
+            Result = await ResultService.GetByIdAsync(ResultId);
+            SelectedSchool = SchoolService.GetSelectedSchool();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load result.");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        await ResultService.UpdateAsync(Result);
+        await InvokeAsync(StateHasChanged);
+        NavigationManager.NavigateTo($"/results/list/{SelectedSchool?.Id}/{Result.Learner?.RegisterClass?.GradeId}/{Result.SubjectId}");
+    }
+
+    private void HandleEvent()
+    {
+        if (Result.Absent)
+        {
+            Result.Score = 0;
+            StateHasChanged();
+        }
+    }
+}

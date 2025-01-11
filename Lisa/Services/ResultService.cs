@@ -28,6 +28,8 @@ namespace Lisa.Services
             await using var context = _dbContextFactory.CreateDbContext();
             return await context.Results
                 .Include(r => r.Learner)
+                 .ThenInclude(l => l.RegisterClass)
+                    .ThenInclude(rc => rc.Grade)
                 .Include(r => r.Subject)
                 .FirstOrDefaultAsync(r => r.Id == id);
         }
@@ -74,6 +76,8 @@ namespace Lisa.Services
             existingResult.Absent = result.Absent;
             existingResult.AbsentReason = result.AbsentReason;
             existingResult.UpdatedAt = DateTime.UtcNow;
+            existingResult.AssessmentTopic = result.AssessmentTopic;
+            existingResult.AssessmentType = result.AssessmentType;
 
             await context.SaveChangesAsync();
             _logger.LogInformation($"Result updated for LearnerId: {result.LearnerId}, SubjectId: {result.SubjectId}");

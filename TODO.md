@@ -42,3 +42,12 @@ Deactivate a student and see if they come up in Results when filter by the grade
 
 # Questions
 Should we incldue [X] Active tickbox when adding a Learner?
+
+
+Capture Marks
+Selecting a grade should only show subjects applicable to that grade.
+
+
+# Capture Results
+State Management is broken when selecting different schools.
+

@@ -58,7 +58,7 @@ portalGA@broadlands-schools.co.za
 Portal@GA
 
 ## Broadlands
-protalBL@broadlands-schools.co.za
+portalBL@broadlands-schools.co.za
 Portal@BL
 
 ## DCEG

@@ -7,7 +7,8 @@ public class Parent
     public string? SecondaryEmail { get; set; }
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
-    public string? CellNumber { get; set; }
+    public string? PrimaryCellNumber { get; set; }
+    public string? SecondaryCellNumber { get; set; }
     public string? WhatsAppNumber { get; set; }
     public string? Relationship { get; set; }
     public Guid LearnerId { get; set; }

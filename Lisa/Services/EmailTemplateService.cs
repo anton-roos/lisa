@@ -6,8 +6,8 @@ namespace Lisa.Services;
 
 public interface IEmailTemplateService
 {
-    Task SaveTemplateAsync(string name, string content);
-    Task<EmailTemplate> GetTemplateAsync(string name);
+    Task SaveTemplateAsync(string name, string subject, string content);
+    Task<EmailTemplate?> GetTemplateAsync(string name);
 }
 
 public class EmailTemplateService : IEmailTemplateService
@@ -19,9 +19,8 @@ public class EmailTemplateService : IEmailTemplateService
         _contextFactory = contextFactory;
     }
 
-    public async Task SaveTemplateAsync(string name, string content)
+    public async Task SaveTemplateAsync(string name, string subject, string content)
     {
-
         var _context = await _contextFactory.CreateDbContextAsync();
         var template = await _context.EmailTemplates.FirstOrDefaultAsync(t => t.Name == name);
 
@@ -31,6 +30,7 @@ public class EmailTemplateService : IEmailTemplateService
             {
                 Id = Guid.NewGuid(),
                 Name = name,
+                Subject = subject,
                 Content = content,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -39,6 +39,7 @@ public class EmailTemplateService : IEmailTemplateService
         }
         else
         {
+            template.Subject = subject;
             template.Content = content;
             template.UpdatedAt = DateTime.UtcNow;
         }
@@ -46,11 +47,11 @@ public class EmailTemplateService : IEmailTemplateService
         await _context.SaveChangesAsync();
     }
 
-    public async Task<EmailTemplate> GetTemplateAsync(string name)
+    public async Task<EmailTemplate?> GetTemplateAsync(string name)
     {
         var _context = await _contextFactory.CreateDbContextAsync();
-        var template = await _context.EmailTemplates.FirstOrDefaultAsync(t => t.Name == name)
-            ?? throw new InvalidOperationException($"Email template with name '{name}' not found.");
+        var template = await _context.EmailTemplates.FirstOrDefaultAsync(t => t.Name == name);
+        await _context.SaveChangesAsync();
         return template;
     }
 }

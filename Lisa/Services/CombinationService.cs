@@ -21,6 +21,8 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
         var _context = _dbContextFactory.CreateDbContext();
         var combination = await _context.Combinations
             .Include(sc => sc.Subjects)
+            .Include(sc => sc.Grade)
+                .ThenInclude(g => g!.School)
             .FirstOrDefaultAsync(sc => sc.Id == id);
 
         if (combination == null)

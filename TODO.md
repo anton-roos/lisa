@@ -11,10 +11,6 @@
 - Setup Database Backups in SharePoint
 
 # Bugs
-State management is broken on selecting schools for grades.
-State management is broken on selecting schools for register class.
-Description for Subjuct is not pulling through in Index.razor
-Grade is not pulling through for Combination on Index.razor
 Combination details page is broken.
 Edit Combinations should have the tickboxes instead of list select.
 Adding Learner -> Combinations for other schools are pulling through.

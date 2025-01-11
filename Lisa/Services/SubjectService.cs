@@ -35,14 +35,24 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory)
 
         existing.Name = subject.Name;
         existing.Code = subject.Code;
+        existing.Description = subject.Description;
 
         await _context.SaveChangesAsync();
     }
 
+    public Task<List<Subject>> GetSubjectsByIdsAsync(IEnumerable<Guid> ids)
+    {
+        var _context = _dbContextFactory.CreateDbContext();
+        return _context.Subjects
+            .AsNoTracking()
+            .Where(s => ids.Contains(s.Id))
+            .ToListAsync();
+    }
+    
     public async Task DeleteAsync(Guid id)
     {
         var _context = _dbContextFactory.CreateDbContext();
-        
+
         var existing = await _context.Subjects.FindAsync(id);
         if (existing == null) return;
 

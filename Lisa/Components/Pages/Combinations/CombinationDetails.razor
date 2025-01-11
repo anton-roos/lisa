@@ -1,1 +1,57 @@
-@page "/combination-details/{Id:guid}"
+@page "/combinations/details/{Id:guid}"
+@using Lisa.Models.Entities
+@inject CombinationService CombinationService
+@inject NavigationManager Navigation
+
+<h3>Subject Combination Details</h3>
+
+@if (Combination != null)
+{
+    <dl>
+        <dt>Name</dt>
+        <dd>@Combination.Name</dd>
+        <dt>Grade</dt>
+        <dd>@Combination.Grade?.Name</dd>
+        <dt>School</dt>
+        <dd>@Combination.Grade?.School?.ShortName</dd>
+        <dt>Subjects</dt>
+        <dd>
+            <ul>
+                @if (Combination.Subjects != null)
+                {
+                    @foreach (var subject in Combination.Subjects)
+                    {
+                        <li>@subject.Name</li>
+                    }
+                }
+            </ul>
+        </dd>
+    </dl>
+}
+else
+{
+    <p>Combination not found</p>
+}
+
+<button class="btn btn-primary" @onclick="EditCombination">Edit</button>
+<button class="btn btn-secondary" @onclick="Cancel">Back</button>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private Combination? Combination;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Combination = await CombinationService.GetByIdAsync(Id);
+    }
+
+    private void EditCombination()
+    {
+        Navigation.NavigateTo($"/combinations/edit/{Id}");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/combinations");
+    }
+}

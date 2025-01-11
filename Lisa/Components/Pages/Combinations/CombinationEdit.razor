@@ -6,7 +6,9 @@
 @inject SubjectService SubjectService
 @inject SchoolService SchoolService
 @inject GradeService GradeService
+@inject IDbContextFactory<LisaDbContext> DbContextFactory
 @using Microsoft.AspNetCore.Components
+@using Microsoft.EntityFrameworkCore
 
 <h3>Edit Subject Combination</h3>
 
@@ -32,15 +34,26 @@
 
     <div class="mb-3">
         <label class="form-label">Subjects</label>
-        <select multiple class="form-select" @onchange="HandleSubjectSelection">
+
+        @if (AllSubjects.Any())
+        {
             @foreach (var subject in AllSubjects)
             {
-                bool isSelected = SelectedSubjectIds.Contains(subject.Id);
-                <option value="@subject.Id" selected="@isSelected">
-                    @subject.Name
-                </option>
+                bool isChecked = SelectedSubjectIds.Contains(subject.Id);
+
+                <div>
+                    <input type="checkbox"
+                           checked="@isChecked"
+                           @onchange="@(() => ToggleSubject(subject.Id))" />
+                    <label>@subject.Name</label>
+                </div>
             }
-        </select>
+        }
+        else
+        {
+            <div>No subjects available.</div>
+        }
+        <small>Select the subjects for this combination.</small>
     </div>
 
     <button type="submit" class="btn btn-primary">Save</button>
@@ -60,6 +73,7 @@
         CurrentSchool = SchoolService.GetSelectedSchool();
         AllSubjects = await SubjectService.GetAllAsync();
         Grades = await GradeService.GetGradesForSchool(CurrentSchool.Id);
+
         var existing = await CombinationService.GetByIdAsync(Id);
         if (existing != null)
         {
@@ -81,14 +95,32 @@
 
     private async Task HandleValidSubmit()
     {
-        var entity = new Combination
-        {
-            Id = Combination.Id,
-            Name = Combination.Name,
-            GradeId = Combination.GradeId
-        };
+        using var _context = DbContextFactory.CreateDbContext();
 
-        await CombinationService.UpdateAsync(entity);
+        var selectedSubjects = await SubjectService.GetSubjectsByIdsAsync(SelectedSubjectIds);
+
+        foreach (var subject in selectedSubjects)
+        {
+            _context.Subjects.Attach(subject);
+        }
+
+        var existingCombination = await _context.Combinations
+            .Include(c => c.Subjects)
+            .FirstOrDefaultAsync(c => c.Id == Combination.Id);
+
+        if (existingCombination != null)
+        {
+            existingCombination.Name = Combination.Name;
+            existingCombination.GradeId = Combination.GradeId;
+
+            existingCombination.Subjects.Clear();
+            foreach (var subject in selectedSubjects)
+            {
+                existingCombination.Subjects.Add(subject);
+            }
+
+            await _context.SaveChangesAsync();
+        }
 
         Navigation.NavigateTo("/combinations");
     }
@@ -98,13 +130,15 @@
         Navigation.NavigateTo("/combinations");
     }
 
-    private void HandleSubjectSelection(ChangeEventArgs e)
+    private void ToggleSubject(Guid subjectId)
     {
-        if (e.Value is string[] selectedValues)
+        if (SelectedSubjectIds.Contains(subjectId))
         {
-            SelectedSubjectIds = selectedValues
-                .Select(val => Guid.Parse(val))
-                .ToList();
+            SelectedSubjectIds.Remove(subjectId);
+        }
+        else
+        {
+            SelectedSubjectIds.Add(subjectId);
         }
     }
 }

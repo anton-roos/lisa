@@ -209,8 +209,8 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .HasForeignKey(sc => sc.GradeId)
             .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<Combination>()
-            .HasMany(sc => sc.Subjects)
-            .WithMany()
+            .HasMany(c => c.Subjects)
+            .WithMany(s => s.Combinations)
             .UsingEntity<Dictionary<string, object>>(
                 "CombinationSubject",
                 j => j.HasOne<Subject>()
@@ -219,7 +219,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
                     .OnDelete(DeleteBehavior.Restrict),
                 j => j.HasOne<Combination>()
                     .WithMany()
-                    .HasForeignKey("SubjectCombinationId")
+                    .HasForeignKey("CombinationId")
                     .OnDelete(DeleteBehavior.Cascade));
 
         modelBuilder.Entity<Subject>()

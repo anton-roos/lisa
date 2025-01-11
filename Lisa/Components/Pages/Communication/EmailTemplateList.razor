@@ -1,0 +1,77 @@
+@page "/communication/email-templates"
+@using Lisa.Models.Entities
+@inject EmailTemplateService EmailTemplateService
+@inject NavigationManager NavigationManager
+
+<h3>Email Templates</h3>
+
+<button class="btn btn-primary mb-3" @onclick="CreateNewTemplate">Create New Template</button>
+
+@if (emailTemplates == null)
+{
+    <p><em>Loading templates...</em></p>
+}
+else if (!emailTemplates.Any())
+{
+    <p>No email templates found.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Subject</th>
+                <th>Created At</th>
+                <th>Updated At</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var template in emailTemplates)
+            {
+                <tr>
+                    <td>@template.Name</td>
+                    <td>@template.Subject</td>
+                    <td>@template.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>@template.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" @onclick="@(() => ViewTemplate(template.Name))">View</button>
+                        <button class="btn btn-sm btn-warning" @onclick="@(() => EditTemplate(template.Name))">Edit</button>
+                        <button class="btn btn-sm btn-danger" @onclick="@(() => DeleteTemplate(template.Id))">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<EmailTemplate>? emailTemplates;
+
+    protected override async Task OnInitializedAsync()
+    {
+        emailTemplates = await EmailTemplateService.GetAllTemplatesAsync();
+    }
+
+    private void ViewTemplate(string name)
+    {
+        NavigationManager.NavigateTo($"/email-template-view/{name}");
+    }
+
+    private void EditTemplate(string name)
+    {
+        NavigationManager.NavigateTo($"/email-template/{name}");
+    }
+
+    private async Task DeleteTemplate(Guid id)
+    {
+        await EmailTemplateService.DeleteTemplateAsync(id);
+        emailTemplates = await EmailTemplateService.GetAllTemplatesAsync();
+    }
+
+    private void CreateNewTemplate()
+    {
+        NavigationManager.NavigateTo("/email-template");
+    }
+}

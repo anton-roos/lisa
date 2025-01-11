@@ -110,7 +110,7 @@ builder.Services.AddScoped<TeacherService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ResultService>();
 builder.Services.AddScoped<IUiEventService, UiEventService>();
-builder.Services.AddScoped<IEmailTemplateService, EmailTemplateService>();
+builder.Services.AddScoped<EmailTemplateService>();
 
 builder.Services.AddHttpContextAccessor();
 

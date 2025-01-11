@@ -1,0 +1,22 @@
+@page "/email-template/{TemplateName?}"
+@using Lisa.Models.EmailModels
+@inject EmailTemplateService EmailTemplateService
+
+@code {
+    [Parameter]
+    public string? TemplateName { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(TemplateName))
+        {
+            var template = await EmailTemplateService.GetTemplateAsync(TemplateName);
+
+            if (template != null)
+            {
+                //TemplateSubject = template.Subject;
+                //await TextEditor.SetHTML(template.Content);
+            }
+        }
+    }
+}

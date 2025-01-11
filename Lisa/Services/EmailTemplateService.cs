@@ -4,13 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public interface IEmailTemplateService
-{
-    Task SaveTemplateAsync(string name, string subject, string content);
-    Task<EmailTemplate?> GetTemplateAsync(string name);
-}
 
-public class EmailTemplateService : IEmailTemplateService
+public class EmailTemplateService
 {
     private readonly IDbContextFactory<LisaDbContext> _contextFactory;
 
@@ -18,6 +13,25 @@ public class EmailTemplateService : IEmailTemplateService
     {
         _contextFactory = contextFactory;
     }
+
+    public async Task<List<EmailTemplate>> GetAllTemplatesAsync()
+    {
+        var _context = await _contextFactory.CreateDbContextAsync();
+        return await _context.EmailTemplates
+                             .OrderByDescending(t => t.UpdatedAt).ToListAsync();
+    }
+
+    public async Task DeleteTemplateAsync(Guid id)
+    {
+        var _context = await _contextFactory.CreateDbContextAsync();
+        var template = await _context.EmailTemplates.FirstOrDefaultAsync(t => t.Id == id);
+        if (template != null)
+        {
+            _context.EmailTemplates.Remove(template);
+            await _context.SaveChangesAsync();
+        }
+    }
+
 
     public async Task SaveTemplateAsync(string name, string subject, string content)
     {

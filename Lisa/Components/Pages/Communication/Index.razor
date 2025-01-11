@@ -3,18 +3,29 @@
 @using Lisa.Services
 @using RazorLight
 @inject EmailService EmailService
-@inject IEmailTemplateService _emailTemplateService
-@inject RazorLightEngine _razorLightEngine
+@inject EmailTemplateService _emailTemplateService
+@inject IRazorLightEngine _razorLightEngine
 @inject ResultService _resultService
+@inject NavigationManager NavigationManager
 
 <PageTitle>Communication</PageTitle>
 <h3>Communication</h3>
 <button class="btn btn-primary" @onclick="SendEmail">Send Communication</button>
 <button class="btn btn-primary" @onclick="SendEmail">Send Feedback</button>
 <button class="btn btn-primary" @onclick="SendEmail">Send Newsletter</button>
-<button class="btn btn-primary" @onclick="SendEmail">View Templates</button>
+<button class="btn btn-primary" @onclick="ViewTemplates">View Templates</button>
+<button class="btn btn-primary" @onclick="AddTemplate">Add Template</button>
 
 @code {
+    private void AddTemplate()
+    {
+        NavigationManager.NavigateTo("/communication/email-templates/add");
+    }
+    private void ViewTemplates()
+    {
+        NavigationManager.NavigateTo("/communication/email-templates");
+    }
+
     private async Task SendEmail()
     {
         var Subject = "Test Email";
@@ -30,7 +41,7 @@
             };
 
         var template = await _emailTemplateService.GetTemplateAsync("WelcomeEmail");
-        string emailBody = await _razorLightEngine.CompileRenderStringAsync("WelcomeEmail", template.Content, model);
+        string emailBody = await _razorLightEngine.CompileRenderStringAsync("WelcomeEmail", template?.Content, model);
 
         EmailService.QueueLearnerProgressFeedbackEmail
         (

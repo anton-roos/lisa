@@ -1,5 +1,7 @@
 using Lisa.Data;
 using Lisa.Models.Entities;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
@@ -7,14 +9,32 @@ namespace Lisa.Services;
 public class SchoolService
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory;
-    private School? _selectedSchool;
     private readonly IUiEventService _uiEventService;
+    private readonly AuthenticationStateProvider _authenticationStateProvider;
+    private readonly UserManager<User> _userManager;
+    private bool _isInitialized = false;
+    private School? _selectedSchool;
 
-    public SchoolService(IDbContextFactory<LisaDbContext> dbContextFactory, IUiEventService uiEventService)
+    public SchoolService(IDbContextFactory<LisaDbContext> dbContextFactory, IUiEventService uiEventService, AuthenticationStateProvider authenticationStateProvider, UserManager<User> userManager)
     {
         _dbContextFactory = dbContextFactory;
-        InitializeSelectedSchool();
         _uiEventService = uiEventService;
+        _authenticationStateProvider = authenticationStateProvider;
+        _authenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        _userManager = userManager;
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        if (_isInitialized) return;
+
+        var user = (await task).User;
+
+        if (user.Identity != null && user.Identity.IsAuthenticated)
+        {
+            await InitializeSelectedSchoolAsync();
+            _isInitialized = true;
+        }
     }
 
     public async Task<School> SetCurrentSchool(Guid schoolId)
@@ -88,15 +108,36 @@ public class SchoolService
         }
         catch (Exception ex)
         {
-            // Log the exception
             Console.WriteLine($"Failed to publish event: {ex.Message}");
         }
     }
 
-    private void InitializeSelectedSchool()
+    private async Task InitializeSelectedSchoolAsync()
     {
-        var _context = _dbContextFactory.CreateDbContext();
-        _selectedSchool = _context.Schools.FirstOrDefault() ?? new School { ShortName = "No Schools in DB", LongName = "No Schools in DB" };
-        _context.Dispose();
+        using var _context = _dbContextFactory.CreateDbContext();
+
+        var user = await _userManager.GetUserAsync(_authenticationStateProvider.GetAuthenticationStateAsync().Result.User);
+
+        if (user != null)
+        {
+            if (await _userManager.IsInRoleAsync(user, Roles.SystemAdministrator))
+            {
+                _selectedSchool = await _context.Schools.OrderBy(s => s.Id).FirstOrDefaultAsync()
+                                  ?? new School { ShortName = "No Schools in DB", LongName = "No Schools in DB" };
+            }
+            else
+            {
+                var loggedInUser = await _context.Users
+                    .Include(t => t.School)
+                    .FirstOrDefaultAsync(t => t.Id == user.Id);
+
+                _selectedSchool = loggedInUser?.School
+                    ?? new School { ShortName = "No School Assigned", LongName = "No School Assigned" };
+            }
+        }
+        else
+        {
+            _selectedSchool = new School { ShortName = "Not Logged In", LongName = "User Not Logged In" };
+        }
     }
 }

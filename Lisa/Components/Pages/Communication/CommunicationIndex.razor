@@ -10,9 +10,7 @@
 
 <PageTitle>Communication</PageTitle>
 <h3>Communication</h3>
-<button class="btn btn-primary" @onclick="SendEmail">Send Communication</button>
-<button class="btn btn-primary" @onclick="SendEmail">Send Feedback</button>
-<button class="btn btn-primary" @onclick="SendEmail">Send Newsletter</button>
+<button class="btn btn-primary" @onclick="SendCommunication">Send Communication</button>
 <button class="btn btn-primary" @onclick="ViewTemplates">View Templates</button>
 <button class="btn btn-primary" @onclick="AddTemplate">Add Template</button>
 
@@ -21,9 +19,15 @@
     {
         NavigationManager.NavigateTo("/communication/email-templates/add");
     }
+
     private void ViewTemplates()
     {
         NavigationManager.NavigateTo("/communication/email-templates");
+    }
+
+    private void SendCommunication()
+    {
+        NavigationManager.NavigateTo("/communication/send");
     }
 
     private async Task SendEmail()

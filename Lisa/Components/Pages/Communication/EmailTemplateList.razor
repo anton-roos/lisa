@@ -56,12 +56,12 @@ else
 
     private void ViewTemplate(string name)
     {
-        NavigationManager.NavigateTo($"/email-template-view/{name}");
+        NavigationManager.NavigateTo($"/communication/email-template-view/{name}");
     }
 
     private void EditTemplate(string name)
     {
-        NavigationManager.NavigateTo($"/email-template/{name}");
+        NavigationManager.NavigateTo($"/communication/email-template/{name}");
     }
 
     private async Task DeleteTemplate(Guid id)

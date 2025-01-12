@@ -4,31 +4,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services
 {
-    public class ResultService
+    public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<ResultService> logger)
     {
-        private readonly IDbContextFactory<LisaDbContext> _dbContextFactory;
-        private readonly ILogger<ResultService> _logger;
-
-        public ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<ResultService> logger)
-        {
-            _dbContextFactory = dbContextFactory;
-            _logger = logger;
-        }
+        private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
+        private readonly ILogger<ResultService> _logger = logger;
 
         public async Task CreateAsync(Result result)
         {
             await using var context = _dbContextFactory.CreateDbContext();
             context.Results.Add(result);
             await context.SaveChangesAsync();
-            _logger.LogInformation($"Result created for LearnerId: {result.LearnerId}, SubjectId: {result.SubjectId}");
+            _logger.LogInformation("Result created for LearnerId: {result.LearnerId}, SubjectId: {result.SubjectId}", result.LearnerId, result.SubjectId);
         }
 
         public async Task<Result?> GetByIdAsync(Guid id)
         {
             await using var context = _dbContextFactory.CreateDbContext();
             return await context.Results
-                .Include(r => r.Learner)
-                 .ThenInclude(l => l.RegisterClass)
+                .Include(r => r.Learner!)
+                 .ThenInclude(l => l.RegisterClass!)
                     .ThenInclude(rc => rc.Grade)
                 .Include(r => r.Subject)
                 .FirstOrDefaultAsync(r => r.Id == id);

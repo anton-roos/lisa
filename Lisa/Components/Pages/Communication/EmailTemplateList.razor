@@ -36,8 +36,8 @@ else
                     <td>@template.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
                     <td>@template.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</td>
                     <td>
-                        <button class="btn btn-sm btn-info" @onclick="@(() => ViewTemplate(template.Name))">View</button>
-                        <button class="btn btn-sm btn-warning" @onclick="@(() => EditTemplate(template.Name))">Edit</button>
+                        <button class="btn btn-sm btn-info" @onclick="@(() => { if (template?.Name != null) ViewTemplate(template.Name); })">View</button>
+                        <button class="btn btn-sm btn-warning" @onclick="@(() => { if (template?.Name != null) EditTemplate(template.Name); })">Edit</button>
                         <button class="btn btn-sm btn-danger" @onclick="@(() => DeleteTemplate(template.Id))">Delete</button>
                     </td>
                 </tr>

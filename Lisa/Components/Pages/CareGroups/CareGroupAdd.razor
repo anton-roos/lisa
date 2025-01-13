@@ -36,7 +36,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        SelectedSchool = await SchoolService.GetSelectedSchool();
+        SelectedSchool = SchoolService.GetSelectedSchool();
     }
 
     private async Task HandleValidSubmit()

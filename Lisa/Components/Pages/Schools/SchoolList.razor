@@ -71,7 +71,7 @@ else
     {
         if (school != null)
         {
-            await SchoolService.DeleteAsync(school);
+            await SchoolService.DeleteSchoolAsync(school);
             schools = await SchoolService.GetAllAsync();
         }
     }

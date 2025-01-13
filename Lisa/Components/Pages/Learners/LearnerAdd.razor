@@ -2,7 +2,7 @@
 @using Lisa.Models.Entities
 @inject NavigationManager navigationManager
 @inject LearnerService learnerService
-@inject SchoolService schoolService
+@inject SchoolService SchoolService
 @inject CombinationService combinationService
 @inject IToastService ToastService
 @inherits EventAwareComponentBase
@@ -162,7 +162,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        SelectedSchool = await schoolService.GetSelectedSchool();
+        SelectedSchool = SchoolService.GetSelectedSchool();
         SubscribeToEvent(UiEvents.SchoolSelected);
         registerClasses = await learnerService.GetRegisterClasses(SelectedSchool);
         careGroups = await learnerService.GetCareGroups(SelectedSchool);

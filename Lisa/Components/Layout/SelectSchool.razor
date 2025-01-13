@@ -54,7 +54,7 @@ else
         Thread.Sleep(500);
         schools = await SchoolService.GetAllAsync();
         schools = schools.OrderBy(s => s.Id).ToList();
-        var selectedSchool = await SchoolService.GetSelectedSchool();
+        var selectedSchool = SchoolService.GetSelectedSchool();
         SelectedSchoolId = selectedSchool?.Id.ToString();
         IsLoading = false;
         await InvokeAsync(StateHasChanged);
@@ -80,7 +80,7 @@ else
         SelectedSchoolId = e.Value?.ToString();
         if (SelectedSchoolId != null)
         {
-            var SelectedSchool = await SchoolService.SetCurrentSchool(Guid.Parse(SelectedSchoolId));
+            var SelectedSchool = await SchoolService.SetCurrentSchoolAsync(Guid.Parse(SelectedSchoolId));
             await IUiEventService.PublishAsync(UiEvents.SchoolSelected, SelectedSchool);
         }
         else

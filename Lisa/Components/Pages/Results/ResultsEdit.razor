@@ -84,7 +84,7 @@ else
         {
             IsLoading = true;
             Result = await ResultService.GetByIdAsync(ResultId);
-            SelectedSchool = await SchoolService.GetSelectedSchool();
+            SelectedSchool = SchoolService.GetSelectedSchool();
         }
         catch (Exception ex)
         {

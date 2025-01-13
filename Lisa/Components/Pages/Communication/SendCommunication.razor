@@ -117,7 +117,7 @@
 
     private async Task LoadData()
     {
-        SelectedSchool = await SchoolService.GetSelectedSchool();
+        SelectedSchool = SchoolService.GetSelectedSchool();
         Learners = await LearnerService.GetLearnersBySchoolAsync(SelectedSchool.Id);
     }
 

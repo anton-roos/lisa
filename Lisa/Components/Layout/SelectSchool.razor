@@ -54,7 +54,8 @@ else
         Thread.Sleep(500);
         schools = await SchoolService.GetAllAsync();
         schools = schools.OrderBy(s => s.Id).ToList();
-        SelectedSchoolId = SchoolService.GetSelectedSchool()?.Id.ToString();
+        var selectedSchool = await SchoolService.GetSelectedSchool();
+        SelectedSchoolId = selectedSchool?.Id.ToString();
         IsLoading = false;
         await InvokeAsync(StateHasChanged);
     }

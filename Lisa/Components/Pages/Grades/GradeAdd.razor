@@ -39,9 +39,9 @@ else
     private School? SelectedSchool;
     private GradeViewModel NewGrade = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        SelectedSchool = SchoolService.GetSelectedSchool();
+        SelectedSchool = await SchoolService.GetSelectedSchool();
     }
 
     private async Task HandleValidSubmit()
@@ -50,11 +50,11 @@ else
             return;
 
         var gradeEntity = new Lisa.Models.Entities.Grade
-        {
-            Name = NewGrade.Name,
-            SequenceNumber = NewGrade.SequenceNumber,
-            SchoolId = SelectedSchool.Id
-        };
+            {
+                Name = NewGrade.Name,
+                SequenceNumber = NewGrade.SequenceNumber,
+                SchoolId = SelectedSchool.Id
+            };
 
         await GradeService.CreateGradeAsync(gradeEntity);
         Navigation.NavigateTo("/grades");

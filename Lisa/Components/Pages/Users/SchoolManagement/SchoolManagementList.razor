@@ -54,8 +54,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        SelectedSchool = await SchoolService.GetSelectedSchool();
         SubscribeToEvent(UiEvents.SchoolSelected);
-        SelectedSchool = SchoolService.GetSelectedSchool();
 
         if (SelectedSchool != null)
         {

@@ -50,10 +50,10 @@
     private SystemAdminViewModel SysAdmin { get; set; } = new();
     private School? SelectedSchool;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        SelectedSchool = await SchoolService.GetSelectedSchool();
         SubscribeToEvent(UiEvents.SchoolSelected);
-        SelectedSchool = SchoolService.GetSelectedSchool();
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)

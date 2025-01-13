@@ -9,6 +9,7 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using Lisa.Models.Entities;
 using RazorLight;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -104,13 +105,14 @@ builder.Services.AddScoped<GradeService>();
 builder.Services.AddScoped<LearnerService>();
 builder.Services.AddScoped<ParentService>();
 builder.Services.AddScoped<RegisterClassService>();
-builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<SubjectService>();
 builder.Services.AddScoped<TeacherService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ResultService>();
 builder.Services.AddScoped<IUiEventService, UiEventService>();
 builder.Services.AddScoped<EmailTemplateService>();
+builder.Services.AddScoped<SchoolService>();
+builder.Services.AddScoped<ProtectedSessionStorage>();
 
 builder.Services.AddHttpContextAccessor();
 
@@ -138,9 +140,9 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    await DatabaseSeed.Seed(services);
-}
+// using (var scope = app.Services.CreateScope())
+// {
+//     var services = scope.ServiceProvider;
+//     await DatabaseSeed.Seed(services);
+// }
 app.Run();

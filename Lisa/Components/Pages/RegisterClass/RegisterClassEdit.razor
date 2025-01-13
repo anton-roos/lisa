@@ -78,7 +78,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        SelectedSchool = SchoolService.GetSelectedSchool();
+        SelectedSchool = await SchoolService.GetSelectedSchool();
         if (SelectedSchool == null)
         {
             return;

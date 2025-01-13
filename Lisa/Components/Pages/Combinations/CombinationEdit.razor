@@ -80,7 +80,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        CurrentSchool = SchoolService.GetSelectedSchool();
+        CurrentSchool = await SchoolService.GetSelectedSchool();
         AllSubjects = await SubjectService.GetAllAsync();
         Grades = await GradeService.GetGradesForSchool(CurrentSchool.Id);
 

@@ -4,53 +4,46 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, SchoolService schoolService, IServiceProvider serviceProvider)
+public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-    private readonly SchoolService _schoolService = schoolService;
-    private readonly IServiceProvider _serviceProvider = serviceProvider;
     public event Action? LearnersUpdated;
-    private School? SelectedSchool => _schoolService.GetSelectedSchool();
 
     public async Task<Learner?> GetLearnerAsync(Guid id)
     {
-        using var scope = _serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
-        return await dbContext.Learners.FindAsync(id);
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Learners.FindAsync(id);
     }
 
     public async Task<Learner?> GetLearnerWithParentsAsync(Guid id)
     {
-        using var scope = _serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
-        return await dbContext.Learners
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Learners
             .Include(l => l.Parents)
             .FirstOrDefaultAsync(l => l.Id == id);
     }
 
     public async Task AddParentToLearnerAsync(Parent parent)
     {
-        await using var context = _dbContextFactory.CreateDbContext();
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
         context.Parents.Add(parent);
         await context.SaveChangesAsync();
     }
 
     public async Task<List<Learner>> GetLearnersBySchoolAsync(Guid schoolId)
     {
-        using var scope = _serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
-        return await dbContext.Learners
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Learners
         .Include(l => l.RegisterClass!)
             .ThenInclude(rc => rc.Grade)
             .Where(l => l.SchoolId == schoolId)
             .ToListAsync();
     }
 
-    public async Task<List<RegisterClass>> GetRegisterClasses()
+    public async Task<List<RegisterClass>> GetRegisterClasses(School? SelectedSchool)
     {
-        using var scope = _serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
-        return await dbContext.RegisterClasses
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.RegisterClasses
             .Where(rc => rc.Grade != null && rc.Grade.SchoolId == SelectedSchool!.Id)
             .Include(rc => rc.Grade!)
             .ToListAsync();
@@ -58,37 +51,34 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, S
 
 
 
-    public async Task<List<CareGroup>> GetCareGroups()
+    public async Task<List<CareGroup>> GetCareGroups(School? SelectedSchool)
     {
-        using var scope = _serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
-        return await dbContext.CareGroups
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.CareGroups
             .Where(cg => cg.SchoolId == SelectedSchool!.Id)
             .ToListAsync();
     }
 
     public async Task<List<CareGroup>> GetCareGroupsBySchoolId(Guid schoolId)
     {
-        using var scope = _serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
-        return await dbContext.CareGroups
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.CareGroups
             .Where(cg => cg.SchoolId == schoolId)
             .ToListAsync();
     }
 
     public async Task AddLearner(Learner learner)
     {
-        var _context = _dbContextFactory.CreateDbContext();
-        _context.Learners.Add(learner);
-        await _context.SaveChangesAsync();
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        context.Learners.Add(learner);
+        await context.SaveChangesAsync();
         LearnersUpdated?.Invoke();
     }
 
     public async Task<List<Learner>> GetLearnersByGradeAsync(Guid gradeId)
     {
-        using var scope = _serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
-        var learners = await dbContext.Learners
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        var learners = await context.Learners
             .Where(l => l.RegisterClass != null && l.RegisterClass.GradeId == gradeId)
             .Include(l => l.RegisterClass!)
             .ToListAsync();
@@ -105,10 +95,8 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, S
 
     public async Task<List<Learner>> GetLearnersWithTheirSubjectsByGradeAsync(Guid gradeId)
     {
-        using var scope = _serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
-
-        var learners = await dbContext.Learners
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        var learners = await context.Learners
             .Where(l => l.RegisterClass != null && l.RegisterClass.GradeId == gradeId)
             .Include(l => l.RegisterClass!)
                 .ThenInclude(rc => rc.CompulsorySubjects)
@@ -122,15 +110,14 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, S
 
     public async Task<Learner?> LoadLearnerAsync(Guid learnerId)
     {
-        var _context = await _dbContextFactory.CreateDbContextAsync();
-        var learner = await _context.Learners
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        var learner = await context.Learners
             .Include(l => l.Combination)
             .Include(l => l.CareGroup)
             .Include(l => l.Parents)
             .Include(l => l.RegisterClass!)
                 .ThenInclude(rc => rc.Grade)
             .FirstOrDefaultAsync(l => l.Id == learnerId);
-        await _context.DisposeAsync();
         return learner;
     }
 }

@@ -64,7 +64,7 @@ else
 
     public async Task LoadCombinations()
     {
-        SelectedSchool = SchoolService.GetSelectedSchool();
+        SelectedSchool = await SchoolService.GetSelectedSchool();
         Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
         SubjectCombinations = await CombinationService.GetSubjectCombinationsForSchool(SelectedSchool);
     }

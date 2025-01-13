@@ -50,10 +50,10 @@
     private AdministratorViewModel Administrator { get; set; } = new();
     private School? SelectedSchool;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        SelectedSchool = await SchoolService.GetSelectedSchool();
         SubscribeToEvent(UiEvents.SchoolSelected);
-        SelectedSchool = SchoolService.GetSelectedSchool();
     }
 
     private async Task HandleValidSubmit()

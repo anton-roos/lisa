@@ -80,6 +80,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        SelectedSchool = await SchoolService.GetSelectedSchool();
         SubscribeToEvent(UiEvents.SchoolSelected);
         await LoadLearners();
     }
@@ -99,7 +100,7 @@ else
 
     private async Task LoadLearners()
     {
-        SelectedSchool = SchoolService.GetSelectedSchool();
+        SelectedSchool = await SchoolService.GetSelectedSchool();
         if (SelectedSchool?.Id != null)
         {
             Learners = await LearnerService.GetLearnersBySchoolAsync(SelectedSchool.Id);

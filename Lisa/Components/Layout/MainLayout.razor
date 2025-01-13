@@ -1,4 +1,5 @@
 ﻿@inherits LayoutComponentBase
+@inject SchoolService SchoolService
 
 <div class="page">
     <div class="sidebar">
@@ -37,3 +38,13 @@
 <FluentTooltipProvider />
 <FluentMessageBarProvider />
 <FluentMenuProvider />
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await SchoolService.InitializeAsync();
+        }
+    }
+}

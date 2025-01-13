@@ -162,11 +162,11 @@
 
     protected override async Task OnInitializedAsync()
     {
+        SelectedSchool = await schoolService.GetSelectedSchool();
         SubscribeToEvent(UiEvents.SchoolSelected);
-        registerClasses = await learnerService.GetRegisterClasses();
-        careGroups = await learnerService.GetCareGroups();
+        registerClasses = await learnerService.GetRegisterClasses(SelectedSchool);
+        careGroups = await learnerService.GetCareGroups(SelectedSchool);
         combinations = await combinationService.GetAllAsync();
-        SelectedSchool = schoolService.GetSelectedSchool();
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)

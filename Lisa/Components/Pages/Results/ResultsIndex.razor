@@ -130,6 +130,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        SelectedSchool = await SchoolService.GetSelectedSchool();
         SubscribeToEvent(UiEvents.SchoolSelected);
         await LoadDropdowns();
     }
@@ -169,7 +170,7 @@ else
 
     private async Task LoadDropdowns()
     {
-        SelectedSchool = SchoolService.GetSelectedSchool();
+        SelectedSchool = await SchoolService.GetSelectedSchool();
         
         if (SelectedSchool != null)
         {

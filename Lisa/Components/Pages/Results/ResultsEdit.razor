@@ -83,16 +83,7 @@ else
         try
         {
             IsLoading = true;
-            var result = await ResultService.GetByIdAsync(ResultId);
-            if (result != null)
-            {
-                Result = result;
-            }
-            else
-            {
-                Logger.LogError("Result not found.");
-                NavigationManager.NavigateTo("/results/list");
-            }
+            Result = await ResultService.GetByIdAsync(ResultId);
             SelectedSchool = SchoolService.GetSelectedSchool();
         }
         catch (Exception ex)

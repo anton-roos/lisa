@@ -89,7 +89,7 @@ namespace Lisa.Services
 
             context.Results.Remove(result);
             await context.SaveChangesAsync();
-            _logger.LogInformation("Result with ID {id} deleted.", id);
+            _logger.LogInformation($"Result with ID {id} deleted.");
         }
     }
 }

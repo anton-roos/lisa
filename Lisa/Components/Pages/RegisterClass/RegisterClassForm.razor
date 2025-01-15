@@ -1,0 +1,94 @@
+﻿@using Lisa.Models.Entities
+@using Lisa.Models.ViewModels
+@using Microsoft.AspNetCore.Components.Forms
+
+<EditForm Model="@RegisterClass" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Class Name</label>
+        <InputText class="form-control" @bind-Value="RegisterClass.Name" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Grade</label>
+        <select class="form-select" @bind="RegisterClass.GradeId">
+            <option value="">-- Select Grade --</option>
+            @if (Grades != null)
+            {
+                @foreach (var grade in Grades)
+                {
+                    <option value="@grade.Id">@grade.Name</option>
+                }
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Teacher</label>
+        <select class="form-select" @bind="RegisterClass.TeacherId">
+            <option value="">-- Select Teacher --</option>
+            @if (Teachers != null)
+            {
+                @foreach (var teacher in Teachers)
+                {
+                    <option value="@teacher.Id">@($"{teacher.FirstName} {teacher.LastName}")</option>
+                }
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Compulsory Subjects</label>
+        <div class="mb-3">
+            <label class="form-label">Search Subjects</label>
+            <InputText class="form-control"
+            @bind-Value="SearchText"
+            @oninput="OnInputChange"
+            placeholder="Type to filter subjects..." />
+        </div>
+        <div role="group">
+            @if (FilteredSubjects != null)
+            {
+                @foreach (var subject in FilteredSubjects)
+                {
+                    bool isChecked = RegisterClass.SubjectIds.Contains(subject.Id);
+
+                    <div>
+                        <input type="checkbox"
+                        checked="@isChecked"
+                        @onchange="@(() => ToggleSubjectAsync(subject.Id))" />
+                        <label>@subject.Name</label>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <button class="btn btn-primary" type="submit">Save</button>
+    <button class="btn btn-secondary" type="button" @onclick="OnCancel">Cancel</button>
+</EditForm>
+
+@code {
+    [Parameter] public RegisterClassViewModel RegisterClass { get; set; } = new();
+    [Parameter] public List<Grade>? Grades { get; set; }
+    [Parameter] public List<Teacher>? Teachers { get; set; }
+    [Parameter] public IEnumerable<Subject>? FilteredSubjects { get; set; }
+    [Parameter] public string SearchText { get; set; } = string.Empty;
+    [Parameter] public EventCallback<ChangeEventArgs> OnInputChange { get; set; }
+    [Parameter] public EventCallback<Guid> ToggleSubject { get; set; }
+    [Parameter] public EventCallback OnValidSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public List<Subject> AllSubjects { get; set; } = new();
+
+    private async Task ToggleSubjectAsync(Guid subjectId)
+    {
+        await ToggleSubject.InvokeAsync(subjectId);
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        await OnValidSubmit.InvokeAsync();
+    }
+}

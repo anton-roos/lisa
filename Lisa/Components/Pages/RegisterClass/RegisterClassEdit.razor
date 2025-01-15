@@ -1,12 +1,16 @@
 @page "/register-class/edit/{RegisterClassId:guid}"
 @using Lisa.Models.Entities
+@using Lisa.Models.ViewModels
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components
+@using Microsoft.EntityFrameworkCore
 @inject SchoolService SchoolService
 @inject RegisterClassService RegisterClassService
 @inject NavigationManager Navigation
 @inject GradeService GradeService
 @inject TeacherService TeacherService
+@inject SubjectService SubjectService
+@inject IDbContextFactory<LisaDbContext> DbContextFactory
 
 <h3>Edit Register Class</h3>
 
@@ -16,65 +20,35 @@
         No school is selected. Please select a school first.
     </div>
 }
-else if (EditRegisterClass == null)
+else if (RegisterClass == null)
 {
     <p>Loading...</p>
 }
 else
 {
-    <EditForm Model="@EditRegisterClass" OnValidSubmit="HandleValidSubmit">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
-
-        <!-- Class Name -->
-        <div class="mb-3">
-            <label class="form-label">Class Name</label>
-            <InputText class="form-control" @bind-Value="EditRegisterClass.Name" />
-        </div>
-
-        <!-- Grade Dropdown -->
-        <div class="mb-3">
-            <label class="form-label">Grade</label>
-            <select class="form-select" @bind="EditRegisterClass.GradeId">
-                <option value="">-- Select Grade --</option>
-                @if (Grades != null)
-                {
-                    @foreach (var grade in Grades)
-                    {
-                        <option value="@grade.Id">@grade.Name</option>
-                    }
-                }
-            </select>
-        </div>
-
-        <!-- Teacher Dropdown -->
-        <div class="mb-3">
-            <label class="form-label">Teacher</label>
-            <select class="form-select" @bind="EditRegisterClass.TeacherId">
-                <option value="">-- Select Teacher --</option>
-                @if (Teachers != null)
-                {
-                    @foreach (var teacher in Teachers)
-                    {
-                        <option value="@teacher.Id">@($"{teacher.FirstName} {teacher.LastName}")</option>
-                    }
-                }
-            </select>
-        </div>
-
-        <button class="btn btn-primary" type="submit">Save</button>
-        <button class="btn btn-secondary" type="button" @onclick="Cancel">Cancel</button>
-    </EditForm>
+    <RegisterClassForm RegisterClass="@RegisterClass"
+    Grades="@Grades"
+    Teachers="@Teachers"
+    FilteredSubjects="@FilteredSubjects"
+    SearchText="@SearchText"
+    OnInputChange="@OnInputChange"
+    ToggleSubject="@ToggleSubject"
+    OnCancel="@Cancel"
+    OnValidSubmit="@HandleValidSubmit"
+    AllSubjects="@AllSubjects" />
 }
 
 @code {
-    [Parameter]
-    public Guid RegisterClassId { get; set; }
-
-    private RegisterClass? EditRegisterClass;
+    [Parameter] public Guid RegisterClassId { get; set; }
+    private RegisterClassViewModel RegisterClass { get; set; } = new ();
     private School? SelectedSchool;
     private List<Grade>? Grades;
     private List<Teacher>? Teachers;
+    private List<Subject> AllSubjects = new();
+    private string SearchText = string.Empty;
+    private IEnumerable<Subject> FilteredSubjects =>
+        AllSubjects.Where(s => string.IsNullOrEmpty(SearchText)
+        || (s.Name != null && s.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)));
 
     protected override async Task OnInitializedAsync()
     {
@@ -84,35 +58,89 @@ else
             return;
         }
 
-        // Load the existing RegisterClass
-        var existingClass = await RegisterClassService.GetByIdAsync(RegisterClassId);
-        if (existingClass == null)
+        var RegisterClassEntity = await RegisterClassService.GetByIdAsync(RegisterClassId);
+        if (RegisterClass == null)
         {
             // Not found or error
             Navigation.NavigateTo("/register-class");
             return;
         }
 
-        // Populate EditRegisterClass with the fetched data
-        EditRegisterClass = existingClass;
-
+        RegisterClass = new RegisterClassViewModel
+            {
+                GradeId = RegisterClassEntity.GradeId,
+                Name = RegisterClassEntity.Name,
+                TeacherId = RegisterClassEntity.TeacherId,
+                SubjectIds = RegisterClassEntity.CompulsorySubjects.Select(s => s.Id).ToList(),
+            };
         // Also load Grades/Teachers for drop-down
         Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
         Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id);
+        AllSubjects = await SubjectService.GetAllAsync();
     }
 
     private async Task HandleValidSubmit()
     {
-        if (EditRegisterClass == null) return;
+        if (RegisterClass == null) return;
+
+        using var _context = DbContextFactory.CreateDbContext();
+
+        // Load the existing entity with related subjects
+        var existingEntity = await _context.RegisterClasses
+            .Include(rc => rc.CompulsorySubjects) // include related subjects
+            .FirstOrDefaultAsync(rc => rc.Id == RegisterClassId);
+
+        if (existingEntity == null)
+        {
+            // Handle not found scenario
+            return;
+        }
+
+        // Update scalar properties
+        existingEntity.Name = RegisterClass.Name;
+        existingEntity.GradeId = RegisterClass.GradeId;
+        existingEntity.TeacherId = RegisterClass.TeacherId;
+
+        // Use the context to fetch subjects
+        var subjectIds = RegisterClass.SubjectIds;
+        var selectedSubjects = await _context.Subjects
+                                             .Where(s => subjectIds.Contains(s.Id))
+                                             .ToListAsync();
+
+        // Update the relationship
+        existingEntity.CompulsorySubjects.Clear();
+        foreach (var subject in selectedSubjects)
+        {
+            existingEntity.CompulsorySubjects.Add(subject);
+        }
 
         // Save changes
-        await RegisterClassService.UpdateAsync(EditRegisterClass);
+        await _context.SaveChangesAsync();
 
         Navigation.NavigateTo("/register-class");
     }
 
+
     private void Cancel()
     {
         Navigation.NavigateTo("/register-class");
+    }
+
+    private void ToggleSubject(Guid subjectId)
+    {
+        if (RegisterClass.SubjectIds.Contains(subjectId))
+        {
+            RegisterClass.SubjectIds.Remove(subjectId);
+        }
+        else
+        {
+            RegisterClass.SubjectIds.Add(subjectId);
+        }
+    }
+
+    private void OnInputChange(ChangeEventArgs e)
+    {
+        SearchText = e?.Value?.ToString() ?? string.Empty;
+        StateHasChanged();
     }
 }

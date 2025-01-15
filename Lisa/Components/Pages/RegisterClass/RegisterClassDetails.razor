@@ -55,7 +55,20 @@ else
                 }
             </tbody>
         </table>
+
     }
+        <dt>Subjects</dt>
+        <dd>
+            <ul>
+                @if (RegisterClass.CompulsorySubjects != null)
+                {
+                    @foreach (var subject in RegisterClass.CompulsorySubjects)
+                    {
+                        <li>@subject.Name</li>
+                    }
+                }
+            </ul>
+        </dd>
 
     <button class="btn btn-secondary" @onclick="GoBack">Back</button>
 }

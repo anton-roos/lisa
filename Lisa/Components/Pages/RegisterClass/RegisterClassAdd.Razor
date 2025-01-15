@@ -1,11 +1,15 @@
 @page "/register-class/add"
 @inject SchoolService SchoolService
+@inject SubjectService SubjectService
 @inject GradeService GradeService
 @inject TeacherService TeacherService
 @inject NavigationManager Navigation
 @inject RegisterClassService RegisterClassService
 @using Lisa.Models.Entities
-@using Microsoft.AspNetCore.Components.Forms
+@using Lisa.Models.ViewModels
+@using Microsoft.EntityFrameworkCore
+@inject IToastService ToastService
+@inject IDbContextFactory<LisaDbContext> DbContextFactory
 
 <h3>Add Register Class</h3>
 
@@ -17,56 +21,30 @@
 }
 else
 {
-    <EditForm Model="@NewRegisterClass" OnValidSubmit="HandleValidSubmit">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
-
-        <!-- Class Name -->
-        <div class="mb-3">
-            <label class="form-label">Class Name</label>
-            <InputText class="form-control" @bind-Value="NewRegisterClass.Name" />
-        </div>
-
-        <!-- Grade Dropdown -->
-        <div class="mb-3">
-            <label class="form-label">Grade</label>
-            <select class="form-select" @bind="NewRegisterClass.GradeId">
-                <option value="">-- Select Grade --</option>
-                @if (Grades != null)
-                {
-                    @foreach (var grade in Grades)
-                    {
-                        <option value="@grade.Id">@grade.Name</option>
-                    }
-                }
-            </select>
-        </div>
-
-        <!-- Teacher Dropdown -->
-        <div class="mb-3">
-            <label class="form-label">Teacher</label>
-            <select class="form-select" @bind="NewRegisterClass.TeacherId">
-                <option value="">-- Select Teacher --</option>
-                @if (Teachers != null)
-                {
-                    @foreach (var teacher in Teachers)
-                    {
-                        <option value="@teacher.Id">@($"{teacher.FirstName} {teacher.LastName}")</option>
-                    }
-                }
-            </select>
-        </div>
-
-        <button class="btn btn-primary" type="submit">Save</button>
-        <button class="btn btn-secondary" type="button" @onclick="Cancel">Cancel</button>
-    </EditForm>
+    <RegisterClassForm RegisterClass="@NewRegisterClass"
+                       Grades="@Grades"
+                       Teachers="@Teachers"
+                       FilteredSubjects="@FilteredSubjects"
+                       SearchText="@SearchText" 
+                       OnInputChange="@OnInputChange"
+                       ToggleSubject="@ToggleSubject"
+                       OnCancel="@Cancel"
+                       OnValidSubmit="@HandleValidSubmit"
+                       AllSubjects="@AllSubjects"
+                       />
 }
 
 @code {
-    private RegisterClass NewRegisterClass = new();
+    private RegisterClassViewModel NewRegisterClass = new();
     private School? SelectedSchool;
     private List<Grade>? Grades;
     private List<Teacher>? Teachers;
+    private List<Subject> AllSubjects = new();
+    private string SearchText = string.Empty;
+    
+    private IEnumerable<Subject> FilteredSubjects =>
+        AllSubjects.Where(s => string.IsNullOrEmpty(SearchText)
+        || (s.Name != null && s.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)));
 
     protected override async Task OnInitializedAsync()
     {
@@ -74,7 +52,8 @@ else
         if (SelectedSchool != null)
         {
             Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
-            Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id); // Or whatever method you have
+            Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id);
+            AllSubjects = await SubjectService.GetAllAsync();
         }
     }
 
@@ -82,12 +61,28 @@ else
     {
         if (SelectedSchool == null)
         {
+            ToastService.ShowToast(ToastIntent.Error, "Please select a school");
             return;
         }
 
-        NewRegisterClass.Id = Guid.NewGuid();
-        
-        await RegisterClassService.CreateAsync(NewRegisterClass);
+        using var _context = DbContextFactory.CreateDbContext();
+        var selectedSubjects = await SubjectService.GetSubjectsByIdsAsync(NewRegisterClass.SubjectIds);
+
+        foreach (var subject in selectedSubjects)
+        {
+            _context.Subjects.Attach(subject);
+        }
+
+        var entity = new RegisterClass
+        {
+            Name = NewRegisterClass.Name,
+            GradeId = NewRegisterClass.GradeId,
+            CompulsorySubjects = selectedSubjects,
+            TeacherId = NewRegisterClass.TeacherId
+        }; 
+
+        _context.RegisterClasses.Add(entity);
+        await _context.SaveChangesAsync();
 
         Navigation.NavigateTo("/register-class");
     }
@@ -95,5 +90,23 @@ else
     private void Cancel()
     {
         Navigation.NavigateTo("/register-class");
+    }
+
+    private void OnInputChange(ChangeEventArgs e)
+    {
+        SearchText = e?.Value?.ToString() ?? string.Empty;
+        StateHasChanged();
+    }
+
+    private void ToggleSubject(Guid subjectId)
+    {
+        if (NewRegisterClass.SubjectIds.Contains(subjectId))
+        {
+            NewRegisterClass.SubjectIds.Remove(subjectId);
+        }
+        else
+        {
+            NewRegisterClass.SubjectIds.Add(subjectId);
+        }
     }
 }

@@ -69,12 +69,8 @@
 
     <div class="mb-3">
         <label for="RegisterClassId">Register Class</label>
-        <InputSelect    class="form-select"
-        id="RegisterClassId" 
-        ValueExpression="@(() => SelectedRegisterClassId)" 
-        Value="SelectedRegisterClassId" 
-        TValue="string" 
-        ValueChanged="RegisterClassSelected">
+        <InputSelect class="form-select" id="RegisterClassId" ValueExpression="@(() => SelectedRegisterClassId)"
+            Value="SelectedRegisterClassId" TValue="string" ValueChanged="RegisterClassSelected">
 
             <option value="">Select Register Class</option>
             @foreach (var registerClass in RegisterClasses!)
@@ -94,35 +90,48 @@
         {
             <div>Register Class @RegisterClass.Name</div>
 
-             <h3>Compulsory Subjects</h3>
+            <h3>Compulsory Subjects</h3>
             @foreach (var subject in RegisterClass.CompulsorySubjects)
             {
                 bool isChecked = Learner.SubjectIds.Contains(subject.Id);
 
-                    <div>
-                        <input type="checkbox"
-                        checked="@isChecked"
-                        @onchange="@(() => ToggleSubject(subject.Id))" />
-                        <label>@subject.Name</label>
-                    </div>
+                <div>
+                    <input type="checkbox" checked="@isChecked" @onchange="@(() => ToggleSubject(subject.Id))" />
+                    <label>@subject.Name</label>
+                </div>
             }
-                <h3>Compulsory Subjects</h3>
-                    <div class="container text-center">
-                    <div class="row">
-                        <div class="col">
-                             Math / Math Lit
+            @if (RegisterClass.MathSelectionEnabled)
+            {
+                <div class="mb-8" id="math-selection">
+                    <h3>Select 1</h3>
+                    <div class="row justify-content-start">
+                        <div class="col-3">
+                            <input type="radio" id="math" name="math" value="MATH">
+                            <label for="html">Mathematichs</label><br>
                         </div>
-                        <div class="col">
-                            Combination A
-                        </div>
-                        <div class="col">
-                            Combination B
-                        </div>
-                        <div class="col">
-                            Combination C
+                        <div class="col-3">
+                            <input type="radio" id="math-lit" name="math" value="MATL">
+                            <label for="css">Mathematical Literacy</label><br>
                         </div>
                     </div>
                 </div>
+            }
+            <div class="container text-center">
+                <div class="row">
+                    <div class="col">
+                        Math / Math Lit
+                    </div>
+                    <div class="col">
+                        Combination A
+                    </div>
+                    <div class="col">
+                        Combination B
+                    </div>
+                    <div class="col">
+                        Combination C
+                    </div>
+                </div>
+            </div>
         }
     </div>
 
@@ -177,7 +186,7 @@
                         </div>
 
                         <button type="button" class="btn btn-danger w-100 mt-2" @onclick="@(() => RemoveParent(parent))"> <i
-                            class="bi bi-trash me-1"></i> Remove</button>
+                                class="bi bi-trash me-1"></i> Remove</button>
                     </div>
                 </div>
             </div>
@@ -285,7 +294,7 @@
             return;
         }
 
-		var learnerId = Guid.NewGuid();
+        var learnerId = Guid.NewGuid();
 
         using var _context = DbContextFactory.CreateDbContext();
         var selectedSubjects = await SubjectService.GetSubjectsByIdsAsync(Learner.SubjectIds);

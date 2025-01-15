@@ -35,7 +35,10 @@ else
     ToggleSubject="@ToggleSubject"
     OnCancel="@Cancel"
     OnValidSubmit="@HandleValidSubmit"
-    AllSubjects="@AllSubjects" />
+    AllSubjects="@AllSubjects"
+    MathSelected="@MathSelected"
+    ToggleMathSelected="ToggleMathSelected"
+    />
 }
 
 @code {
@@ -49,6 +52,7 @@ else
     private IEnumerable<Subject> FilteredSubjects =>
         AllSubjects.Where(s => string.IsNullOrEmpty(SearchText)
         || (s.Name != null && s.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)));
+    private bool MathSelected { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -58,6 +62,8 @@ else
             return;
         }
 
+        
+
         var RegisterClassEntity = await RegisterClassService.GetByIdAsync(RegisterClassId);
         if (RegisterClass == null)
         {
@@ -65,6 +71,8 @@ else
             Navigation.NavigateTo("/register-class");
             return;
         }
+
+        MathSelected = RegisterClassEntity.MathSelectionEnabled;
 
         RegisterClass = new RegisterClassViewModel
             {
@@ -100,6 +108,7 @@ else
         existingEntity.Name = RegisterClass.Name;
         existingEntity.GradeId = RegisterClass.GradeId;
         existingEntity.TeacherId = RegisterClass.TeacherId;
+        existingEntity.MathSelectionEnabled = MathSelected;
 
         // Use the context to fetch subjects
         var subjectIds = RegisterClass.SubjectIds;
@@ -143,4 +152,10 @@ else
         SearchText = e?.Value?.ToString() ?? string.Empty;
         StateHasChanged();
     }
+
+    private void ToggleMathSelected()
+    {
+        MathSelected = !MathSelected;
+    }
+
 }

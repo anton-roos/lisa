@@ -22,16 +22,18 @@
 else
 {
     <RegisterClassForm RegisterClass="@NewRegisterClass"
-                       Grades="@Grades"
-                       Teachers="@Teachers"
-                       FilteredSubjects="@FilteredSubjects"
-                       SearchText="@SearchText" 
-                       OnInputChange="@OnInputChange"
-                       ToggleSubject="@ToggleSubject"
-                       OnCancel="@Cancel"
-                       OnValidSubmit="@HandleValidSubmit"
-                       AllSubjects="@AllSubjects"
-                       />
+    Grades="@Grades"
+    Teachers="@Teachers"
+    FilteredSubjects="@FilteredSubjects"
+    SearchText="@SearchText" 
+    OnInputChange="@OnInputChange"
+    ToggleSubject="@ToggleSubject"
+    OnCancel="@Cancel"
+    OnValidSubmit="@HandleValidSubmit"
+    AllSubjects="@AllSubjects"
+    MathSelected="MathSelected"
+    ToggleMathSelected="ToggleMathSelected"
+    />
 }
 
 @code {
@@ -41,7 +43,8 @@ else
     private List<Teacher>? Teachers;
     private List<Subject> AllSubjects = new();
     private string SearchText = string.Empty;
-    
+    private bool MathSelected { get; set; }
+
     private IEnumerable<Subject> FilteredSubjects =>
         AllSubjects.Where(s => string.IsNullOrEmpty(SearchText)
         || (s.Name != null && s.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)));
@@ -55,6 +58,7 @@ else
             Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id);
             AllSubjects = await SubjectService.GetAllAsync();
         }
+        MathSelected = false;
     }
 
     private async Task HandleValidSubmit()
@@ -78,7 +82,8 @@ else
             Name = NewRegisterClass.Name,
             GradeId = NewRegisterClass.GradeId,
             CompulsorySubjects = selectedSubjects,
-            TeacherId = NewRegisterClass.TeacherId
+            TeacherId = NewRegisterClass.TeacherId,
+            MathSelectionEnabled = MathSelected
         }; 
 
         _context.RegisterClasses.Add(entity);
@@ -108,5 +113,10 @@ else
         {
             NewRegisterClass.SubjectIds.Add(subjectId);
         }
+    }
+
+    private void ToggleMathSelected()
+    {
+        MathSelected = !MathSelected;
     }
 }

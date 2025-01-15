@@ -26,6 +26,11 @@
     </div>
 
     <div class="mb-3">
+        <label for="Maths">You need to choose between Math and Math Literacy in this grade.</label>
+        <input type="checkbox" id="Active" checked="@MathSelected" @onchange="ToggleMathSelected" />
+    </div>
+
+    <div class="mb-3">
         <label class="form-label">Teacher</label>
         <select class="form-select" @bind="RegisterClass.TeacherId">
             <option value="">-- Select Teacher --</option>
@@ -81,6 +86,8 @@
     [Parameter] public EventCallback OnValidSubmit { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public List<Subject> AllSubjects { get; set; } = new();
+    [Parameter] public bool MathSelected { get; set; }
+    [Parameter] public EventCallback ToggleMathSelected { get; set; }
 
     private async Task ToggleSubjectAsync(Guid subjectId)
     {

@@ -24,6 +24,20 @@ else
         <dd class="col-sm-10">
             @($"{RegisterClass.Teacher?.FirstName} {RegisterClass.Teacher?.LastName}")
         </dd>
+        <dt class"col-sm-2">Math/Math Lit Selection Enabled?</dt>
+        <dd>@(RegisterClass.MathSelectionEnabled ? "Yes" : "No")</dd>
+        <dt>Subjects</dt>
+        <dd>
+            <ul>
+                @if (RegisterClass.CompulsorySubjects != null)
+                {
+                    @foreach (var subject in RegisterClass.CompulsorySubjects)
+                    {
+                        <li>@subject.Name</li>
+                    }
+                }
+            </ul>
+        </dd>
     </dl>
 
     <h4>Enrolled Learners</h4>
@@ -57,18 +71,7 @@ else
         </table>
 
     }
-        <dt>Subjects</dt>
-        <dd>
-            <ul>
-                @if (RegisterClass.CompulsorySubjects != null)
-                {
-                    @foreach (var subject in RegisterClass.CompulsorySubjects)
-                    {
-                        <li>@subject.Name</li>
-                    }
-                }
-            </ul>
-        </dd>
+        
 
     <button class="btn btn-secondary" @onclick="GoBack">Back</button>
 }

@@ -69,3 +69,4 @@ Portal@DCEG
  1. Seed the Database (Roles, Admin User, School Types)
  1. Setup the System Administrator (When app runs with DB Seed)
  2. Setup the School
+ 

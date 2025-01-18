@@ -86,8 +86,6 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
         modelBuilder.Entity<School>()
             .HasKey(s => s.Id);
         modelBuilder.Entity<School>()
-            .OwnsOne(s => s.SmtpDetails);
-        modelBuilder.Entity<School>()
             .HasIndex(s => s.ShortName)
             .IsUnique();
         modelBuilder.Entity<School>()

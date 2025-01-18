@@ -37,6 +37,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
         await using var context = _dbContextFactory.CreateDbContext();
         return await context.Combinations
                             .Where(c => c.Grade!.SchoolId == schoolId)
+                            .Include(c => c.Subjects)
                             .ToListAsync();
     }
 

@@ -94,7 +94,11 @@ public class SchoolService
     public async Task<School?> GetSchoolAsync(Guid id)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.Schools.FindAsync(id);
+        return await context.Schools
+        .Include(s => s.SchoolType)
+        .Include(s => s.Curriculum)
+        .Where(x=> x.Id == id)
+        .FirstOrDefaultAsync();
     }
 
     public async Task<List<SchoolCurriculum>> GetSchoolCurriculumsAsync()

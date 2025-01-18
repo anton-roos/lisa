@@ -7,7 +7,7 @@
 
 <PageTitle>Edit School</PageTitle>
 
-<AuthorizeView Context="authContext"Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
+<AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
     <Authorized>
         <h3>Edit School</h3>
 
@@ -21,50 +21,8 @@
         }
         else
         {
-            <EditForm Context="editContext" Model="school" OnValidSubmit="HandleValidSubmit">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
-
-                <div class="form-group">
-                    <label for="shortName">Short Name</label>
-                    <InputText id="shortName" class="form-control" @bind-Value="school.ShortName" />
-                </div>
-
-                <div class="form-group">
-                    <label for="longName">Long Name</label>
-                    <InputText id="longName" class="form-control" @bind-Value="school.LongName" />
-                </div>
-
-                <div class="form-group">
-                    <label for="color">Color</label>
-                    <input type="color" id="color" class="form-control form-control-color" @bind="school.Color" />
-                </div>
-
-                <div class="form-group">
-                    <label for="schoolType">School Type</label>
-                    <InputSelect id="schoolType" class="form-control" @bind-Value="school.SchoolTypeId">
-                        <option value="">Select School Type</option>
-                        @foreach (var type in SchoolTypes)
-                        {
-                            <option value="@type.Id">@type.Name</option>
-                        }
-                    </InputSelect>
-                </div>
-
-                <div class="form-group">
-                    <label for="curriculum">Curriculum</label>
-                    <InputSelect id="curriculum" class="form-control" @bind-Value="school.SchoolCurriculumId">
-                        <option value="">Select Curriculum</option>
-                        @foreach (var curriculum in Curriculums)
-                        {
-                            <option value="@curriculum.Id">@curriculum.Name</option>
-                        }
-                    </InputSelect>
-                </div>
-
-                <button type="submit" class="btn btn-primary">Save</button>
-                <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
-            </EditForm>
+            <SchoolForm School="@school" SchoolTypes="@SchoolTypes" Curriculums="@Curriculums"
+                OnValidSubmitCallback="@HandleValidSubmit" OnCancelCallback="@Cancel" />
         }
     </Authorized>
     <NotAuthorized>
@@ -107,7 +65,7 @@
     {
         try
         {
-            await SchoolService.UpdateAsync(school!);            
+            await SchoolService.UpdateAsync(school!);
             NavigationManager.NavigateTo("/schools");
         }
         catch (Exception ex)

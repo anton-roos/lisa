@@ -37,16 +37,10 @@ namespace Lisa.Services
                 throw new Exception($"School with ID {schoolId} not found.");
             }
 
-            if (school.SmtpDetails == null)
+            using var smtpClient = new SmtpClient(school.SmtpHost)
             {
-                _logger.LogError("SMTP details not found for school with ID {schoolId}.", schoolId);
-                throw new Exception($"SMTP details not found for school with ID {schoolId}.");
-            }
-            
-            using var smtpClient = new SmtpClient(school.SmtpDetails.Host)
-            {
-                Port = school.SmtpDetails.Port,
-                Credentials = new NetworkCredential(school.SmtpDetails.Email, school.SmtpDetails.Password),
+                Port = school.SmtpPort,
+                Credentials = new NetworkCredential(school.SmtpEmail, school.SmtpPassword),
                 EnableSsl = true
             };
 
@@ -80,7 +74,7 @@ namespace Lisa.Services
 
                 var mailMessage = new MailMessage
                 {
-                    From = new MailAddress(school.SmtpDetails.Email!),
+                    From = new MailAddress(school.SmtpEmail!),
                     Subject = subject,
                     Body = body,
                     IsBodyHtml = true

@@ -6,11 +6,15 @@ public class School
     public string? ShortName { get; set; }
     public string? LongName { get; set; }
     public string? Color { get; set; }
+
+    public string? SmtpHost { get; set; }
+    public int SmtpPort { get; set; }
+    public string? SmtpEmail { get; set; }
+    public string? SmtpPassword { get; set; }
     public Guid SchoolTypeId { get; set; }
     public Guid SchoolCurriculumId { get; set; }
     public SchoolType? SchoolType { get; set; }
     public SchoolCurriculum? Curriculum { get; set; }
-    public SmtpDetails? SmtpDetails { get; set; }
     public ICollection<Grade>? Grades { get; set; }
     public ICollection<RegisterClass>? RegisterClasses { get; set; }
     public ICollection<Teacher>? Teachers { get; set; }

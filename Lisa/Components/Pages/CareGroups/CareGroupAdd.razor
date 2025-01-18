@@ -34,7 +34,7 @@ else
     private School? SelectedSchool;
     private CareGroupViewModel NewCareGroup = new();
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         SelectedSchool = SchoolService.GetSelectedSchool();
     }

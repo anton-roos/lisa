@@ -9,70 +9,8 @@
     <Authorized>
         <h3>Add School</h3>
 
-        <EditForm Context="editContext" Model="School" OnValidSubmit="HandleValidSubmit">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
-
-            <div class="form-group">
-                <label for="shortName">Short Name</label>
-                <InputText id="shortName" class="form-control" @bind-Value="School.ShortName" />
-            </div>
-
-            <div class="form-group">
-                <label for="longName">Long Name</label>
-                <InputText id="longName" class="form-control" @bind-Value="School.LongName" />
-            </div>
-
-            <div class="form-group">
-                <label for="color">Color</label>
-                <input type="color" id="color" class="form-control form-control-color" @bind="School.Color" />
-            </div>
-
-            <div class="form-group">
-                <label for="schoolType">School Type</label>
-                <InputSelect id="schoolType" class="form-control" @bind-Value="School.SchoolTypeId">
-                    <option value="">Select School Type</option>
-                    @foreach (var type in SchoolTypes)
-                    {
-                        <option value="@type.Id">@type.Name</option>
-                    }
-                </InputSelect>
-            </div>
-
-            <div class="form-group">
-                <label for="curriculum">Curriculum</label>
-                <InputSelect id="curriculum" class="form-control" @bind-Value="School.SchoolCurriculumId">
-                    <option value="">Select Curriculum</option>
-                    @foreach (var curriculum in Curriculums)
-                    {
-                        <option value="@curriculum.Id">@curriculum.Name</option>
-                    }
-                </InputSelect>
-            </div>
-
-            <div class="form-group">
-                <label for="longName">Email</label>
-                <InputText id="longName" class="form-control" @bind-Value="School.SmtpDetails.Email" />
-            </div>
-            
-            <div class="form-group">
-                <label for="longName">Password</label>
-                <InputText id="longName" type="password" class="form-control" @bind-Value="School.SmtpDetails.Password" />
-            </div>
-            
-            <div class="form-group">
-                <label for="longName">Port</label>
-                <InputNumber id="longName" type="number" class="form-control" @bind-Value="School.SmtpDetails.Port" />
-            </div>
-            
-            <div class="form-group">
-                <label for="longName">Host</label>
-                <InputText id="longName" type="number" class="form-control" @bind-Value="School.SmtpDetails.Host" />
-            </div>
-
-            <button type="submit" class="btn btn-primary">Save</button>
-            <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
-        </EditForm>
+        <SchoolForm School="@School" SchoolTypes="@SchoolTypes" Curriculums="@Curriculums"
+                OnValidSubmitCallback="@HandleValidSubmit" OnCancelCallback="@Cancel" />
     </Authorized>
     <NotAuthorized>
         <h3>You are not authorized to access this page.</h3>
@@ -83,21 +21,17 @@
     private School School = new();
     private List<SchoolType> SchoolTypes = new();
     private List<SchoolCurriculum> Curriculums = new();
-    private string PortNumber = "587";
 
     protected override async Task OnInitializedAsync()
     {
         SchoolTypes = await SchoolService.GetSchoolTypesAsync();
         Curriculums = await SchoolService.GetSchoolCurriculumsAsync();
-        School.SmtpDetails = new SmtpDetails {
-            Port = 587,
-            Host = "smtp.office365.com"
-        };
+        School.SmtpPort = 587;
+        School.SmtpHost = "smtp.office365.com";
     }
 
     private async Task HandleValidSubmit()
     {
-        School.SmtpDetails.Port = int.Parse(PortNumber);
         await SchoolService.AddSchoolAsync(School);
         Navigation.NavigateTo("/schools");
     }

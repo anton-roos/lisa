@@ -116,22 +116,40 @@
                     </div>
                 </div>
             }
-            <div class="container text-center">
+            <!-- Where you list all combinations in the UI: -->
+            @if (CombinationsToChoseFrom != null)
+            {
+                <h3>Select exactly 1 subject from each Combination</h3>
                 <div class="row">
-                    <div class="col">
-                        Math / Math Lit
-                    </div>
-                    <div class="col">
-                        Combination A
-                    </div>
-                    <div class="col">
-                        Combination B
-                    </div>
-                    <div class="col">
-                        Combination C
-                    </div>
+                    @foreach (var combo in CombinationsToChoseFrom!)
+                    {
+                        <div class="col">
+                            <h5>@combo.Name</h5>
+                            @foreach (var subject in combo.Subjects)
+                            {
+                                // Is this subject selected in this combination?
+                                bool selected = CombinationSelections.TryGetValue(combo.Id, out var chosenSubjectId)
+                                && chosenSubjectId == subject.Id;
+
+                                // Is this subject already chosen in a different combination?
+                                bool disabled = IsSubjectDisabled(subject.Id, combo.Id);
+
+                                <div>
+                                    <input type="radio" name="@combo.Id" value="@subject.Id"
+                                        @onclick="@(() => OnCombinationSubjectChanged(combo, subject))" checked="@selected"
+                                        disabled="@disabled" />
+                                    <label class="@(disabled ? "text-muted" : "")">@subject.Name</label>
+                                </div>
+                            }
+                        </div>
+                    }
                 </div>
-            </div>
+
+            }
+            else
+            {
+                <p>No combinations found for this grade.</p>
+            }
         }
     </div>
 
@@ -204,10 +222,13 @@
     private List<Parent> Parents = new();
     private List<RegisterClass> RegisterClasses = new();
     private List<CareGroup> CareGroups = new();
-    private IEnumerable<Combination>? combinations;
+    private IEnumerable<Combination>? Combinations;
     private School? SelectedSchool = new();
     private RegisterClass? RegisterClass;
     private string? SelectedRegisterClassId = string.Empty;
+    private IEnumerable<Combination>? CombinationsToChoseFrom;
+    // Key = combination.Id, Value = the subject.Id chosen in that combo
+    private Dictionary<Guid, Guid> CombinationSelections = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -252,13 +273,13 @@
         if (SelectedSchool != null)
         {
             RegisterClasses = await learnerService.GetRegisterClassesBySchoolId(SelectedSchool.Id);
-            combinations = await combinationService.GetCombinationsBySchoolId(SelectedSchool.Id);
+            Combinations = await combinationService.GetCombinationsBySchoolId(SelectedSchool.Id);
             CareGroups = await learnerService.GetCareGroupsBySchoolId(SelectedSchool.Id);
         }
         else
         {
             RegisterClasses.Clear();
-            combinations = Enumerable.Empty<Combination>();
+            Combinations = Enumerable.Empty<Combination>();
         }
     }
 
@@ -271,6 +292,7 @@
         {
             Learner.SubjectIds.Add(subject.Id);
         }
+        CombinationsToChoseFrom = Combinations.Where(c => c.GradeId == RegisterClass.GradeId);
         StateHasChanged();
     }
 
@@ -326,5 +348,29 @@
         ToastService.ShowToast(ToastIntent.Success, "Learner and Parents added successfully");
         await Task.Delay(1000);
         navigationManager.NavigateTo("/learners");
+    }
+
+    private void OnCombinationSubjectChanged(Combination combo, Subject newSubject)
+    {
+        // If there was an old subject chosen in this combo, remove it from SubjectIds:
+        if (CombinationSelections.TryGetValue(combo.Id, out var oldSubjectId))
+        {
+            Learner.SubjectIds.Remove(oldSubjectId);
+        }
+
+        // Mark this new subject as chosen in the UI dictionary
+        CombinationSelections[combo.Id] = newSubject.Id;
+
+        // Add the new subject to Learner’s selected list:
+        if (!Learner.SubjectIds.Contains(newSubject.Id))
+        {
+            Learner.SubjectIds.Add(newSubject.Id);
+        }
+    }
+
+    private bool IsSubjectDisabled(Guid subjectId, Guid currentComboId)
+    {
+        // Disable if subjectId appears as the chosen subject in ANY other combination:
+        return CombinationSelections.Any(kvp => kvp.Key != currentComboId && kvp.Value == subjectId);
     }
 }

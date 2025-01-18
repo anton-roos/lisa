@@ -51,6 +51,26 @@
                 </InputSelect>
             </div>
 
+            <div class="form-group">
+                <label for="longName">Email</label>
+                <InputText id="longName" class="form-control" @bind-Value="School.SmtpDetails.Email" />
+            </div>
+            
+            <div class="form-group">
+                <label for="longName">Password</label>
+                <InputText id="longName" type="password" class="form-control" @bind-Value="School.SmtpDetails.Password" />
+            </div>
+            
+            <div class="form-group">
+                <label for="longName">Port</label>
+                <InputText id="longName" type="number" class="form-control" @bind-Value="PortNumber" />
+            </div>
+            
+            <div class="form-group">
+                <label for="longName">Port</label>
+                <InputText id="longName" type="number" class="form-control" @bind-Value="School.SmtpDetails.Host" />
+            </div>
+
             <button type="submit" class="btn btn-primary">Save</button>
             <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
         </EditForm>
@@ -64,15 +84,21 @@
     private School School = new();
     private List<SchoolType> SchoolTypes = new();
     private List<SchoolCurriculum> Curriculums = new();
+    private string PortNumber = "587";
 
     protected override async Task OnInitializedAsync()
     {
         SchoolTypes = await SchoolService.GetSchoolTypesAsync();
         Curriculums = await SchoolService.GetSchoolCurriculumsAsync();
+        School.SmtpDetails = new SmtpDetails {
+            Port = 587,
+            Host = "smtp.office365.com"
+        };
     }
 
     private async Task HandleValidSubmit()
     {
+        School.SmtpDetails.Port = int.Parse(PortNumber);
         await SchoolService.AddSchoolAsync(School);
         Navigation.NavigateTo("/schools");
     }

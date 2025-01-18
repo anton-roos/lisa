@@ -1,5 +1,4 @@
 @page "/schools/add"
-@using Lisa.Components.Layout
 @using Lisa.Services
 @using Microsoft.EntityFrameworkCore
 @using Lisa.Models.Entities
@@ -63,11 +62,11 @@
             
             <div class="form-group">
                 <label for="longName">Port</label>
-                <InputText id="longName" type="number" class="form-control" @bind-Value="PortNumber" />
+                <InputNumber id="longName" type="number" class="form-control" @bind-Value="School.SmtpDetails.Port" />
             </div>
             
             <div class="form-group">
-                <label for="longName">Port</label>
+                <label for="longName">Host</label>
                 <InputText id="longName" type="number" class="form-control" @bind-Value="School.SmtpDetails.Host" />
             </div>
 

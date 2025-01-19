@@ -12,9 +12,9 @@
             Select School
         </div>
         <div class="select-school-dropdown">
-            @* <InputSelect class="form-select" id="SelectedSchoolId" TValue="string">
-                <option value="">Loading...</option>
-            </InputSelect> *@
+            <select class="form-select" id="SelectedSchoolId">
+                <option value="">-- Select School --</option>
+            </select>
         </div>
     </div>
 }
@@ -27,7 +27,7 @@ else
         <div>
             <InputSelect class="form-select" id="SelectedSchoolId" TValue="string" Value="@SelectedSchoolId"
                 ValueChanged="OnSchoolSelected" ValueExpression="@(() => SelectedSchoolId)">
-                <option value="">Select School</option>
+                <option value="">-- Select School --</option>
                 @foreach (var school in schools!)
                 {
                     <option value="@school.Id.ToString()">@school.ShortName</option>

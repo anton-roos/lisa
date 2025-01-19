@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using FluentAssertions;
 using Lisa.Data;
 using Lisa.Models.Entities;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
@@ -41,9 +42,17 @@ public class SchoolService
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         _selectedSchool = await context.Schools.FindAsync(schoolId);
-        await _sessionStorage.SetAsync("selectedSchool", _selectedSchool);
-        await _uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
-        return _selectedSchool!;
+        _selectedSchool.Should().NotBeNull();
+        if (_selectedSchool != null)
+        {
+            await _sessionStorage.SetAsync("selectedSchool", _selectedSchool);
+            await _uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
+            return _selectedSchool;
+        }
+        else
+        {
+            throw new InvalidOperationException("School was null when trying to SetCurrentSchoolAsync");
+        }
     }
 
     public async Task<IdentityUser<Guid>?> GetCurrentUserAsync()

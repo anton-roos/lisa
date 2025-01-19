@@ -5,53 +5,66 @@
 @inject SchoolService SchoolService
 @inherits EventAwareComponentBase
 
-<h3>Care Groups</h3>
-<button class="btn btn-primary mb-3" @onclick="AddCareGroup">Add Care Group</button>
-@if (CareGroups == null)
-{
-    <p>Loading...</p>
-}
-else if (!CareGroups.Any())
-{
-    <div class="alert alert-warning">
-        No Care Groups for <strong>@SelectedSchool.ShortName</strong>.
-    </div>
-}
-else
-{
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Learner Count</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var careGroup in CareGroups)
-            {
-                <tr>
-                    <td>@careGroup.Name</td>
-                    <td>@careGroup.CareGroupMembers?.Count().ToString()
-                    </td>
-                    <ActionButtons TEntity="CareGroup" Entity="careGroup" OnView="ViewCareGroup" OnEdit="EditCareGroup"
-                        OnDelete="DeleteCareGroup" />
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+<AuthorizeView Roles="@Roles.SystemAdministrator">
+    <Authorized>
+        <h3>Care Groups</h3>
+        <button class="btn btn-primary mb-3" @onclick="AddCareGroup">Add Care Group</button>
+        @if (SelectedSchool == null)
+        {
+            <div class="alert alert-warning">
+                Please select a school.
+            </div>
+        }
+        else if (CareGroups == null)
+        {
+            <p>Loading...</p>
+        }
+        else if (!CareGroups.Any())
+        {
+            <div class="alert alert-warning">
+                No Care Groups for <strong>@SelectedSchool.ShortName</strong>.
+            </div>
+        }
+        else
+        {
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Learner Count</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var careGroup in CareGroups)
+                    {
+                        <tr>
+                            <td>@careGroup.Name</td>
+                            <td>@careGroup.CareGroupMembers?.Count().ToString()
+                            </td>
+                            <ActionButtons TEntity="CareGroup" Entity="careGroup" OnView="ViewCareGroup" OnEdit="EditCareGroup"
+                                OnDelete="DeleteCareGroup" />
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     private IEnumerable<CareGroup>? CareGroupsToFilter;
     private IEnumerable<CareGroup>? CareGroups;
-    private School SelectedSchool = new();
+    private School? SelectedSchool;
 
     protected override async Task OnInitializedAsync()
     {
         SelectedSchool = SchoolService.GetSelectedSchool();
         CareGroupsToFilter = await CareGroupService.GetAllAsync();
-        CareGroups = CareGroupsToFilter.Where(c => c.SchoolId == SelectedSchool.Id);
+        CareGroups = CareGroupsToFilter.Where(c => c.SchoolId == SelectedSchool?.Id);
         SubscribeToEvent(UiEvents.SchoolSelected);
     }
 

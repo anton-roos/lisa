@@ -2,7 +2,6 @@ using Lisa.Components;
 using Lisa.Data;
 using Lisa.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.FluentUI.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
 using Lisa.Middleware;
 using Hangfire;
@@ -97,11 +96,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 
-// Fluent UI Components
 builder.Services.AddHttpClient();
-builder.Services.AddFluentUIComponents();
-builder.Services.AddDataGridEntityFrameworkAdapter();
-
 builder.Services.AddScoped<CareGroupService>();
 builder.Services.AddScoped<CombinationService>();
 builder.Services.AddScoped<EmailService>();

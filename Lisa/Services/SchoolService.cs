@@ -1,11 +1,9 @@
 using System.Security.Claims;
 using Lisa.Data;
 using Lisa.Models.Entities;
-using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.JSInterop;
 
 namespace Lisa.Services;
 
@@ -13,11 +11,9 @@ public class SchoolService
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory;
     private readonly IUiEventService _uiEventService;
-    private readonly AuthenticationStateProvider _authenticationStateProvider;
     private readonly UserManager<User> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ProtectedSessionStorage _sessionStorage;
-    private readonly IJSRuntime _jsRuntime;
 
     private School? _selectedSchool;
     private static int _instanceCounter;
@@ -26,40 +22,19 @@ public class SchoolService
     public SchoolService(
         IDbContextFactory<LisaDbContext> dbContextFactory,
         IUiEventService uiEventService,
-        AuthenticationStateProvider authenticationStateProvider,
         UserManager<User> userManager,
         IHttpContextAccessor httpContextAccessor,
-        ProtectedSessionStorage sessionStorage,
-        IJSRuntime jsRuntime)
+        ProtectedSessionStorage sessionStorage
+        )
     {
         _dbContextFactory = dbContextFactory;
         _uiEventService = uiEventService;
-        _authenticationStateProvider = authenticationStateProvider;
         _userManager = userManager;
         _httpContextAccessor = httpContextAccessor;
         _sessionStorage = sessionStorage;
-        _jsRuntime = jsRuntime;
 
-        _authenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
         _instanceId = Interlocked.Increment(ref _instanceCounter);
         Console.WriteLine($"SchoolService created. ID: {_instanceId}");
-    }
-
-    public async Task InitializeAsync()
-    {
-        if (_selectedSchool != null) return;
-
-        var result = await _sessionStorage.GetAsync<School>("selectedSchool");
-        _selectedSchool = result.Success ? result.Value : await LoadDefaultSchoolAsync();
-    }
-
-    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
-    {
-        var user = (await task).User;
-        if (user.Identity?.IsAuthenticated == true)
-        {
-            await InitializeAsync();
-        }
     }
 
     public async Task<School> SetCurrentSchoolAsync(Guid schoolId)
@@ -84,7 +59,7 @@ public class SchoolService
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Schools.CountAsync();
     }
-    
+
     public async Task<List<School>> GetAllAsync()
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -103,7 +78,7 @@ public class SchoolService
         return await context.Schools
         .Include(s => s.SchoolType)
         .Include(s => s.Curriculum)
-        .Where(x=> x.Id == id)
+        .Where(x => x.Id == id)
         .FirstOrDefaultAsync();
     }
 
@@ -134,12 +109,5 @@ public class SchoolService
         await action(context);
         await context.SaveChangesAsync();
         await _uiEventService.PublishAsync(UiEvents.SchoolsUpdated, _selectedSchool);
-    }
-
-    private async Task<School> LoadDefaultSchoolAsync()
-    {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.Schools.OrderBy(s => s.Id).FirstOrDefaultAsync()
-               ?? new School { ShortName = "No School Assigned", LongName = "No School Assigned" };
     }
 }

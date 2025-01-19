@@ -6,7 +6,6 @@
 @inject LearnerService learnerService
 @inject SchoolService SchoolService
 @inject CombinationService combinationService
-@inject IToastService ToastService
 @inject RegisterClassService registerClassService
 @inject SubjectService subjectService
 @inherits EventAwareComponentBase
@@ -16,6 +15,14 @@
 @inject IDbContextFactory<LisaDbContext> DbContextFactory
 
 <h3>Add Learner</h3>
+
+@if (!string.IsNullOrEmpty(AlertMessage))
+{
+    <div class="alert alert-@AlertType alert-dismissible fade show" role="alert">
+        @AlertMessage
+        <button type="button" class="btn-close" aria-label="Close" @onclick="ClearAlert"></button>
+    </div>
+}
 
 <EditForm Context="Edit" Model="Learner" OnValidSubmit="HandleValidSubmit">
     <DataAnnotationsValidator />
@@ -228,6 +235,8 @@
     private IEnumerable<Combination>? CombinationsToChoseFrom;
     // Key = combination.Id, Value = the subject.Id chosen in that combo
     private Dictionary<Guid, Guid> CombinationSelections = new();
+    private string? AlertMessage { get; set; }
+    private string AlertType { get; set; } = "success";
 
     protected override async Task OnInitializedAsync()
     {
@@ -314,7 +323,7 @@
     {
         if (SelectedSchool == null)
         {
-            ToastService.ShowToast(ToastIntent.Error, "Please select a school");
+            SetAlert("danger", "Please select a school.");
             return;
         }
 
@@ -347,7 +356,7 @@
             await learnerService.AddParentToLearnerAsync(parent);
         }
 
-        ToastService.ShowToast(ToastIntent.Success, "Learner and Parents added successfully");
+        SetAlert("success", "Learner and Parents added successfully.");
         await Task.Delay(1000);
         navigationManager.NavigateTo("/learners");
     }
@@ -374,5 +383,18 @@
     {
         // Disable if subjectId appears as the chosen subject in ANY other combination:
         return CombinationSelections.Any(kvp => kvp.Key != currentComboId && kvp.Value == subjectId);
+    }
+
+    private void SetAlert(string type, string message)
+    {
+        AlertType = type; // "success", "danger", "warning", etc.
+        AlertMessage = message;
+        StateHasChanged();
+    }
+
+    private void ClearAlert()
+    {
+        AlertMessage = null;
+        StateHasChanged();
     }
 }

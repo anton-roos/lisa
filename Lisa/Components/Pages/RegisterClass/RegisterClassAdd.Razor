@@ -8,10 +8,17 @@
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
 @using Microsoft.EntityFrameworkCore
-@inject IToastService ToastService
 @inject IDbContextFactory<LisaDbContext> DbContextFactory
 
 <h3>Add Register Class</h3>
+
+@if (!string.IsNullOrEmpty(AlertMessage))
+{
+    <div class="alert alert-@AlertType alert-dismissible fade show" role="alert">
+        @AlertMessage
+        <button type="button" class="btn-close" aria-label="Close" @onclick="ClearAlert"></button>
+    </div>
+}
 
 @if (SelectedSchool == null)
 {
@@ -44,6 +51,8 @@ else
     private List<Subject> AllSubjects = new();
     private string SearchText = string.Empty;
     private bool MathSelected { get; set; }
+    private string? AlertMessage { get; set; }
+    private string AlertType { get; set; } = "success";
 
     private IEnumerable<Subject> FilteredSubjects =>
         AllSubjects.Where(s => string.IsNullOrEmpty(SearchText)
@@ -65,7 +74,7 @@ else
     {
         if (SelectedSchool == null)
         {
-            ToastService.ShowToast(ToastIntent.Error, "Please select a school");
+            SetAlert("danger", "Please select a school.");
             return;
         }
 
@@ -118,5 +127,18 @@ else
     private void ToggleMathSelected()
     {
         MathSelected = !MathSelected;
+    }
+
+    private void SetAlert(string type, string message)
+    {
+        AlertType = type; // "success", "danger", "warning", etc.
+        AlertMessage = message;
+        StateHasChanged();
+    }
+
+    private void ClearAlert()
+    {
+        AlertMessage = null;
+        StateHasChanged();
     }
 }

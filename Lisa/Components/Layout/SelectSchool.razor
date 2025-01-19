@@ -12,9 +12,9 @@
             Select School
         </div>
         <div class="select-school-dropdown">
-            <FluentSelect TOption="string">
-                    <FluentOption>Loading...</FluentOption>
-            </FluentSelect>
+            @* <InputSelect class="form-select" id="SelectedSchoolId" TValue="string">
+                <option value="">Loading...</option>
+            </InputSelect> *@
         </div>
     </div>
 }
@@ -24,13 +24,15 @@ else
         <div class="select-school-text">
             Select School
         </div>
-        <div class="select-school-dropdown">
-            <FluentSelect TOption="string" @bind-Value="SelectedSchoolId" @onchange="OnSchoolSelected">
+        <div>
+            <InputSelect class="form-select" id="SelectedSchoolId" TValue="string" Value="@SelectedSchoolId"
+                ValueChanged="OnSchoolSelected" ValueExpression="@(() => SelectedSchoolId)">
+                <option value="">Select School</option>
                 @foreach (var school in schools!)
                 {
-                    <FluentOption Value="@school.Id.ToString()">@school.ShortName</FluentOption>
+                    <option value="@school.Id.ToString()">@school.ShortName</option>
                 }
-            </FluentSelect>
+            </InputSelect>
         </div>
     </div>
 }
@@ -62,22 +64,19 @@ else
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        // Handle the events and update the state
         switch (eventName)
         {
             case UiEvents.SchoolsUpdated:
-                // Reload Schools to reflect changes.
                 await LoadSchoolsAsync();
                 break;
         }
 
-        // Ensure state change
         await base.HandleEventAsync(eventName, payload);
     }
 
-    public async Task OnSchoolSelected(ChangeEventArgs e)
+    public async Task OnSchoolSelected(string selectedSchoolId)
     {
-        SelectedSchoolId = e.Value?.ToString();
+        SelectedSchoolId = selectedSchoolId;
         if (SelectedSchoolId != null)
         {
             var SelectedSchool = await SchoolService.SetCurrentSchoolAsync(Guid.Parse(SelectedSchoolId));

@@ -6,10 +6,26 @@
 @inherits EventAwareComponentBase
 @inject ILogger<RegisterClassList> Logger
 
-<h3>Register Classes</h3>
-<button class="btn btn-primary mb-3" @onclick="AddRegisterClass">Add Register Class</button>
-@if (SelectedSchool != null && RegisterClasses.Any())
+@if (SelectedSchool == null)
 {
+    <div class="alert alert-info">
+        Please select a school to view register classes.
+    </div>
+}
+else if (!RegisterClasses.Any())
+{
+    <div>
+        <h3>Register Classes</h3>
+        <button class="btn btn-primary mb-3" @onclick="AddRegisterClass">Add Register Class</button>
+        <div class="alert alert-info">
+            No register classes found for <strong>@SelectedSchool.ShortName</strong>.
+        </div>
+    </div>
+}
+else
+{
+    <h3>Register Classes</h3>
+    <button class="btn btn-primary mb-3" @onclick="AddRegisterClass">Add Register Class</button>
     <table class="table table-striped">
         <thead>
             <tr>
@@ -56,18 +72,6 @@
         </tbody>
     </table>
 }
-else if (SelectedSchool != null && !RegisterClasses.Any())
-{
-    <div class="alert alert-info">
-        No Register Classes found for <strong>@SelectedSchool.ShortName</strong>.
-    </div>
-}
-else
-{
-    <div class="alert alert-info">
-        Please select a school to view its Register Classes.
-    </div>
-}
 
 @code {
     private List<RegisterClass> RegisterClasses = new();
@@ -104,19 +108,19 @@ else
         if (unfiltedRegisterClasses != null)
         {
             RegisterClasses = unfiltedRegisterClasses
-                .Where(rc => rc.Grade != null && rc.Grade.SchoolId == SelectedSchool.Id)
-                .Select(rc => new
-                {
-                    RegisterClass = rc,
-                    Parts = rc.Name.Split('.')
-                })
-                .Where(x => x.Parts.Length == 2
-                            && int.TryParse(x.Parts[0], out int major)
-                            && int.TryParse(x.Parts[1], out int minor))
-                .OrderByDescending(x => int.Parse(x.Parts[0]))  // sort by first numeric part descending
-                .ThenByDescending(x => int.Parse(x.Parts[1]))   // then by second numeric part descending
-                .Select(x => x.RegisterClass)
-                .ToList();
+            .Where(rc => rc.Grade != null && rc.Grade.SchoolId == SelectedSchool.Id)
+            .Select(rc => new
+            {
+                RegisterClass = rc,
+                Parts = rc.Name.Split('.')
+            })
+            .Where(x => x.Parts.Length == 2
+            && int.TryParse(x.Parts[0], out int major)
+            && int.TryParse(x.Parts[1], out int minor))
+            .OrderByDescending(x => int.Parse(x.Parts[0])) // sort by first numeric part descending
+            .ThenByDescending(x => int.Parse(x.Parts[1])) // then by second numeric part descending
+            .Select(x => x.RegisterClass)
+            .ToList();
         }
     }
 

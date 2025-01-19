@@ -5,10 +5,9 @@
 @inject NavigationManager NavigationManager
 @inherits EventAwareComponentBase
 
-<h3>Learners</h3>
-
 @if (SelectedSchool != null)
 {
+    <h3>Learners for @SelectedSchool.ShortName</h3>
     <div class="row mb-3">
         <div class="col-12 col-md-4 mb-2">
             <label for="gradeFilter" class="form-label">Filter by Grade</label>
@@ -66,7 +65,9 @@
 }
 else
 {
-    <p>Please select a school to view its learners.</p>
+    <div class="alert alert-info">
+        Please select a school to view learners.
+    </div>
 }
 
 @code {

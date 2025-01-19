@@ -6,60 +6,74 @@
 @inherits EventAwareComponentBase
 @inject SchoolService SchoolService
 
-<h3>Subject Combinations</h3>
-<button class="btn btn-primary mb-3" @onclick="AddCombination">Add Subject Combination</button>
+<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+    <Authorized>
 
-@if (SubjectCombinations == null)
-{
-    <p>Loading...</p>
-}
-else if (Grades == null || !Grades.Any())
-{
-    <div class="alert alert-warning">
-        No Grades found. Please add a grade first before adding Subject combination.
-    </div>
-}
-else if (!SubjectCombinations.Any())
-{
-    <div class="alert alert-info">
-        No Subject Combinations found.
-    </div>
-}
-else
-{
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Grade</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var combination in SubjectCombinations)
-            {
-                <tr>
-                    <td>@combination.Name</td>
-                    <td>@combination.Grade?.Name</td>
-                    <ActionButtons TEntity="Combination" Entity="combination" OnView="ViewCombination" OnEdit="EditCombination"
-                        OnDelete="DeleteCombination" />
-                </tr>
-            }
-        </tbody>
-    </table>
-}
-
+        @if (SelectedSchool == null)
+        {
+            <div class="alert alert-info">
+                Please select a school to view subject combinations.
+            </div>
+        }
+        else if (SubjectCombinations == null)
+        {
+            <p>Loading...</p>
+        }
+        else if (Grades == null || !Grades.Any())
+        {
+            <h3>Combinations</h3>
+            <button class="btn btn-primary mb-3" @onclick="AddCombination">Add Combination</button>
+            <div class="alert alert-warning">
+                No Grades found. Please add a grade first before adding Subject combination.
+            </div>
+        }
+        else if (!SubjectCombinations.Any())
+        {
+            <h3>Combinations</h3>
+            <button class="btn btn-primary mb-3" @onclick="AddCombination">Add Combination</button>
+            <div class="alert alert-info">
+                No Subject Combinations found.
+            </div>
+        }
+        else
+        {
+            <h3>Combinations</h3>
+            <button class="btn btn-primary mb-3" @onclick="AddCombination">Add Combination</button>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Grade</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var combination in SubjectCombinations)
+                    {
+                        <tr>
+                            <td>@combination.Name</td>
+                            <td>@combination.Grade?.Name</td>
+                            <ActionButtons TEntity="Combination" Entity="combination" OnView="ViewCombination"
+                                OnEdit="EditCombination" OnDelete="DeleteCombination" />
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     private IEnumerable<Combination>? SubjectCombinations;
     private IEnumerable<Grade>? Grades;
     private School? SelectedSchool;
 
-
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         SubscribeToEvent(UiEvents.SchoolSelected);
-        await LoadCombinations();
     }
 
     public async Task LoadCombinations()

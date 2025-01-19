@@ -77,7 +77,12 @@ else
     public async Task OnSchoolSelected(string selectedSchoolId)
     {
         SelectedSchoolId = selectedSchoolId;
-        if (SelectedSchoolId != null)
+        if (SelectedSchoolId == string.Empty)
+        {
+            await SchoolService.SetCurrentSchoolAsync(null);
+            return;
+        }
+        if (SelectedSchoolId != null && SelectedSchoolId != string.Empty)
         {
             var SelectedSchool = await SchoolService.SetCurrentSchoolAsync(Guid.Parse(SelectedSchoolId));
             await IUiEventService.PublishAsync(UiEvents.SchoolSelected, SelectedSchool);

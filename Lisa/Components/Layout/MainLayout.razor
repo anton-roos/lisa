@@ -1,6 +1,8 @@
-﻿@inherits LayoutComponentBase
+﻿@using Lisa.Models.Entities
+@inherits LayoutComponentBase
 @inject SchoolService SchoolService
 @inject NavigationManager NavigationManager
+@inject BugReportService BugReportService
 
 <div class="page">
     <div class="sidebar">
@@ -8,14 +10,18 @@
     </div>
 
     <main>
-        <div class="d-flex justify-content-between align-items-center bg-light py-3 px-4 shadow-sm">
+        <div class="d-flex justify-content-between align-items-center bg-light px-4 shadow-sm">
             <div>
                 <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
                     <SelectSchool></SelectSchool>
                 </AuthorizeView>
             </div>
 
-            <div>
+            <div class="d-flex align-items-center">
+                <button class="btn btn-outline-secondary btn-sm me-3" @onclick="OpenBugReportModal">
+                    <i class="bi bi-bug-fill me-1"></i> Report Bug
+                </button>
+
                 <AuthorizeView Context="authContext">
                     <Authorized>
                         <button @onclick="Logout" class="btn btn-outline-danger btn-sm">
@@ -37,6 +43,32 @@
     </main>
 </div>
 
+<div class="modal-backdrop fade show" style="display: @(IsBugReportModalVisible ? "block" : "none");"></div>
+<div class="modal" tabindex="-1" role="dialog" style="display: @(IsBugReportModalVisible ? "block" : "none");">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Report a Bug</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseBugReportModal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="BugWhatTried" class="form-label">What did you try to do?</label>
+                    <textarea id="BugWhatTried" class="form-control" rows="3" @bind="WhatTried"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="BugWhatHappened" class="form-label">What happened when you tried to do it?</label>
+                    <textarea id="BugWhatHappened" class="form-control" rows="3" @bind="WhatHappened"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseBugReportModal">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="SubmitBugReportAsync">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
@@ -44,6 +76,46 @@
 </div>
 
 @code {
+    private bool IsBugReportModalVisible = false;
+    private string WhatTried = string.Empty;
+    private string WhatHappened = string.Empty;
+
+    private void OpenBugReportModal()
+    {
+        IsBugReportModalVisible = true;
+        WhatTried = string.Empty;
+        WhatHappened = string.Empty;
+    }
+
+    private void CloseBugReportModal()
+    {
+        IsBugReportModalVisible = false;
+    }
+
+    private async Task SubmitBugReportAsync()
+    {
+        CloseBugReportModal();
+
+        try
+        {
+            var bugreport = new BugReport
+                {
+                    WhatTried = WhatTried,
+                    WhatHappened = WhatHappened
+                };
+
+            await BugReportService.LogBugAsync(bugreport);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error logging bug: {ex.Message}");
+        }
+        finally
+        {
+            WhatTried = string.Empty;
+            WhatHappened = string.Empty;
+        }
+    }
 
     private void Logout()
     {

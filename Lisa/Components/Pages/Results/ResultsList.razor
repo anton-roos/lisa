@@ -7,7 +7,6 @@
 @inject NavigationManager Navigation
 @inject ILogger<ResultsList> Logger
 
-<h3>Filtered Results</h3>
 
 @if (IsLoading)
 {
@@ -15,6 +14,7 @@
 }
 else if (Results.Any())
 {
+    <h3>Filtered Results</h3>
     <table class="table table-striped">
         <thead>
             <tr>

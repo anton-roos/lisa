@@ -38,8 +38,17 @@ public class SchoolService
         Console.WriteLine($"SchoolService created. ID: {_instanceId}");
     }
 
-    public async Task<School> SetCurrentSchoolAsync(Guid schoolId)
+    public async Task<School?> SetCurrentSchoolAsync(Guid? schoolId)
     {
+        if (schoolId == null)
+        {
+            _selectedSchool = null;
+
+            await _sessionStorage.SetAsync("selectedSchool", string.Empty);
+            await _uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
+            return null;
+        }
+
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         _selectedSchool = await context.Schools.FindAsync(schoolId);
         _selectedSchool.Should().NotBeNull();

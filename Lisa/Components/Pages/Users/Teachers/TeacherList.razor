@@ -15,22 +15,24 @@
 
 <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
     <Authorized>
-        @if (IsLoading)
+        @if (SelectedSchool == null)
+        {
+            <div class="alert alert-info">
+                Please select a school to view teachers.
+            </div>
+        }
+        else if (IsLoading)
         {
             <p>Loading...</p>
         }
         else
         {
             <div class="mb-4">
-                @if (SelectedSchool != null)
-                {
-                    <h3>Teachers for @SelectedSchool.ShortName</h3>
-                }
-                else
-                {
-                    <h3>Teachers</h3>
-                }
+                
+                <h3>Teachers for @SelectedSchool.ShortName</h3>
+
                 <button class="btn btn-primary mb-3" @onclick="AddTeacher">Add Teacher</button>
+
                 @if (Teachers == null)
                 {
                     <p>Loading...</p>

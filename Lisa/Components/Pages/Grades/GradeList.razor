@@ -7,47 +7,61 @@
 @inherits EventAwareComponentBase
 @inject ILogger<Grade> Logger
 
-<h3>Grades for @SelectedSchool?.ShortName</h3>
-<button class="btn btn-primary mb-3" @onclick="AddGrade">Add Grade</button>
-@if (Grades?.Count == 0)
-{
-    <div class="alert alert-info">
-        No grades found for this school.
-    </div>
-}
-else
-{
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Sequence Number</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (Grades == null)
-            {
-                <tr>
-                    <td>No Grades Found</td>
-                </tr>
-            }
-            else
-            {
-                @foreach (var grade in Grades)
-                {
+<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+    <Authorized>
+        @if (SelectedSchool == null)
+        {
+            <div class="alert alert-info">
+                Please select a school to view grades.
+            </div>
+        }
+        else if (Grades?.Count == 0)
+        {
+            <h3>Grades for @SelectedSchool?.ShortName</h3>
+            <button class="btn btn-primary mb-3" @onclick="AddGrade">Add Grade</button>
+            <div class="alert alert-info">
+                No grades found for this school.
+            </div>
+        }
+        else
+        {
+            <h3>Grades for @SelectedSchool?.ShortName</h3>
+            <button class="btn btn-primary mb-3" @onclick="AddGrade">Add Grade</button>
+            <table class="table table-striped">
+                <thead>
                     <tr>
-                        <td>@grade.Name</td>
-                        <td>@grade.SequenceNumber</td>
-                        <ActionButtons TEntity="Grade" Entity="grade" OnView="ViewGrade" OnEdit="EditGrade"
-                            OnDelete="DeleteGrade" />
+                        <th>Name</th>
+                        <th>Sequence Number</th>
+                        <th>Actions</th>
                     </tr>
-                }
-            }
-        </tbody>
-    </table>
-}
-
+                </thead>
+                <tbody>
+                    @if (Grades == null)
+                    {
+                        <tr>
+                            <td>No Grades Found</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var grade in Grades)
+                        {
+                            <tr>
+                                <td>@grade.Name</td>
+                                <td>@grade.SequenceNumber</td>
+                                <ActionButtons TEntity="Grade" Entity="grade" OnView="ViewGrade" OnEdit="EditGrade"
+                                    OnDelete="DeleteGrade" />
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
 @code {
     private School? SelectedSchool;
     private List<Grade>? Grades;
@@ -107,17 +121,14 @@ else
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        // Handle the events and update the state
         switch (eventName)
         {
             case UiEvents.SchoolSelected:
-                // Cast Payload to a School
                 SelectedSchool = payload as School;
                 await LoadGrades();
                 break;
         }
 
-        // Ensure state change
         await base.HandleEventAsync(eventName, payload);
     }
 }

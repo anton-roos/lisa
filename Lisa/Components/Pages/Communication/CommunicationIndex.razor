@@ -1,5 +1,6 @@
 @page "/communication"
 @using Lisa.Models.EmailModels
+@using Lisa.Models.Entities
 @using Lisa.Services
 @using RazorLight
 @inject EmailService EmailService
@@ -7,14 +8,33 @@
 @inject IRazorLightEngine _razorLightEngine
 @inject ResultService _resultService
 @inject NavigationManager NavigationManager
+@inject SchoolService SchoolService
+@inherits EventAwareComponentBase
 
 <PageTitle>Communication</PageTitle>
-<h3>Communication</h3>
-<button class="btn btn-primary" @onclick="SendCommunication">Send Communication</button>
-<button class="btn btn-primary" @onclick="ViewTemplates">View Templates</button>
-<button class="btn btn-primary" @onclick="AddTemplate">Add Template</button>
+@if (SelectedSchool == null)
+{
+    <div class="alert alert-info">
+        Please select a school to view communication.
+    </div>
+}
+else
+{
+    <h3>Communication</h3>
+    <button class="btn btn-primary" @onclick="SendCommunication">Send Communication</button>
+    <button class="btn btn-primary" @onclick="ViewTemplates">View Templates</button>
+    <button class="btn btn-primary" @onclick="AddTemplate">Add Template</button>
+}
 
 @code {
+    private School? SelectedSchool;
+
+    protected override void OnInitialized()
+    {
+        SelectedSchool = SchoolService.GetSelectedSchool();
+        SubscribeToEvent(UiEvents.SchoolSelected);
+    }
+
     private void AddTemplate()
     {
         NavigationManager.NavigateTo("/communication/email-templates/add");
@@ -30,29 +50,18 @@
         NavigationManager.NavigateTo("/communication/send");
     }
 
-    private async Task SendEmail()
+    protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        var Subject = "Test Email";
-        var Body = "This is a test email";
+        switch (eventName)
+        {
+            case UiEvents.SchoolSelected:
+                if (payload is School school)
+                {
+                    SelectedSchool = school;
+                }
+                break;
+        }
 
-        var results = await _resultService.GetAllAsync();
-
-        var model = new ProgressReportModel
-            {
-                ParentName = "Mr. Smith",
-                ChildName = "John Smith",
-                Results = results
-            };
-
-        var template = await _emailTemplateService.GetTemplateAsync("WelcomeEmail");
-        string emailBody = await _razorLightEngine.CompileRenderStringAsync("WelcomeEmail", template?.Content, model);
-
-        EmailService.QueueLearnerProgressFeedbackEmail
-        (
-        subject: Subject,
-        body: Body,
-        schoolId: new Guid(),
-        learnerId: new Guid()
-        );
+        await base.HandleEventAsync(eventName, payload);
     }
 }

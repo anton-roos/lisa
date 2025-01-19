@@ -91,7 +91,6 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
 });
 
-
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<CareGroupService>();
 builder.Services.AddScoped<CombinationService>();
@@ -108,6 +107,8 @@ builder.Services.AddScoped<IUiEventService, UiEventService>();
 builder.Services.AddScoped<EmailTemplateService>();
 builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<ProtectedSessionStorage>();
+builder.Services.AddScoped<BugReportService>();
+builder.Services.AddScoped<VersionService>();
 
 builder.Services.AddHttpContextAccessor();
 

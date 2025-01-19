@@ -13,28 +13,30 @@
 @inject UserService UserService
 @inject ResultService ResultService
 
-<h3>Capture Marks</h3>
 
 @if (SelectedSchool == null)
 {
-    <div class="alert alert-warning" role="alert">
-        <strong>No School Selected!</strong> Please select a school to Capture Marks.
+    <div class="alert alert-info" role="alert">
+        Please select a school to capture marks.
     </div>
 }
 else if (Grades.Count == 0)
 {
+    <h3>Capture Marks</h3>
     <div class="alert alert-warning" role="alert">
         <strong>No Grades for School!</strong> Please add Grades to @SelectedSchool.ShortName! to Capture Marks.
     </div>
 }
 else if (Subjects.Count == 0)
 {
+    <h3>Capture Marks</h3>
     <div class="alert alert-warning" role="alert">
         <strong>No Subjects for School!</strong> Please add Subjects to @SelectedSchool.ShortName! to Capture Marks.
     </div>
 }
 else
 {
+    <h3>Capture Marks</h3>
     <div>
         <label>Select Grade:</label>
         <select class="form-select" @bind="SelectedGradeId">

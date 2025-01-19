@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Mail;
 using Hangfire;
+using Lisa.Models.Entities;
 
 namespace Lisa.Services
 {
@@ -21,6 +22,59 @@ namespace Lisa.Services
                 TimeSpan.FromSeconds(5)
             );
             Thread.Sleep(5000);
+        }
+
+        public async Task SendBugReportEmailAsync(BugReport bugReport)
+        {
+            using var smtpClient = new SmtpClient("smtp.office365.com")
+            {
+                Port = 587,
+                Credentials = new NetworkCredential("portalDCEG@dcegroup.co.za", "Portal@DCEG"),
+                EnableSsl = true
+            };
+
+            var mailMessage = new MailMessage
+            {
+                From = new MailAddress("portalDCEG@dcegroup.co.za"),
+                Subject = "Bug Report",
+                Body =
+                $@"
+                    <!DOCTYPE html>
+                    <html lang=""en"">
+                    <head>
+                        <meta charset=""UTF-8"">
+                        <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+                        <title>Bug Report</title>
+                        <style>
+                            body {{ font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; }}
+                            .container {{ max-width: 600px; margin: auto; background: #fff; border: 1px solid #ddd; padding: 20px; border-radius: 8px; }}
+                            .header {{ padding: 10px; text-align: center; }}
+                            .footer {{ text-align: center; font-size: 12px; color: #666; padding: 10px; }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class=""container"">
+                            <div class=""header""><h1>Bug Report</h1></div>
+                            <p><strong>Reported At:</strong> {bugReport.ReportedAt}</p>
+                            <p><strong>Reported By:</strong> {bugReport.ReportedBy ?? "Anonymous"}</p>
+                            <p><strong>User Authenticated:</strong> {(bugReport.UserAuthenticated ? "Yes" : "No")}</p>
+                            <p><strong>Page URL:</strong> <a href=""{bugReport.PageUrl}"">{bugReport.PageUrl}</a></p>
+                            <p><strong>App Version:</strong> {bugReport.Version}</p>
+                            <hr>
+                            <p><strong>What Happened:</strong> {bugReport.WhatHappened}</p>
+                            <p><strong>What Was Tried:</strong> {bugReport.WhatTried}</p>
+                            <hr>
+                            <p><strong>Is Resolved:</strong> {(bugReport.IsResolved ? "Yes" : "No")}</p>
+                            <p><strong>Resolved At:</strong> {bugReport.ResolvedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A"}</p>
+                        </div>
+                    </body>
+                    </html>
+                ",
+                IsBodyHtml = true
+            };
+
+            mailMessage.To.Add("antonroos992@gmail.com");
+            await smtpClient.SendMailAsync(mailMessage);
         }
 
         /// <summary>

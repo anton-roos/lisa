@@ -11,6 +11,9 @@
             <button class="btn btn-primary mt-3" @onclick="GoHome">
                 <i class="bi bi-house-door-fill me-2"></i>Go to Homepage
             </button>
+            <button class="btn btn-primary mt-3" @onclick="Login">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Login
+            </button>
         </div>
     </div>
 </div>
@@ -19,5 +22,10 @@
     private void GoHome()
     {
         NavigationManager.NavigateTo("/");
+    }
+
+    private void Login()
+    {
+        NavigationManager.NavigateTo("/login");
     }
 }

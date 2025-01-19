@@ -33,8 +33,27 @@
     </div>
 
     <div class="mb-3">
+        <label class="form-label">Combination Type</label>
+        <select class="form-select" @bind="Combination.CombinationType">
+            @if (Combination.CombinationType == CombinationType.None)
+            {
+                <option value="">-- Select Combination Type --</option>
+            }
+            else
+            {
+                <option value="@Combination.CombinationType">@Combination.CombinationType</option>
+            }
+            @foreach (var type in Enum.GetValues(typeof(CombinationType)))
+            {
+                <option value="@type">@type</option>
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
         <label class="form-label">Search Subjects</label>
-        <InputText class="form-control" @oninput="OnInputChange" @bind-Value="searchText" placeholder="Type to filter subjects..." />
+        <InputText class="form-control" @oninput="OnInputChange" @bind-Value="searchText"
+            placeholder="Type to filter subjects..." />
     </div>
 
     <div class="mb-3">
@@ -47,9 +66,7 @@
                 bool isChecked = SelectedSubjectIds.Contains(subject.Id);
 
                 <div>
-                    <input type="checkbox"
-                           checked="@isChecked"
-                           @onchange="@(() => ToggleSubject(subject.Id))" />
+                    <input type="checkbox" checked="@isChecked" @onchange="@(() => ToggleSubject(subject.Id))" />
                     <label>@subject.Name</label>
                 </div>
             }
@@ -75,8 +92,8 @@
     private string searchText = string.Empty;
 
     private IEnumerable<Subject> FilteredSubjects =>
-        AllSubjects.Where(s => string.IsNullOrEmpty(searchText) ||
-                               (s.Name != null && s.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase)));
+    AllSubjects.Where(s => string.IsNullOrEmpty(searchText) ||
+    (s.Name != null && s.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase)));
 
     protected override async Task OnInitializedAsync()
     {
@@ -88,17 +105,18 @@
         if (existing != null)
         {
             Combination = new Combination
-            {
-                Id = existing.Id,
-                Name = existing.Name,
-                GradeId = existing.GradeId
-            };
+                {
+                    Id = existing.Id,
+                    Name = existing.Name,
+                    GradeId = existing.GradeId,
+                    CombinationType = existing.CombinationType
+                };
 
             if (existing.Subjects != null)
             {
                 SelectedSubjectIds = existing.Subjects
-                    .Select(scs => scs.Id)
-                    .ToList();
+                .Select(scs => scs.Id)
+                .ToList();
             }
         }
     }
@@ -115,20 +133,21 @@
         }
 
         var existingCombination = await _context.Combinations
-            .Include(c => c.Subjects)
-            .FirstOrDefaultAsync(c => c.Id == Combination.Id);
+        .Include(c => c.Subjects)
+        .FirstOrDefaultAsync(c => c.Id == Combination.Id);
 
         if (existingCombination != null)
         {
             existingCombination.Name = Combination.Name;
             existingCombination.GradeId = Combination.GradeId;
+            existingCombination.CombinationType = Combination.CombinationType;
 
             existingCombination.Subjects?.Clear();
             foreach (var subject in selectedSubjects)
             {
                 existingCombination.Subjects?.Add(subject);
             }
-
+            _context.Update(existingCombination);
             await _context.SaveChangesAsync();
         }
 

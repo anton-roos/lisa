@@ -1,0 +1,159 @@
+@page "/communication/email-template/{action}/{id:guid?}"
+@inject EmailTemplateService EmailTemplateService
+@inject NavigationManager NavigationManager
+@using Lisa.Models.Entities
+@using Blazored.TextEditor
+
+<PageTitle>@(IsEdit ? "Edit Email Template" : "Add Email Template")</PageTitle>
+
+<h3>@(IsEdit ? "Edit Email Template" : "Add Email Template")</h3>
+
+@if (IsEdit && Template == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <EditForm Model="@Template" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">Name</label>
+            <InputText class="form-control" @bind-Value="Template.Name" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Subject</label>
+            <InputText class="form-control" @bind-Value="Template.Subject" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Content</label>
+            <BlazoredTextEditor @ref="@TextEditor">
+                <ToolbarContent>
+                    <select class="ql-header">
+                        <option selected=""></option>
+                        <option value="1"></option>
+                        <option value="2"></option>
+                        <option value="3"></option>
+                        <option value="4"></option>
+                        <option value="5"></option>
+                    </select>
+                    <span class="ql-formats">
+                        <button class="ql-bold"></button>
+                        <button class="ql-italic"></button>
+                        <button class="ql-underline"></button>
+                        <button class="ql-strike"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <select class="ql-color"></select>
+                        <select class="ql-background"></select>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-list" value="ordered"></button>
+                        <button class="ql-list" value="bullet"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-link"></button>
+                    </span>
+                </ToolbarContent>
+                <EditorContent>
+                    <h4>This Toolbar works with HTML</h4>
+                    <a href="http://BlazorHelpWebsite.com">
+                        BlazorHelpWebsite.com</a>
+                </EditorContent>
+            </BlazoredTextEditor>
+        </div>
+
+        <button type="submit" class="btn btn-success">@SaveButtonLabel</button>
+        <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+    </EditForm>
+}
+
+@if (SuccessMessage != null)
+{
+    <div class="alert alert-success mt-3">@SuccessMessage</div>
+}
+
+@code {
+    [Parameter]
+    public string Action { get; set; } = string.Empty;
+
+    [Parameter]
+    public Guid? Id { get; set; }
+
+    private BlazoredTextEditor? TextEditor;
+    private EmailTemplate Template = new();
+    private bool IsEdit => Action.Equals("edit", StringComparison.OrdinalIgnoreCase);
+    private string SaveButtonLabel => IsEdit ? "Save Changes" : "Add Template";
+    private string? SuccessMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEdit)
+        {
+            if (Id.HasValue)
+            {
+                Template = await EmailTemplateService.GetTemplateByIdAsync(Id.Value) ?? new EmailTemplate();
+                if (string.IsNullOrWhiteSpace(Template.Id.ToString()))
+                {
+                    NavigationManager.NavigateTo("/communication/email-templates");
+                }
+
+                // Ensure the editor content is set if the template is loaded
+                if (TextEditor != null && !string.IsNullOrWhiteSpace(Template.Content))
+                {
+                    await TextEditor.LoadHTMLContent(Template.Content);
+                }
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/communication/email-templates");
+            }
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (TextEditor != null && !string.IsNullOrWhiteSpace(Template.Content))
+        {
+            Template.Content = await TextEditor.GetHTML();
+
+            if (string.IsNullOrWhiteSpace(Template.Name))
+            {
+                SuccessMessage = "Template Name cannot be empty.";
+                return;
+            }
+
+            if (IsEdit)
+            {
+                await EmailTemplateService.UpdateTemplateAsync(Template);
+                SuccessMessage = "Template updated successfully!";
+            }
+            else
+            {
+                await EmailTemplateService.SaveTemplateAsync(Template.Name, Template.Subject, Template.Content);
+                SuccessMessage = "Template added successfully!";
+                Template = new EmailTemplate(); // Reset form for new addition
+            }
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/communication/email-templates");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            if (IsEdit && TextEditor != null && Template != null && !string.IsNullOrWhiteSpace(Template.Content))
+            {
+                await Task.Delay(50);
+                await TextEditor.LoadHTMLContent(Template.Content);
+            }
+        }
+    }
+}

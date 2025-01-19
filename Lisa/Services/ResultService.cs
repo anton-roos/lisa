@@ -17,6 +17,12 @@ namespace Lisa.Services
             _logger.LogInformation("Result created for LearnerId: {result.LearnerId}, SubjectId: {result.SubjectId}", result.LearnerId, result.SubjectId);
         }
 
+        public async Task<int> GetCountAsync()
+        {
+            await using var context = _dbContextFactory.CreateDbContext();
+            return await context.Results.CountAsync();
+        }
+
         public async Task<Result?> GetByIdAsync(Guid id)
         {
             await using var context = _dbContextFactory.CreateDbContext();

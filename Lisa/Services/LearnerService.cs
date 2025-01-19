@@ -9,6 +9,12 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     public event Action? LearnersUpdated;
 
+    public async Task<int> GetCountAsync()
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Learners.CountAsync();
+    }
+
     public async Task<Learner?> GetLearnerAsync(Guid id)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();

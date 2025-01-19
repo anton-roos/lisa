@@ -10,8 +10,12 @@ using Hangfire.PostgreSql;
 using Lisa.Models.Entities;
 using RazorLight;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using FluentAssertions;
 
 var builder = WebApplication.CreateBuilder(args);
+
+string actual = "ABCDEFGHI";
+actual.Should().StartWith("AB").And.EndWith("HI").And.Contain("EF").And.HaveLength(9);
 
 builder.Logging.AddSentry(options =>
 {

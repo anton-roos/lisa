@@ -14,6 +14,9 @@
   <ItemGroup>
     <PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
     <PackageReference Include="Blazored.TextEditor" Version="1.1.2" />
+    <!-- Pinned Version because of licence changes in 8.0.0 -->
+    <!-- https://github.com/fluentassertions/fluentassertions/pull/2943 -->
+    <PackageReference Include="FluentAssertions" Version="[7.1.0]" />
     <PackageReference Include="Hangfire" Version="1.8.17" />
     <PackageReference Include="Hangfire.PostgreSql" Version="1.20.10" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.0" />

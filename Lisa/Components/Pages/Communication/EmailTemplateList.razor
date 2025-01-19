@@ -35,11 +35,13 @@ else
                     <td>@template.Subject</td>
                     <td>@template.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
                     <td>@template.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</td>
-                    <td>
-                        <button class="btn btn-sm btn-info" @onclick="@(() => ViewTemplate(template.Name))">View</button>
-                        <button class="btn btn-sm btn-warning" @onclick="@(() => EditTemplate(template.Name))">Edit</button>
-                        <button class="btn btn-sm btn-danger" @onclick="@(() => DeleteTemplate(template.Id))">Delete</button>
-                    </td>
+                    <ActionButtons
+                        TEntity="EmailTemplate"
+                        Entity="template"
+                        OnView="ViewTemplate"
+                        OnEdit="EditTemplate"
+                        OnDelete="DeleteTemplate"
+                    />
                 </tr>
             }
         </tbody>
@@ -54,24 +56,24 @@ else
         emailTemplates = await EmailTemplateService.GetAllTemplatesAsync();
     }
 
-    private void ViewTemplate(string name)
+    private void ViewTemplate(EmailTemplate template)
     {
-        NavigationManager.NavigateTo($"/communication/email-template-view/{name}");
+        NavigationManager.NavigateTo($"/communication/email-template/details/{template.Id}");
     }
 
-    private void EditTemplate(string name)
+    private void EditTemplate(EmailTemplate template)
     {
-        NavigationManager.NavigateTo($"/communication/email-template/{name}");
+        NavigationManager.NavigateTo($"/communication/email-template/edit/{template.Id}");
     }
 
-    private async Task DeleteTemplate(Guid id)
+    private async Task DeleteTemplate(EmailTemplate template)
     {
-        await EmailTemplateService.DeleteTemplateAsync(id);
+        await EmailTemplateService.DeleteTemplateAsync(template.Id);
         emailTemplates = await EmailTemplateService.GetAllTemplatesAsync();
     }
 
     private void CreateNewTemplate()
     {
-        NavigationManager.NavigateTo("/email-template");
+        NavigationManager.NavigateTo("/communication/email-template/add");
     }
 }

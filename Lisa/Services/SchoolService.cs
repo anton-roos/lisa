@@ -79,6 +79,12 @@ public class SchoolService
 
     public School? GetSelectedSchool() => _selectedSchool;
 
+    public async Task<int> GetCountAsync()
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Schools.CountAsync();
+    }
+    
     public async Task<List<School>> GetAllAsync()
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();

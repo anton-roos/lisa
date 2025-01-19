@@ -116,7 +116,6 @@
                     </div>
                 </div>
             }
-            <!-- Where you list all combinations in the UI: -->
             @if (CombinationsToChoseFrom != null)
             {
                 <h3>Select exactly 1 subject from each Combination</h3>
@@ -292,7 +291,10 @@
         {
             Learner.SubjectIds.Add(subject.Id);
         }
-        CombinationsToChoseFrom = Combinations.Where(c => c.GradeId == RegisterClass.GradeId);
+        CombinationsToChoseFrom = Combinations.Where(
+            c => c.GradeId == RegisterClass.GradeId && 
+            c.CombinationType == CombinationType.SubjectCombination);
+
         StateHasChanged();
     }
 

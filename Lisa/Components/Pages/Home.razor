@@ -3,7 +3,8 @@
 @using Lisa.Models.Entities
 @inherits LayoutComponentBase
 @inject SchoolService SchoolService
-
+@inject LearnerService LearnerService
+@inject ResultService ResultService
 
 <PageTitle>DCEG Portal</PageTitle>
 
@@ -26,7 +27,7 @@
                             <div class="card text-center">
                                 <div class="card-body bg-light">
                                     <h4 class="card-title">Schools</h4>
-                                    <p class="card-text display-4">@Schools.Count()</p>
+                                    <p class="card-text display-4">@SchoolCount</p>
                                 </div>
                             </div>
                         </div>
@@ -34,7 +35,7 @@
                             <div class="card text-center">
                                 <div class="card-body bg-light">
                                     <h4 class="card-title">Learners</h4>
-                                    <p class="card-text display-4">0</p>
+                                    <p class="card-text display-4">@LearnerCount</p>
                                 </div>
                             </div>
                         </div>
@@ -42,7 +43,7 @@
                             <div class="card text-center">
                                 <div class="card-body bg-light">
                                     <h4 class="card-title">Results Submitted</h4>
-                                    <p class="card-text display-4">0</p>
+                                    <p class="card-text display-4">@ResultCount</p>
                                 </div>
                             </div>
                         </div>
@@ -64,10 +65,14 @@
 </AuthorizeView>
 
 @code {
-    List<School> Schools = new();
+    int SchoolCount;
+    int LearnerCount;
+    int ResultCount;
 
     protected async override Task OnInitializedAsync()
     {
-        Schools = await SchoolService.GetAllAsync();
+        SchoolCount = await SchoolService.GetCountAsync();
+        ResultCount = await ResultService.GetCountAsync();
+        LearnerCount = await LearnerService.GetCountAsync();
     }
 }

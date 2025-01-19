@@ -58,11 +58,6 @@ else
                         <button class="ql-link"></button>
                     </span>
                 </ToolbarContent>
-                <EditorContent>
-                    <h4>This Toolbar works with HTML</h4>
-                    <a href="http://BlazorHelpWebsite.com">
-                        BlazorHelpWebsite.com</a>
-                </EditorContent>
             </BlazoredTextEditor>
         </div>
 
@@ -100,12 +95,6 @@ else
                 {
                     NavigationManager.NavigateTo("/communication/email-templates");
                 }
-
-                // Ensure the editor content is set if the template is loaded
-                if (TextEditor != null && !string.IsNullOrWhiteSpace(Template.Content))
-                {
-                    await TextEditor.LoadHTMLContent(Template.Content);
-                }
             }
             else
             {
@@ -116,7 +105,7 @@ else
 
     private async Task HandleSubmit()
     {
-        if (TextEditor != null && !string.IsNullOrWhiteSpace(Template.Content))
+        if (TextEditor != null)
         {
             Template.Content = await TextEditor.GetHTML();
 
@@ -135,8 +124,12 @@ else
             {
                 await EmailTemplateService.SaveTemplateAsync(Template.Name, Template.Subject, Template.Content);
                 SuccessMessage = "Template added successfully!";
-                Template = new EmailTemplate(); // Reset form for new addition
             }
+
+            StateHasChanged();
+            await Task.Delay(500);
+
+            NavigationManager.NavigateTo("/communication/email-templates");
         }
     }
 
@@ -145,15 +138,33 @@ else
         NavigationManager.NavigateTo("/communication/email-templates");
     }
 
+    private bool IsEditorInitialized = false;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && IsEdit && TextEditor != null && Template != null)
         {
-            if (IsEdit && TextEditor != null && Template != null && !string.IsNullOrWhiteSpace(Template.Content))
+            try
             {
+                // Add a delay to ensure the editor is fully initialized
                 await Task.Delay(50);
-                await TextEditor.LoadHTMLContent(Template.Content);
+
+                // Load content only if the editor is initialized
+                if (!string.IsNullOrWhiteSpace(Template.Content) && !IsEditorInitialized)
+                {
+                    await TextEditor.LoadHTMLContent(Template.Content);
+                    IsEditorInitialized = true; // Mark the editor as initialized
+                }
+            }
+            catch (JSException jsEx)
+            {
+                Console.WriteLine($"JavaScript error initializing editor: {jsEx.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing editor: {ex.Message}");
             }
         }
     }
+
 }

@@ -40,7 +40,7 @@ else
                         Entity="template"
                         OnView="ViewTemplate"
                         OnEdit="EditTemplate"
-                        OnDelete="DeleteTemplate"
+                        OnDelete="ConfirmDelete"
                     />
                 </tr>
             }
@@ -48,8 +48,29 @@ else
     </table>
 }
 
+<div class="modal fade show" tabindex="-1" role="dialog" style="display: @(showModal ? "block" : "none");" aria-hidden="@(showModal ? "false" : "true")">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" @onclick="CloseModal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the template <strong>@selectedTemplate?.Name</strong>?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                <button type="button" class="btn btn-danger" @onclick="DeleteConfirmed">Delete</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show" style="display: @(showModal ? "block" : "none");"></div>
+</div>
+
 @code {
     private List<EmailTemplate>? emailTemplates;
+    private EmailTemplate? selectedTemplate;
+    private bool showModal = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -75,5 +96,26 @@ else
     private void CreateNewTemplate()
     {
         NavigationManager.NavigateTo("/communication/email-template/add");
+    }
+
+    private void ConfirmDelete(EmailTemplate template)
+    {
+        selectedTemplate = template;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+    }
+
+    private async Task DeleteConfirmed()
+    {
+        if (selectedTemplate != null)
+        {
+            await DeleteTemplate(selectedTemplate);
+            selectedTemplate = null;
+            showModal = false;
+        }
     }
 }

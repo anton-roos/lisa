@@ -1,0 +1,21 @@
+@page "/NotFound"
+
+<div class="not-found-container">
+    <div class="not-found-content">
+        <h1 class="not-found-title">404</h1>
+        <h2 class="not-found-subtitle">Oops! Page Not Found</h2>
+        <p class="not-found-message">
+            The page you are looking for does not exist. It might have been moved or deleted.
+        </p>
+        <button class="btn btn-primary" @onclick="NavigateHome">Go to Homepage</button>
+    </div>
+</div>
+
+@code {
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+
+    private void NavigateHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}

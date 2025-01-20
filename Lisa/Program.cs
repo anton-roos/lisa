@@ -29,7 +29,8 @@ builder.Services.AddSingleton<IRazorLightEngine>(provider =>
         .Build();
 });
 
-builder.Services.AddRazorComponents()
+builder.Services.AddRazorComponents(options =>
+    options.DetailedErrors = builder.Environment.IsDevelopment())
     .AddInteractiveServerComponents();
 
 builder.Services.AddAuthorization();

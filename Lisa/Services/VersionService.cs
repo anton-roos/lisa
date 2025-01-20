@@ -4,7 +4,7 @@ namespace Lisa.Services
     {
         public string GetVersion()
         {
-            return "1.0.0";
+            return "1.0.2";
         }
     }
 }

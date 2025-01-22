@@ -139,11 +139,9 @@
         await base.HandleEventAsync(eventName, payload);
     }
 
-    private async Task DeleteTeacher(Teacher teacher)
+    private void DeleteTeacher(Teacher teacher)
     {
-        IsLoading = true;
-        await UserService.DeleteAsync<Teacher>(teacher.Id);
-        IsLoading = false;
+        NavigationManager.NavigateTo($"/teacher/delete/{teacher.Id}");
     }
 
     private void AddTeacher()

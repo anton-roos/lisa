@@ -52,6 +52,12 @@ public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         await _uiEventService.PublishAsync(UiEvents.TeachersUpdated);
     }
 
+    public async Task<bool> HasRegisterClassesAsync(Guid TeacherId)
+    {
+        await using var context = _dbContextFactory.CreateDbContext();
+        return await context.RegisterClasses!.AnyAsync(rc => rc.TeacherId == TeacherId);
+    }
+
     public async Task DeleteAsync(Guid id)
     {
         var _context = _dbContextFactory.CreateDbContext();
@@ -72,5 +78,43 @@ public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             .ToListAsync();
         await _context.DisposeAsync();
         return teachers;
+    }
+
+    public async Task<List<Teacher>> GetAvailableTeachersAsync(Guid TeacherId)
+    {
+        await using var context = _dbContextFactory.CreateDbContext();
+        var teacher = context.Teachers.Find(TeacherId);
+        if (teacher == null) return new List<Teacher>();
+        var availableTeachers = await context.Teachers.Where(t => t.SchoolId == teacher.SchoolId).ToListAsync();
+        return availableTeachers;
+    }
+
+    public async Task<bool> TransferRegisterClassesAsync(Guid oldTeacherId, Guid newTeacherId)
+    {
+        await using var context = _dbContextFactory.CreateDbContext();
+
+        var oldTeacher = await context.Teachers.FindAsync(oldTeacherId);
+        if (oldTeacher == null) return false;
+
+        var newTeacher = await context.Teachers.FindAsync(newTeacherId);
+        if (newTeacher == null) return false;
+
+        var registerClasses = context.RegisterClasses.Where(rc => rc.TeacherId == oldTeacherId);
+
+        await registerClasses.ForEachAsync(rc => rc.TeacherId = newTeacherId);
+
+        await context.SaveChangesAsync();
+
+        return true;
+    }
+
+    public async Task<bool> DeleteTeacherAsync(Guid teacherId)
+    {
+        await using var context = _dbContextFactory.CreateDbContext();
+        var teacher = context.Teachers.Find(teacherId);
+        if (teacher == null) return false;
+        context.Teachers.Remove(teacher);
+        await context.SaveChangesAsync();
+        return true;
     }
 }

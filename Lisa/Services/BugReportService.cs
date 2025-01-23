@@ -14,6 +14,12 @@ public class BugReportService(IHttpContextAccessor httpContextAccessor, Navigati
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly EmailService _emailService = emailService;
 
+    public async Task<List<BugReport>> GetAllAsync()
+    {
+        await using var context = _dbContextFactory.CreateDbContext();
+        return await context.BugReports.ToListAsync();
+    }
+    
     public async Task LogBugAsync(BugReport bugReport)
     {
         bugReport.ReportedAt = DateTime.UtcNow;
@@ -42,5 +48,31 @@ public class BugReportService(IHttpContextAccessor httpContextAccessor, Navigati
         await context.SaveChangesAsync();
 
         await _emailService.SendBugReportEmailAsync(bugReport);
+    }
+    
+    public async Task UpdateStatusAsync(Guid id, BugReportStatus status)
+    {
+        await using var context = _dbContextFactory.CreateDbContext();
+        var bugReport = await context.BugReports.FindAsync(id);
+        if (bugReport == null) return;
+
+        bugReport.Status = status;
+        await context.SaveChangesAsync();
+    }
+
+    public async Task<int> GetCountAsync()
+    {
+        await using var context = _dbContextFactory.CreateDbContext();
+        return await context.BugReports.CountAsync();
+    }
+
+    public async Task DeleteBugAsync(Guid id)
+    {
+        var context = _dbContextFactory.CreateDbContext();
+        var bugReport = await context.BugReports.FindAsync(id);
+        if (bugReport == null) return;
+
+        context.BugReports.Remove(bugReport);
+        await context.SaveChangesAsync();
     }
 }

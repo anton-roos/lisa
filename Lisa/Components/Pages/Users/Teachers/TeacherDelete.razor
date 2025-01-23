@@ -1,0 +1,113 @@
+@page "/teacher/delete/{TeacherId:guid}"
+@using Lisa.Models.Entities
+@inject TeacherService TeacherService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Delete Teacher</PageTitle>
+
+<h3>Delete Teacher</h3>
+
+@if (isLoading)
+{
+    <p>Loading...</p>
+}
+else if (teacher == null)
+{
+    <p>Teacher not found.</p>
+}
+else
+{
+    <div>
+        <p>Are you sure you want to delete <strong>@teacher.FirstName</strong>?</p>
+
+        @if (hasRegisterClasses)
+        {
+            <p>This teacher is assigned to one or more Register Classes. You need to transfer these classes to another teacher
+                before deleting.</p>
+
+            <div class="py-3">
+                <InputSelect class="form-select" id="SelectedSchoolId" TValue="string" @bind-Value="@selectedTeacherId">
+                    <option value="">-- Select School --</option>
+                    @foreach (var teacher in availableTeachers!)
+                    {
+                        <option value="@teacher.Id">@teacher.FirstName</option>
+                    }
+                </InputSelect>
+            </div>
+        }
+
+        <button @onclick="ConfirmDelete" class="btn btn-danger"
+            disabled="@(hasRegisterClasses && string.IsNullOrEmpty(selectedTeacherId))">
+            Delete Teacher
+        </button>
+        <button @onclick="Cancel" class="btn btn-secondary">Cancel</button>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guid TeacherId { get; set; }
+
+    private Teacher teacher;
+    private List<Teacher> availableTeachers = new();
+    private bool hasRegisterClasses = false;
+    private bool isLoading = true;
+    private string selectedTeacherId = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+
+        try
+        {
+            // Fetch the teacher and their associated classes
+            teacher = await TeacherService.GetByIdAsync(TeacherId);
+            if (teacher != null)
+            {
+                hasRegisterClasses = await TeacherService.HasRegisterClassesAsync(TeacherId);
+
+                // If the teacher has register classes, load other teachers
+                if (hasRegisterClasses)
+                {
+                    availableTeachers = await TeacherService.GetAvailableTeachersAsync(TeacherId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            if (hasRegisterClasses && !string.IsNullOrEmpty(selectedTeacherId))
+            {
+                // Transfer Register Classes
+                await TeacherService.TransferRegisterClassesAsync(TeacherId, Guid.Parse(selectedTeacherId));
+            }
+
+            // Delete Teacher
+            await TeacherService.DeleteTeacherAsync(TeacherId);
+
+            // Redirect to teacher list or confirmation
+            Navigation.NavigateTo("/teachers");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/teachers");
+    }
+}

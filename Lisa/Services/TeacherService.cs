@@ -85,7 +85,8 @@ public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         await using var context = _dbContextFactory.CreateDbContext();
         var teacher = context.Teachers.Find(TeacherId);
         if (teacher == null) return new List<Teacher>();
-        var availableTeachers = await context.Teachers.Where(t => t.SchoolId == teacher.SchoolId).ToListAsync();
+        var availableTeachers = await context.Teachers.Where(t => t.SchoolId == teacher.SchoolId
+        && t.Id != TeacherId).ToListAsync();
         return availableTeachers;
     }
 

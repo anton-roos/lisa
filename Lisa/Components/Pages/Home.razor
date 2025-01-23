@@ -5,6 +5,8 @@
 @inject SchoolService SchoolService
 @inject LearnerService LearnerService
 @inject ResultService ResultService
+@inject BugReportService BugService
+@inject NavigationManager NavigationManager
 
 <PageTitle>DCEG Portal</PageTitle>
 
@@ -47,6 +49,14 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="col-md-4" @onclick="NavigateToBugReport">
+                            <div class="card text-center">
+                                <div class="card-body bg-light">
+                                    <h4 class="card-title">Bugs</h4>
+                                    <p class="card-text display-4">@BugCount</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -67,11 +77,18 @@
     int SchoolCount;
     int LearnerCount;
     int ResultCount;
+    int BugCount;
 
     protected async override Task OnInitializedAsync()
     {
         SchoolCount = await SchoolService.GetCountAsync();
         ResultCount = await ResultService.GetCountAsync();
         LearnerCount = await LearnerService.GetCountAsync();
+        BugCount = await BugService.GetCountAsync();
+    }
+
+    private void NavigateToBugReport()
+    {
+        NavigationManager.NavigateTo("/bug-report");
     }
 }

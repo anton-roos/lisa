@@ -12,4 +12,5 @@ public class BugReport
     public bool UserAuthenticated { get; set; }
     public string? PageUrl { get; set; }
     public string? Version { get; set; }
+    public BugReportStatus Status { get; set; }
 }

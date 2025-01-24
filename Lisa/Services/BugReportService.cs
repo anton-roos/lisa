@@ -75,4 +75,10 @@ public class BugReportService(IHttpContextAccessor httpContextAccessor, Navigati
         context.BugReports.Remove(bugReport);
         await context.SaveChangesAsync();
     }
+
+    public async Task<BugReport> GetAsync(Guid id)
+    {
+        await using var context = _dbContextFactory.CreateDbContext();
+        return await context.BugReports.FindAsync(id);
+    }
 }

@@ -49,7 +49,10 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4" @onclick="NavigateToBugReport">
+                        
+                    </div>
+                    <div class="row mb-4">
+                        <div class="col-md-4" @onclick="NavigateToBugReports" style="cursor: pointer;" onmouseover="this.style.backgroundColor='#f0f0f0';" onmouseout="this.style.backgroundColor='';">
                             <div class="card text-center">
                                 <div class="card-body bg-light">
                                     <h4 class="card-title">Bugs</h4>
@@ -87,8 +90,8 @@
         BugCount = await BugService.GetCountAsync();
     }
 
-    private void NavigateToBugReport()
+    private void NavigateToBugReports()
     {
-        NavigationManager.NavigateTo("/bug-report");
+        NavigationManager.NavigateTo("/bug-reports");
     }
 }

@@ -1,0 +1,134 @@
+@page "/bug-reports"
+@using Lisa.Models.Entities
+@inject BugReportService BugReportService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+
+<PageTitle>Bug Reports</PageTitle>
+
+<h3>Bug Reports</h3>
+
+@if (isLoading)
+{
+    <p>Loading bug reports...</p>
+}
+else if (!bugReports.Any())
+{
+    <p>No bug reports found.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Description</th>
+                <th>Page URL</th>
+                <th>Version</th>
+                <th>Reported By</th>
+                <th>Reported At</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var bug in bugReports)
+            {
+                <tr class="@GetRowClass(bug.Status)">
+                    <td>@bug.Id</td>
+                    <td>@bug.ReportedAt</td>
+                    <td>
+                        <a href="@bug.PageUrl" target="_blank">@bug.PageUrl</a>
+                    </td>
+                    <td>@bug.Version</td>
+                    <td>@bug.ReportedBy</td>
+                    <td>@bug.ReportedAt.ToString("g")</td>
+                    <td>
+                        <InputSelect class="form-select" id="SelectBugStatus" TValue="BugReportStatus" Value="@bug.Status"
+                            ValueChanged="@(async (status) => await UpdateBugStatusAsync(bug, status))"
+                            ValueExpression="@(() => bug.Status)">
+                            <option value="">-- Select Status --</option>
+                            @foreach (var status in Enum.GetValues(typeof(BugReportStatus)).Cast<BugReportStatus>())
+                            {
+                                <option value="@status">@status</option>
+                            }
+                        </InputSelect>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => ViewBugReportAsync(bug)">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<BugReport> bugReports = new();
+    private bool isLoading = true;
+
+    private string GetRowClass(BugReportStatus status)
+    {
+        return status switch
+        {
+            BugReportStatus.Open => "table-danger", // Red
+            BugReportStatus.InProgress => "table-warning", // Yellow
+            BugReportStatus.Resolved => "table-warning", // Yellow
+            BugReportStatus.Closed => "table-success", // Green
+            _ => ""
+        };
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBugList();
+    }
+
+    private async Task LoadBugList()
+    {
+        isLoading = true;
+
+        try
+        {
+            var allBugs = await BugReportService.GetAllAsync();
+
+            bugReports = allBugs
+            .OrderBy(bug => bug.Status)
+            .ThenByDescending(bug => bug.ReportedAt)
+            .ToList();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error loading bug reports: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task UpdateBugStatusAsync(BugReport bug, BugReportStatus newStatus)
+    {
+        try
+        {
+            bug.Status = newStatus;
+
+            await BugReportService.UpdateStatusAsync(bug.Id, newStatus);
+
+            await JSRuntime.InvokeVoidAsync("alert", $"Bug ID {bug.Id} status updated successfully!");
+            await LoadBugList();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error updating status for Bug ID {bug.Id}: {ex.Message}");
+
+        }
+    }
+
+    private async Task ViewBugReportAsync(BugReport bug)
+    {
+        NavigationManager.NavigateTo($"/bug-reports/{bug.Id}");
+    }
+}

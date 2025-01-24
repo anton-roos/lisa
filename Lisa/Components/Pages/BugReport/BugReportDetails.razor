@@ -52,7 +52,7 @@ else
                 <dd class="col-sm-9">@bug.IsResolved</dd>
 
                 <dt class="col-sm-3">Resolved At:</dt>
-                <dd class="col-sm-9">@bug.ResolvedAt?.ToString("g") ?? "N/A"</dd>
+                <dd class="col-sm-9">@(bug.ResolvedAt?.ToString("g") ?? "N/A")</dd>
             </dl>
             <button class="btn btn-secondary" @onclick="NavigateBack">Back to Bug List</button>
         </div>

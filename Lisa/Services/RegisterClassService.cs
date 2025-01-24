@@ -21,14 +21,25 @@ public class RegisterClassService(IDbContextFactory<LisaDbContext> dbContextFact
 
     public async Task<List<RegisterClass>> GetAllAsync()
     {
-        var _context = _dbContextFactory.CreateDbContext();
-        var registerClasses = await _context.RegisterClasses
-            .Include(rc => rc.Grade)
-            .Include(rc => rc.Teacher)
-            .Include(rc => rc.CompulsorySubjects)
-            .Include(rc => rc.Learners)
-            .ToListAsync();
-        return registerClasses;
+        try
+        {
+            var _context = _dbContextFactory.CreateDbContext();
+
+            // Load only required fields to avoid excessive eager loading
+            return await _context.RegisterClasses
+                .Include(rc => rc.Grade)
+                    .ThenInclude(g => g.School)
+                .Include(rc => rc.Teacher)
+                .Include(rc => rc.CompulsorySubjects) // Use carefully for large datasets
+                .Include(rc => rc.Learners)          // Ensure Learners is necessary
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            // Log detailed error
+            Console.WriteLine($"Error fetching register classes: {ex.Message}");
+            throw;
+        }
     }
 
     public async Task<Combination> RegisterClassAsync(Combination combination)
@@ -66,7 +77,7 @@ public class RegisterClassService(IDbContextFactory<LisaDbContext> dbContextFact
         return _context.SaveChangesAsync();
     }
 
-    public  async Task<RegisterClass> UpdateAsync(RegisterClass registerClass)
+    public async Task<RegisterClass> UpdateAsync(RegisterClass registerClass)
     {
         var _context = _dbContextFactory.CreateDbContext();
         _context.RegisterClasses.Update(registerClass);

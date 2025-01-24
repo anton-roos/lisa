@@ -109,24 +109,13 @@ else
         {
             RegisterClasses = unfiltedRegisterClasses
             .Where(rc => rc.Grade != null && rc.Grade.SchoolId == SelectedSchool.Id)
-            .Select(rc => new
-            {
-                RegisterClass = rc,
-                Parts = rc.Name.Split('.')
-            })
-            .Where(x => x.Parts.Length == 2
-            && int.TryParse(x.Parts[0], out int major)
-            && int.TryParse(x.Parts[1], out int minor))
-            .OrderByDescending(x => int.Parse(x.Parts[0])) // sort by first numeric part descending
-            .ThenByDescending(x => int.Parse(x.Parts[1])) // then by second numeric part descending
-            .Select(x => x.RegisterClass)
             .ToList();
         }
     }
 
     private void EditRegisterClass(RegisterClass registerClass)
     {
-        NavigationManager.NavigateTo($"/register-class/edit/{registerClass.Id}");
+        NavigationManager.NavigateTo($"/register-class/manage/{registerClass.Id}");
     }
 
     private void ViewRegisterClass(RegisterClass registerClass)
@@ -147,6 +136,6 @@ else
 
     private void AddRegisterClass()
     {
-        NavigationManager.NavigateTo("/register-class/add");
+        NavigationManager.NavigateTo("/register-class/manage/");
     }
 }

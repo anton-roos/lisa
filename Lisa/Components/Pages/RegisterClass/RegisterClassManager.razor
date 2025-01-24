@@ -1,0 +1,268 @@
+@page "/register-class/manage"
+@page "/register-class/manage/{RegisterClassId:guid}"
+
+@using Lisa.Models.Entities
+@using Lisa.Models.ViewModels
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@inject NavigationManager Navigation
+@inject RegisterClassService RegisterClassService
+@inject SchoolService SchoolService
+@inject SubjectService SubjectService
+@inject GradeService GradeService
+@inject TeacherService TeacherService
+@inject IDbContextFactory<LisaDbContext> DbContextFactory
+@inherits EventAwareComponentBase
+
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+    <Authorized>
+        <h3>@(IsEdit ? "Edit Register Class" : "Add Register Class")</h3>
+
+        @if (!string.IsNullOrEmpty(AlertMessage))
+        {
+            <div class="alert alert-@AlertType alert-dismissible fade show" role="alert">
+                @AlertMessage
+                <button type="button" class="btn-close" aria-label="Close" @onclick="ClearAlert"></button>
+            </div>
+        }
+
+        @if (SelectedSchool == null)
+        {
+            <div class="alert alert-warning">
+                No school is selected. Please select a school first.
+            </div>
+        }
+        else if (IsLoading)
+        {
+            <p>Loading @(IsEdit ? "register class..." : "form...")</p>
+        }
+        else
+        {
+            <RegisterClassForm RegisterClass="@RegisterClassModel" Grades="@Grades" Teachers="@Teachers"
+                FilteredSubjects="@FilteredSubjects" SearchText="@SearchText" OnInputChange="@OnInputChange"
+                ToggleSubject="@ToggleSubject" OnCancel="@Cancel" OnValidSubmit="@HandleValidSubmit"
+                AllSubjects="@AllSubjects" MathSelected="@MathSelected" ToggleMathSelected="ToggleMathSelected" />
+        }
+    </Authorized>
+    <NotAuthorized>
+        <h3>You are not authorized to access this page.</h3>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter] public Guid? RegisterClassId { get; set; }
+
+    private bool IsEdit => RegisterClassId.HasValue && RegisterClassId.Value != Guid.Empty;
+    private bool IsLoading { get; set; } = true;
+
+    private RegisterClassViewModel RegisterClassModel { get; set; } = new();
+    private School? SelectedSchool;
+    private List<Grade>? Grades;
+    private List<Teacher>? Teachers;
+    private List<Subject> AllSubjects = new();
+    private string SearchText = string.Empty;
+    private bool MathSelected { get; set; }
+    private string? AlertMessage { get; set; }
+    private string AlertType { get; set; } = "success";
+
+    private IEnumerable<Subject> FilteredSubjects =>
+    AllSubjects.Where(s => string.IsNullOrEmpty(SearchText)
+    || (s.Name != null && s.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)));
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Subscribe to any event bus if needed
+            SubscribeToEvent(UiEvents.SchoolSelected);
+
+            // Load the "currently selected" school (optional)
+            SelectedSchool = SchoolService.GetSelectedSchool();
+
+            if (SelectedSchool != null)
+            {
+                Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+                Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id);
+                AllSubjects = await SubjectService.GetAllAsync();
+            }
+
+            if (IsEdit && RegisterClassId.HasValue)
+            {
+                // Load existing RegisterClass
+                var registerClassEntity = await RegisterClassService.GetByIdAsync(RegisterClassId.Value);
+                if (registerClassEntity == null)
+                {
+                    SetAlert("danger", "Register Class not found.");
+                    Navigation.NavigateTo("/register-class");
+                    return;
+                }
+
+                // Populate the ViewModel
+                RegisterClassModel = new RegisterClassViewModel
+                    {
+                        Name = registerClassEntity.Name,
+                        GradeId = registerClassEntity.GradeId,
+                        TeacherId = registerClassEntity.TeacherId,
+                        SubjectIds = registerClassEntity.CompulsorySubjects.Select(s => s.Id).ToList(),
+                    };
+
+                MathSelected = registerClassEntity.MathSelectionEnabled;
+            }
+            else
+            {
+                // Initialize for Add mode
+                RegisterClassModel = new RegisterClassViewModel();
+                MathSelected = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            SetAlert("danger", $"Error loading page: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        switch (eventName)
+        {
+            case UiEvents.SchoolSelected:
+                SelectedSchool = payload as School;
+                if (!IsEdit && SelectedSchool != null)
+                {
+                    // Optionally set default Grade or Teacher based on selected school
+                    RegisterClassModel = new RegisterClassViewModel
+                    {
+                        // Initialize as needed
+                    };
+                }
+                break;
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            if (SelectedSchool == null)
+            {
+                SetAlert("danger", "Please select a school.");
+                return;
+            }
+
+            using var _context = DbContextFactory.CreateDbContext();
+
+            var selectedSubjects = await SubjectService.GetSubjectsByIdsAsync(RegisterClassModel.SubjectIds);
+
+            foreach (var subject in selectedSubjects)
+            {
+                _context.Subjects.Attach(subject);
+            }
+
+            if (IsEdit)
+            {
+                // EDIT Mode
+                var existingEntity = await _context.RegisterClasses
+                .Include(rc => rc.CompulsorySubjects)
+                .FirstOrDefaultAsync(rc => rc.Id == RegisterClassId.Value);
+
+                if (existingEntity == null)
+                {
+                    SetAlert("danger", "Register Class not found.");
+                    Navigation.NavigateTo("/register-class");
+                    return;
+                }
+
+                // Update scalar properties
+                existingEntity.Name = RegisterClassModel.Name;
+                existingEntity.GradeId = RegisterClassModel.GradeId;
+                existingEntity.TeacherId = RegisterClassModel.TeacherId;
+                existingEntity.MathSelectionEnabled = MathSelected;
+
+                // Update CompulsorySubjects
+                existingEntity.CompulsorySubjects.Clear();
+                foreach (var subject in selectedSubjects)
+                {
+                    existingEntity.CompulsorySubjects.Add(subject);
+                }
+
+                await _context.SaveChangesAsync();
+
+                SetAlert("success", "Register Class updated successfully.");
+            }
+            else
+            {
+                // ADD Mode
+                var entity = new RegisterClass
+                    {
+                        Name = RegisterClassModel.Name,
+                        GradeId = RegisterClassModel.GradeId,
+                        CompulsorySubjects = selectedSubjects,
+                        TeacherId = RegisterClassModel.TeacherId,
+                        MathSelectionEnabled = MathSelected
+                    };
+
+                _context.RegisterClasses.Add(entity);
+                await _context.SaveChangesAsync();
+
+                SetAlert("success", "Register Class added successfully.");
+                Thread.Sleep(500);
+
+            }
+
+            Navigation.NavigateTo("/register-class");
+        }
+        catch (Exception ex)
+        {
+            SetAlert("danger", $"Error: {ex.Message}");
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/register-class");
+    }
+
+    private void OnInputChange(ChangeEventArgs e)
+    {
+        SearchText = e?.Value?.ToString() ?? string.Empty;
+        StateHasChanged();
+    }
+
+    private void ToggleSubject(Guid subjectId)
+    {
+        if (RegisterClassModel.SubjectIds.Contains(subjectId))
+        {
+            RegisterClassModel.SubjectIds.Remove(subjectId);
+        }
+        else
+        {
+            RegisterClassModel.SubjectIds.Add(subjectId);
+        }
+    }
+
+    private void ToggleMathSelected()
+    {
+        MathSelected = !MathSelected;
+    }
+
+    private void SetAlert(string type, string message)
+    {
+        AlertType = type; // "success", "danger", "warning", etc.
+        AlertMessage = message;
+        StateHasChanged();
+    }
+
+    private void ClearAlert()
+    {
+        AlertMessage = null;
+        StateHasChanged();
+    }
+}

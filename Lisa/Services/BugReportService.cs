@@ -19,7 +19,7 @@ public class BugReportService(IHttpContextAccessor httpContextAccessor, Navigati
         await using var context = _dbContextFactory.CreateDbContext();
         return await context.BugReports.ToListAsync();
     }
-    
+
     public async Task LogBugAsync(BugReport bugReport)
     {
         bugReport.ReportedAt = DateTime.UtcNow;
@@ -49,7 +49,7 @@ public class BugReportService(IHttpContextAccessor httpContextAccessor, Navigati
 
         await _emailService.SendBugReportEmailAsync(bugReport);
     }
-    
+
     public async Task UpdateStatusAsync(Guid id, BugReportStatus status)
     {
         await using var context = _dbContextFactory.CreateDbContext();
@@ -64,10 +64,10 @@ public class BugReportService(IHttpContextAccessor httpContextAccessor, Navigati
                 bugReport.ResolvedAt = DateTime.UtcNow;
                 break;
             case BugReportStatus.Closed:
-                context.BugReports.Remove(bugReport);
+                bugReport.ClosedAt = DateTime.UtcNow;
                 break;
         }
-        
+
         await context.SaveChangesAsync();
     }
 

@@ -50,6 +50,9 @@ else
 
                 <dt class="col-sm-3">Resolved At:</dt>
                 <dd class="col-sm-9">@(bug.ResolvedAt?.ToString("g") ?? "N/A")</dd>
+                
+                <dt class="col-sm-3">Closed At:</dt>
+                <dd class="col-sm-9">@(bug.ClosedAt?.ToString("g") ?? "N/A")</dd>
             </dl>
             <button class="btn btn-secondary" @onclick="NavigateBack">Back to Bug List</button>
         </div>

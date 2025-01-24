@@ -186,8 +186,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .HasForeignKey(rc => rc.TeacherId)
             .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<RegisterClass>()
-            .HasIndex(rc => rc.Name)
-            .IsUnique();
+            .HasIndex(rc => rc.Name);
         modelBuilder.Entity<RegisterClass>()
             .HasMany(rc => rc.CompulsorySubjects)
             .WithMany()

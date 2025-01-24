@@ -96,6 +96,13 @@ public class SchoolService
         return await context.Schools
         .Include(s => s.SchoolType)
         .Include(s => s.Curriculum)
+        .Include(s => s.Grades)
+        .Include(s => s.RegisterClasses)
+        .Include(s => s.Teachers)
+        .Include(s => s.Principals)
+        .Include(s => s.Administrators)
+        .Include(s => s.SchoolManagements)
+        .Include(s => s.Learners)
         .Where(x => x.Id == id)
         .FirstOrDefaultAsync();
     }

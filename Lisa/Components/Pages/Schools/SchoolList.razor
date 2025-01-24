@@ -4,7 +4,7 @@
 @inject NavigationManager NavigationManager
 @inject SchoolService SchoolService
 
-<AuthorizeView Context="authContext">
+<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
     <Authorized>
         <h3>Schools</h3>
         <button class="btn btn-primary mb-3" @onclick="() => AddSchool()">
@@ -44,7 +44,7 @@
                                 </div>
                             </td>
                             <ActionButtons TEntity="School" Entity="school" OnView="ViewSchool" OnEdit="EditSchool"
-                                OnDelete="DeleteSchool" />
+                                OnDelete="ShowConfirmationAsync" />
                         </tr>
                     }
                 </tbody>
@@ -56,8 +56,22 @@
     </NotAuthorized>
 </AuthorizeView>
 
+<ConfirmDialog @ref="Dialog" />
+<Modal @ref="ErrorModal" Title="Info">
+    <BodyTemplate>
+        You can't delete this school because of the following:
+        @Exception.Message
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Primary" @onclick="CloseErrorModal">Ok</Button>
+    </FooterTemplate>
+</Modal>
+
 @code {
     private List<Lisa.Models.Entities.School>? schools;
+    private ConfirmDialog Dialog = default!;
+    private Modal ErrorModal = default!;
+    private Exception Exception = new();
 
     protected async override Task OnInitializedAsync()
     {
@@ -69,18 +83,56 @@
         NavigationManager.NavigateTo($"schools/edit/{school.Id}");
     }
 
+    private async Task CloseErrorModal()
+    {
+        ErrorModal.HideAsync();
+    }
+
     private void ViewSchool(School school)
     {
         NavigationManager.NavigateTo($"schools/details/{school.Id}");
     }
 
-    private async Task DeleteSchool(School School)
+    private async Task ShowConfirmationAsync(School School)
     {
-        if (School != null)
+        var confirmation = await Dialog.ShowAsync(
+        title: $"Are you sure you want to delete {School.ShortName}?",
+        message1: "This will delete the record. Once deleted can not be rolled back.",
+        message2: "Do you want to proceed?");
+
+        if (confirmation)
         {
-            EventBus.Publish(new DeleteSchoolEvent {School = School});
-            await SchoolService.DeleteSchoolAsync(School);
-            schools = await SchoolService.GetAllAsync();
+            if (School != null)
+            {
+                try
+                {
+                    var SchoolToDelete = await SchoolService.GetSchoolAsync(School.Id);
+
+                    if (SchoolToDelete == null)
+                    {
+                        throw new Exception("School not found.");
+                    }
+
+                    if (SchoolToDelete.Administrators.Any()
+                    || SchoolToDelete.Learners.Any()
+                    || SchoolToDelete.Teachers.Any()
+                    || SchoolToDelete.RegisterClasses.Any()
+                    )
+                    {
+                        throw new Exception("School has associated users, learners, or register classes. You need to delete them first.");
+                    }
+
+                    EventBus.Publish(new DeleteSchoolEvent { School = School });
+                    await SchoolService.DeleteSchoolAsync(School);
+                    schools = await SchoolService.GetAllAsync();
+                    await InvokeAsync(StateHasChanged);
+                }
+                catch (Exception ex)
+                {
+                    Exception = ex;
+                    await ErrorModal.ShowAsync();
+                }
+            }
         }
     }
 

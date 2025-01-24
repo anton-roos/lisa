@@ -12,6 +12,7 @@ else if (ErrorContent is not null)
 {
     <div class="alert alert-danger my-4 mx-4">
         <h3>An error occurred in the application.</h3>
+        <button class="btn btn-danger my-4" @onclick="Recover">Reload Application</button>
         <dl>
             <dt>Source</dt>
             <dd>@CurrentException.Source</dd>
@@ -32,13 +33,12 @@ else if (ErrorContent is not null)
             <dt>Data</dt>
             <dd>@CurrentException.Data</dd>
         </dl>
-        <button class="btn btn-danger" @onclick="Recover">Reload Application</button>
     </div>
 }
 
 @code {
     private string Version => VersionService.GetVersion();
-    
+
     protected override Task OnErrorAsync(Exception ex)
     {
         Logger.LogError(ex, "An error occurred in the application.");
@@ -47,6 +47,7 @@ else if (ErrorContent is not null)
 
     protected async Task Recover()
     {
+        base.Recover();
         await JSRuntime.InvokeVoidAsync("reloadToMainPage");
     }
 }

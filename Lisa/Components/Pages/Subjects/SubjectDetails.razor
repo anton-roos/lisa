@@ -1,0 +1,77 @@
+@page "/subjects/details/{Id:guid}"
+@using Lisa.Models.Entities
+@inject SubjectService SubjectService
+@inject NavigationManager Navigation
+
+<h2>Subject Details</h2>
+
+@if (IsLoading)
+{
+    <p>Loading subject details...</p>
+}
+else if (subject == null)
+{
+    <div class="alert alert-danger">
+        <strong>Error:</strong> Subject not found.
+    </div>
+}
+else
+{
+    <div class="mb-3">
+        <label class="form-label"><strong>Name:</strong></label>
+        <p>@subject.Name</p>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label"><strong>Code:</strong></label>
+        <p>@subject.Code</p>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label"><strong>Description:</strong></label>
+        <p>@subject.Description</p>
+    </div>
+
+    <div class="mt-4">
+        <button class="btn btn-primary" @onclick="EditSubject">Edit</button>
+        <button class="btn btn-secondary" @onclick="BackToList">Back to List</button>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private Subject? subject;
+    private bool IsLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            subject = await SubjectService.GetByIdAsync(Id);
+            if (subject == null)
+            {
+                // Handle the case where the subject is not found
+                Navigation.NavigateTo("/subjects");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching subject details: {ex.Message}");
+            Navigation.NavigateTo("/subjects");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void EditSubject()
+    {
+        Navigation.NavigateTo($"/subjects/edit/{Id}");
+    }
+
+    private void BackToList()
+    {
+        Navigation.NavigateTo("/subjects");
+    }
+}

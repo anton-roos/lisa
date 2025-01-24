@@ -130,6 +130,7 @@ builder.Services.AddScoped<IEventLogRepository, EventLogRepository>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Host.UseSerilog();
+builder.Services.AddBlazorBootstrap();
 
 var app = builder.Build();
 

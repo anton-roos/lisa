@@ -11,9 +11,6 @@
 - Setup Database Backups in SharePoint
 
 # Bugs
-Can access /schools without being authenticated.
-Combination details page is broken.
-Edit Combinations should have the tickboxes instead of list select.
 Adding Learner -> Combinations for other schools are pulling through.
 Learner Grade is not pulling through on the Index Page.
 System Administrators -> No System Administrators Found

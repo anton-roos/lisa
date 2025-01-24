@@ -71,16 +71,20 @@
     private IEnumerable<Grade>? Grades;
     private School? SelectedSchool;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         SubscribeToEvent(UiEvents.SchoolSelected);
+        await LoadCombinations();
     }
 
     public async Task LoadCombinations()
     {
         SelectedSchool = SchoolService.GetSelectedSchool();
-        Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
-        SubjectCombinations = await CombinationService.GetSubjectCombinationsForSchool(SelectedSchool);
+        if (SelectedSchool != null)
+        {
+            Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+            SubjectCombinations = await CombinationService.GetSubjectCombinationsForSchool(SelectedSchool);
+        }
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
@@ -111,8 +115,14 @@
         Navigation.NavigateTo($"/combinations/edit/{combination.Id}");
     }
 
-    private void DeleteCombination(Combination combination)
+    private async Task DeleteCombination(Combination combination)
     {
-        Navigation.NavigateTo($"/combinations/delete/{combination.Id}");
+        var Combination = await CombinationService.GetByIdAsync(combination.Id);
+        if (Combination != null)
+        {
+            await CombinationService.DeleteAsync(Combination.Id);
+            await LoadCombinations();
+            await InvokeAsync(StateHasChanged);
+        }
     }
 }

@@ -66,16 +66,19 @@ else
                         <td>Teacher not found</td>
                     }
                     <ActionButtons TEntity="RegisterClass" Entity="registerClass" OnView="ViewRegisterClass"
-                        OnEdit="EditRegisterClass" OnDelete="DeleteRegisterClass" />
+                        OnEdit="EditRegisterClass" OnDelete="ShowConfirmationAsync" />
                 </tr>
             }
         </tbody>
     </table>
+
+    <ConfirmDialog @ref="dialog" />
 }
 
 @code {
-    private List<RegisterClass> RegisterClasses = new();
     private School? SelectedSchool;
+    private List<RegisterClass> RegisterClasses = new();
+    private ConfirmDialog dialog = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -123,14 +126,24 @@ else
         NavigationManager.NavigateTo($"/register-class/details/{registerClass.Id}");
     }
 
-    public async Task DeleteRegisterClass(RegisterClass registerClass)
+    private async Task ShowConfirmationAsync(RegisterClass registerClass)
     {
-        if (registerClass != null)
-        {
-            await RegisterClassService.DeleteAsync(registerClass);
+        var confirmation = await dialog.ShowAsync(
+        title: "Are you sure you want to delete this?",
+        message1: "This will delete the record. Once deleted can not be rolled back.",
+        message2: "Do you want to proceed?");
 
-            await LoadRegisterClasses();
-            await InvokeAsync(StateHasChanged);
+        if (confirmation)
+        {
+            if (registerClass != null)
+            {
+                await RegisterClassService.DeleteAsync(registerClass);
+                await LoadRegisterClasses();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        else
+        {
         }
     }
 

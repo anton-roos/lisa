@@ -9,8 +9,23 @@ using Hangfire.PostgreSql;
 using Lisa.Models.Entities;
 using RazorLight;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Serilog;
+using Lisa.Repositories;
+using Lisa.Events;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+     .MinimumLevel.Override("Microsoft.EntityFrameworkCore", Serilog.Events.LogEventLevel.Warning)
+    .WriteTo.Console()
+    .WriteTo.File(
+        path: "Logs/log-.txt",
+        rollingInterval: RollingInterval.Day,
+        fileSizeLimitBytes: 10_485_760,
+        retainedFileCountLimit: 10,
+        shared: true)
+    .CreateLogger();
 
 builder.Logging.AddSentry(options =>
 {
@@ -110,8 +125,11 @@ builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<ProtectedSessionStorage>();
 builder.Services.AddScoped<BugReportService>();
 builder.Services.AddScoped<VersionService>();
+builder.Services.AddSingleton<IEventBus, EventBus>();
+builder.Services.AddScoped<IEventLogRepository, EventLogRepository>();
 
 builder.Services.AddHttpContextAccessor();
+builder.Host.UseSerilog();
 
 var app = builder.Build();
 
@@ -141,4 +159,13 @@ app.MapRazorComponents<App>()
 //     var services = scope.ServiceProvider;
 //     await DatabaseSeed.Seed(services);
 // }
+
+var eventBus = app.Services.GetRequiredService<IEventBus>();
+eventBus.Publish(new ApplicationStartedEvent
+{
+    Environment = app.Environment.EnvironmentName,
+});
+
 app.Run();
+
+Log.CloseAndFlush();

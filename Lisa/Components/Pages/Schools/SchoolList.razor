@@ -74,11 +74,12 @@
         NavigationManager.NavigateTo($"schools/details/{school.Id}");
     }
 
-    private async Task DeleteSchool(School school)
+    private async Task DeleteSchool(School School)
     {
-        if (school != null)
+        if (School != null)
         {
-            await SchoolService.DeleteSchoolAsync(school);
+            EventBus.Publish(new DeleteSchoolEvent {School = School});
+            await SchoolService.DeleteSchoolAsync(School);
             schools = await SchoolService.GetAllAsync();
         }
     }

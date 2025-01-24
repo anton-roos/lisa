@@ -146,11 +146,11 @@
 
     private void AddTeacher()
     {
-        NavigationManager.NavigateTo("/teachers/add");
+        NavigationManager.NavigateTo("/teachers/manage/");
     }
     private void EditTeacher(Teacher teacher)
     {
-        NavigationManager.NavigateTo($"/teachers/edit/{teacher.Id}");
+        NavigationManager.NavigateTo($"/teachers/manage/{teacher.Id}");
     }
 
     private void ViewTeacher(Teacher teacher)

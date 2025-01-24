@@ -125,6 +125,12 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
         }
     }
 
+    public async Task UpdateUserPassword(User user, string password)
+    {
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        await _userManager.ResetPasswordAsync(user, token, password);
+    }
+
     public async Task DeleteAsync<TUser>(Guid id) where TUser : User
     {
         var user = await GetByIdAsync<TUser>(id);

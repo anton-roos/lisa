@@ -49,12 +49,12 @@ else
 
     private void AddSystemAdministrator()
     {
-        Navigation.NavigateTo("/system-administrators/add");
+        Navigation.NavigateTo("/system-administrators/manage/");
     }
 
     private void EditSystemAdministrator(User systemAdministrator)
     {
-        Navigation.NavigateTo($"/system-administrators/edit/{systemAdministrator.Id}");
+        Navigation.NavigateTo($"/system-administrators/manage/{systemAdministrator.Id}");
     }
 
     private void DeleteSystemAdministrator(User systemAdministrator)

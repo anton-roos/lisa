@@ -1,12 +1,16 @@
 @page "/login"
+@using Lisa.Events
 @using Lisa.Middleware
 @using Lisa.Models.Entities
 @using Microsoft.AspNetCore.Identity
 @using System.ComponentModel.DataAnnotations
+@using Lisa.Services
 @inject SignInManager<User> SignInManager
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<User> UserManager
+@inject ILogger<Login> Logger
+@inject IEventBus EventBus
 
 <h3>Login</h3>
 
@@ -86,8 +90,25 @@ else
             if (result == Microsoft.AspNetCore.Identity.SignInResult.Success)
             {
                 isLoading = false;
+
                 Guid key = Guid.NewGuid();
                 BlazorAuthMiddleware.Logins[key] = new LoginInfo { Email = loginModel.Email, Password = loginModel.Password };
+
+                try
+                {
+                    Logger.LogInformation($"User {loginModel.Email} logged in.");
+
+                    EventBus.Publish(new UserLogInEvent
+                        {
+                            Email = loginModel.Email,
+                        });
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError($"Error logging analytics event {ex.Message}");
+                    Console.WriteLine($"Error logging analytics event {ex.Message}");
+                }
+
                 NavigationManager.NavigateTo($"/login?key={key}", true);
             }
             else

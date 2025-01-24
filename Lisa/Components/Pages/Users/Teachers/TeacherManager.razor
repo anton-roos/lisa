@@ -1,0 +1,233 @@
+@page "/teachers/manage"
+@page "/teachers/manage/{Id:guid}"
+@using Lisa.Models.Entities
+@using Lisa.Models.ViewModels
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Authorization
+@inject NavigationManager Navigation
+@inject UserService UserService
+@inject TeacherService TeacherService
+@inject SchoolService SchoolService
+@inherits EventAwareComponentBase
+@using FluentAssertions
+
+
+<AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator}")">
+    <Authorized>
+        <h3>@(IsEdit ? "Edit Teacher" : "Add Teacher")</h3>
+
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class='alert alert-danger'>@ErrorMessage</div>
+        }
+
+        @if (IsLoading)
+        {
+            <p>Loading teacher...</p>
+        }
+        else
+        {
+            <EditForm Model="@TeacherViewModel" OnValidSubmit="@HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label for="firstName" class="form-label">First Name</label>
+                    <InputText id="firstName" class="form-control" @bind-Value="TeacherViewModel.FirstName" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="lastName" class="form-label">Last Name</label>
+                    <InputText id="lastName" class="form-control" @bind-Value="TeacherViewModel.LastName" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <InputText id="email" class="form-control" @bind-Value="TeacherViewModel.Email" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <InputText id="password" type="password" class="form-control" @bind-Value="TeacherViewModel.Password" />
+                    @if (!IsEdit)
+                    {
+                        <small class="text-muted">Required for new teacher.</small>
+                    }
+                    else
+                    {
+                        <small class="text-muted">Leave blank to keep current password.</small>
+                    }
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">School</label>
+                    <select class="form-select" @bind="TeacherViewModel.SchoolId">
+                        <option value="">-- Select School --</option>
+                        @if (Schools is not null)
+                        {
+                            @foreach (var s in Schools)
+                            {
+                                <option value="@s.Id">@s.ShortName</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    @(IsEdit ? "Save Changes" : "Add Teacher")
+                </button>
+                <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+            </EditForm>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <h4>You are not authorized to access this page.</h4>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private bool IsEdit => Id.HasValue && Id.Value != Guid.Empty;
+    private bool IsLoading { get; set; } = true;
+
+    private TeacherViewModel TeacherViewModel { get; set; } = new();
+    private List<School> Schools = new();
+    private string ErrorMessage { get; set; } = string.Empty;
+
+    private School SelectedSchool { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            SubscribeToEvent(UiEvents.SchoolSelected);
+
+            Schools = await SchoolService.GetAllAsync();
+
+            if (IsEdit && Id != null )
+            {
+                var teacherEntity = await TeacherService.GetByIdAsync(Id.Value);
+                if (teacherEntity == null)
+                {
+                    Navigation.NavigateTo("/teachers");
+                    return;
+                }
+
+                teacherEntity.Should().NotBeNull();
+
+                TeacherViewModel = new TeacherViewModel
+                    {
+                        Id = teacherEntity.Id,
+                        FirstName = teacherEntity.FirstName,
+                        LastName = teacherEntity.LastName,
+                        Email = teacherEntity.Email,
+                        SchoolId = teacherEntity.SchoolId
+                    };
+            }
+            else
+            {
+                SelectedSchool = SchoolService.GetSelectedSchool();
+                if (SelectedSchool != null)
+                {
+                    TeacherViewModel.SchoolId = SelectedSchool.Id;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Error loading page: " + ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        switch (eventName)
+        {
+            case UiEvents.SchoolSelected:
+                if (payload is School school)
+                {
+                    SelectedSchool = school;
+                    if (!IsEdit)
+                    {
+                        TeacherViewModel.SchoolId = school.Id;
+                    }
+                }
+                break;
+        }
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            if (!IsEdit)
+            {
+                // ADD TEACHER
+                if (string.IsNullOrWhiteSpace(TeacherViewModel.Password))
+                {
+                    throw new Exception("Password is required for new teacher.");
+                }
+
+                var teacherEntity = new Teacher
+                    {
+                        FirstName = TeacherViewModel.FirstName,
+                        LastName = TeacherViewModel.LastName,
+                        Email = TeacherViewModel.Email,
+                        SchoolId = TeacherViewModel.SchoolId,
+                        UserName = TeacherViewModel.Email
+                    };
+
+                EventBus.Publish(new AddTeacherEvent { Teacher = teacherEntity });
+
+                // Create user
+                await UserService.AddUser(teacherEntity, TeacherViewModel.Password);
+            }
+            else
+            {
+                // EDIT TEACHER
+                var teacherEntity = await TeacherService.GetByIdAsync(TeacherViewModel.Id);
+                if (teacherEntity is null)
+                    throw new Exception("Teacher not found.");
+
+                // Update general fields
+                teacherEntity.FirstName = TeacherViewModel.FirstName;
+                teacherEntity.LastName = TeacherViewModel.LastName;
+                teacherEntity.Email = TeacherViewModel.Email;
+                teacherEntity.SchoolId = TeacherViewModel.SchoolId;
+                teacherEntity.UserName = TeacherViewModel.Email; // keep sync with email
+
+                
+                await TeacherService.UpdateAsync(teacherEntity);
+
+                // If user entered a password, update it. Otherwise, do nothing.
+                if (!string.IsNullOrWhiteSpace(TeacherViewModel.Password))
+                {
+                    // Example: custom method to update the password
+                    await UserService.UpdateUserPassword(teacherEntity, TeacherViewModel.Password);
+                }
+            }
+
+            Navigation.NavigateTo("/teachers");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Error: " + ex.Message;
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/teachers");
+    }
+}

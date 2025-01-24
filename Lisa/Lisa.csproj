@@ -9,8 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ServiceWorker Include="wwwroot\service-worker.js"
-      PublishedContent="wwwroot\service-worker.published.js" />
+    <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
   </ItemGroup>
 
   <ItemGroup>
@@ -37,6 +36,8 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL.Design" Version="1.1.0" />
     <PackageReference Include="RazorLight" Version="2.3.1" />
     <PackageReference Include="Sentry.Extensions.Logging" Version="5.0.0" />
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
   </ItemGroup>
 
 </Project>

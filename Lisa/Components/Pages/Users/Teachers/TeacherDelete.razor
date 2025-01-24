@@ -90,14 +90,12 @@ else
         {
             if (hasRegisterClasses && !string.IsNullOrEmpty(selectedTeacherId))
             {
-                // Transfer Register Classes
                 await TeacherService.TransferRegisterClassesAsync(TeacherId, Guid.Parse(selectedTeacherId));
             }
 
-            // Delete Teacher
+            EventBus.Publish(new DeleteTeacherEvent { TeacherId = selectedTeacherId });
             await TeacherService.DeleteTeacherAsync(TeacherId);
 
-            // Redirect to teacher list or confirmation
             Navigation.NavigateTo("/teachers");
         }
         catch (Exception ex)

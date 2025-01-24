@@ -29,6 +29,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
     public DbSet<CareGroup> CareGroups { get; set; } = null!;
     public DbSet<EmailTemplate> EmailTemplates { get; set; } = null!;
     public DbSet<BugReport> BugReports { get; set; } = null!;
+    public DbSet<EventLog>  EventLogs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

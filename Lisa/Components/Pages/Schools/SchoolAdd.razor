@@ -1,16 +1,18 @@
 @page "/schools/add"
+@using Lisa.Events
 @using Lisa.Services
 @using Microsoft.EntityFrameworkCore
 @using Lisa.Models.Entities
 @inject NavigationManager Navigation
 @inject SchoolService SchoolService
+@inject IEventBus EventBus
 
 <AuthorizeView Context="authContext">
     <Authorized>
         <h3>Add School</h3>
 
         <SchoolForm School="@School" SchoolTypes="@SchoolTypes" Curriculums="@Curriculums"
-                OnValidSubmitCallback="@HandleValidSubmit" OnCancelCallback="@Cancel" />
+            OnValidSubmitCallback="@HandleValidSubmit" OnCancelCallback="@Cancel" />
     </Authorized>
     <NotAuthorized>
         <h3>You are not authorized to access this page.</h3>
@@ -32,6 +34,7 @@
 
     private async Task HandleValidSubmit()
     {
+        EventBus.Publish(new AddSchoolEvent { School = School });
         await SchoolService.AddSchoolAsync(School);
         Navigation.NavigateTo("/schools");
     }

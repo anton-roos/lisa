@@ -21,7 +21,6 @@ else
     <table class="table table-striped">
         <thead>
             <tr>
-                <th>ID</th>
                 <th>Description</th>
                 <th>Version</th>
                 <th>Reported By</th>
@@ -34,10 +33,16 @@ else
             @foreach (var bug in bugReports)
             {
                 <tr class="@GetRowClass(bug.Status)">
-                    <td>@bug.Id</td>
                     <td>@bug.WhatTried</td>
                     <td>@bug.Version</td>
-                    <td>@bug.ReportedBy</td>
+                    @if(bug.ReportedBy == null || string.IsNullOrWhiteSpace(bug.ReportedBy))
+                    {
+                        <td>Anonymous</td>
+                    }
+                    else
+                    {
+                        <td>@bug.ReportedBy</td>
+                    }
                     <td>@bug.ReportedAt.ToString("g")</td>
                     <td>
                         <InputSelect class="form-select" id="SelectBugStatus" TValue="BugReportStatus" Value="@bug.Status"

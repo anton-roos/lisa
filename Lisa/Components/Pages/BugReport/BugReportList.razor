@@ -23,7 +23,6 @@ else
             <tr>
                 <th>ID</th>
                 <th>Description</th>
-                <th>Page URL</th>
                 <th>Version</th>
                 <th>Reported By</th>
                 <th>Reported At</th>
@@ -36,10 +35,7 @@ else
             {
                 <tr class="@GetRowClass(bug.Status)">
                     <td>@bug.Id</td>
-                    <td>@bug.ReportedAt</td>
-                    <td>
-                        <a href="@bug.PageUrl" target="_blank">@bug.PageUrl</a>
-                    </td>
+                    <td>@bug.WhatTried</td>
                     <td>@bug.Version</td>
                     <td>@bug.ReportedBy</td>
                     <td>@bug.ReportedAt.ToString("g")</td>

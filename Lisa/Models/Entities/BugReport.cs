@@ -6,7 +6,6 @@ public class BugReport
     public string? WhatTried { get; set; }
     public string? WhatHappened { get; set; }
     public DateTime ReportedAt { get; set; }
-    public bool IsResolved { get; set; } = false;
     public DateTime? ResolvedAt { get; set; }
     public string? ReportedBy { get; set; }
     public bool UserAuthenticated { get; set; }

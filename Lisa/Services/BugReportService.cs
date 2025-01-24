@@ -57,6 +57,17 @@ public class BugReportService(IHttpContextAccessor httpContextAccessor, Navigati
         if (bugReport == null) return;
 
         bugReport.Status = status;
+
+        switch (status)
+        {
+            case BugReportStatus.Resolved:
+                bugReport.ResolvedAt = DateTime.UtcNow;
+                break;
+            case BugReportStatus.Closed:
+                context.BugReports.Remove(bugReport);
+                break;
+        }
+        
         await context.SaveChangesAsync();
     }
 

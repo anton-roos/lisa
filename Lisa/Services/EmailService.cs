@@ -63,9 +63,6 @@ namespace Lisa.Services
                             <hr>
                             <p><strong>What Happened:</strong> {bugReport.WhatHappened}</p>
                             <p><strong>What Was Tried:</strong> {bugReport.WhatTried}</p>
-                            <hr>
-                            <p><strong>Is Resolved:</strong> {(bugReport.IsResolved ? "Yes" : "No")}</p>
-                            <p><strong>Resolved At:</strong> {bugReport.ResolvedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A"}</p>
                         </div>
                     </body>
                     </html>

@@ -5,6 +5,7 @@ namespace Lisa.Models.ViewModels;
 
 public class CombinationViewModel
 {
+    public Guid? Id { get; set; }
     [Required(AllowEmptyStrings = false, ErrorMessage = "Name is required")]
     public string? Name { get; set; }
     public Guid GradeId { get; set; }

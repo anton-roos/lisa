@@ -22,6 +22,8 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
         return await context.Learners
         .Include(l => l.RegisterClass)
             .ThenInclude(rc => rc.Grade)
+        .Include(l => l.Combination)
+            .ThenInclude(c => c.Subjects)
         .Include(l => l.LearnerSubjects)
             .ThenInclude(ls => ls.Subject)
         .Include(l => l.CareGroup)
@@ -262,20 +264,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
         return learners;
     }
 
-
-    public async Task<Learner?> LoadLearnerAsync(Guid learnerId)
-    {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
-        var learner = await context.Learners
-            .Include(l => l.Combination)
-            .Include(l => l.CareGroup)
-            .Include(l => l.Parents)
-            .Include(l => l.RegisterClass!)
-                .ThenInclude(rc => rc.Grade)
-            .FirstOrDefaultAsync(l => l.Id == learnerId);
-        return learner;
-    }
-
     public async Task<List<Guid>> GetSubjectIdsForLearnerAsync(Guid learnerId)
     {
         using var context = _dbContextFactory.CreateDbContext();
@@ -283,34 +271,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
             .Where(ls => ls.LearnerId == learnerId)
             .Select(ls => ls.SubjectId)
             .ToListAsync();
-    }
-
-    public async Task UpdateLearnerSubjectsAsync(Guid learnerId, List<Guid> subjectIds)
-    {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
-        var learner = await context.Learners
-            .Include(l => l.Combination)
-                .ThenInclude(c => c.Subjects)
-            .FirstOrDefaultAsync(l => l.Id == learnerId);
-
-        if (learner == null)
-        {
-            return;
-        }
-
-        learner.Combination ??= new Combination();
-        learner.Combination.Subjects?.Clear();
-
-        foreach (var subjectId in subjectIds)
-        {
-            var subject = await context.Subjects.FindAsync(subjectId);
-            if (subject != null)
-            {
-                learner.Combination.Subjects ??= [];
-                learner.Combination.Subjects.Add(subject);
-            }
-        }
-        await context.SaveChangesAsync();
     }
 
     public async Task AssignSubjectToLearner(Guid learnerId, Guid subjectId)

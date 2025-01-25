@@ -1,0 +1,214 @@
+@page "/combinations/add"
+@page "/combinations/edit/{Id:guid}"
+
+@using Lisa.Models.ViewModels
+@using Lisa.Models.Entities
+@inject NavigationManager Navigation
+@inject CombinationService CombinationService
+@inject SubjectService SubjectService
+@inject SchoolService SchoolService
+@inject GradeService GradeService
+
+<h3>@(IsEdit ? "Edit Subject Combination" : "Add Subject Combination")</h3>
+
+<EditForm Context="edit" Model="@CombinationModel" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <InputText class="form-control" @bind-Value="CombinationModel.Name" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Grade</label>
+        <select class="form-select" @bind="CombinationModel.GradeId">
+            <option value="">-- Select Grade --</option>
+            @foreach (var grade in Grades)
+            {
+                <option value="@grade.Id">@grade.Name</option>
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="RegisterClassId">Register Class</label>
+        <InputSelect id="RegisterClassId" class="form-control" @bind-Value="CombinationModel.CombinationType" TValue="CombinationType"
+            @oninput="OnCombinationTypeChanged">
+            <option value="">Select Register Class</option>
+            @foreach (var type in Enum.GetValues(typeof(CombinationType)))
+            {
+                 <option value="@type">@type</option>
+            }
+        </InputSelect>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Search Subjects</label>
+        <InputText class="form-control" @oninput="OnInputChange" @bind-Value="searchText"
+            placeholder="Type to filter subjects..." />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Subjects</label>
+
+        @if (FilteredSubjects.Any())
+        {
+            @foreach (var subject in FilteredSubjects)
+            {
+                bool isChecked = SelectedSubjectIds.Contains(subject.Id);
+                bool isDisabled = CombinationModel.CombinationType == CombinationType.MathCombination && !isChecked &&
+                SelectedSubjectIds.Count >= 2;
+
+                <div>
+                    <input type="checkbox" checked="@isChecked" disabled="@isDisabled"
+                        @onchange="@(() => ToggleSubject(subject.Id))" />
+                    <label>@subject.Name</label>
+                </div>
+            }
+        }
+        else
+        {
+            <div>No matching subjects found.</div>
+        }
+
+        @if (CombinationModel.CombinationType == CombinationType.MathCombination && SelectedSubjectIds.Count != 2)
+        {
+            <small class="text-danger">You must select exactly 2 subjects for a Math Combination.</small>
+        }
+        else if (CombinationModel.CombinationType == CombinationType.MathCombination)
+        {
+            <small class="text-success">2 subjects selected.</small>
+        }
+    </div>
+
+    <button type="submit" class="btn btn-primary" disabled="@(!IsFormValid)">Save</button>
+    <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+</EditForm>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+    private bool IsEdit => Id.HasValue;
+    private CombinationViewModel CombinationModel = new();
+    private List<Grade> Grades = new();
+    private List<Subject> AllSubjects = new();
+    private School SelectedSchool = new();
+    private List<Guid> SelectedSubjectIds = new();
+    private string searchText = string.Empty;
+
+    private bool IsFormValid =>
+    CombinationModel.CombinationType != CombinationType.MathCombination || SelectedSubjectIds.Count == 2;
+
+    private IEnumerable<Subject> FilteredSubjects =>
+    AllSubjects.Where(s => string.IsNullOrEmpty(searchText) || (s.Name != null && s.Name.Contains(searchText,
+    StringComparison.OrdinalIgnoreCase)));
+
+    protected override async Task OnInitializedAsync()
+    {
+        SelectedSchool = SchoolService.GetSelectedSchool();
+        AllSubjects = await SubjectService.GetAllAsync();
+        Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+
+        if (IsEdit)
+        {
+            await LoadExistingCombination(Id.Value);
+        }
+    }
+
+    private async Task LoadExistingCombination(Guid id)
+    {
+        var existingCombination = await CombinationService.GetByIdAsync(id);
+        if (existingCombination != null)
+        {
+            CombinationModel = new CombinationViewModel
+                {
+                    Id = existingCombination.Id,
+                    Name = existingCombination.Name,
+                    GradeId = existingCombination.GradeId,
+                    CombinationType = existingCombination.CombinationType,
+                    SubjectIds = existingCombination.Subjects.Select(s => s.Id).ToList()
+                };
+
+            SelectedSubjectIds = existingCombination.Subjects.Select(s => s.Id).ToList();
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        using var context = DbContextFactory.CreateDbContext();
+
+        var selectedSubjects = await SubjectService.GetSubjectsByIdsAsync(SelectedSubjectIds);
+
+        foreach (var subject in selectedSubjects)
+        {
+            context.Subjects.Attach(subject);
+        }
+
+        if (IsEdit)
+        {
+            var existingCombination = await context.Combinations
+            .Include(c => c.Subjects)
+            .FirstOrDefaultAsync(c => c.Id == CombinationModel.Id);
+
+            if (existingCombination != null)
+            {
+                existingCombination.Name = CombinationModel.Name;
+                existingCombination.GradeId = CombinationModel.GradeId;
+                existingCombination.CombinationType = CombinationModel.CombinationType;
+
+                existingCombination.Subjects?.Clear();
+                foreach (var subject in selectedSubjects)
+                {
+                    existingCombination.Subjects?.Add(subject);
+                }
+
+                context.Update(existingCombination);
+            }
+        }
+        else
+        {
+            var newCombination = new Combination
+                {
+                    Name = CombinationModel.Name,
+                    GradeId = CombinationModel.GradeId,
+                    CombinationType = CombinationModel.CombinationType,
+                    Subjects = selectedSubjects
+                };
+
+            context.Combinations.Add(newCombination);
+        }
+
+        await context.SaveChangesAsync();
+        Navigation.NavigateTo("/combinations");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/combinations");
+    }
+
+    private void ToggleSubject(Guid subjectId)
+    {
+        if (SelectedSubjectIds.Contains(subjectId))
+        {
+            SelectedSubjectIds.Remove(subjectId);
+        }
+        else
+        {
+            SelectedSubjectIds.Add(subjectId);
+        }
+    }
+
+    private void OnCombinationTypeChanged(ChangeEventArgs e)
+    {
+        if (CombinationModel.CombinationType == CombinationType.MathCombination && SelectedSubjectIds.Count > 2)
+        {
+            SelectedSubjectIds = SelectedSubjectIds.Take(2).ToList();
+        }
+    }
+
+    private void OnInputChange(ChangeEventArgs e)
+    {
+        searchText = e?.Value?.ToString() ?? string.Empty;
+    }
+}

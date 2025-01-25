@@ -26,8 +26,7 @@
     </div>
 
     <div class="mb-3">
-        <label for="Maths">You need to choose between Math and Math Literacy in this grade.</label>
-        <input type="checkbox" id="Active" checked="@MathSelected" @onchange="ToggleMathSelected" />
+        <Switch Class="mt-3" Value="MathSelected" Label="Do you need to choose between Mathematics and Mathematical Literacy in this grade?" ValueExpression="() => MathSelected" ValueChanged="ToggleMathSelected" />
     </div>
 
     <div class="mb-3">

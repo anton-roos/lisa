@@ -301,6 +301,12 @@
             AllCombinations = await combinationService.GetCombinationsBySchoolId(SelectedSchool.Id);
             CareGroups = await LearnerService.GetCareGroupsBySchoolId(SelectedSchool.Id);
         }
+        else if (LearnerModel.RegisterClassId.HasValue)
+        {
+            RegisterClasses = await LearnerService.GetRegisterClassesBySchoolId(LearnerModel.SchoolId);
+            AllCombinations = await combinationService.GetCombinationsBySchoolId(LearnerModel.SchoolId);
+            CareGroups = await LearnerService.GetCareGroupsBySchoolId(LearnerModel.SchoolId);
+        }
         else
         {
             RegisterClasses.Clear();
@@ -348,7 +354,7 @@
             })
         .ToList();
 
-        LearnerModel.SubjectIds = await LearnerService.GetSubjectIdsForLearnerAsync(learnerId);
+        LearnerModel.SubjectIds = existingLearner.LearnerSubjects.Select(s => s.SubjectId).ToList();
 
         if (LearnerModel.RegisterClassId.HasValue)
         {
@@ -382,7 +388,14 @@
 
         if (!string.IsNullOrEmpty(selectedValue))
         {
-            LearnerModel.RegisterClassId = Guid.Parse(selectedValue);
+            var newRegisterClassId = Guid.Parse(selectedValue);
+
+            if (LearnerModel.RegisterClassId == newRegisterClassId)
+            {
+                return;
+            }
+            
+            LearnerModel.RegisterClassId = newRegisterClassId;
             CurrentRegisterClass = await registerClassService.GetByIdAsync(LearnerModel.RegisterClassId.Value);
 
             LearnerModel.SubjectIds.Clear();
@@ -424,6 +437,11 @@
     {
         SelectedMathOption = optionValue;
 
+        if (CurrentRegisterClass != null && CurrentRegisterClass.MathSelectionEnabled)
+        {
+            
+        }
+        
         // Example of how you'd switch subject IDs:
         // var mathSubjects = new Dictionary<string, Guid>
         // {

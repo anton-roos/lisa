@@ -134,7 +134,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        Learner = await LearnerService.LoadLearnerAsync(LearnerId);
+        Learner = await LearnerService.GetByIdAsync(LearnerId);
     }
 
     private void GoBack()

@@ -14,24 +14,16 @@ else if (ErrorContent is not null)
         <h3>An error occurred in the application.</h3>
         <button class="btn btn-danger my-4" @onclick="Recover">Reload Application</button>
         <dl>
+            <dt>Version</dt>
+            <dd>@Version</dd>
             <dt>Source</dt>
             <dd>@CurrentException.Source</dd>
             <dt>Message</dt>
             <dd>@CurrentException.Message</dd>
-            <dt>Version</dt>
-            <dd>@Version</dd>
-            <dt>Inner Exception</dt>
-            <dd>@CurrentException.InnerException</dd>
             <dt>Stack Trace</dt>
             <dd>@CurrentException.StackTrace</dd>
-            <dt>HResult</dt>
-            <dd>@CurrentException.HResult</dd>
             <dt>Target Site</dt>
             <dd>@CurrentException.TargetSite</dd>
-            <dt>Stack Trace</dt>
-            <dd>@CurrentException.StackTrace</dd>
-            <dt>Data</dt>
-            <dd>@CurrentException.Data</dd>
         </dl>
     </div>
 }

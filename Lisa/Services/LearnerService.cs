@@ -1,5 +1,6 @@
 using Lisa.Data;
 using Lisa.Models.Entities;
+using Lisa.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
@@ -29,10 +30,27 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
             .FirstOrDefaultAsync(l => l.Id == id);
     }
 
-    public async Task AddParentToLearnerAsync(Parent parent)
+    public async Task AddParentToLearnerAsync(ParentViewModel parent, Learner learner)
     {
+        var newParent = new Parent
+        {
+            FirstName = parent.FirstName,
+            LastName = parent.LastName,
+            PrimaryEmail = parent.PrimaryEmail,
+            SecondaryEmail = parent.SecondaryEmail,
+            PrimaryCellNumber = parent.PrimaryCellNumber,
+            SecondaryCellNumber = parent.SecondaryCellNumber,
+            WhatsAppNumber = parent.WhatsAppNumber,
+            Relationship = parent.Relationship,
+            LearnerId = learner.Id
+        };
+
         await using var context = await _dbContextFactory.CreateDbContextAsync();
-        context.Parents.Add(parent);
+        context.Parents.Add(newParent);
+        await context.SaveChangesAsync();
+
+        learner.Parents ??= [];
+        learner.Parents.Add(newParent);
         await context.SaveChangesAsync();
     }
 

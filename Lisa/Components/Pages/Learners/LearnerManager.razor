@@ -243,6 +243,7 @@
     private Dictionary<Guid, Guid> CombinationSelections = new();
     private string? AlertMessage { get; set; }
     private string AlertType { get; set; } = "success";
+    private EditContext? ParentEditContext;
 
     protected override async Task OnInitializedAsync()
     {
@@ -252,12 +253,30 @@
         await LoadDropdowns();
         await LoadSubjects();
 
+        InitializeParentEditContext();
+
         if (IsEdit && LearnerId.HasValue)
         {
             await LoadExistingLearner(LearnerId.Value);
         }
 
         Console.WriteLine("Learner Add/Edit Page Initialized");
+    }
+
+    private void InitializeParentEditContext()
+    {
+        ParentEditContext = new EditContext(new ParentViewModel());
+        ParentEditContext.OnFieldChanged += (sender, args) =>
+        {
+            var fieldIdentifier = args.FieldIdentifier;
+            var messages = new ValidationMessageStore(ParentEditContext);
+            messages.Clear(fieldIdentifier);
+
+            if (fieldIdentifier.FieldName == nameof(ParentViewModel.PrimaryEmail))
+            {
+                var value = fieldIdentifier.Model as ParentViewModel;
+            }
+        };
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
@@ -297,6 +316,7 @@
         using var _context = DbContextFactory.CreateDbContext();
         var existingLearner = await _context.Learners
         .Include(l => l.Parents)
+        .AsNoTracking()
         .FirstOrDefaultAsync(l => l.Id == learnerId);
 
         if (existingLearner is null)
@@ -319,7 +339,19 @@
                 RegisterClassId = existingLearner.RegisterClassId
             };
 
-        Parents = existingLearner.Parents?.ToList() ?? new List<Parent>();
+        // Map Parent entities to ParentViewModel
+        Parents = existingLearner.Parents.Select(p => new ParentViewModel
+            {
+                Id = p.Id,
+                FirstName = p.FirstName,
+                LastName = p.LastName,
+                Relationship = p.Relationship,
+                PrimaryEmail = p.PrimaryEmail,
+                SecondaryEmail = p.SecondaryEmail,
+                PrimaryCellNumber = p.PrimaryCellNumber,
+                SecondaryCellNumber = p.SecondaryCellNumber,
+                WhatsAppNumber = p.WhatsAppNumber
+            }).ToList();
 
         LearnerModel.SubjectIds = await learnerService.GetSubjectIdsForLearnerAsync(learnerId);
 
@@ -436,11 +468,11 @@
 
     private void AddParent()
     {
-        Parents.Add(new Parent());
+        Parents.Add(new ParentViewModel());
         StateHasChanged();
     }
 
-    private void RemoveParent(Parent parent)
+    private void RemoveParent(ParentViewModel parent)
     {
         Parents.Remove(parent);
         StateHasChanged();
@@ -478,11 +510,37 @@
             existing.LastName = LearnerModel.LastName;
             existing.RegisterClassId = LearnerModel.RegisterClassId;
 
-            existing.Parents.Clear();
-            foreach (var parent in Parents)
+            var existingParentIds = existing.Parents?.Select(p => p.Id).ToList() ?? new List<Guid>();
+            var updatedParentIds = Parents.Select(p => p.Id).ToList();
+
+            var parentsToRemove = existing.Parents.Where(p => !updatedParentIds.Contains(p.Id)).ToList();
+            foreach (var parent in parentsToRemove)
             {
-                parent.LearnerId = existing.Id;
-                existing.Parents.Add(parent);
+                existing.Parents.Remove(parent);
+                _context.Parents.Remove(parent);
+            }
+
+            foreach (var parentViewModel in Parents)
+            {
+                var parent = existing.Parents.FirstOrDefault(p => p.Id == parentViewModel.Id);
+                if (parent == null)
+                {
+                    parent = new Parent
+                        {
+                            Id = Guid.NewGuid(),
+                            LearnerId = existing.Id
+                        };
+                    existing.Parents.Add(parent);
+                }
+
+                parent.FirstName = parentViewModel.FirstName;
+                parent.LastName = parentViewModel.LastName;
+                parent.Relationship = parentViewModel.Relationship;
+                parent.PrimaryEmail = parentViewModel.PrimaryEmail;
+                parent.SecondaryEmail = parentViewModel.SecondaryEmail;
+                parent.PrimaryCellNumber = parentViewModel.PrimaryCellNumber;
+                parent.SecondaryCellNumber = parentViewModel.SecondaryCellNumber;
+                parent.WhatsAppNumber = parentViewModel.WhatsAppNumber;
             }
 
             await learnerService.UpdateLearnerSubjectsAsync(existing.Id, LearnerModel.SubjectIds);
@@ -496,7 +554,7 @@
         else
         {
             var newLearnerId = Guid.NewGuid();
-            var newEntity = new Learner
+            var newLearner = new Learner
                 {
                     Id = newLearnerId,
                     Active = LearnerModel.Active,
@@ -511,14 +569,28 @@
                     SchoolId = SelectedSchool.Id
                 };
 
-            _context.Learners.Add(newEntity);
-            await _context.SaveChangesAsync();
+            _context.Learners.Add(newLearner);
 
-            foreach (var parent in Parents)
+            foreach (var parentViewModel in Parents)
             {
-                parent.LearnerId = newLearnerId;
-                await learnerService.AddParentToLearnerAsync(parent);
+                var parent = new Parent
+                    {
+                        Id = Guid.NewGuid(),
+                        LearnerId = newLearnerId,
+                        FirstName = parentViewModel.FirstName,
+                        LastName = parentViewModel.LastName,
+                        Relationship = parentViewModel.Relationship,
+                        PrimaryEmail = parentViewModel.PrimaryEmail,
+                        SecondaryEmail = parentViewModel.SecondaryEmail,
+                        PrimaryCellNumber = parentViewModel.PrimaryCellNumber,
+                        SecondaryCellNumber = parentViewModel.SecondaryCellNumber,
+                        WhatsAppNumber = parentViewModel.WhatsAppNumber
+                    };
+
+                _context.Parents.Add(parent);
             }
+
+            await _context.SaveChangesAsync();
 
             await learnerService.UpdateLearnerSubjectsAsync(newLearnerId, LearnerModel.SubjectIds);
 

@@ -1,5 +1,6 @@
 using Lisa.Data;
 using Lisa.Models.Entities;
+using Lisa.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
@@ -60,14 +61,6 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
             .ToListAsync();
     }
 
-    public async Task<Combination> UpdateAsync(Combination subjectCombination)
-    {
-        var _context = _dbContextFactory.CreateDbContext();
-        _context.Combinations.Update(subjectCombination);
-        await _context.SaveChangesAsync();
-        return subjectCombination;
-    }
-
     public async Task DeleteAsync(Guid id)
     {
         var _context = _dbContextFactory.CreateDbContext();
@@ -80,6 +73,52 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
         {
             throw new KeyNotFoundException($"Combination with id {id} not found.");
         }
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task AddCombinationAsync(CombinationViewModel model, IEnumerable<Subject> selectedSubjects)
+    {
+        using var _context = _dbContextFactory.CreateDbContext();
+
+        foreach (var subject in selectedSubjects)
+        {
+            _context.Attach(subject);
+        }
+
+        var newCombination = new Combination
+        {
+            Name = model.Name,
+            GradeId = model.GradeId,
+            CombinationType = model.CombinationType,
+            Subjects = selectedSubjects.ToList()
+        };
+
+        _context.Combinations.Add(newCombination);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task UpdateCombinationAsync(CombinationViewModel model, IEnumerable<Subject> selectedSubjects)
+    {
+        var _context = _dbContextFactory.CreateDbContext();
+        var existing = await _context.Combinations
+            .Include(c => c.Subjects)
+            .FirstOrDefaultAsync(c => c.Id == model.Id);
+
+        if (existing == null)
+            throw new InvalidOperationException("Combination not found.");
+
+        existing.Name = model.Name;
+        existing.GradeId = model.GradeId;
+        existing.CombinationType = model.CombinationType;
+
+        // Clear the old subject links and add the new
+        existing.Subjects?.Clear();
+        foreach (var subj in selectedSubjects)
+        {
+            existing.Subjects?.Add(subj);
+        }
+
+        // EF tracks changes. Just Save
         await _context.SaveChangesAsync();
     }
 }

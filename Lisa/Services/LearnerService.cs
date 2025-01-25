@@ -107,7 +107,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
             .Include(l => l.RegisterClass!)
                 .ThenInclude(rc => rc.CompulsorySubjects)
             .Include(l => l.Combination!)
-                .ThenInclude(c => c.Subjects)
+                .ThenInclude(c => c.Subjects!)
             .ToListAsync();
 
         return learners;
@@ -125,5 +125,51 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
                 .ThenInclude(rc => rc.Grade)
             .FirstOrDefaultAsync(l => l.Id == learnerId);
         return learner;
+    }
+
+    public async Task<List<Guid>> GetSubjectIdsForLearnerAsync(Guid learnerId)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        var learner = await context.Learners
+            .Include(l => l.Combination)
+                .ThenInclude(c => c.Subjects)
+            .FirstOrDefaultAsync(l => l.Id == learnerId);
+        var subjectIds = new List<Guid>();
+        if (learner.Combination != null)
+        {
+            foreach (var subject in learner.Combination.Subjects)
+            {
+                subjectIds.Add(subject.Id);
+            }
+        }
+        return subjectIds;
+    }
+
+    public async Task UpdateLearnerSubjectsAsync(Guid learnerId, List<Guid> subjectIds)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        var learner = await context.Learners
+            .Include(l => l.Combination)
+                .ThenInclude(c => c.Subjects)
+            .FirstOrDefaultAsync(l => l.Id == learnerId);
+
+        if (learner == null)
+        {
+            return;
+        }
+
+        learner.Combination ??= new Combination();
+        learner.Combination.Subjects?.Clear();
+
+        foreach (var subjectId in subjectIds)
+        {
+            var subject = await context.Subjects.FindAsync(subjectId);
+            if (subject != null)
+            {
+                learner.Combination.Subjects ??= [];
+                learner.Combination.Subjects.Add(subject);
+            }
+        }
+        await context.SaveChangesAsync();
     }
 }

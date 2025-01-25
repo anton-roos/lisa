@@ -314,9 +314,9 @@
     private async Task LoadExistingLearner(Guid learnerId)
     {
         using var _context = DbContextFactory.CreateDbContext();
+
         var existingLearner = await _context.Learners
         .Include(l => l.Parents)
-        .AsNoTracking()
         .FirstOrDefaultAsync(l => l.Id == learnerId);
 
         if (existingLearner is null)
@@ -328,6 +328,7 @@
 
         LearnerModel = new LearnerViewModel
             {
+                Id = existingLearner.Id,
                 Active = existingLearner.Active,
                 CareGroupId = existingLearner.CareGroupId,
                 CellNumber = existingLearner.CellNumber,
@@ -384,11 +385,11 @@
 
     private async Task RegisterClassSelected(ChangeEventArgs e)
     {
-        var SelectedRegisterClassId = e.Value?.ToString();
+        var selectedValue = e.Value?.ToString();
 
-        if (!string.IsNullOrEmpty(SelectedRegisterClassId))
+        if (!string.IsNullOrEmpty(selectedValue))
         {
-            LearnerModel.RegisterClassId = Guid.Parse(SelectedRegisterClassId);
+            LearnerModel.RegisterClassId = Guid.Parse(selectedValue);
             CurrentRegisterClass = await registerClassService.GetByIdAsync(LearnerModel.RegisterClassId.Value);
 
             LearnerModel.SubjectIds.Clear();
@@ -402,8 +403,7 @@
 
             CombinationsToChoseFrom = AllCombinations?.Where(
             c => c.GradeId == CurrentRegisterClass.GradeId &&
-            c.CombinationType == CombinationType.SubjectCombination
-            );
+            c.CombinationType == CombinationType.SubjectCombination);
         }
         else
         {
@@ -431,18 +431,18 @@
     {
         SelectedMathOption = optionValue;
 
-        // Suppose "MATH" corresponds to Guid X, "MATL" to Guid Y, etc.
-        // You’d need to map these to actual Subject IDs.
-        // For demonstration, imagine you have a dictionary:
+        // Example of how you'd switch subject IDs:
         // var mathSubjects = new Dictionary<string, Guid>
         // {
-        // { "MATH", new Guid("...some guid...") },
-        // { "MATL", new Guid("...another guid...") }
+        // { "MATH", new Guid("11111111-1111-1111-1111-111111111111") },
+        // { "MATL", new Guid("22222222-2222-2222-2222-222222222222") }
         // };
         //
-        // Then do:
+        // // Remove both possible math subjects
         // LearnerModel.SubjectIds.Remove(mathSubjects["MATH"]);
         // LearnerModel.SubjectIds.Remove(mathSubjects["MATL"]);
+        //
+        // // Add the selected one
         // LearnerModel.SubjectIds.Add(mathSubjects[optionValue]);
     }
 
@@ -490,47 +490,48 @@
 
         if (IsEdit && LearnerId.HasValue)
         {
-            var existing = await _context.Learners
+            var existingLearner = await _context.Learners
             .Include(l => l.Parents)
             .FirstOrDefaultAsync(l => l.Id == LearnerId.Value);
 
-            if (existing is null)
+            if (existingLearner is null)
             {
                 SetAlert("danger", "Could not find the learner to update.");
                 return;
             }
 
-            existing.Active = LearnerModel.Active;
-            existing.CareGroupId = LearnerModel.CareGroupId;
-            existing.CellNumber = LearnerModel.CellNumber;
-            existing.Code = LearnerModel.Code;
-            existing.Email = LearnerModel.Email;
-            existing.FirstName = LearnerModel.FirstName;
-            existing.IdNumber = LearnerModel.IdNumber;
-            existing.LastName = LearnerModel.LastName;
-            existing.RegisterClassId = LearnerModel.RegisterClassId;
+            existingLearner.Id = LearnerModel.Id;
+            existingLearner.Active = LearnerModel.Active;
+            existingLearner.CareGroupId = LearnerModel.CareGroupId;
+            existingLearner.CellNumber = LearnerModel.CellNumber;
+            existingLearner.Code = LearnerModel.Code;
+            existingLearner.Email = LearnerModel.Email;
+            existingLearner.FirstName = LearnerModel.FirstName;
+            existingLearner.IdNumber = LearnerModel.IdNumber;
+            existingLearner.LastName = LearnerModel.LastName;
+            existingLearner.RegisterClassId = LearnerModel.RegisterClassId;
 
-            var existingParentIds = existing.Parents?.Select(p => p.Id).ToList() ?? new List<Guid>();
+            var existingParentIds = existingLearner.Parents?.Select(p => p.Id).ToList() ?? new List<Guid>();
             var updatedParentIds = Parents.Select(p => p.Id).ToList();
 
-            var parentsToRemove = existing.Parents.Where(p => !updatedParentIds.Contains(p.Id)).ToList();
+            var parentsToRemove = existingLearner.Parents.Where(p => !updatedParentIds.Contains(p.Id)).ToList();
             foreach (var parent in parentsToRemove)
             {
-                existing.Parents.Remove(parent);
+                existingLearner.Parents.Remove(parent);
                 _context.Parents.Remove(parent);
             }
 
             foreach (var parentViewModel in Parents)
             {
-                var parent = existing.Parents.FirstOrDefault(p => p.Id == parentViewModel.Id);
+                var parent = existingLearner.Parents.FirstOrDefault(p => p.Id == parentViewModel.Id);
                 if (parent == null)
                 {
                     parent = new Parent
                         {
                             Id = Guid.NewGuid(),
-                            LearnerId = existing.Id
+                            LearnerId = existingLearner.Id
                         };
-                    existing.Parents.Add(parent);
+                    existingLearner.Parents.Add(parent);
                 }
 
                 parent.FirstName = parentViewModel.FirstName;
@@ -543,13 +544,18 @@
                 parent.WhatsAppNumber = parentViewModel.WhatsAppNumber;
             }
 
-            await learnerService.UpdateLearnerSubjectsAsync(existing.Id, LearnerModel.SubjectIds);
+            await learnerService.UpdateLearnerSubjectsAsync(existingLearner.Id, LearnerModel.SubjectIds);
 
-            _context.Learners.Update(existing);
-            await _context.SaveChangesAsync();
-
-            SetAlert("success", "Learner updated successfully.");
-            navigationManager.NavigateTo("/learners");
+            try
+            {
+                await _context.SaveChangesAsync();
+                SetAlert("success", "Learner updated successfully.");
+                navigationManager.NavigateTo("/learners");
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                SetAlert("danger", "Concurrency conflict: " + ex.Message);
+            }
         }
         else
         {
@@ -590,12 +596,19 @@
                 _context.Parents.Add(parent);
             }
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
 
-            await learnerService.UpdateLearnerSubjectsAsync(newLearnerId, LearnerModel.SubjectIds);
+                await learnerService.UpdateLearnerSubjectsAsync(newLearnerId, LearnerModel.SubjectIds);
 
-            SetAlert("success", "Learner and Parents added successfully.");
-            navigationManager.NavigateTo("/learners");
+                SetAlert("success", "Learner and Parents added successfully.");
+                navigationManager.NavigateTo("/learners");
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                SetAlert("danger", "Concurrency conflict: " + ex.Message);
+            }
         }
     }
 

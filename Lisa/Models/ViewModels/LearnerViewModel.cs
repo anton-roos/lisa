@@ -5,6 +5,7 @@ namespace Lisa.Models.ViewModels;
 
 public class LearnerViewModel
 {
+    public Guid? Id { get; set; }
     [Required(AllowEmptyStrings = false, ErrorMessage = "Learner Code is required")]
     public string? Code { get; set; }
     [Required(AllowEmptyStrings = false, ErrorMessage = "First Name is required")]

@@ -24,7 +24,4 @@ public class Learner
     public Combination? Combination { get; set; }
     public Guid SchoolId { get; set; }
     public School? School { get; set; }
-
-    [Timestamp]
-    public byte[]? RowVersion { get; set; }
 }

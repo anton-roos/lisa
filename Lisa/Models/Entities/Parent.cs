@@ -15,7 +15,4 @@ public class Parent
     public string? Relationship { get; set; }
     public Guid LearnerId { get; set; }
     public Learner? Learner { get; set; }
-
-    [Timestamp]
-    public byte[]? RowVersion { get; set; }
 }

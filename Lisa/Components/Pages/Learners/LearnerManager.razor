@@ -5,13 +5,12 @@
 @using Lisa.Models.ViewModels
 @using Microsoft.EntityFrameworkCore
 @inject NavigationManager navigationManager
-@inject LearnerService learnerService
+@inject LearnerService LearnerService
 @inject SchoolService SchoolService
 @inject CombinationService combinationService
 @inject RegisterClassService registerClassService
 @inject SubjectService subjectService
 @inject ILogger<LearnerManager> Logger
-@inject IDbContextFactory<LisaDbContext> DbContextFactory
 
 @inherits EventAwareComponentBase
 
@@ -300,9 +299,9 @@
     {
         if (SelectedSchool != null)
         {
-            RegisterClasses = await learnerService.GetRegisterClassesBySchoolId(SelectedSchool.Id);
+            RegisterClasses = await LearnerService.GetRegisterClassesBySchoolId(SelectedSchool.Id);
             AllCombinations = await combinationService.GetCombinationsBySchoolId(SelectedSchool.Id);
-            CareGroups = await learnerService.GetCareGroupsBySchoolId(SelectedSchool.Id);
+            CareGroups = await LearnerService.GetCareGroupsBySchoolId(SelectedSchool.Id);
         }
         else
         {
@@ -313,12 +312,9 @@
 
     private async Task LoadExistingLearner(Guid learnerId)
     {
-        using var _context = DbContextFactory.CreateDbContext();
 
-        var existingLearner = await _context.Learners
-        .Include(l => l.Parents)
-        .FirstOrDefaultAsync(l => l.Id == learnerId);
-
+        var existingLearner = await LearnerService.GetByIdAsync(learnerId);
+        
         if (existingLearner is null)
         {
             SetAlert("danger", "Learner not found.");
@@ -354,7 +350,7 @@
                 WhatsAppNumber = p.WhatsAppNumber
             }).ToList();
 
-        LearnerModel.SubjectIds = await learnerService.GetSubjectIdsForLearnerAsync(learnerId);
+        LearnerModel.SubjectIds = await LearnerService.GetSubjectIdsForLearnerAsync(learnerId);
 
         if (LearnerModel.RegisterClassId.HasValue)
         {
@@ -486,13 +482,9 @@
             return;
         }
 
-        using var _context = DbContextFactory.CreateDbContext();
-
         if (IsEdit && LearnerId.HasValue)
         {
-            var existingLearner = await _context.Learners
-            .Include(l => l.Parents)
-            .FirstOrDefaultAsync(l => l.Id == LearnerId.Value);
+            var existingLearner = await LearnerService.GetByIdAsync(LearnerId.Value);
 
             if (existingLearner is null)
             {
@@ -500,7 +492,6 @@
                 return;
             }
 
-            existingLearner.Id = LearnerModel.Id;
             existingLearner.Active = LearnerModel.Active;
             existingLearner.CareGroupId = LearnerModel.CareGroupId;
             existingLearner.CellNumber = LearnerModel.CellNumber;
@@ -518,7 +509,6 @@
             foreach (var parent in parentsToRemove)
             {
                 existingLearner.Parents.Remove(parent);
-                _context.Parents.Remove(parent);
             }
 
             foreach (var parentViewModel in Parents)
@@ -544,11 +534,11 @@
                 parent.WhatsAppNumber = parentViewModel.WhatsAppNumber;
             }
 
-            await learnerService.UpdateLearnerSubjectsAsync(existingLearner.Id, LearnerModel.SubjectIds);
+            await LearnerService.UpdateLearnerSubjectsAsync(existingLearner.Id, LearnerModel.SubjectIds);
 
             try
             {
-                await _context.SaveChangesAsync();
+                // What do I need to do here now because I am not going to call _context.SaveChanges() anymore?
                 SetAlert("success", "Learner updated successfully.");
                 navigationManager.NavigateTo("/learners");
             }
@@ -575,7 +565,7 @@
                     SchoolId = SelectedSchool.Id
                 };
 
-            _context.Learners.Add(newLearner);
+            // _context.Learners.Add(newLearner); <-- I am not going to do this anymore any suggestions?
 
             foreach (var parentViewModel in Parents)
             {
@@ -593,14 +583,14 @@
                         WhatsAppNumber = parentViewModel.WhatsAppNumber
                     };
 
-                _context.Parents.Add(parent);
+                // _context.Parents.Add(parent); <-- I am not going to do this anymore any suggestions?
             }
 
             try
             {
-                await _context.SaveChangesAsync();
+                // await _context.SaveChangesAsync(); <-- I am not going to do this anymore any suggestions?
 
-                await learnerService.UpdateLearnerSubjectsAsync(newLearnerId, LearnerModel.SubjectIds);
+                await LearnerService.UpdateLearnerSubjectsAsync(newLearnerId, LearnerModel.SubjectIds);
 
                 SetAlert("success", "Learner and Parents added successfully.");
                 navigationManager.NavigateTo("/learners");

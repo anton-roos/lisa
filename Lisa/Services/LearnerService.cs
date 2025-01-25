@@ -16,10 +16,18 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
         return await context.Learners.CountAsync();
     }
 
-    public async Task<Learner?> GetLearnerAsync(Guid id)
+    public async Task<Learner?> GetByIdAsync(Guid id)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.Learners.FindAsync(id);
+        return await context.Learners
+        .Include(l => l.RegisterClass)
+            .ThenInclude(rc => rc.Grade)
+        .Include(l => l.Combination)
+            .ThenInclude(c => c.Subjects)
+        .Include(l => l.CareGroup)
+        .Include(l => l.Parents)
+        .Include(l => l.School)
+        .FirstOrDefaultAsync(l => l.Id == id);
     }
 
     public async Task<Learner?> GetLearnerWithParentsAsync(Guid id)

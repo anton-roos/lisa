@@ -99,26 +99,41 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
 
     public async Task UpdateCombinationAsync(CombinationViewModel model, IEnumerable<Subject> selectedSubjects)
     {
-        var _context = _dbContextFactory.CreateDbContext();
-        var existing = await _context.Combinations
+        using var context = _dbContextFactory.CreateDbContext();
+
+        var existingCombination = await context.Combinations
             .Include(c => c.Subjects)
-            .FirstOrDefaultAsync(c => c.Id == model.Id);
+            .FirstOrDefaultAsync(c => c.Id == model.Id) 
+            ?? throw new InvalidOperationException("Combination not found.");
+        
+        existingCombination.Name = model.Name;
+        existingCombination.GradeId = model.GradeId;
+        existingCombination.CombinationType = model.CombinationType;
 
-        if (existing == null)
-            throw new InvalidOperationException("Combination not found.");
+        var currentSubjectIds = existingCombination.Subjects.Select(s => s.Id).ToList();
+        var newSubjectIds = selectedSubjects.Select(s => s.Id).ToList();
 
-        existing.Name = model.Name;
-        existing.GradeId = model.GradeId;
-        existing.CombinationType = model.CombinationType;
+        var subjectsToAdd = selectedSubjects
+            .Where(s => !currentSubjectIds.Contains(s.Id))
+            .ToList();
 
-        // Clear the old subject links and add the new
-        existing.Subjects?.Clear();
-        foreach (var subj in selectedSubjects)
+        var subjectsToRemove = existingCombination.Subjects
+            .Where(s => !newSubjectIds.Contains(s.Id))
+            .ToList();
+
+        foreach (var subject in subjectsToRemove)
         {
-            existing.Subjects?.Add(subj);
+            existingCombination.Subjects.Remove(subject);
         }
 
-        // EF tracks changes. Just Save
-        await _context.SaveChangesAsync();
+        foreach (var subject in subjectsToAdd)
+        {
+            var trackedSubject = context.Subjects.Local.FirstOrDefault(s => s.Id == subject.Id)
+                ?? context.Subjects.Attach(subject).Entity;
+
+            existingCombination.Subjects.Add(trackedSubject);
+        }
+
+        await context.SaveChangesAsync();
     }
 }

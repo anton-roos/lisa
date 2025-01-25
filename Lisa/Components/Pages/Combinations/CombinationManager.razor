@@ -33,12 +33,12 @@
 
     <div class="mb-3">
         <label for="RegisterClassId">Register Class</label>
-        <InputSelect id="RegisterClassId" class="form-control" @bind-Value="CombinationModel.CombinationType" TValue="CombinationType"
-            @oninput="OnCombinationTypeChanged">
+        <InputSelect id="RegisterClassId" class="form-control" @bind-Value="CombinationModel.CombinationType"
+            TValue="CombinationType" @oninput="OnCombinationTypeChanged">
             <option value="">Select Register Class</option>
             @foreach (var type in Enum.GetValues(typeof(CombinationType)))
             {
-                 <option value="@type">@type</option>
+                <option value="@type">@type</option>
             }
         </InputSelect>
     </div>
@@ -148,7 +148,7 @@
     private async Task HandleValidSubmit()
     {
         var selectedSubjects = AllSubjects
-        .Where(sub => SelectedSubjectIds.Contains(sub.Id))
+        .Where(subject => SelectedSubjectIds.Contains(subject.Id))
         .ToList();
 
         if (IsEdit)
@@ -184,19 +184,18 @@
     {
         if (e.Value is null) return;
 
-        var newTypeStr = e.Value.ToString();
-        if (!Enum.TryParse(newTypeStr, out CombinationType newType)) return;
-
-        if (newType == CombinationModel.CombinationType)
+        if (Enum.TryParse<CombinationType>(e.Value.ToString(), out var newType) &&
+        newType != CombinationModel.CombinationType)
         {
-            return;
-        }
+            CombinationModel.CombinationType = newType;
 
-        CombinationModel.CombinationType = newType;
-
-        if (CombinationModel.CombinationType == CombinationType.MathCombination && SelectedSubjectIds.Count > 2)
-        {
-            SelectedSubjectIds = SelectedSubjectIds.Take(2).ToList();
+            if (CombinationModel.CombinationType == CombinationType.MathCombination)
+            {
+                if (SelectedSubjectIds.Count > 2)
+                {
+                    SelectedSubjectIds = SelectedSubjectIds.Take(2).ToList();
+                }
+            }
         }
     }
 

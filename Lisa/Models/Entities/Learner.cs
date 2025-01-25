@@ -24,4 +24,5 @@ public class Learner
     public Combination? Combination { get; set; }
     public Guid SchoolId { get; set; }
     public School? School { get; set; }
+    public ICollection<LearnerSubject>? LearnerSubjects { get; set; }
 }

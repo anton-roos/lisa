@@ -3,7 +3,6 @@
 
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
-@using Microsoft.EntityFrameworkCore
 @inject NavigationManager navigationManager
 @inject LearnerService LearnerService
 @inject SchoolService SchoolService
@@ -235,13 +234,13 @@
     private List<CareGroup> CareGroups = new();
     private IEnumerable<Combination>? AllCombinations;
     private RegisterClass? CurrentRegisterClass;
-    private School? SelectedSchool = new();
+    private School? SelectedSchool;
     private string? SelectedRegisterClassId = string.Empty;
     private string? SelectedMathOption = string.Empty;
     private IEnumerable<Combination>? CombinationsToChoseFrom;
     private Dictionary<Guid, Guid> CombinationSelections = new();
-    private string? AlertMessage { get; set; }
-    private string AlertType { get; set; } = "success";
+    private string? AlertMessage;
+    private string AlertType = "success";
     private EditContext? ParentEditContext;
 
     protected override async Task OnInitializedAsync()
@@ -286,7 +285,6 @@
             await LoadDropdowns();
             StateHasChanged();
         }
-
         await base.HandleEventAsync(eventName, payload);
     }
 
@@ -312,9 +310,8 @@
 
     private async Task LoadExistingLearner(Guid learnerId)
     {
-
         var existingLearner = await LearnerService.GetByIdAsync(learnerId);
-        
+
         if (existingLearner is null)
         {
             SetAlert("danger", "Learner not found.");
@@ -336,8 +333,8 @@
                 RegisterClassId = existingLearner.RegisterClassId
             };
 
-        // Map Parent entities to ParentViewModel
-        Parents = existingLearner.Parents.Select(p => new ParentViewModel
+        Parents = existingLearner.Parents
+        .Select(p => new ParentViewModel
             {
                 Id = p.Id,
                 FirstName = p.FirstName,
@@ -348,7 +345,8 @@
                 PrimaryCellNumber = p.PrimaryCellNumber,
                 SecondaryCellNumber = p.SecondaryCellNumber,
                 WhatsAppNumber = p.WhatsAppNumber
-            }).ToList();
+            })
+        .ToList();
 
         LearnerModel.SubjectIds = await LearnerService.GetSubjectIdsForLearnerAsync(learnerId);
 
@@ -356,7 +354,6 @@
         {
             SelectedRegisterClassId = LearnerModel.RegisterClassId.Value.ToString();
             CurrentRegisterClass = await registerClassService.GetByIdAsync(LearnerModel.RegisterClassId.Value);
-
             CombinationsToChoseFrom = AllCombinations?
             .Where(c => c.GradeId == CurrentRegisterClass.GradeId &&
             c.CombinationType == CombinationType.SubjectCombination);
@@ -482,123 +479,28 @@
             return;
         }
 
-        if (IsEdit && LearnerId.HasValue)
+        try
         {
-            var existingLearner = await LearnerService.GetByIdAsync(LearnerId.Value);
-
-            if (existingLearner is null)
+            if (IsEdit && LearnerId.HasValue)
             {
-                SetAlert("danger", "Could not find the learner to update.");
-                return;
-            }
+                LearnerModel.Id = LearnerId.Value;
 
-            existingLearner.Active = LearnerModel.Active;
-            existingLearner.CareGroupId = LearnerModel.CareGroupId;
-            existingLearner.CellNumber = LearnerModel.CellNumber;
-            existingLearner.Code = LearnerModel.Code;
-            existingLearner.Email = LearnerModel.Email;
-            existingLearner.FirstName = LearnerModel.FirstName;
-            existingLearner.IdNumber = LearnerModel.IdNumber;
-            existingLearner.LastName = LearnerModel.LastName;
-            existingLearner.RegisterClassId = LearnerModel.RegisterClassId;
+                await LearnerService.UpdateLearnerAsync(LearnerModel, Parents);
 
-            var existingParentIds = existingLearner.Parents?.Select(p => p.Id).ToList() ?? new List<Guid>();
-            var updatedParentIds = Parents.Select(p => p.Id).ToList();
-
-            var parentsToRemove = existingLearner.Parents.Where(p => !updatedParentIds.Contains(p.Id)).ToList();
-            foreach (var parent in parentsToRemove)
-            {
-                existingLearner.Parents.Remove(parent);
-            }
-
-            foreach (var parentViewModel in Parents)
-            {
-                var parent = existingLearner.Parents.FirstOrDefault(p => p.Id == parentViewModel.Id);
-                if (parent == null)
-                {
-                    parent = new Parent
-                        {
-                            Id = Guid.NewGuid(),
-                            LearnerId = existingLearner.Id
-                        };
-                    existingLearner.Parents.Add(parent);
-                }
-
-                parent.FirstName = parentViewModel.FirstName;
-                parent.LastName = parentViewModel.LastName;
-                parent.Relationship = parentViewModel.Relationship;
-                parent.PrimaryEmail = parentViewModel.PrimaryEmail;
-                parent.SecondaryEmail = parentViewModel.SecondaryEmail;
-                parent.PrimaryCellNumber = parentViewModel.PrimaryCellNumber;
-                parent.SecondaryCellNumber = parentViewModel.SecondaryCellNumber;
-                parent.WhatsAppNumber = parentViewModel.WhatsAppNumber;
-            }
-
-            await LearnerService.UpdateLearnerSubjectsAsync(existingLearner.Id, LearnerModel.SubjectIds);
-
-            try
-            {
-                // What do I need to do here now because I am not going to call _context.SaveChanges() anymore?
                 SetAlert("success", "Learner updated successfully.");
-                navigationManager.NavigateTo("/learners");
             }
-            catch (DbUpdateConcurrencyException ex)
+            else
             {
-                SetAlert("danger", "Concurrency conflict: " + ex.Message);
-            }
-        }
-        else
-        {
-            var newLearnerId = Guid.NewGuid();
-            var newLearner = new Learner
-                {
-                    Id = newLearnerId,
-                    Active = LearnerModel.Active,
-                    CareGroupId = LearnerModel.CareGroupId,
-                    CellNumber = LearnerModel.CellNumber,
-                    Code = LearnerModel.Code,
-                    Email = LearnerModel.Email,
-                    FirstName = LearnerModel.FirstName,
-                    IdNumber = LearnerModel.IdNumber,
-                    LastName = LearnerModel.LastName,
-                    RegisterClassId = LearnerModel.RegisterClassId,
-                    SchoolId = SelectedSchool.Id
-                };
-
-            // _context.Learners.Add(newLearner); <-- I am not going to do this anymore any suggestions?
-
-            foreach (var parentViewModel in Parents)
-            {
-                var parent = new Parent
-                    {
-                        Id = Guid.NewGuid(),
-                        LearnerId = newLearnerId,
-                        FirstName = parentViewModel.FirstName,
-                        LastName = parentViewModel.LastName,
-                        Relationship = parentViewModel.Relationship,
-                        PrimaryEmail = parentViewModel.PrimaryEmail,
-                        SecondaryEmail = parentViewModel.SecondaryEmail,
-                        PrimaryCellNumber = parentViewModel.PrimaryCellNumber,
-                        SecondaryCellNumber = parentViewModel.SecondaryCellNumber,
-                        WhatsAppNumber = parentViewModel.WhatsAppNumber
-                    };
-
-                // _context.Parents.Add(parent); <-- I am not going to do this anymore any suggestions?
-            }
-
-            try
-            {
-                // await _context.SaveChangesAsync(); <-- I am not going to do this anymore any suggestions?
-
-                await LearnerService.UpdateLearnerSubjectsAsync(newLearnerId, LearnerModel.SubjectIds);
+                await LearnerService.AddLearnerAsync(LearnerModel, Parents, SelectedSchool.Id);
 
                 SetAlert("success", "Learner and Parents added successfully.");
-                navigationManager.NavigateTo("/learners");
             }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                SetAlert("danger", "Concurrency conflict: " + ex.Message);
-            }
+
+            navigationManager.NavigateTo("/learners");
+        }
+        catch (Exception ex)
+        {
+            SetAlert("danger", "Error: " + ex.Message);
         }
     }
 

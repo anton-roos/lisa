@@ -7,4 +7,5 @@ public class Subject
     public string? Description { get; set; }
     public string? Code { get; set; }
     public ICollection<Combination>? Combinations { get; set; }
+    public ICollection<LearnerSubject>? LearnerSubjects { get; set; }
 }

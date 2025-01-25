@@ -22,12 +22,135 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
         return await context.Learners
         .Include(l => l.RegisterClass)
             .ThenInclude(rc => rc.Grade)
-        .Include(l => l.Combination)
-            .ThenInclude(c => c.Subjects)
+        .Include(l => l.LearnerSubjects)
+            .ThenInclude(ls => ls.Subject)
         .Include(l => l.CareGroup)
         .Include(l => l.Parents)
         .Include(l => l.School)
         .FirstOrDefaultAsync(l => l.Id == id);
+    }
+
+    public async Task AddLearnerAsync(LearnerViewModel model, List<ParentViewModel> parents, Guid schoolId)
+    {
+        using var context = _dbContextFactory.CreateDbContext();
+
+        var newLearnerId = Guid.NewGuid();
+        var learner = new Learner
+        {
+            Id = newLearnerId,
+            Active = model.Active,
+            CareGroupId = model.CareGroupId,
+            CellNumber = model.CellNumber,
+            Code = model.Code,
+            Email = model.Email,
+            FirstName = model.FirstName,
+            IdNumber = model.IdNumber,
+            LastName = model.LastName,
+            RegisterClassId = model.RegisterClassId,
+            SchoolId = schoolId
+        };
+
+        context.Learners.Add(learner);
+
+        foreach (var pm in parents)
+        {
+            var parent = new Parent
+            {
+                Id = Guid.NewGuid(),
+                LearnerId = newLearnerId,
+                FirstName = pm.FirstName,
+                LastName = pm.LastName,
+                Relationship = pm.Relationship,
+                PrimaryEmail = pm.PrimaryEmail,
+                SecondaryEmail = pm.SecondaryEmail,
+                PrimaryCellNumber = pm.PrimaryCellNumber,
+                SecondaryCellNumber = pm.SecondaryCellNumber,
+                WhatsAppNumber = pm.WhatsAppNumber
+            };
+            context.Parents.Add(parent);
+        }
+
+        await context.SaveChangesAsync();
+
+        await UpdateLearnerSubjectsAsync(newLearnerId, model.SubjectIds, context);
+    }
+
+    public async Task UpdateLearnerAsync(LearnerViewModel model, List<ParentViewModel> parents)
+    {
+        using var context = _dbContextFactory.CreateDbContext();
+
+        var existing = await context.Learners
+            .Include(l => l.Parents)
+            .FirstOrDefaultAsync(l => l.Id == model.Id);
+
+        if (existing == null)
+            throw new InvalidOperationException("Learner not found.");
+
+        existing.Active = model.Active;
+        existing.CareGroupId = model.CareGroupId;
+        existing.CellNumber = model.CellNumber;
+        existing.Code = model.Code;
+        existing.Email = model.Email;
+        existing.FirstName = model.FirstName;
+        existing.IdNumber = model.IdNumber;
+        existing.LastName = model.LastName;
+        existing.RegisterClassId = model.RegisterClassId;
+
+        var existingParentIds = existing.Parents.Select(p => p.Id).ToList();
+        var updatedParentIds = parents.Select(p => p.Id).ToList();
+
+        var toRemove = existing.Parents.Where(p => !updatedParentIds.Contains(p.Id)).ToList();
+        foreach (var p in toRemove)
+        {
+            existing.Parents.Remove(p);
+            context.Parents.Remove(p);
+        }
+
+        foreach (var pm in parents)
+        {
+            var parent = existing.Parents.FirstOrDefault(x => x.Id == pm.Id);
+            if (parent == null)
+            {
+                parent = new Parent
+                {
+                    Id = Guid.NewGuid(),
+                    LearnerId = existing.Id
+                };
+                existing.Parents.Add(parent);
+            }
+
+            parent.FirstName = pm.FirstName;
+            parent.LastName = pm.LastName;
+            parent.Relationship = pm.Relationship;
+            parent.PrimaryEmail = pm.PrimaryEmail;
+            parent.SecondaryEmail = pm.SecondaryEmail;
+            parent.PrimaryCellNumber = pm.PrimaryCellNumber;
+            parent.SecondaryCellNumber = pm.SecondaryCellNumber;
+            parent.WhatsAppNumber = pm.WhatsAppNumber;
+        }
+
+        await context.SaveChangesAsync();
+
+        await UpdateLearnerSubjectsAsync(existing.Id, model.SubjectIds, context);
+    }
+
+    public async Task UpdateLearnerSubjectsAsync(Guid learnerId, List<Guid> subjectIds, LisaDbContext context)
+    {
+        var existingLinks = context.LearnerSubjects
+            .Where(ls => ls.LearnerId == learnerId);
+        context.LearnerSubjects.RemoveRange(existingLinks);
+
+        foreach (var sid in subjectIds)
+        {
+            var link = new LearnerSubject
+            {
+                LearnerId = learnerId,
+                SubjectId = sid
+            };
+            context.LearnerSubjects.Add(link);
+        }
+
+        await context.SaveChangesAsync();
     }
 
     public async Task<Learner?> GetLearnerWithParentsAsync(Guid id)
@@ -155,20 +278,11 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
 
     public async Task<List<Guid>> GetSubjectIdsForLearnerAsync(Guid learnerId)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
-        var learner = await context.Learners
-            .Include(l => l.Combination)
-                .ThenInclude(c => c.Subjects)
-            .FirstOrDefaultAsync(l => l.Id == learnerId);
-        var subjectIds = new List<Guid>();
-        if (learner.Combination != null)
-        {
-            foreach (var subject in learner.Combination.Subjects)
-            {
-                subjectIds.Add(subject.Id);
-            }
-        }
-        return subjectIds;
+        using var context = _dbContextFactory.CreateDbContext();
+        return await context.LearnerSubjects
+            .Where(ls => ls.LearnerId == learnerId)
+            .Select(ls => ls.SubjectId)
+            .ToListAsync();
     }
 
     public async Task UpdateLearnerSubjectsAsync(Guid learnerId, List<Guid> subjectIds)
@@ -197,5 +311,41 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
             }
         }
         await context.SaveChangesAsync();
+    }
+
+    public async Task AssignSubjectToLearner(Guid learnerId, Guid subjectId)
+    {
+        using var context = _dbContextFactory.CreateDbContext();
+
+        var link = new LearnerSubject
+        {
+            LearnerId = learnerId,
+            SubjectId = subjectId
+        };
+        context.LearnerSubjects.Add(link);
+        await context.SaveChangesAsync();
+    }
+
+    public async Task RemoveSubjectFromLearner(Guid learnerId, Guid subjectId)
+    {
+        using var context = _dbContextFactory.CreateDbContext();
+
+        var link = await context.LearnerSubjects
+            .FirstOrDefaultAsync(ls => ls.LearnerId == learnerId && ls.SubjectId == subjectId);
+
+        if (link != null)
+        {
+            context.LearnerSubjects.Remove(link);
+            await context.SaveChangesAsync();
+        }
+    }
+
+    public async Task<List<Subject>> GetSubjectsForLearner(Guid learnerId)
+    {
+        using var context = _dbContextFactory.CreateDbContext();
+        return await context.LearnerSubjects
+            .Where(ls => ls.LearnerId == learnerId)
+            .Select(ls => ls.Subject)
+            .ToListAsync();
     }
 }

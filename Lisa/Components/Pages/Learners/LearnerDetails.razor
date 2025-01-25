@@ -48,14 +48,17 @@ else
         <p>@Learner.CareGroup.Name</p>
     }
 
-    <h4>Subject Combination</h4>
-    @if (Learner.Combination == null)
+    <h4>Subjects</h4>
+    @if (Learner.LearnerSubjects == null)
     {
-        <p>No subject combination assigned.</p>
+        <p>No subjects found for this Leaner.</p>
     }
     else
     {
-        <p>@Learner.Combination.Name</p>
+        @foreach (var ls in Learner.LearnerSubjects)
+        {
+            <p>@ls.Subject.Name</p>
+        }
     }
 
     <h4>Parents</h4>

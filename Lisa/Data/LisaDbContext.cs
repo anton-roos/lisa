@@ -29,7 +29,8 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
     public DbSet<CareGroup> CareGroups { get; set; } = null!;
     public DbSet<EmailTemplate> EmailTemplates { get; set; } = null!;
     public DbSet<BugReport> BugReports { get; set; } = null!;
-    public DbSet<EventLog>  EventLogs { get; set; } = null!;
+    public DbSet<EventLog> EventLogs { get; set; } = null!;
+    public DbSet<LearnerSubject> LearnerSubjects { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -171,6 +172,21 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .HasQueryFilter(lp => lp.Learner!.Active);
 
         // Classes and Subjects
+        modelBuilder.Entity<LearnerSubject>()
+            .HasKey(ls => new { ls.LearnerId, ls.SubjectId });
+        modelBuilder.Entity<LearnerSubject>()
+            .HasOne(ls => ls.Learner)
+            .WithMany(l => l.LearnerSubjects)
+            .HasForeignKey(ls => ls.LearnerId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<LearnerSubject>()
+            .HasOne(ls => ls.Subject)
+            .WithMany(s => s.LearnerSubjects)
+            .HasForeignKey(ls => ls.SubjectId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<LearnerSubject>()
+            .HasQueryFilter(ls => ls.Learner != null && ls.Learner.Active);
+
         modelBuilder.Entity<RegisterClass>()
             .HasKey(rc => rc.Id);
         modelBuilder.Entity<RegisterClass>()

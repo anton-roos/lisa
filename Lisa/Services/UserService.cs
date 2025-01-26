@@ -10,19 +10,18 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
 
-    public async Task<TUser> GetLoggedInUserAsync<TUser>() where TUser : User
+    public async Task<Guid?> GetLoggedInUserIdAsync()
     {
-        var user = (_httpContextAccessor.HttpContext?.User != null
+        var user = _httpContextAccessor.HttpContext?.User != null
             ? await _userManager.GetUserAsync(_httpContextAccessor.HttpContext.User)
-            : null)
-            ?? throw new Exception("User not found");
+            : null;
 
-        var _context = await _dbContextFactory.CreateDbContextAsync();
-        var userEntity = await _context.Users.OfType<TUser>().FirstOrDefaultAsync(u => u.Id == user.Id)
-            ?? throw new Exception("User not found in Database");
-
-        await _context.DisposeAsync();
-        return userEntity;
+        if (user == null)
+        {
+            return null;
+        }
+        
+        return user.Id;
     }
 
     public async Task<List<TUser>> GetAllByRoleAndSchoolAsync<TUser>(Guid? schoolId = null) where TUser : User

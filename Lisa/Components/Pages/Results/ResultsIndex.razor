@@ -233,9 +233,9 @@ else
 
     private async Task SaveResults()
     {
-        var user = await UserService.GetLoggedInUserAsync<User>();
+        var userId = await UserService.GetLoggedInUserIdAsync();
 
-        if (user == null)
+        if (userId == null)
         {
             Logger.LogError("User is null when trying to save results.");
             return;
@@ -256,7 +256,7 @@ else
                     ResultDate = DateTime.SpecifyKind(SelectedResultDate, DateTimeKind.Utc),
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
-                    CapturedBy = user.Id
+                    CapturedBy = userId.Value
                 };
             await ResultService.CreateAsync(result);
 

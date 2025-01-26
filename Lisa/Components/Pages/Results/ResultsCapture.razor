@@ -1,4 +1,4 @@
-@page "/results"
+@page "/results/capture"
 @using System.ComponentModel.DataAnnotations
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
@@ -239,7 +239,7 @@ else
         if (SelectedGradeId == Guid.Empty || SelectedSubjectId == Guid.Empty)
             return;
 
-        Navigation.NavigateTo($"/results/list/{SelectedSchool!.Id}/{SelectedGradeId}/{SelectedSubjectId}");
+        Navigation.NavigateTo($"/results/list?s={SelectedSchool!.Id}&g={SelectedGradeId}&sj={SelectedSubjectId}");
     }
 
     private async Task SaveResults()
@@ -266,7 +266,7 @@ else
 
         }
 
-        Navigation.NavigateTo($"/results/list/{SelectedSchool!.Id}/{SelectedGradeId}/{SelectedSubjectId}");
+        Navigation.NavigateTo($"/results/list?s={SelectedSchool!.Id}&g={SelectedGradeId}&sj={SelectedSubjectId}");
     }
 
     private class LearnerResult

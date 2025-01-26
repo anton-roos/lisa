@@ -1,5 +1,6 @@
-@page "/results/list/{schoolId:guid}/{gradeId:guid}/{subjectId:guid}"
+@page "/results"
 @using Lisa.Models.Entities
+@using Microsoft.AspNetCore.WebUtilities
 @inject ResultService ResultService
 @inject SchoolService SchoolService
 @inject GradeService GradeService
@@ -7,88 +8,209 @@
 @inject NavigationManager Navigation
 @inject ILogger<ResultsList> Logger
 
+@inherits EventAwareComponentBase
 
-@if (IsLoading)
+<PageTitle>Results</PageTitle>
+<h3>Results</h3>
+
+@if (SelectedSchool == null)
+{
+    <div class="alert alert-info">
+        Please select a school to view results.
+    </div>
+}
+else if (Loading)
 {
     <p>Loading results...</p>
 }
-else if (Results.Any())
-{
-    <h3>Filtered Results</h3>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Student</th>
-                <th>Subject</th>
-                <th>Score</th>
-                <th>Date</th>
-                <th>Assessment Type</th>
-                <th>Topic</th>
-                <th>Created On</th>
-                <th>Absent?</th>
-                <th>Reason</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var result in Results)
-            {
-                <tr>
-                    <td>@result.Learner?.FirstName @result.Learner?.LastName</td>
-                    <td>@result.Subject?.Name</td>
-                    <td>
-                        @if (result.Absent)
-                        {
-                            <div>Absent</div>
-                        }
-                        else
-                        {
-                            <div>
-                                @result.Score.ToString("0")
-                            </div>
-                        }
-                    </td>
-                    <td>@result.ResultDate.ToString("yyyy-MM-dd")</td>
-                    <td>@result.AssessmentType</td>
-                    <td>@result.AssessmentTopic</td>
-                    <td>@result.CreatedAt</td>
-                    <td>@(result.Absent ? "Yes" : "No")</td>
-                    <td>@result.AbsentReason</td>
-                    <td>
-                        <button class="btn btn-sm btn-primary" @onclick="() => EditResult(result.Id)">Edit</button>
-                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteResult(result.Id)">Delete</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
 else
 {
-    <div class="alert alert-info">
-        No results found for the selected filters.
+    <div class="col mb-3">
+        <div class="row">
+            <label for="gradeDropdown">Grade</label>
+            <InputSelect class="form-select" id="gradeDropdown" TValue="string" Value="@gradeId"
+                ValueChanged="@(async (value) => await OnGradeChange(value))"
+                ValueExpression="@(() => gradeId)">
+                <option value="">-- Select Grade --</option>
+                @foreach (var grade in Grades)
+                {
+                    <option value="@grade.Id">@grade.Name</option>
+                }
+            </InputSelect>
+        </div>
+        <div class="row">
+            <label for="subjectDropdown">Subject</label>
+            <InputSelect class="form-select" id="subjectDropdown" TValue="string" Value="@subjectId"
+                ValueChanged="@(async (value) => await OnSubjectChange(value))"
+                ValueExpression="@(() => gradeId)">
+                <option value="">-- Select Subject --</option>
+                @foreach (var subject in Subjects)
+                {
+                    <option value="@subject.Id">@subject.Name</option>
+                }
+            </InputSelect>
+        </div>
     </div>
+
+    @if (!string.IsNullOrWhiteSpace(gradeId) && !string.IsNullOrWhiteSpace(subjectId))
+    {
+        @if (Results.Any())
+        {
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Subject</th>
+                        <th>Score</th>
+                        <th>Date</th>
+                        <th>Assessment Type</th>
+                        <th>Topic</th>
+                        <th>Created On</th>
+                        <th>Absent?</th>
+                        <th>Reason</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var result in Results)
+                    {
+                        <tr>
+                            <td>@result.Learner?.FirstName @result.Learner?.LastName</td>
+                            <td>@result.Subject?.Name</td>
+                            <td>
+                                @if (result.Absent)
+                                {
+                                    <div>Absent</div>
+                                }
+                                else
+                                {
+                                    <div>@result.Score.ToString("0")</div>
+                                }
+                            </td>
+                            <td>@result.ResultDate.ToString("yyyy-MM-dd")</td>
+                            <td>@result.AssessmentType</td>
+                            <td>@result.AssessmentTopic</td>
+                            <td>@result.CreatedAt</td>
+                            <td>@(result.Absent ? "Yes" : "No")</td>
+                            <td>@result.AbsentReason</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" @onclick="() => EditResult(result.Id)">Edit</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                No results found for the selected filters.
+            </div>
+        }
+    }
+    else
+    {
+        <div class="alert alert-info">
+            Please select a grade and subject to view results.
+        </div>
+    }
 }
 
 @code {
-    [Parameter] public Guid schoolId { get; set; }
-    [Parameter] public Guid gradeId { get; set; }
-    [Parameter] public Guid subjectId { get; set; }
+    School? SelectedSchool { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "g")]
+    public string? gradeId { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "s")]
+    public string? subjectId { get; set; }
 
     private List<Result> Results = new();
-    private bool IsLoading = true;
+    private List<Grade> Grades = new();
+    private List<Subject> Subjects = new();
+    private bool Loading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadResults();
+        SelectedSchool = SchoolService.GetSelectedSchool();
+        SubscribeToEvent(UiEvents.SchoolSelected);
+
+        if (SelectedSchool != null)
+        {
+            await LoadFilters();
+
+            if (!string.IsNullOrWhiteSpace(gradeId) && !string.IsNullOrWhiteSpace(subjectId))
+            {
+                await LoadResults();
+            }
+            else
+            {
+                Loading = false;
+            }
+        }
+        else
+        {
+            Loading = false;
+        }
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected)
+        {
+            if (payload is School school)
+            {
+                SelectedSchool = school;
+                await LoadFilters();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadFilters()
+    {
+        try
+        {
+            if (SelectedSchool != null)
+            {
+                Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+            }
+            else
+            {
+                Logger.LogWarning("Selected School was null when trying to load grades.");
+            }
+            Subjects = await SubjectService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load filters.");
+        }
     }
 
     private async Task LoadResults()
     {
         try
         {
-            IsLoading = true;
-            Results = await ResultService.GetResultsByFiltersAsync(schoolId, gradeId, subjectId);
+            Loading = true;
+            if (Guid.TryParse(gradeId, out var parsedGradeId)
+            && Guid.TryParse(subjectId, out var parsedSubjectId)
+            && SelectedSchool != null)
+            {
+                Results = await ResultService.GetResultsByFiltersAsync(
+                SelectedSchool.Id,
+                parsedGradeId,
+                parsedSubjectId
+                );
+            }
+            else
+            {
+                Logger.LogWarning("Invalid gradeId or subjectId. Cannot load results.");
+                Results.Clear();
+            }
         }
         catch (Exception ex)
         {
@@ -96,18 +218,58 @@ else
         }
         finally
         {
-            IsLoading = false;
+            Loading = false;
+        }
+    }
+
+    private async Task OnGradeChange(string value)
+    {
+        gradeId = value;
+        await UpdateQueryParameters();
+    }
+
+    private async Task OnSubjectChange(string value)
+    {
+        subjectId = value;
+        await UpdateQueryParameters();
+    }
+
+    private async Task UpdateQueryParameters()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var queryParams = new Dictionary<string, string?>
+            {
+                ["g"] = gradeId,
+                ["s"] = subjectId
+            };
+
+        var newUri = QueryHelpers.AddQueryString(uri.AbsolutePath, queryParams);
+        Navigation.NavigateTo(newUri);
+
+        await LoadResults();
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SelectedSchool == null)
+        {
+            Loading = false;
+            return;
+        }
+
+        await LoadFilters();
+
+        if (!string.IsNullOrWhiteSpace(gradeId) && !string.IsNullOrWhiteSpace(subjectId))
+        {
+            await LoadResults();
+        }
+        else
+        {
+            Loading = false;
         }
     }
 
     private void EditResult(Guid resultId)
     {
-        Navigation.NavigateTo($"/results/edit/{resultId}");
-    }
-
-    private async Task DeleteResult(Guid resultId)
-    {
-        await ResultService.DeleteAsync(resultId);
-        await LoadResults();
+        Navigation.NavigateTo($"results/edit/{resultId}");
     }
 }

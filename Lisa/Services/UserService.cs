@@ -4,23 +4,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
-public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDbContext> dbContextFactory, IHttpContextAccessor httpContextAccessor)
+public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDbContext> dbContextFactory)
 {
     private readonly UserManager<User> _userManager = userManager;
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-    private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
-
-    public async Task<Guid?> GetLoggedInUserIdAsync()
-    {
-        var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext == null || httpContext.User?.Identity == null || !httpContext.User.Identity.IsAuthenticated)
-        {
-            return null;
-        }
-
-        var user = await _userManager.GetUserAsync(httpContext.User);
-        return user?.Id;
-    }
 
     public async Task<List<TUser>> GetAllByRoleAndSchoolAsync<TUser>(Guid? schoolId = null) where TUser : User
     {

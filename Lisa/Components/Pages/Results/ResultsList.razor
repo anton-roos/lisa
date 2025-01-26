@@ -25,12 +25,11 @@ else if (Loading)
 }
 else
 {
-    <div class="col mb-3">
+    <div class="col mb-3 mx-3">
         <div class="row">
             <label for="gradeDropdown">Grade</label>
             <InputSelect class="form-select" id="gradeDropdown" TValue="string" Value="@gradeId"
-                ValueChanged="@(async (value) => await OnGradeChange(value))"
-                ValueExpression="@(() => gradeId)">
+                ValueChanged="@(async (value) => await OnGradeChange(value))" ValueExpression="@(() => gradeId)">
                 <option value="">-- Select Grade --</option>
                 @foreach (var grade in Grades)
                 {
@@ -41,8 +40,7 @@ else
         <div class="row">
             <label for="subjectDropdown">Subject</label>
             <InputSelect class="form-select" id="subjectDropdown" TValue="string" Value="@subjectId"
-                ValueChanged="@(async (value) => await OnSubjectChange(value))"
-                ValueExpression="@(() => gradeId)">
+                ValueChanged="@(async (value) => await OnSubjectChange(value))" ValueExpression="@(() => subjectId)">
                 <option value="">-- Select Subject --</option>
                 @foreach (var subject in Subjects)
                 {
@@ -56,50 +54,56 @@ else
     {
         @if (Results.Any())
         {
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Student</th>
-                        <th>Subject</th>
-                        <th>Score</th>
-                        <th>Date</th>
-                        <th>Assessment Type</th>
-                        <th>Topic</th>
-                        <th>Created On</th>
-                        <th>Absent?</th>
-                        <th>Reason</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var result in Results)
-                    {
-                        <tr>
-                            <td>@result.Learner?.FirstName @result.Learner?.LastName</td>
-                            <td>@result.Subject?.Name</td>
-                            <td>
-                                @if (result.Absent)
-                                {
-                                    <div>Absent</div>
-                                }
-                                else
-                                {
-                                    <div>@result.Score.ToString("0")</div>
-                                }
-                            </td>
-                            <td>@result.ResultDate.ToString("yyyy-MM-dd")</td>
-                            <td>@result.AssessmentType</td>
-                            <td>@result.AssessmentTopic</td>
-                            <td>@result.CreatedAt</td>
-                            <td>@(result.Absent ? "Yes" : "No")</td>
-                            <td>@result.AbsentReason</td>
-                            <td>
-                                <button class="btn btn-sm btn-primary" @onclick="() => EditResult(result.Id)">Edit</button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            <div class="rounded overflow-hidden shadow-sm mb-3">
+                <Grid TItem="Result" Class="table table-hover table-bordered table-striped rounded shadow-sm"
+                    DataProvider="LoadResults" AllowFiltering="true" AllowPaging="true" PageSize="10" AllowSorting="true"
+                    Responsive="true">
+
+                    <GridColumns>
+                        <GridColumn TItem="Result" HeaderText="Student" PropertyName="FullName">
+                            @context.Learner?.FirstName @context.Learner?.LastName
+                        </GridColumn>
+
+                        <GridColumn TItem="Result" HeaderText="Score" PropertyName="Score" FilterTextboxWidth="50">
+                            @if (context.Absent)
+                            {
+                                <div>Absent</div>
+                            }
+                            else
+                            {
+                                <div>@context.Score.ToString("0")</div>
+                            }
+                        </GridColumn>
+
+                        <GridColumn TItem="Result" HeaderText="Date" PropertyName="ResultDate">
+                            @context.ResultDate.ToString("yyyy-MM-dd")
+                        </GridColumn>
+
+                        <GridColumn TItem="Result" HeaderText="Assessment Type" PropertyName="AssessmentType" />
+
+                        <GridColumn TItem="Result" HeaderText="Topic" PropertyName="AssessmentTopic" />
+
+                        <GridColumn TItem="Result" HeaderText="Created On" PropertyName="CreatedAt">
+                            @context.CreatedAt
+                        </GridColumn>
+
+                        <GridColumn TItem="Result" HeaderText="Was Absent" PropertyName="Absent"
+                            SortKeySelector="item => item.Absent">
+                            @(context.Absent ? "Yes" : "No")
+                        </GridColumn>
+
+                        <GridColumn TItem="Result" HeaderText="Absent Reason" PropertyName="AbsentReason">
+                            @context.AbsentReason
+                        </GridColumn>
+
+                        <GridColumn TItem="Result" HeaderText="Actions" FilterTextboxWidth="50">
+                            <button class="btn btn-sm btn-primary" @onclick="() => EditResult(context.Id)">
+                                <Icon Name="IconName.Pencil" />Edit
+                            </button>
+                        </GridColumn>
+                    </GridColumns>
+                </Grid>
+            </div>
         }
         else
         {
@@ -143,7 +147,7 @@ else
 
             if (!string.IsNullOrWhiteSpace(gradeId) && !string.IsNullOrWhiteSpace(subjectId))
             {
-                await LoadResults();
+                await LoadResults(null!);
             }
             else
             {
@@ -191,30 +195,59 @@ else
         }
     }
 
-    private async Task LoadResults()
+    private async Task<GridDataProviderResult<Result>> LoadResults(GridDataProviderRequest<Result> request)
     {
         try
         {
             Loading = true;
-            if (Guid.TryParse(gradeId, out var parsedGradeId)
-            && Guid.TryParse(subjectId, out var parsedSubjectId)
-            && SelectedSchool != null)
+
+            if (Results is null || !Results.Any())
             {
-                Results = await ResultService.GetResultsByFiltersAsync(
-                SelectedSchool.Id,
-                parsedGradeId,
-                parsedSubjectId
-                );
+                if (SelectedSchool == null)
+                {
+                    Logger.LogWarning("SelectedSchool is null. Cannot load results.");
+                    return new GridDataProviderResult<Result>
+                        {
+                            Data = new List<Result>(),
+                            TotalCount = 0
+                        };
+                }
+
+                if (Guid.TryParse(gradeId, out var parsedGradeId) &&
+                Guid.TryParse(subjectId, out var parsedSubjectId))
+                {
+                    Results = await ResultService.GetResultsByFiltersAsync(
+                    SelectedSchool.Id,
+                    parsedGradeId,
+                    parsedSubjectId
+                    );
+                }
+                else
+                {
+                    Logger.LogWarning("Invalid gradeId or subjectId. Cannot load results.");
+                    Results = new List<Result>();
+                }
             }
-            else
+
+            if (request == null)
             {
-                Logger.LogWarning("Invalid gradeId or subjectId. Cannot load results.");
-                Results.Clear();
+                return new GridDataProviderResult<Result>
+                    {
+                        Data = Results,
+                        TotalCount = Results.Count
+                    };
             }
+
+            return request.ApplyTo(Results);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to load filtered results.");
+            Logger.LogError(ex, "Failed to load results.");
+            return new GridDataProviderResult<Result>
+                {
+                    Data = new List<Result>(),
+                    TotalCount = 0
+                };
         }
         finally
         {
@@ -246,8 +279,11 @@ else
         var newUri = QueryHelpers.AddQueryString(uri.AbsolutePath, queryParams);
         Navigation.NavigateTo(newUri);
 
-        await LoadResults();
+        // Force the grid to reload data
+        // If your library has a built-in method to refresh the data, call that.
+        await LoadResults(null!);
     }
+
     protected override async Task OnParametersSetAsync()
     {
         if (SelectedSchool == null)
@@ -260,7 +296,7 @@ else
 
         if (!string.IsNullOrWhiteSpace(gradeId) && !string.IsNullOrWhiteSpace(subjectId))
         {
-            await LoadResults();
+            await LoadResults(null!);
         }
         else
         {

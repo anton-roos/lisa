@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace Lisa.Models.Entities;
 
 public class Learner

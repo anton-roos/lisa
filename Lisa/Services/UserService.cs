@@ -12,16 +12,14 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
 
     public async Task<Guid?> GetLoggedInUserIdAsync()
     {
-        var user = _httpContextAccessor.HttpContext?.User != null
-            ? await _userManager.GetUserAsync(_httpContextAccessor.HttpContext.User)
-            : null;
-
-        if (user == null)
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null || httpContext.User?.Identity == null || !httpContext.User.Identity.IsAuthenticated)
         {
             return null;
         }
-        
-        return user.Id;
+
+        var user = await _userManager.GetUserAsync(httpContext.User);
+        return user?.Id;
     }
 
     public async Task<List<TUser>> GetAllByRoleAndSchoolAsync<TUser>(Guid? schoolId = null) where TUser : User

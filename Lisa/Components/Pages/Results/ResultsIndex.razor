@@ -3,6 +3,7 @@
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
 @using Lisa.Services
+@using System.Security.Claims
 @inject NavigationManager Navigation
 @inject SchoolService SchoolService
 @inject LearnerService LearnerService
@@ -129,12 +130,22 @@ else
     private Guid SelectedGradeId { get; set; }
     private Guid SelectedSubjectId { get; set; }
     private DateTime SelectedResultDate { get; set; } = DateTime.Today;
+    private ClaimsPrincipal User { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         SelectedSchool = SchoolService.GetSelectedSchool();
         SubscribeToEvent(UiEvents.SchoolSelected);
         await LoadDropdowns();
+
+        var authState = await authenticationStateTask;
+        User = authState.User;
+
+        if (User.Identity.IsAuthenticated)
+        {
+            Console.WriteLine($"{User.Identity.Name} is authenticated.");
+        }
     }
 
     private void HandleGradeSelect(ChangeEventArgs e)
@@ -173,7 +184,7 @@ else
     private async Task LoadDropdowns()
     {
         SelectedSchool = SchoolService.GetSelectedSchool();
-        
+
         if (SelectedSchool != null)
         {
             Subjects = await SubjectService.GetAllAsync();
@@ -233,14 +244,6 @@ else
 
     private async Task SaveResults()
     {
-        var userId = await UserService.GetLoggedInUserIdAsync();
-
-        if (userId == null)
-        {
-            Logger.LogError("User is null when trying to save results.");
-            return;
-        }
-
         foreach (var entry in LearnerResults)
         {
             var result = new Result
@@ -256,7 +259,6 @@ else
                     ResultDate = DateTime.SpecifyKind(SelectedResultDate, DateTimeKind.Utc),
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
-                    CapturedBy = userId.Value
                 };
             await ResultService.CreateAsync(result);
 

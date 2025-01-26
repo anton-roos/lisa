@@ -11,7 +11,7 @@ public class Result
     public DateTime UpdatedAt { get; set; }
     public string? AssessmentType { get; set; }
     public string? AssessmentTopic { get; set; }
-    public Guid CapturedBy { get; set; }
+    public string? CapturedBy { get; set; }
     public bool Absent { get; set; }
     public string? AbsentReason { get; set; }
     public Learner? Learner { get; set; }

@@ -129,21 +129,21 @@
             {
                 <h3>Select exactly 1 subject from each Combination</h3>
                 <div class="row">
-                    @foreach (var combo in CombinationsToChoseFrom!)
+                    @foreach (var combination in CombinationsToChoseFrom!)
                     {
                         <div class="col">
-                            <h5>@combo.Name</h5>
-                            @foreach (var subj in combo.Subjects)
+                            <h5>@combination.Name</h5>
+                            @foreach (var subject in combination.Subjects)
                             {
-                                bool isSelected = CombinationSelections.TryGetValue(combo.Id, out var chosenSubjId)
-                                && chosenSubjId == subj.Id;
-                                bool isDisabled = IsSubjectDisabled(subj.Id, combo.Id);
+                                bool isSelected = CombinationSelections.TryGetValue(combination.Id, out var chosenSubjId)
+                                && chosenSubjId == subject.Id;
+                                bool isDisabled = IsSubjectDisabled(combination.Id, subject.Id);
 
                                 <div>
-                                    <input type="radio" name="@combo.Id" value="@subj.Id"
-                                        @onclick="@(() => OnCombinationSubjectChanged(combo, subj))" checked="@isSelected"
+                                    <input type="radio" name="@combination.Id" value="@subject.Id"
+                                        @onclick="@(() => OnCombinationSubjectChanged(combination, subject))" checked="@isSelected"
                                         disabled="@isDisabled" />
-                                    <label class="@(isDisabled ? "text-muted" : "")">@subj.Name</label>
+                                    <label class="@(isDisabled ? "text-muted" : "")">@subject.Name</label>
                                 </div>
                             }
                         </div>
@@ -238,7 +238,7 @@
     private string? SelectedRegisterClassId = string.Empty;
     private string? SelectedMathOption = string.Empty;
     private IEnumerable<Combination>? CombinationsToChoseFrom;
-    private Dictionary<Guid, Guid> CombinationSelections = new();
+    private Dictionary<Guid, int> CombinationSelections = new();
     private string? AlertMessage;
     private string AlertType = "success";
     private EditContext? ParentEditContext;
@@ -421,7 +421,7 @@
         StateHasChanged();
     }
 
-    private void ToggleSubject(Guid subjectId)
+    private void ToggleSubject(int subjectId)
     {
         if (LearnerModel.SubjectIds.Contains(subjectId))
         {
@@ -472,7 +472,7 @@
         }
     }
 
-    private bool IsSubjectDisabled(Guid subjectId, Guid currentComboId)
+    private bool IsSubjectDisabled(Guid currentComboId, int subjectId)
     {
         return CombinationSelections.Any(kvp => kvp.Key != currentComboId && kvp.Value == subjectId);
     }

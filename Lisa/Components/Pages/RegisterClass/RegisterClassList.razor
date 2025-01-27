@@ -139,7 +139,7 @@ else
             {
                 await RegisterClassService.DeleteAsync(registerClass);
                 await LoadRegisterClasses();
-                await InvokeAsync(StateHasChanged);
+            await InvokeAsync(StateHasChanged);
             }
         }
         else

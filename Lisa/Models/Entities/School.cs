@@ -6,7 +6,6 @@ public class School
     public string? ShortName { get; set; }
     public string? LongName { get; set; }
     public string? Color { get; set; }
-
     public string? SmtpHost { get; set; }
     public int SmtpPort { get; set; }
     public string? SmtpEmail { get; set; }
@@ -22,4 +21,6 @@ public class School
     public ICollection<Administrator>? Administrators { get; set; }
     public ICollection<SchoolManagement>? SchoolManagements { get; set; }
     public ICollection<Learner>? Learners { get; set; }
+    public ICollection<CareGroup>? CareGroups { get; set; }
+    public ICollection<Period>? Periods { get; set; }
 }

@@ -1,5 +1,6 @@
 using Lisa.Models.Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Data;
 
@@ -15,6 +16,13 @@ public static class DatabaseSeed
         await SeedSchoolTypes(serviceProvider);
         await SeedSchoolSubjects(serviceProvider);
         await SeedSchoolCurriculum(serviceProvider);
+        await ApplyMigrations(serviceProvider);
+    }
+
+    private static async Task ApplyMigrations(IServiceProvider serviceProvider)
+    {
+        var dbContext = serviceProvider.GetRequiredService<LisaDbContext>();
+        await dbContext.Database.MigrateAsync();
     }
 
     private static async Task SeedRoles(IServiceProvider serviceProvider)
@@ -104,88 +112,212 @@ public static class DatabaseSeed
         {
             dbContext.Subjects.AddRange(
             [
-                new Subject { Name = "Natural Sciences and Technology" },
-                new Subject { Name = "Social Sciences" },
-                new Subject { Name = "Life Skills" },
-                new Subject { Name = "Natural Sciences" },
-                new Subject { Name = "Economic and Management Sciences" },
-                new Subject { Name = "Technology" },
-                new Subject { Name = "Creative Arts" },
-                new Subject { Name = "Afrikaans Home Language" },
-                new Subject { Name = "English Home Language" },
-                new Subject { Name = "isiNdebele Home Language" },
-                new Subject { Name = "isiZulu Home Language" },
-                new Subject { Name = "isiXhosa Home Language" },
-                new Subject { Name = "Sepedi Home Language" },
-                new Subject { Name = "Sesotho Home Language" },
-                new Subject { Name = "Setswana Home Language" },
-                new Subject { Name = "Seswati Home Language" },
-                new Subject { Name = "Xitsonga Home Language" },
-                new Subject { Name = "Tshivenda Home Language" },
-                new Subject { Name = "South African Sign Language Home Language" },
-                new Subject { Name = "Afrikaans First Additional Language" },
-                new Subject { Name = "English First Additional Language" },
-                new Subject { Name = "isiNdebele First Additional Language" },
-                new Subject { Name = "isiZulu First Additional Language" },
-                new Subject { Name = "isiXhosa First Additional Language" },
-                new Subject { Name = "Sepedi First Additional Language" },
-                new Subject { Name = "Sesotho First Additional Language" },
-                new Subject { Name = "Setswana First Additional Language" },
-                new Subject { Name = "Seswati First Additional Language" },
-                new Subject { Name = "Xitsonga First Additional Language" },
-                new Subject { Name = "Tshivenda First Additional Language" },
-                new Subject { Name = "South African Sign Language First Additional Language" },
-                new Subject { Name = "Mathematics" },
-                new Subject { Name = "Mathematics Literacy" },
-                new Subject { Name = "Technical Mathematics" },
-                new Subject { Name = "Mechanical Technology" },
-                new Subject { Name = "Physical Sciences" },
-                new Subject { Name = "Technical Sciences" },
-                new Subject { Name = "Agricultural Sciences" },
-                new Subject { Name = "Life Sciences" },
-                new Subject { Name = "Information Technology" },
-                new Subject { Name = "Computer Applications Technology" },
-                new Subject { Name = "Engineering Graphics and Design" },
-                new Subject { Name = "Civil Technology" },
-                new Subject { Name = "Electrical Technology" },
-                new Subject { Name = "Agricultural Technology" },
-                new Subject { Name = "Geography" },
-                new Subject { Name = "History" },
-                new Subject { Name = "Accounting" },
-                new Subject { Name = "Economics" },
-                new Subject { Name = "Business Studies" },
-                new Subject { Name = "Consumer Studies" },
-                new Subject { Name = "Hospitality Studies" },
-                new Subject { Name = "Tourism" },
-                new Subject { Name = "Dramatic Arts" },
-                new Subject { Name = "Life Orientation" },
-                new Subject { Name = "Music" },
-                new Subject { Name = "Dance" },
-                new Subject { Name = "Visual Arts" },
-                new Subject { Name = "Design" },
-                new Subject { Name = "Religion Studies" },
-                new Subject { Name = "Agricultural Management Practices" },
-                new Subject { Name = "Dance Studies Grade" },
-                new Subject { Name = "English" },
-                new Subject { Name = "English Literature" },
-                new Subject { Name = "Science" },
-                new Subject { Name = "Physics" },
-                new Subject { Name = "Psychology" },
-                new Subject { Name = "Computer Science" },
-                new Subject { Name = "Modern Foreign Languages" },
-                new Subject { Name = "Law" },
-                new Subject { Name = "Sociology" },
-                new Subject { Name = "Religious Studies" },
-                new Subject { Name = "Environmental Management" },
-                new Subject { Name = "Chemistry" },
-                new Subject { Name = "Biology" },
-                new Subject { Name = "Cambridge Global Perspectives" },
-                new Subject { Name = "Art and Design" },
-                new Subject { Name = "Physical Education" },
-                new Subject { Name = "Information and Communication Technology" },
-                new Subject { Name = "Foreign Languages" },
-                new Subject { Name = "Design and Technology" },
-                new Subject { Name = "Drama" },
+                new Subject {
+                    Id = 1,
+                    Name = "English HL (RRR - 12)",
+                    Code = "Eng HL",
+                    Description = "English Home Language",
+                    Order = 1,
+                    SubjectType = SubjectType.Compulsory
+                },
+
+                new Subject {
+                    Id = 2,
+                    Name = "Afrikaans FAL (RRR - 12)",
+                    Code = "Afr FAL",
+                    Description = "Afrikaans First Additional Language",
+                    Order = 2,
+                    SubjectType = SubjectType.Compulsory
+                },
+
+                new Subject {
+                    Id = 3,
+                    Name = "Life Skills (RRR - 6)",
+                    Code = "LSK",
+                    Description = "Life Skills",
+                    Order = 3,
+                    SubjectType = SubjectType.Compulsory
+                },
+
+                new Subject {
+                    Id = 4,
+                    Name = "Life Orientation (7 - 12)",
+                    Code = "LO",
+                    Description = "Life Orientation",
+                    Order = 4,
+                    SubjectType = SubjectType.Compulsory
+                },
+
+                new Subject {
+                    Id = 5,
+                    Name = "Mathematics (RRR - 9)",
+                    Code = "MATF",
+                    Description = "Mathematics",
+                    Order = 5,
+                    SubjectType = SubjectType.Compulsory
+                },
+
+                new Subject {
+                    Id = 6,
+                    Name = "Mathematics (10 - 12)",
+                    Code = "MATH",
+                    Description = "Mathematics",
+                    Order = 6,
+                    SubjectType = SubjectType.MathCombination
+                },
+
+                new Subject {
+                    Id = 7,
+                    Name = "Mathematical Literacy (10 - 12)",
+                    Code = "MATL",
+                    Description = "Mathematical Literacy",
+                    Order = 7,
+                    SubjectType = SubjectType.MathCombination
+                },
+
+                new Subject {
+                    Id = 8,
+                    Name = "Natural Sciences (4 - 9)",
+                    Code = "NS",
+                    Description = "Natural Sciences",
+                    Order = 8,
+                    SubjectType = SubjectType.Compulsory
+                },
+
+                new Subject {
+                    Id = 9,
+                    Name = "Physical Sciences (10 - 12)",
+                    Code = "PS",
+                    Description = "Physical Sciences",
+                    Order = 9,
+                    SubjectType = SubjectType.Combination
+                },
+
+                new Subject {
+                    Id = 10,
+                    Name = "Life Sciences (10 - 12)",
+                    Code = "LSC",
+                    Description = "Life Sciences",
+                    Order = 10,
+                    SubjectType = SubjectType.Combination
+                },
+
+                new Subject {
+                    Id = 11,
+                    Name = "EMS Business (8 - 9)",
+                    Code = "EMS BS",
+                    Description = "Economic and Management Sciences - Business",
+                    Order = 11,
+                    SubjectType = SubjectType.Compulsory
+                },
+
+                new Subject {
+                    Id = 12,
+                    Name = "EMS Accounting (8 - 9)",
+                    Code = "EMS AC",
+                    Description = "Economic and Management Sciences - Accounting",
+                    Order = 12,
+                    SubjectType = SubjectType.Compulsory
+                },
+
+                new Subject {
+                    Id = 13,
+                    Name = "Business Studies (10 - 12)",
+                    Code = "BUS",
+                    Description = "Business Studies",
+                    Order = 13,
+                    SubjectType = SubjectType.Combination
+                },
+
+                new Subject {
+                    Id = 14,
+                    Name = "Accounting (10 - 12)",
+                    Code = "ACC",
+                    Description = "Accounting",
+                    Order = 14,
+                    SubjectType = SubjectType.Combination
+                },
+
+                new Subject {
+                    Id = 15,
+                    Name = "Economics (10 - 12)",
+                    Code = "ECO",
+                    Description = "Economics",
+                    Order = 15,
+                    SubjectType = SubjectType.Combination
+                },
+
+                new Subject {
+                    Id = 16,
+                    Name = "Tourism (10 - 12)",
+                    Code = "TOUR",
+                    Description = "Tourism",
+                    Order = 16,
+                    SubjectType = SubjectType.Combination
+                },
+
+                new Subject {
+                    Id = 17,
+                    Name = "SS History (4 - 9)",
+                    Code = "SS HIS",
+                    Description = "Social Sciences - History",
+                    Order = 17,
+                    SubjectType = SubjectType.Compulsory
+                },
+
+                new Subject {
+                    Id = 18,
+                    Name = "SS Geography (4 - 9)",
+                    Code = "SS GEO",
+                    Description = "Social Sciences - Geography",
+                    Order = 18,
+                    SubjectType = SubjectType.Compulsory
+                },
+
+                new Subject {
+                    Id = 19,
+                    Name = "History (10 - 12)",
+                    Code = "HIS",
+                    Description = "History",
+                    Order = 19,
+                    SubjectType = SubjectType.Combination
+                },
+
+                new Subject {
+                    Id = 20,
+                    Name = "Geography (10 - 12)",
+                    Code = "GEO",
+                    Description = "Geography",
+                    Order = 20,
+                    SubjectType = SubjectType.Combination
+                },
+
+                new Subject {
+                    Id = 21,
+                    Name = "Creative Arts (4 - 9)",
+                    Code = "CA",
+                    Description = "Creative Arts",
+                    Order = 21,
+                    SubjectType = SubjectType.Compulsory
+                },
+
+                new Subject {
+                    Id = 22,
+                    Name = "Technology (7 - 9)",
+                    Code = "TECH",
+                    Description = "Technology",
+                    Order = 22,
+                    SubjectType = SubjectType.Compulsory
+                },
+
+                new Subject {
+                    Id = 23,
+                    Name = "CAT (10 - 12)",
+                    Code = "CAT",
+                    Description = "Computer Applications Technology",
+                    Order = 23,
+                    SubjectType = SubjectType.Combination
+                }
             ]);
 
             await dbContext.SaveChangesAsync();

@@ -155,11 +155,11 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// using (var scope = app.Services.CreateScope())
-// {
-//     var services = scope.ServiceProvider;
-//     await DatabaseSeed.Seed(services);
-// }
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    await DatabaseSeed.Seed(services);
+}
 
 var eventBus = app.Services.GetRequiredService<IEventBus>();
 eventBus.Publish(new ApplicationStartedEvent

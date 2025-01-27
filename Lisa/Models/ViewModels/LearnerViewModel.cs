@@ -21,6 +21,6 @@ public class LearnerViewModel
     public Guid SchoolId { get; set; }
     [Required(AllowEmptyStrings = false, ErrorMessage = "Student needs to be assigned to a Care Group.")]
     public Guid? CareGroupId { get; set; }
-    public List<Guid> SubjectIds { get; set; } = [];
+    public List<int> SubjectIds { get; set; } = [];
     public ICollection<Parent>? Parents { get; set; }
 }

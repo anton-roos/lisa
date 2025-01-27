@@ -83,12 +83,6 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
                     break;
                 }
 
-            case SystemAdministrator sysAdmin:
-                {
-                    await _userManager.CreateAsync(sysAdmin, password);
-                    await _userManager.AddToRoleAsync(sysAdmin, Roles.SystemAdministrator);
-                    break;
-                }
             case Teacher teacher:
                 {
                     var result = await _userManager.CreateAsync(teacher, password);
@@ -100,6 +94,7 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
                     await _userManager.AddToRoleAsync(teacher, Roles.Teacher);
                     break;
                 }
+
             case User baseUser:
                 {
                     await _userManager.CreateAsync(baseUser, password);

@@ -136,18 +136,18 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
         await UpdateLearnerSubjectsAsync(existing.Id, model.SubjectIds, context);
     }
 
-    public async Task UpdateLearnerSubjectsAsync(Guid learnerId, List<Guid> subjectIds, LisaDbContext context)
+    public async Task UpdateLearnerSubjectsAsync(Guid learnerId, List<int> subjectIds, LisaDbContext context)
     {
         var existingLinks = context.LearnerSubjects
             .Where(ls => ls.LearnerId == learnerId);
         context.LearnerSubjects.RemoveRange(existingLinks);
 
-        foreach (var sid in subjectIds)
+        foreach (var subjectId in subjectIds)
         {
             var link = new LearnerSubject
             {
                 LearnerId = learnerId,
-                SubjectId = sid
+                SubjectId = subjectId
             };
             context.LearnerSubjects.Add(link);
         }
@@ -264,7 +264,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
         return learners;
     }
 
-    public async Task<List<Guid>> GetSubjectIdsForLearnerAsync(Guid learnerId)
+    public async Task<List<int>> GetSubjectIdsForLearnerAsync(Guid learnerId)
     {
         using var context = _dbContextFactory.CreateDbContext();
         return await context.LearnerSubjects
@@ -273,7 +273,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
             .ToListAsync();
     }
 
-    public async Task AssignSubjectToLearner(Guid learnerId, Guid subjectId)
+    public async Task AssignSubjectToLearner(Guid learnerId, int subjectId)
     {
         using var context = _dbContextFactory.CreateDbContext();
 
@@ -286,7 +286,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
         await context.SaveChangesAsync();
     }
 
-    public async Task RemoveSubjectFromLearner(Guid learnerId, Guid subjectId)
+    public async Task RemoveSubjectFromLearner(Guid learnerId, int subjectId)
     {
         using var context = _dbContextFactory.CreateDbContext();
 

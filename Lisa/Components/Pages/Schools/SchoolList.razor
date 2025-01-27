@@ -44,7 +44,7 @@
                                 </div>
                             </td>
                             <ActionButtons TEntity="School" Entity="school" OnView="ViewSchool" OnEdit="EditSchool"
-                                OnDelete="ShowConfirmationAsync" />
+                                OnDelete="DeleteSchool" />
                         </tr>
                     }
                 </tbody>
@@ -93,47 +93,9 @@
         NavigationManager.NavigateTo($"schools/details/{school.Id}");
     }
 
-    private async Task ShowConfirmationAsync(School School)
+    private void DeleteSchool(School School)
     {
-        var confirmation = await Dialog.ShowAsync(
-        title: $"Are you sure you want to delete {School.ShortName}?",
-        message1: "This will delete the record. Once deleted can not be rolled back.",
-        message2: "Do you want to proceed?");
-
-        if (confirmation)
-        {
-            if (School != null)
-            {
-                try
-                {
-                    var SchoolToDelete = await SchoolService.GetSchoolAsync(School.Id);
-
-                    if (SchoolToDelete == null)
-                    {
-                        throw new Exception("School not found.");
-                    }
-
-                    if (SchoolToDelete.Administrators.Any()
-                    || SchoolToDelete.Learners.Any()
-                    || SchoolToDelete.Teachers.Any()
-                    || SchoolToDelete.RegisterClasses.Any()
-                    )
-                    {
-                        throw new Exception("School has associated users, learners, or register classes. You need to delete them first.");
-                    }
-
-                    EventBus.Publish(new DeleteSchoolEvent { School = School });
-                    await SchoolService.DeleteSchoolAsync(School);
-                    schools = await SchoolService.GetAllAsync();
-                    await InvokeAsync(StateHasChanged);
-                }
-                catch (Exception ex)
-                {
-                    Exception = ex;
-                    await ErrorModal.ShowAsync();
-                }
-            }
-        }
+        NavigationManager.NavigateTo($"schools/delete/{School.Id}");
     }
 
     private void AddSchool()

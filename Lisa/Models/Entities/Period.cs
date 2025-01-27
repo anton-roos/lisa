@@ -5,6 +5,8 @@ namespace Lisa.Models.Entities;
 public class Period : IValidatable
 {
     public Guid Id { get; set; }
+    public Guid? SchoolId { get; set; }
+    public School? School { get; set; }
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
     public PeriodStatus Status { get; set; }
@@ -13,7 +15,7 @@ public class Period : IValidatable
     public Grade? Grade { get; set; }
     public Guid TeacherId { get; set; }
     public Teacher? Teacher { get; set; }
-    public Guid SubjectId { get; set; }
+    public int SubjectId { get; set; }
     public Subject? Subject { get; set; }
     public void Validate()
     {

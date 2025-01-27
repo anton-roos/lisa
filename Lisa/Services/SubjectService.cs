@@ -21,7 +21,7 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory)
         await _context.SaveChangesAsync();
     }
 
-    public async Task<Subject?> GetByIdAsync(Guid id)
+    public async Task<Subject?> GetByIdAsync(int id)
     {
         var _context = _dbContextFactory.CreateDbContext();
         return await _context.Subjects.FindAsync(id);
@@ -40,7 +40,7 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory)
         await _context.SaveChangesAsync();
     }
 
-    public Task<List<Subject>> GetSubjectsByIdsAsync(IEnumerable<Guid> ids)
+    public Task<List<Subject>> GetSubjectsByIdsAsync(IEnumerable<int> ids)
     {
         var _context = _dbContextFactory.CreateDbContext();
         return _context.Subjects
@@ -49,7 +49,7 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory)
             .ToListAsync();
     }
     
-    public async Task DeleteAsync(Guid id)
+    public async Task DeleteAsync(int id)
     {
         var _context = _dbContextFactory.CreateDbContext();
 

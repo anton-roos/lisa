@@ -19,7 +19,6 @@
                 placeholder="Type to filter subjects..." />
         </div>
 
-
         <hr />
 
         @if (subjects == null)
@@ -44,7 +43,7 @@
                 <tbody>
                     @foreach (var subject in FilteredSubjects)
                     {
-                        <tr>
+                        <tr class="@GetRowClass(subject.SubjectType)">
                             <td>@subject.Name</td>
                             <td>@subject.Code</td>
                             <td>@subject.Description</td>
@@ -73,12 +72,14 @@
 
     private IEnumerable<Subject> FilteredSubjects
     => subjects != null
-    ? subjects.Where(s =>
+    ? subjects
+    .Where(s =>
     string.IsNullOrWhiteSpace(searchText)
     || (s.Name != null && s.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase))
     || (s.Code != null && s.Code.Contains(searchText, StringComparison.OrdinalIgnoreCase))
     || (s.Description != null && s.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase))
     )
+    .OrderBy(s => s.Order)
     : Enumerable.Empty<Subject>();
 
     private void AddSubject()
@@ -109,5 +110,16 @@
     private void OnInputChange(ChangeEventArgs e)
     {
         searchText = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private string GetRowClass(SubjectType subjectType)
+    {
+        return subjectType switch
+        {
+            SubjectType.Compulsory => "table-primary",
+            SubjectType.Combination => "table-danger",
+            SubjectType.MathCombination => "table-success",
+            _ => ""
+        };
     }
 }

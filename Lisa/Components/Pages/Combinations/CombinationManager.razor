@@ -94,7 +94,7 @@
     private CombinationViewModel CombinationModel = new();
     private List<Grade> Grades = new();
     private List<Subject> AllSubjects = new();
-    private List<Guid> SelectedSubjectIds = new();
+    private List<int> SelectedSubjectIds = new();
     private string searchText = string.Empty;
 
     private bool IsFormValid =>
@@ -142,7 +142,7 @@
                 SubjectIds = existing.Subjects.Select(s => s.Id).ToList()
             };
 
-        SelectedSubjectIds = new List<Guid>(CombinationModel.SubjectIds);
+        SelectedSubjectIds = new List<int>(CombinationModel.SubjectIds);
     }
 
     private async Task HandleValidSubmit()
@@ -168,7 +168,7 @@
         Navigation.NavigateTo("/combinations");
     }
 
-    private void ToggleSubject(Guid subjectId)
+    private void ToggleSubject(int subjectId)
     {
         if (SelectedSubjectIds.Contains(subjectId))
         {

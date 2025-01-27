@@ -27,6 +27,58 @@ namespace Lisa.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "BugReports",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    WhatTried = table.Column<string>(type: "text", nullable: true),
+                    WhatHappened = table.Column<string>(type: "text", nullable: true),
+                    ReportedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ResolvedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ClosedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ReportedBy = table.Column<string>(type: "text", nullable: true),
+                    UserAuthenticated = table.Column<bool>(type: "boolean", nullable: false),
+                    PageUrl = table.Column<string>(type: "text", nullable: true),
+                    Version = table.Column<string>(type: "text", nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BugReports", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "EmailTemplates",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: true),
+                    Subject = table.Column<string>(type: "text", nullable: true),
+                    Content = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_EmailTemplates", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "EventLogs",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    EventType = table.Column<string>(type: "text", nullable: true),
+                    EventData = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_EventLogs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "SchoolCurriculums",
                 columns: table => new
                 {
@@ -80,12 +132,12 @@ namespace Lisa.Migrations
                     ShortName = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     LongName = table.Column<string>(type: "text", nullable: true),
                     Color = table.Column<string>(type: "text", nullable: true),
+                    SmtpHost = table.Column<string>(type: "text", nullable: true),
+                    SmtpPort = table.Column<int>(type: "integer", nullable: false),
+                    SmtpEmail = table.Column<string>(type: "text", nullable: true),
+                    SmtpPassword = table.Column<string>(type: "text", nullable: true),
                     SchoolTypeId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SchoolCurriculumId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SmtpDetails_Host = table.Column<string>(type: "text", nullable: true),
-                    SmtpDetails_Port = table.Column<int>(type: "integer", nullable: true),
-                    SmtpDetails_Email = table.Column<string>(type: "text", nullable: true),
-                    SmtpDetails_Password = table.Column<string>(type: "text", nullable: true)
+                    SchoolCurriculumId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -136,12 +188,7 @@ namespace Lisa.Migrations
                         column: x => x.SchoolId,
                         principalTable: "Schools",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_AspNetUsers_Schools_SchoolId1",
-                        column: x => x.SchoolId,
-                        principalTable: "Schools",
-                        principalColumn: "Id");
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -272,10 +319,13 @@ namespace Lisa.Migrations
                 name: "Subjects",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Name = table.Column<string>(type: "text", nullable: true),
                     Description = table.Column<string>(type: "text", nullable: true),
                     Code = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    Order = table.Column<int>(type: "integer", nullable: false),
+                    SubjectType = table.Column<int>(type: "integer", nullable: false),
                     TeacherId = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
@@ -294,7 +344,8 @@ namespace Lisa.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: true),
-                    GradeId = table.Column<Guid>(type: "uuid", nullable: false)
+                    GradeId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CombinationType = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -304,7 +355,7 @@ namespace Lisa.Migrations
                         column: x => x.GradeId,
                         principalTable: "Grades",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -315,6 +366,7 @@ namespace Lisa.Migrations
                     Name = table.Column<string>(type: "text", nullable: true),
                     GradeId = table.Column<Guid>(type: "uuid", nullable: false),
                     TeacherId = table.Column<Guid>(type: "uuid", nullable: false),
+                    MathSelectionEnabled = table.Column<bool>(type: "boolean", nullable: false),
                     SchoolId = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
@@ -331,7 +383,7 @@ namespace Lisa.Migrations
                         column: x => x.GradeId,
                         principalTable: "Grades",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_RegisterClasses_Schools_SchoolId",
                         column: x => x.SchoolId,
@@ -344,13 +396,14 @@ namespace Lisa.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    SchoolId = table.Column<Guid>(type: "uuid", nullable: true),
                     StartTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     EndTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Status = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     Description = table.Column<string>(type: "text", nullable: true),
                     GradeId = table.Column<Guid>(type: "uuid", nullable: false),
                     TeacherId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SubjectId = table.Column<Guid>(type: "uuid", nullable: false)
+                    SubjectId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -361,13 +414,19 @@ namespace Lisa.Migrations
                         column: x => x.TeacherId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_Periods_Grades_GradeId",
                         column: x => x.GradeId,
                         principalTable: "Grades",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Periods_Schools_SchoolId",
+                        column: x => x.SchoolId,
+                        principalTable: "Schools",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Periods_Subjects_SubjectId",
                         column: x => x.SubjectId,
@@ -380,15 +439,15 @@ namespace Lisa.Migrations
                 name: "CombinationSubject",
                 columns: table => new
                 {
-                    SubjectCombinationId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SubjectId = table.Column<Guid>(type: "uuid", nullable: false)
+                    CombinationId = table.Column<Guid>(type: "uuid", nullable: false),
+                    SubjectId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_CombinationSubject", x => new { x.SubjectCombinationId, x.SubjectId });
+                    table.PrimaryKey("PK_CombinationSubject", x => new { x.CombinationId, x.SubjectId });
                     table.ForeignKey(
-                        name: "FK_CombinationSubject_Combinations_SubjectCombinationId",
-                        column: x => x.SubjectCombinationId,
+                        name: "FK_CombinationSubject_Combinations_CombinationId",
+                        column: x => x.CombinationId,
                         principalTable: "Combinations",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -397,7 +456,7 @@ namespace Lisa.Migrations
                         column: x => x.SubjectId,
                         principalTable: "Subjects",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -408,6 +467,9 @@ namespace Lisa.Migrations
                     Code = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     FirstName = table.Column<string>(type: "text", nullable: true),
                     LastName = table.Column<string>(type: "text", nullable: true),
+                    IdNumber = table.Column<string>(type: "text", nullable: true),
+                    Email = table.Column<string>(type: "text", nullable: true),
+                    CellNumber = table.Column<string>(type: "text", nullable: true),
                     Active = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -423,7 +485,8 @@ namespace Lisa.Migrations
                         name: "FK_Learners_CareGroups_CareGroupId",
                         column: x => x.CareGroupId,
                         principalTable: "CareGroups",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_Learners_Combinations_CombinationId",
                         column: x => x.CombinationId,
@@ -435,7 +498,7 @@ namespace Lisa.Migrations
                         column: x => x.RegisterClassId,
                         principalTable: "RegisterClasses",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_Learners_Schools_SchoolId",
                         column: x => x.SchoolId,
@@ -445,31 +508,56 @@ namespace Lisa.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "RegisterClassSubject",
+                name: "RegisterClassCompulsorySubject",
                 columns: table => new
                 {
                     RegisterClassId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SubjectId = table.Column<Guid>(type: "uuid", nullable: false)
+                    SubjectId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RegisterClassSubject", x => new { x.RegisterClassId, x.SubjectId });
+                    table.PrimaryKey("PK_RegisterClassCompulsorySubject", x => new { x.RegisterClassId, x.SubjectId });
                     table.ForeignKey(
-                        name: "FK_RegisterClassSubject_RegisterClasses_RegisterClassId",
+                        name: "FK_RegisterClassCompulsorySubject_RegisterClasses_RegisterClas~",
                         column: x => x.RegisterClassId,
                         principalTable: "RegisterClasses",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_RegisterClassSubject_Subjects_SubjectId",
+                        name: "FK_RegisterClassCompulsorySubject_Subjects_SubjectId",
                         column: x => x.SubjectId,
                         principalTable: "Subjects",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "LearnerParents",
+                name: "LearnerSubjects",
+                columns: table => new
+                {
+                    LearnerId = table.Column<Guid>(type: "uuid", nullable: false),
+                    SubjectId = table.Column<int>(type: "integer", nullable: false),
+                    LearnerSubjectType = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_LearnerSubjects", x => new { x.LearnerId, x.SubjectId });
+                    table.ForeignKey(
+                        name: "FK_LearnerSubjects_Learners_LearnerId",
+                        column: x => x.LearnerId,
+                        principalTable: "Learners",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_LearnerSubjects_Subjects_SubjectId",
+                        column: x => x.SubjectId,
+                        principalTable: "Subjects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Parents",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -477,20 +565,21 @@ namespace Lisa.Migrations
                     SecondaryEmail = table.Column<string>(type: "text", nullable: true),
                     FirstName = table.Column<string>(type: "text", nullable: true),
                     LastName = table.Column<string>(type: "text", nullable: true),
-                    CellNumber = table.Column<string>(type: "text", nullable: true),
+                    PrimaryCellNumber = table.Column<string>(type: "text", nullable: true),
+                    SecondaryCellNumber = table.Column<string>(type: "text", nullable: true),
                     WhatsAppNumber = table.Column<string>(type: "text", nullable: true),
                     Relationship = table.Column<string>(type: "text", nullable: true),
                     LearnerId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_LearnerParents", x => x.Id);
+                    table.PrimaryKey("PK_Parents", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_LearnerParents_Learners_LearnerId",
+                        name: "FK_Parents_Learners_LearnerId",
                         column: x => x.LearnerId,
                         principalTable: "Learners",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -499,12 +588,14 @@ namespace Lisa.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     LearnerId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SubjectId = table.Column<Guid>(type: "uuid", nullable: false),
+                    SubjectId = table.Column<int>(type: "integer", nullable: false),
                     Score = table.Column<decimal>(type: "numeric(5,2)", nullable: false),
                     ResultDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    CapturedBy = table.Column<Guid>(type: "uuid", nullable: false),
+                    AssessmentType = table.Column<string>(type: "text", nullable: true),
+                    AssessmentTopic = table.Column<string>(type: "text", nullable: true),
+                    CapturedBy = table.Column<string>(type: "text", nullable: true),
                     Absent = table.Column<bool>(type: "boolean", nullable: false),
                     AbsentReason = table.Column<string>(type: "text", nullable: true)
                 },
@@ -594,21 +685,6 @@ namespace Lisa.Migrations
                 column: "SchoolId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_LearnerParents_LearnerId",
-                table: "LearnerParents",
-                column: "LearnerId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_LearnerParents_PrimaryEmail",
-                table: "LearnerParents",
-                column: "PrimaryEmail");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_LearnerParents_SecondaryEmail",
-                table: "LearnerParents",
-                column: "SecondaryEmail");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Learners_CareGroupId",
                 table: "Learners",
                 column: "CareGroupId");
@@ -635,9 +711,34 @@ namespace Lisa.Migrations
                 column: "SchoolId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_LearnerSubjects_SubjectId",
+                table: "LearnerSubjects",
+                column: "SubjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Parents_LearnerId",
+                table: "Parents",
+                column: "LearnerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Parents_PrimaryEmail",
+                table: "Parents",
+                column: "PrimaryEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Parents_SecondaryEmail",
+                table: "Parents",
+                column: "SecondaryEmail");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Periods_GradeId",
                 table: "Periods",
                 column: "GradeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Periods_SchoolId",
+                table: "Periods",
+                column: "SchoolId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Periods_SubjectId",
@@ -651,6 +752,11 @@ namespace Lisa.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_RegisterClassCompulsorySubject_SubjectId",
+                table: "RegisterClassCompulsorySubject",
+                column: "SubjectId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RegisterClasses_GradeId",
                 table: "RegisterClasses",
                 column: "GradeId");
@@ -658,8 +764,7 @@ namespace Lisa.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_RegisterClasses_Name",
                 table: "RegisterClasses",
-                column: "Name",
-                unique: true);
+                column: "Name");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RegisterClasses_SchoolId",
@@ -670,11 +775,6 @@ namespace Lisa.Migrations
                 name: "IX_RegisterClasses_TeacherId",
                 table: "RegisterClasses",
                 column: "TeacherId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_RegisterClassSubject_SubjectId",
-                table: "RegisterClassSubject",
-                column: "SubjectId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Results_LearnerId",
@@ -739,16 +839,28 @@ namespace Lisa.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "BugReports");
+
+            migrationBuilder.DropTable(
                 name: "CombinationSubject");
 
             migrationBuilder.DropTable(
-                name: "LearnerParents");
+                name: "EmailTemplates");
+
+            migrationBuilder.DropTable(
+                name: "EventLogs");
+
+            migrationBuilder.DropTable(
+                name: "LearnerSubjects");
+
+            migrationBuilder.DropTable(
+                name: "Parents");
 
             migrationBuilder.DropTable(
                 name: "Periods");
 
             migrationBuilder.DropTable(
-                name: "RegisterClassSubject");
+                name: "RegisterClassCompulsorySubject");
 
             migrationBuilder.DropTable(
                 name: "Results");

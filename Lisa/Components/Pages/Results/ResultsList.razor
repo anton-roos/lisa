@@ -10,115 +10,123 @@
 
 @inherits EventAwareComponentBase
 
-<PageTitle>Results</PageTitle>
-<h3>Results</h3>
 
-@if (SelectedSchool == null)
-{
-    <div class="alert alert-info">
-        Please select a school to view results.
-    </div>
-}
-else if (Loading)
-{
-    <p>Loading results...</p>
-}
-else
-{
-    <div class="col mb-3 mx-3">
-        <div class="row">
-            <label for="gradeDropdown">Grade</label>
-            <InputSelect class="form-select" id="gradeDropdown" TValue="string" Value="@gradeId"
-                ValueChanged="@(async (value) => await OnGradeChange(value))" ValueExpression="@(() => gradeId)">
-                <option value="">-- Select Grade --</option>
-                @foreach (var grade in Grades)
-                {
-                    <option value="@grade.Id">@grade.Name</option>
-                }
-            </InputSelect>
-        </div>
-        <div class="row">
-            <label for="subjectDropdown">Subject</label>
-            <InputSelect class="form-select" id="subjectDropdown" TValue="string" Value="@subjectId"
-                ValueChanged="@(async (value) => await OnSubjectChange(value))" ValueExpression="@(() => subjectId)">
-                <option value="">-- Select Subject --</option>
-                @foreach (var subject in Subjects)
-                {
-                    <option value="@subject.Id">@subject.Name</option>
-                }
-            </InputSelect>
-        </div>
-    </div>
-
-    @if (!string.IsNullOrWhiteSpace(gradeId) && !string.IsNullOrWhiteSpace(subjectId))
-    {
-        @if (Results.Any())
+<AuthorizeView Context="AuthContext" Roles="@Roles.Administrator">
+    <Authorized>
+        <PageTitle>Results</PageTitle>
+        <h3>Results</h3>
+        @if (SelectedSchool == null)
         {
-            <div class="rounded overflow-hidden shadow-sm mb-3">
-                <Grid TItem="Result" Class="table table-hover table-bordered table-striped rounded shadow-sm"
-                    DataProvider="LoadResults" AllowFiltering="true" AllowPaging="true" PageSize="10" AllowSorting="true"
-                    Responsive="true">
-
-                    <GridColumns>
-                        <GridColumn TItem="Result" HeaderText="Student" PropertyName="FullName">
-                            @context.Learner?.FirstName @context.Learner?.LastName
-                        </GridColumn>
-
-                        <GridColumn TItem="Result" HeaderText="Score" PropertyName="Score" FilterTextboxWidth="50">
-                            @if (context.Absent)
-                            {
-                                <div>Absent</div>
-                            }
-                            else
-                            {
-                                <div>@context.Score.ToString("0")</div>
-                            }
-                        </GridColumn>
-
-                        <GridColumn TItem="Result" HeaderText="Date" PropertyName="ResultDate">
-                            @context.ResultDate.ToString("yyyy-MM-dd")
-                        </GridColumn>
-
-                        <GridColumn TItem="Result" HeaderText="Assessment Type" PropertyName="AssessmentType" />
-
-                        <GridColumn TItem="Result" HeaderText="Topic" PropertyName="AssessmentTopic" />
-
-                        <GridColumn TItem="Result" HeaderText="Created On" PropertyName="CreatedAt">
-                            @context.CreatedAt
-                        </GridColumn>
-
-                        <GridColumn TItem="Result" HeaderText="Was Absent" PropertyName="Absent"
-                            SortKeySelector="item => item.Absent">
-                            @(context.Absent ? "Yes" : "No")
-                        </GridColumn>
-
-                        <GridColumn TItem="Result" HeaderText="Absent Reason" PropertyName="AbsentReason">
-                            @context.AbsentReason
-                        </GridColumn>
-
-                        <GridColumn TItem="Result" HeaderText="Actions" FilterTextboxWidth="50">
-                            <button class="btn btn-sm btn-primary" @onclick="() => EditResult(context.Id)">
-                                <Icon Name="IconName.Pencil" />Edit
-                            </button>
-                        </GridColumn>
-                    </GridColumns>
-                </Grid>
+            <div class="alert alert-info">
+                Please select a school to view results.
             </div>
+        }
+        else if (Loading)
+        {
+            <p>Loading results...</p>
         }
         else
         {
-            <div class="alert alert-info">
-                No results found for the selected filters.
+            <div class="col mb-3 mx-3">
+                <div class="row">
+                    <label for="gradeDropdown">Grade</label>
+                    <InputSelect class="form-select" id="gradeDropdown" TValue="string" Value="@gradeId"
+                        ValueChanged="@(async (value) => await OnGradeChange(value))" ValueExpression="@(() => gradeId)">
+                        <option value="">-- Select Grade --</option>
+                        @foreach (var grade in Grades)
+                        {
+                            <option value="@grade.Id">@grade.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="row">
+                    <label for="subjectDropdown">Subject</label>
+                    <InputSelect class="form-select" id="subjectDropdown" TValue="string" Value="@subjectId"
+                        ValueChanged="@(async (value) => await OnSubjectChange(value))"
+                        ValueExpression="@(() => subjectId)">
+                        <option value="">-- Select Subject --</option>
+                        @foreach (var subject in Subjects)
+                        {
+                            <option value="@subject.Id">@subject.Name</option>
+                        }
+                    </InputSelect>
+                </div>
             </div>
+
+            @if (!string.IsNullOrWhiteSpace(gradeId) && !string.IsNullOrWhiteSpace(subjectId))
+            {
+                @if (Results.Any())
+                {
+                    <div class="rounded overflow-hidden shadow-sm mb-3">
+                        <Grid TItem="Result" Class="table table-hover table-bordered table-striped rounded shadow-sm"
+                            DataProvider="LoadResults" AllowFiltering="true" AllowPaging="true" PageSize="10" AllowSorting="true"
+                            Responsive="true">
+
+                            <GridColumns>
+                                <GridColumn TItem="Result" HeaderText="Student" PropertyName="FullName">
+                                    @context.Learner?.FirstName @context.Learner?.LastName
+                                </GridColumn>
+
+                                <GridColumn TItem="Result" HeaderText="Score" PropertyName="Score" FilterTextboxWidth="50">
+                                    @if (context.Absent)
+                                    {
+                                        <div>Absent</div>
+                                    }
+                                    else
+                                    {
+                                        <div>@context.Score.ToString("0")</div>
+                                    }
+                                </GridColumn>
+
+                                <GridColumn TItem="Result" HeaderText="Date" PropertyName="ResultDate">
+                                    @context.ResultDate.ToString("yyyy-MM-dd")
+                                </GridColumn>
+
+                                <GridColumn TItem="Result" HeaderText="Assessment Type" PropertyName="AssessmentType" />
+
+                                <GridColumn TItem="Result" HeaderText="Topic" PropertyName="AssessmentTopic" />
+
+                                <GridColumn TItem="Result" HeaderText="Created On" PropertyName="CreatedAt">
+                                    @context.CreatedAt
+                                </GridColumn>
+
+                                <GridColumn TItem="Result" HeaderText="Was Absent" PropertyName="Absent"
+                                    SortKeySelector="item => item.Absent">
+                                    @(context.Absent ? "Yes" : "No")
+                                </GridColumn>
+
+                                <GridColumn TItem="Result" HeaderText="Absent Reason" PropertyName="AbsentReason">
+                                    @context.AbsentReason
+                                </GridColumn>
+
+                                <GridColumn TItem="Result" HeaderText="Actions" FilterTextboxWidth="50">
+                                    <button class="btn btn-sm btn-primary" @onclick="() => EditResult(context.Id)">
+                                        <Icon Name="IconName.Pencil" />Edit
+                                    </button>
+                                </GridColumn>
+                            </GridColumns>
+                        </Grid>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        No results found for the selected filters.
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    Please select a grade and subject to view results.
+                </div>
+            }
         }
-    }
-    else
-    {
-        <div class="alert alert-info">
-            Please select a grade and subject to view results.
-        </div>
-    }
-}
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     School? SelectedSchool { get; set; }
@@ -214,7 +222,7 @@ else
                 }
 
                 if (Guid.TryParse(gradeId, out var parsedGradeId) &&
-                Guid.TryParse(subjectId, out var parsedSubjectId))
+                int.TryParse(subjectId, out var parsedSubjectId))
                 {
                     Results = await ResultService.GetResultsByFiltersAsync(
                     SelectedSchool.Id,

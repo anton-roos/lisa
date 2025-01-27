@@ -43,7 +43,7 @@ namespace Lisa.Services
                 .ToListAsync();
         }
 
-        public async Task<List<Result>> GetResultsByFiltersAsync(Guid schoolId, Guid gradeId, Guid subjectId)
+        public async Task<List<Result>> GetResultsByFiltersAsync(Guid schoolId, Guid gradeId, int subjectId)
         {
             await using var context = _dbContextFactory.CreateDbContext();
 

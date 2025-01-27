@@ -81,14 +81,14 @@
     [Parameter] public IEnumerable<Subject>? FilteredSubjects { get; set; }
     [Parameter] public string SearchText { get; set; } = string.Empty;
     [Parameter] public EventCallback<ChangeEventArgs> OnInputChange { get; set; }
-    [Parameter] public EventCallback<Guid> ToggleSubject { get; set; }
+    [Parameter] public EventCallback<int> ToggleSubject { get; set; }
     [Parameter] public EventCallback OnValidSubmit { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public List<Subject> AllSubjects { get; set; } = new();
     [Parameter] public bool MathSelected { get; set; }
     [Parameter] public EventCallback ToggleMathSelected { get; set; }
 
-    private async Task ToggleSubjectAsync(Guid subjectId)
+    private async Task ToggleSubjectAsync(int subjectId)
     {
         await ToggleSubject.InvokeAsync(subjectId);
     }

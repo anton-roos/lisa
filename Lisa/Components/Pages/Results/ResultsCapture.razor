@@ -128,7 +128,7 @@ else
     private School? SelectedSchool;
     private List<LearnerResult> LearnerResults = new();
     private Guid SelectedGradeId { get; set; }
-    private Guid SelectedSubjectId { get; set; }
+    private int SelectedSubjectId { get; set; }
     private DateTime SelectedResultDate { get; set; } = DateTime.Today;
     private ClaimsPrincipal User { get; set; }
     [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
@@ -199,7 +199,7 @@ else
 
     private async Task LoadLearners()
     {
-        if (SelectedGradeId == Guid.Empty || SelectedSubjectId == Guid.Empty)
+        if (SelectedGradeId == Guid.Empty || SelectedSubjectId == 0)
             return;
 
         var learners = await LearnerService.GetLearnersWithTheirSubjectsByGradeAsync(SelectedGradeId);
@@ -236,7 +236,7 @@ else
 
     private void ViewResults()
     {
-        if (SelectedGradeId == Guid.Empty || SelectedSubjectId == Guid.Empty)
+        if (SelectedGradeId == Guid.Empty || SelectedSubjectId == 0)
             return;
 
         Navigation.NavigateTo($"/results/list?s={SelectedSchool!.Id}&g={SelectedGradeId}&sj={SelectedSubjectId}");

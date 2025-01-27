@@ -4,7 +4,7 @@ public class Result
 {
     public Guid Id { get; set; }
     public Guid LearnerId { get; set; }
-    public Guid SubjectId { get; set; }
+    public int SubjectId { get; set; }
     public decimal Score { get; set; }
     public DateTime ResultDate { get; set; }
     public DateTime CreatedAt { get; set; }

@@ -1,9 +1,0 @@
-/* Force the Blazor Bootstrap table to separate borders and respect border-radius. */
-table.table {
-    border-collapse: separate !important; 
-    border-spacing: 0;           /* remove gaps between cells */
-    border-radius: 0.5rem;       /* adjust to taste */
-    overflow: hidden;            /* ensure corners are clipped */
-    /* Optionally add a border or box-shadow to make the rounding more visible */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }

@@ -1,4 +1,4 @@
-@page "/subjects/edit/{SubjectId:guid}"
+@page "/subjects/edit/{SubjectId:int}"
 @using Lisa.Models.Entities
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Forms
@@ -32,7 +32,7 @@
 
 @code {
     [Parameter]
-    public Guid SubjectId { get; set; }
+    public int SubjectId { get; set; }
 
     private Subject editableSubject = new();
 

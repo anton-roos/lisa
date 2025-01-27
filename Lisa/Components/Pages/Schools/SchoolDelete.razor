@@ -31,7 +31,7 @@
             </div>
 
             <div class="d-flex justify-content-between">
-                <button class="btn btn-danger">Delete</button>
+                <button class="btn btn-danger" @onclick="DeleteSchool">Delete</button>
                 <button class="btn btn-secondary">Cancel</button>
             </div>
         }
@@ -79,15 +79,6 @@
                 if (SchoolToDelete == null)
                 {
                     throw new Exception("School not found.");
-                }
-
-                if (SchoolToDelete.Administrators.Any()
-                || SchoolToDelete.Learners.Any()
-                || SchoolToDelete.Teachers.Any()
-                || SchoolToDelete.RegisterClasses.Any()
-                )
-                {
-                    throw new Exception("School has associated users, learners, or register classes. You need to delete them first.");
                 }
 
                 EventBus.Publish(new DeleteSchoolEvent { School = School });

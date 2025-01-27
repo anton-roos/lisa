@@ -18,7 +18,13 @@ public class EventBus(IServiceProvider serviceProvider) : IEventBus
     public async void Publish<TEvent>(TEvent @event) where TEvent : class
     {
         var eventType = typeof(TEvent).Name;
-        var eventData = JsonConvert.SerializeObject(@event);
+        
+        var settings = new JsonSerializerSettings
+        {
+            ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+        };
+
+        var eventData = JsonConvert.SerializeObject(@event, settings);
 
         try
         {

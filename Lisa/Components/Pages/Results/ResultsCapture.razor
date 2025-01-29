@@ -213,8 +213,6 @@
         var newUri = QueryHelpers.AddQueryString(uri.AbsolutePath, queryParams);
         Navigation.NavigateTo(newUri);
 
-        // Force the grid to reload data
-        // If your library has a built-in method to refresh the data, call that.
         await LoadLearners();
     }
 
@@ -274,7 +272,6 @@
 
             foreach (var learner in learners)
             {
-                // *** KEY CHANGE: Use LearnerSubjects directly ***
                 if (learner.LearnerSubjects != null && learner.LearnerSubjects.Any(ls => ls.SubjectId == int.Parse(subjectId)))
                 {
                     LearnerResults.Add(new LearnerResult
@@ -295,7 +292,6 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading learners.");
-            // Handle the error appropriately, e.g., display an error message to the user.
         }
         finally
         {

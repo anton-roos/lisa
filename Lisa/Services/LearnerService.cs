@@ -255,6 +255,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         var learners = await context.Learners
             .Where(l => l.RegisterClass != null && l.RegisterClass.GradeId == gradeId)
+            .Include (l => l.LearnerSubjects)
             .Include(l => l.RegisterClass!)
                 .ThenInclude(rc => rc.CompulsorySubjects)
             .Include(l => l.Combination!)

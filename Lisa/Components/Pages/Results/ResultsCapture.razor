@@ -266,38 +266,41 @@
 
         Loading = true;
 
-        var learners = await LearnerService.GetLearnersWithTheirSubjectsByGradeAsync(Guid.Parse(gradeId));
-
-        LearnerResults = new List<LearnerResult>();
-
-        foreach (var learner in learners)
+        try
         {
-            var combinationSubjects = learner.Combination?.Subjects ?? new List<Subject>();
+            var learners = await LearnerService.GetLearnersWithTheirSubjectsByGradeAsync(Guid.Parse(gradeId));
 
-            if (!combinationSubjects.Any() && learner.RegisterClass?.CompulsorySubjects != null)
+            LearnerResults = new List<LearnerResult>();
+
+            foreach (var learner in learners)
             {
-                combinationSubjects = learner.RegisterClass.CompulsorySubjects.ToList();
+                // *** KEY CHANGE: Use LearnerSubjects directly ***
+                if (learner.LearnerSubjects != null && learner.LearnerSubjects.Any(ls => ls.SubjectId == int.Parse(subjectId)))
+                {
+                    LearnerResults.Add(new LearnerResult
+                        {
+                            LearnerId = learner.Id,
+                            LearnerName = $"{learner.FirstName} {learner.LastName}",
+                            ResultViewModel = new ResultViewModel()
+                        });
+                }
+
             }
 
-            bool hasSelectedSubject = combinationSubjects.Any(s => s.Id == int.Parse(subjectId));
-
-            if (hasSelectedSubject)
+            if (!LearnerResults.Any())
             {
-                LearnerResults.Add(new LearnerResult
-                    {
-                        LearnerId = learner.Id,
-                        LearnerName = $"{learner.FirstName} {learner.LastName}",
-                        ResultViewModel = new ResultViewModel()
-                    });
+                Logger.LogInformation("No learners found with the selected subject in the selected grade.");
             }
         }
-
-        if (!LearnerResults.Any())
+        catch (Exception ex)
         {
-            Logger.LogInformation("No learners found with the selected subject in the selected grade.");
+            Logger.LogError(ex, "Error loading learners.");
+            // Handle the error appropriately, e.g., display an error message to the user.
         }
-
-        Loading = false;
+        finally
+        {
+            Loading = false;
+        }
     }
 
     private async Task SaveResults()

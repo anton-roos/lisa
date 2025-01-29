@@ -136,8 +136,6 @@
     private List<Subject> Subjects = new();
     private School? SelectedSchool;
     private List<LearnerResult> LearnerResults = new();
-    private Guid SelectedGradeId { get; set; }
-    private int SelectedSubjectId { get; set; }
     private DateTime SelectedResultDate { get; set; } = DateTime.Today;
     private ClaimsPrincipal User { get; set; }
     private string? AssessmentTopic { get; set; }
@@ -200,14 +198,6 @@
         await LoadLearners();
     }
 
-    private void HandleGradeSelect(ChangeEventArgs e)
-    {
-        if (Guid.TryParse(e.Value?.ToString(), out Guid gradeId))
-        {
-            SelectedGradeId = gradeId;
-        }
-    }
-
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
         switch (eventName)
@@ -251,12 +241,12 @@
 
     private async Task LoadLearners()
     {
-        if (SelectedGradeId == Guid.Empty || SelectedSubjectId == 0)
+        if (string.IsNullOrEmpty(gradeId) || subjectId == "0")
             return;
 
         Loading = true;
 
-        var learners = await LearnerService.GetLearnersWithTheirSubjectsByGradeAsync(SelectedGradeId);
+        var learners = await LearnerService.GetLearnersWithTheirSubjectsByGradeAsync(Guid.Parse(gradeId));
 
         LearnerResults = new List<LearnerResult>();
 
@@ -269,7 +259,7 @@
                 combinationSubjects = learner.RegisterClass.CompulsorySubjects.ToList();
             }
 
-            bool hasSelectedSubject = combinationSubjects.Any(s => s.Id == SelectedSubjectId);
+            bool hasSelectedSubject = combinationSubjects.Any(s => s.Id == int.Parse(subjectId));
 
             if (hasSelectedSubject)
             {
@@ -298,7 +288,7 @@
                 {
                     Id = Guid.NewGuid(),
                     LearnerId = entry.LearnerId,
-                    SubjectId = SelectedSubjectId,
+                    SubjectId = int.Parse(subjectId),
                     Score = entry.ResultViewModel.Score,
                     AssessmentType = AssessmentType,
                     AssessmentTopic = AssessmentTopic,
@@ -314,7 +304,7 @@
 
         }
 
-        Navigation.NavigateTo($"/results?g={SelectedGradeId}&s={SelectedSubjectId}");
+        Navigation.NavigateTo($"/results?g={gradeId}&s={subjectId}");
     }
 
     private class LearnerResult

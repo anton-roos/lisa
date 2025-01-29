@@ -169,6 +169,26 @@
         Loading = false;
     }
 
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SelectedSchool == null)
+        {
+            Loading = false;
+            return;
+        }
+
+        await LoadDropdowns();
+
+        if (!string.IsNullOrWhiteSpace(gradeId) && !string.IsNullOrWhiteSpace(subjectId))
+        {
+            await LoadLearners();
+        }
+        else
+        {
+            Loading = false;
+        }
+    }
+
     private async Task OnGradeChange(string value)
     {
         gradeId = value;

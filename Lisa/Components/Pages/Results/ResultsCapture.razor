@@ -1,9 +1,10 @@
-@page "/results/capture"
+@page "/capture-results"
 @using System.ComponentModel.DataAnnotations
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
 @using Lisa.Services
 @using System.Security.Claims
+@using Microsoft.AspNetCore.WebUtilities
 @inject NavigationManager Navigation
 @inject SchoolService SchoolService
 @inject LearnerService LearnerService
@@ -14,113 +15,121 @@
 @inject UserService UserService
 @inject ResultService ResultService
 
-
-@if (SelectedSchool == null)
-{
-    <div class="alert alert-info" role="alert">
-        Please select a school to capture marks.
-    </div>
-}
-else if (Grades.Count == 0)
-{
-    <h3>Capture Marks</h3>
-    <div class="alert alert-warning" role="alert">
-        <strong>No Grades for School!</strong> Please add Grades to @SelectedSchool.ShortName! to Capture Marks.
-    </div>
-}
-else if (Subjects.Count == 0)
-{
-    <h3>Capture Marks</h3>
-    <div class="alert alert-warning" role="alert">
-        <strong>No Subjects for School!</strong> Please add Subjects to @SelectedSchool.ShortName! to Capture Marks.
-    </div>
-}
-else
-{
-    <h3>Capture Marks</h3>
-    <div>
-        <label>Select Grade:</label>
-        <select class="form-select" @bind="SelectedGradeId">
-            <option value="">-- Choose Grade --</option>
-            @foreach (var grade in Grades)
-            {
-                <option value="@grade.Id">@grade.Name</option>
-            }
-        </select>
-    </div>
-
-    <div>
-        <label>Select Subject:</label>
-        <select class="form-select" @bind="SelectedSubjectId">
-            <option value="">-- Choose Subject --</option>
-            @foreach (var subject in Subjects)
-            {
-                <option value="@subject.Id">@subject.Name</option>
-            }
-        </select>
-    </div>
-
-    <div>
-        <label for="resultDate" class="form-label">Select the Date of the Test or Assignment:</label>
-        <InputDate @bind-Value="SelectedResultDate" class="form-control" id="resultDate" />
-    </div>
-
-    <div class="d-flex justify-content-start mt-3">
-        <button class="btn btn-primary me-3" @onclick="async () => await LoadLearners()">Load Learners</button>
-        <button class="btn btn-primary" @onclick="ViewResults">View Results</button>
-    </div>
-}
-
-@if (LearnerResults?.Count > 0)
-{
-    <hr />
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Student</th>
-                <th>Score</th>
-                <th>Assessment Type</th>
-                <th>Assessment Topic</th>
-                <th>Absent?</th>
-                <th>Reason</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var entry in LearnerResults)
-            {
-                <tr>
-                    <td>@entry.LearnerName</td>
-                    <td>
-                        <InputNumber @bind-Value="entry.ResultViewModel.Score" class="form-control" min="0" max="100"
-                            step="1" />
-                    </td>
-                    <td>
-                        <InputText @bind-Value="entry.ResultViewModel.AssessmentType" class="form-control" />
-                    </td>
-                    <td>
-                        <InputText @bind-Value="entry.ResultViewModel.AssessmentTopic" class="form-control" />
-                    </td>
-                    <td>
-                        <InputCheckbox @bind-Value="entry.ResultViewModel.Absent" />
-                    </td>
-                    <td>
-                        @if (entry.ResultViewModel.Absent)
+<AuthorizeView Context="AuthContext"
+    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+    <Authorized>
+        <PageTitle>Capture Results</PageTitle>
+        <h3>Capture Results</h3>
+        @if (SelectedSchool == null)
+        {
+            <div class="alert alert-info" role="alert">
+                Please select a school to capture results.
+            </div>
+        }
+        else if (Loading)
+        {
+            <p>Loading...</p>
+        }
+        else
+        {
+            <div class="col mb-3 mx-3">
+                <div class="row">
+                    <label for="gradeDropdown">Grade</label>
+                    <InputSelect class="form-select" id="gradeDropdown" TValue="string" Value="@gradeId"
+                        ValueChanged="@(async (value) => await OnGradeChange(value))" ValueExpression="@(() => gradeId)">
+                        <option value="">-- Select Grade --</option>
+                        @foreach (var grade in Grades)
                         {
-                            <InputText @bind-Value="entry.ResultViewModel.AbsentReason" class="form-control" />
+                            <option value="@grade.Id">@grade.Name</option>
                         }
-                        else
+                    </InputSelect>
+                </div>
+                <div class="row">
+                    <label for="subjectDropdown">Subject</label>
+                    <InputSelect class="form-select" id="subjectDropdown" TValue="string" Value="@subjectId"
+                        ValueChanged="@(async (value) => await OnSubjectChange(value))"
+                        ValueExpression="@(() => subjectId)">
+                        <option value="">-- Select Subject --</option>
+                        @foreach (var subject in Subjects)
                         {
-                            <InputText style="display:none;" @bind-Value="entry.ResultViewModel.AbsentReason"
-                                class="form-control" />
+                            <option value="@subject.Id">@subject.Name</option>
                         }
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+                    </InputSelect>
+                </div>
+            </div>
+            @if (Grades.Any())
+            {
+                @if (LearnerResults.Any())
+                {
+                    <div>
+                        <label for="resultDate" class="form-label">Select the Date of the Test or Assignment:</label>
+                        <InputDate @bind-Value="SelectedResultDate" class="form-control" id="resultDate" />
+                    </div>
 
-    <button class="btn btn-primary mb-3" @onclick="SaveResults">Save Results</button>
-}
+                    <label>Assessment Topic</label>
+                    <InputText @bind-Value="AssessmentTopic"></InputText>
+                    <label>Assessment Type</label>
+                    <InputText @bind-Value="AssessmentType"></InputText>
+
+                    <hr />
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Score</th>
+                                <th>Absent?</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entry in LearnerResults)
+                            {
+                                <tr>
+                                    <td>@entry.LearnerName</td>
+                                    <td>
+                                        <InputNumber @bind-Value="entry.ResultViewModel.Score" class="form-control" min="0" max="100"
+                                            step="1" />
+                                    </td>
+                                    <td>
+                                        <InputCheckbox @bind-Value="entry.ResultViewModel.Absent" />
+                                    </td>
+                                    <td>
+                                        @if (entry.ResultViewModel.Absent)
+                                        {
+                                            <InputText @bind-Value="entry.ResultViewModel.AbsentReason" class="form-control" />
+                                        }
+                                        else
+                                        {
+                                            <InputText style="display:none;" @bind-Value="entry.ResultViewModel.AbsentReason"
+                                                class="form-control" />
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    <button class="btn btn-primary mb-3" @onclick="SaveResults">Save Results</button>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        No Learners found for the selected filters.
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    Please select a grade and subject to capture results.
+                </div>
+            }
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     private List<Grade> Grades = new();
@@ -131,7 +140,19 @@ else
     private int SelectedSubjectId { get; set; }
     private DateTime SelectedResultDate { get; set; } = DateTime.Today;
     private ClaimsPrincipal User { get; set; }
+    private string? AssessmentTopic { get; set; }
+    private string? AssessmentType { get; set; }
+    private bool Loading = true;
+
     [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "g")]
+    public string? gradeId { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "s")]
+    public string? subjectId { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -146,6 +167,37 @@ else
         {
             Console.WriteLine($"{User.Identity.Name} is authenticated.");
         }
+
+        Loading = false;
+    }
+
+    private async Task OnGradeChange(string value)
+    {
+        gradeId = value;
+        await UpdateQueryParameters();
+    }
+
+    private async Task OnSubjectChange(string value)
+    {
+        subjectId = value;
+        await UpdateQueryParameters();
+    }
+
+    private async Task UpdateQueryParameters()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var queryParams = new Dictionary<string, string?>
+            {
+                ["g"] = gradeId,
+                ["s"] = subjectId
+            };
+
+        var newUri = QueryHelpers.AddQueryString(uri.AbsolutePath, queryParams);
+        Navigation.NavigateTo(newUri);
+
+        // Force the grid to reload data
+        // If your library has a built-in method to refresh the data, call that.
+        await LoadLearners();
     }
 
     private void HandleGradeSelect(ChangeEventArgs e)
@@ -202,6 +254,8 @@ else
         if (SelectedGradeId == Guid.Empty || SelectedSubjectId == 0)
             return;
 
+        Loading = true;
+
         var learners = await LearnerService.GetLearnersWithTheirSubjectsByGradeAsync(SelectedGradeId);
 
         LearnerResults = new List<LearnerResult>();
@@ -232,14 +286,8 @@ else
         {
             Logger.LogInformation("No learners found with the selected subject in the selected grade.");
         }
-    }
 
-    private void ViewResults()
-    {
-        if (SelectedGradeId == Guid.Empty || SelectedSubjectId == 0)
-            return;
-
-        Navigation.NavigateTo($"/results/list?s={SelectedSchool!.Id}&g={SelectedGradeId}&sj={SelectedSubjectId}");
+        Loading = false;
     }
 
     private async Task SaveResults()
@@ -252,8 +300,8 @@ else
                     LearnerId = entry.LearnerId,
                     SubjectId = SelectedSubjectId,
                     Score = entry.ResultViewModel.Score,
-                    AssessmentType = entry.ResultViewModel.AssessmentType,
-                    AssessmentTopic = entry.ResultViewModel.AssessmentTopic,
+                    AssessmentType = AssessmentType,
+                    AssessmentTopic = AssessmentTopic,
                     Absent = entry.ResultViewModel.Absent,
                     AbsentReason = entry.ResultViewModel.AbsentReason,
                     ResultDate = DateTime.SpecifyKind(SelectedResultDate, DateTimeKind.Utc),
@@ -266,7 +314,7 @@ else
 
         }
 
-        Navigation.NavigateTo($"/results/list?s={SelectedSchool!.Id}&g={SelectedGradeId}&sj={SelectedSubjectId}");
+        Navigation.NavigateTo($"/results?g={SelectedGradeId}&s={SelectedSubjectId}");
     }
 
     private class LearnerResult

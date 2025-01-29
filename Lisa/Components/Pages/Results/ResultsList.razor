@@ -83,17 +83,16 @@
                                     @context.ResultDate.ToString("yyyy-MM-dd")
                                 </GridColumn>
 
-                                <GridColumn TItem="Result" HeaderText="Assessment Type" PropertyName="AssessmentType" />
+                                <GridColumn TItem="Result" HeaderText="Assessment Type" PropertyName="AssessmentType">
+                                    @context.AssessmentType
+                                </GridColumn>
 
-                                <GridColumn TItem="Result" HeaderText="Topic" PropertyName="AssessmentTopic" />
+                                <GridColumn TItem="Result" HeaderText="Topic" PropertyName="AssessmentTopic">
+                                    @context.AssessmentTopic
+                                </GridColumn>
 
                                 <GridColumn TItem="Result" HeaderText="Created On" PropertyName="CreatedAt">
                                     @context.CreatedAt
-                                </GridColumn>
-
-                                <GridColumn TItem="Result" HeaderText="Was Absent" PropertyName="Absent"
-                                    SortKeySelector="item => item.Absent">
-                                    @(context.Absent ? "Yes" : "No")
                                 </GridColumn>
 
                                 <GridColumn TItem="Result" HeaderText="Absent Reason" PropertyName="AbsentReason">

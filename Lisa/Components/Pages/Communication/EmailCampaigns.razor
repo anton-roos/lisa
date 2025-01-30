@@ -1,0 +1,93 @@
+@page "/email-campaigns"
+
+@using Lisa.Models.Entities
+@inject Lisa.Services.EmailCampaignService CampaignService
+@inject IJSRuntime JSRuntime
+
+<h3>Email Campaigns</h3>
+
+@if (isLoading)
+{
+    <p>Loading campaigns...</p>
+}
+else if (EmailCampaignList is not null && EmailCampaignList.Count > 0)
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Subject Line</th>
+                <th>Created At</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var campaign in EmailCampaignList)
+            {
+                <tr>
+                    <td>@campaign.Name</td>
+                    <td>@campaign.Status</td>
+                    <td>@campaign.SubjectLine</td>
+                    <td>@campaign.CreatedAt.ToLocalTime()</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" @onclick="@(() => EditCampaign(campaign.Id.Value))">
+                            Edit
+                        </button>
+                        <button class="btn btn-sm btn-danger" @onclick="@(() => DeleteCampaign(campaign.Id.Value))">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No campaigns found.</p>
+}
+
+<button class="btn btn-success" @onclick="CreateNewCampaign">Create New Campaign</button>
+
+@code {
+    private bool isLoading = false;
+    private List<EmailCampaign>? EmailCampaignList;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        EmailCampaignList = await CampaignService.GetAllAsync();
+        isLoading = false;
+    }
+
+    private async Task ReloadCampaigns()
+    {
+        EmailCampaignList = await CampaignService.GetAllAsync();
+        StateHasChanged();
+    }
+
+    private void CreateNewCampaign()
+    {
+        // Navigate to a create form, or show a modal, etc.
+        // For example, if using NavigationManager:
+        // NavigationManager.NavigateTo("/email-campaigns/create");
+    }
+
+    private void EditCampaign(Guid campaignId)
+    {
+        // Navigate to an edit form or show inline editing
+        // e.g., NavigationManager.NavigateTo($"/email-campaigns/edit/{campaignId}");
+    }
+
+    private async Task DeleteCampaign(Guid campaignId)
+    {
+        // Confirm delete (optional)
+        bool confirm = await JSRuntime.InvokeAsync<bool>("confirm", 
+            new object[] { "Are you sure you want to delete this campaign?" });
+        if (!confirm) return;
+
+        await CampaignService.DeleteAsync(campaignId);
+        await ReloadCampaigns();
+    }
+}

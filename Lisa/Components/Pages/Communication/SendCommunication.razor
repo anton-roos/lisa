@@ -43,8 +43,6 @@
     <label class="form-check-label" for="schoolOption">School</label>
 </div>
 
-<p>Selected: @SelectedTarget</p>
-
 @switch (SelectedTarget)
 {
     case CommunicationTarget.Learner:
@@ -85,7 +83,14 @@
         <p>Subject</p>
         break;
     case CommunicationTarget.School:
-        <p>School</p>
+        <label>Audience</label>
+        <InputSelect class="form-select" id="SelectedSchoolId" TValue="string" Value="@SelectedSchoolAudienceId"
+            ValueChanged="OnSchoolAudienceSelected" ValueExpression="@(() => SelectedSchoolAudienceId)">
+            <option value="">-- Select Audience --</option>
+            <option value="1">Learners</option>
+            <option value="2">Staff</option>
+            <option value="3">Learners and Staff</option>
+        </InputSelect>
         break;
 }
 
@@ -96,6 +101,7 @@
     private IEnumerable<Learner> FilteredLearners => ApplyFilters();
     private School? SelectedSchool { get; set; }
     private string? SelectedGradeId { get; set; }
+    private string? SelectedSchoolAudienceId { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -113,6 +119,21 @@
         }
 
         await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task OnSchoolAudienceSelected(string e)
+    {
+        SelectedSchoolAudienceId = e;
+        switch (e)
+        {
+            case "1":
+                await LearnerService.GetLearnersBySchoolAsync(SelectedSchool.Id);
+                break;
+            case "2":
+                break;
+            case "3":
+                break;
+        }
     }
 
     private async Task LoadData()
@@ -158,4 +179,11 @@
     {
         NavigationManager.NavigateTo($"/communication/send/learner/{learner.Id}");
     }
+
+    void SendToAudience(EmailCampaign emailCampaign)
+    {
+        // Save the email campaign to db with list of email addresses
+        NavigationManager.NavigateTo($"/email-campaign/{emailCampaign.Id}");
+    }
+
 }

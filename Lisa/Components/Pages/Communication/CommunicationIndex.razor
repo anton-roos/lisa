@@ -23,7 +23,7 @@ else
     <h3>Communication</h3>
     <button class="btn btn-primary" @onclick="SendCommunication">Send Communication</button>
     <button class="btn btn-primary" @onclick="ViewTemplates">View Templates</button>
-    <button class="btn btn-primary" @onclick="AddTemplate">Add Template</button>
+    <button class="btn btn-primary" @onclick="NavigateToEmailCampaigns">Email Campaigns</button>
 }
 
 @code {
@@ -35,14 +35,14 @@ else
         SubscribeToEvent(UiEvents.SchoolSelected);
     }
 
-    private void AddTemplate()
-    {
-        NavigationManager.NavigateTo("/communication/email-templates/add");
-    }
-
     private void ViewTemplates()
     {
         NavigationManager.NavigateTo("/communication/email-templates");
+    }
+    
+    private void NavigateToEmailCampaigns()
+    {
+        NavigationManager.NavigateTo("/email-campaigns");
     }
 
     private void SendCommunication()

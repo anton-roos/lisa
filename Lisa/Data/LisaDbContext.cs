@@ -30,6 +30,8 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
     public DbSet<BugReport> BugReports { get; set; } = null!;
     public DbSet<EventLog> EventLogs { get; set; } = null!;
     public DbSet<LearnerSubject> LearnerSubjects { get; set; } = null!;
+    public DbSet<EmailCampaign> EmailCampaigns { get; set; } = null!;
+    public DbSet<EmailRecipient> EmailRecipients { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -301,8 +303,61 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
         modelBuilder.Entity<Result>()
             .Property(r => r.Score)
             .HasColumnType("decimal(5, 2)");
-    }
 
+        modelBuilder.Entity<EmailCampaign>(entity =>
+        {
+            entity.ToTable("EmailCampaigns");
+            entity.HasKey(ec => ec.Id);
+            entity.Property(ec => ec.Id)
+                  .ValueGeneratedNever();
+            entity.Property(ec => ec.Name)
+                  .HasMaxLength(200)
+                  .IsRequired(false);
+            entity.Property(ec => ec.Description)
+                  .HasMaxLength(2000)
+                  .IsRequired(false);
+            entity.Property(ec => ec.SubjectLine)
+                  .HasMaxLength(200)
+                  .IsRequired(false);
+            entity.Property(ec => ec.SenderName)
+                  .HasMaxLength(100)
+                  .IsRequired(false);
+            entity.Property(ec => ec.SenderEmail)
+                  .HasMaxLength(255)
+                  .IsRequired(false);
+            entity.Property(ec => ec.Status)
+                  .HasConversion<string>()
+                  .HasMaxLength(50);
+            entity.HasMany(ec => ec.EmailRecipients)
+                  .WithOne(r => r.EmailCampaign)
+                  .HasForeignKey(r => r.EmailCampaignId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(ec => ec.UpdatedAt)
+                  .ValueGeneratedOnAddOrUpdate();
+        });
+
+        modelBuilder.Entity<EmailRecipient>(entity =>
+        {
+            entity.ToTable("EmailRecipients");
+            entity.HasKey(r => r.Id);
+            entity.Property(r => r.Id)
+                  .ValueGeneratedNever();
+            entity.Property(r => r.EmailAddress)
+                  .HasMaxLength(255)
+                  .IsRequired(true);
+            entity.Property(r => r.Status)
+                  .HasConversion<string>()
+                  .HasMaxLength(50);
+            entity.HasOne(r => r.EmailCampaign)
+                  .WithMany(ec => ec.EmailRecipients)
+                  .HasForeignKey(r => r.EmailCampaignId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(r => r.CreatedAt)
+                  .ValueGeneratedOnAdd();
+            entity.Property(r => r.UpdatedAt)
+                  .ValueGeneratedOnAddOrUpdate();
+        });
+    }
 
     public override int SaveChanges()
     {

@@ -7,9 +7,9 @@ namespace Lisa.Services
 {
     public class EmailCampaignService
     {
-        private readonly DbContextFactory<LisaDbContext> _contextFactory;
+        private readonly IDbContextFactory<LisaDbContext> _contextFactory;
 
-        public EmailCampaignService(DbContextFactory<LisaDbContext> contextFactory)
+        public EmailCampaignService(IDbContextFactory<LisaDbContext> contextFactory)
         {
             _contextFactory = contextFactory;
         }

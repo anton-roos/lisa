@@ -128,6 +128,7 @@ builder.Services.AddScoped<VersionService>();
 builder.Services.AddSingleton<IEventBus, EventBus>();
 builder.Services.AddScoped<IEventLogRepository, EventLogRepository>();
 builder.Services.AddScoped<EmailCampaignService>();
+builder.Services.AddScoped<CommunicationService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Host.UseSerilog();

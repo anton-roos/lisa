@@ -1,0 +1,81 @@
+@page "/email-campaign/{Id:guid}"
+@using Lisa.Models.Entities
+
+@inject Lisa.Services.EmailCampaignService EmailCampaignService
+
+<PageTitle>Email Campaign</PageTitle>
+
+<div class="container my-4">
+    @if (Campaign == null)
+    {
+        <p>Loading campaign data...</p>
+    }
+    else
+    {
+        <h3>@Campaign.Name</h3>
+
+
+        // Calculate total recipients and how many have been 'Sent'
+        var totalRecipients = Campaign.EmailRecipients?.Count() ?? 0;
+        var sentRecipientsCount = Campaign.EmailRecipients?
+        .Count(r => r.Status != EmailRecipientStatus.Pending) ?? 0;
+
+        // Calculate the progress percentage
+        // Avoid divide-by-zero if totalRecipients == 0
+        var progressPercent = totalRecipients == 0
+        ? 0
+        : (int)Math.Round((double)sentRecipientsCount / totalRecipients * 100);
+
+
+        <!-- Progress Bar -->
+        <Progress Class="mb-3">
+            <ProgressBar Width="@progressPercent" Label="@($"{progressPercent}%")" />
+        </Progress>
+
+        <!-- Sending "X of Y" text -->
+        <p>Sending @sentRecipientsCount of @totalRecipients emails...</p>
+
+        <!-- Action Buttons -->
+        <Button Color="ButtonColor.Secondary" Size="ButtonSize.Medium" @onclick="Pause">
+            <Icon Name="IconName.PauseBtnFill"></Icon>
+            Pause
+        </Button>
+
+        <Button Color="ButtonColor.Danger" Size="ButtonSize.Medium" @onclick="Stop" class="ms-2">
+            <Icon Name="IconName.SignStopFill"></Icon>
+            Cancel
+        </Button>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private EmailCampaign? Campaign { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load the campaign (including recipients if desired)
+        Campaign = await EmailCampaignService.GetByIdAsync(Id);
+    }
+
+    private async Task Pause()
+    {
+        if (Campaign is null) return;
+
+        Campaign.Status = EmailCampaignStatus.Paused;
+        await EmailCampaignService.UpdateAsync(Campaign);
+        // Optionally refresh UI or invoke other logic after pausing
+    }
+
+    private async Task Stop()
+    {
+        if (Campaign is null) return;
+
+        // If your enum has no 'Stopped' value,
+        // use 'Cancelled' or another appropriate status
+        Campaign.Status = EmailCampaignStatus.Cancelled;
+        await EmailCampaignService.UpdateAsync(Campaign);
+        // Optionally refresh UI or invoke other logic after stopping
+    }
+}

@@ -1,0 +1,174 @@
+@page "/communication/send"
+
+@inject EmailTemplateService EmailTemplateService
+@inject EmailService EmailService
+@inject NavigationManager NavigationManager
+@inject LearnerService LearnerService
+@inject SchoolService SchoolService
+
+@using System.ComponentModel.DataAnnotations
+@using Lisa.Models.Entities
+@using Lisa.Models.EmailModels
+@using Blazored.TextEditor  @* For rich text editing (optional) *@
+
+<PageTitle>Send Communication</PageTitle>
+
+<h3>Send Communication</h3>
+
+@if (CurrentStep == WizardStep.ChooseTarget)
+{
+    <ChooseTargetStep
+        SelectedTarget="SelectedTarget"
+        OnTargetChosen="HandleTargetChosen"
+    />
+}
+else if (CurrentStep == WizardStep.SelectRecipients)
+{
+    <SelectRecipientsStep
+        SelectedTarget="SelectedTarget"
+        SelectedSchool="SelectedSchool"
+        SelectedRecipients="SelectedRecipients"
+        OnRecipientsChosen="HandleRecipientsChosen"
+        OnBack="@(() => CurrentStep = WizardStep.ChooseTarget)"
+    />
+}
+else if (CurrentStep == WizardStep.ChooseTemplate)
+{
+    <ChooseTemplateStep
+        SelectedTemplateId="SelectedTemplateId"
+        Templates="AvailableTemplates"
+        OnTemplateChosen="HandleTemplateChosen"
+        OnBack="@(() => CurrentStep = WizardStep.SelectRecipients)"
+    />
+}
+else if (CurrentStep == WizardStep.PreviewAndSend)
+{
+    <PreviewAndSendStep
+        SelectedRecipients="SelectedRecipients"
+        SelectedTemplate="@SelectedTemplate"
+        OnSend="HandleSend"
+        OnBack="@(() => CurrentStep = WizardStep.ChooseTemplate)"
+    />
+}
+
+<!-- Optional success or error messages -->
+@if (!string.IsNullOrWhiteSpace(SuccessMessage))
+{
+    <div class="alert alert-success">@SuccessMessage</div>
+}
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+@code {
+    //
+    // 1. ENUM DEFINITIONS FOR STEPS AND TARGET
+    //
+    private enum WizardStep
+    {
+        ChooseTarget,
+        SelectRecipients,
+        ChooseTemplate,
+        PreviewAndSend
+    }
+
+    // Reuse your existing CommunicationTarget, or define similarly:
+    private enum CommunicationTarget
+    {
+        Learner,
+        Grade,
+        Subject,
+        School
+    }
+
+    //
+    // 2. PROPERTIES FOR WIZARD FLOW
+    //
+    private WizardStep CurrentStep { get; set; } = WizardStep.ChooseTarget;
+
+    private CommunicationTarget SelectedTarget { get; set; } = CommunicationTarget.Learner;
+    private School? SelectedSchool { get; set; }
+
+    private List<RecipientInfo> SelectedRecipients { get; set; } = new();
+        // This will store email addresses, IDs, or other info about who we’re sending to.
+
+    private List<EmailTemplate> AvailableTemplates { get; set; } = new();
+    private Guid SelectedTemplateId { get; set; }
+    private EmailTemplate? SelectedTemplate { get; set; }
+
+    // For user messages
+    private string? SuccessMessage { get; set; }
+    private string? ErrorMessage { get; set; }
+
+    //
+    // 3. LIFECYCLE METHODS
+    //
+    protected override async Task OnInitializedAsync()
+    {
+        // Maybe load the currently selected school from a service
+        SelectedSchool = SchoolService.GetSelectedSchool();
+
+        // Pre-load all templates (or do so in the ChooseTemplateStep, up to you)
+        AvailableTemplates = await EmailTemplateService.GetAllTemplatesAsync();
+    }
+
+    //
+    // 4. HANDLERS FOR EACH STEP
+    //
+    private void HandleTargetChosen(CommunicationTarget target)
+    {
+        SelectedTarget = target;
+        CurrentStep = WizardStep.SelectRecipients;
+    }
+
+    private void HandleRecipientsChosen(List<RecipientInfo> recipients)
+    {
+        SelectedRecipients = recipients;
+        CurrentStep = WizardStep.ChooseTemplate;
+    }
+
+    private async Task HandleTemplateChosen(Guid templateId)
+    {
+        SelectedTemplateId = templateId;
+        SelectedTemplate = await EmailTemplateService.GetTemplateByIdAsync(templateId);
+        CurrentStep = WizardStep.PreviewAndSend;
+    }
+
+    private async Task HandleSend(string subject, string body)
+    {
+        try
+        {
+            // Example: Send to each recipient in SelectedRecipients
+            // Or build a single email with BCC, etc. - depends on your approach
+            foreach (var recipient in SelectedRecipients)
+            {
+                var message = new EmailMessage
+                {
+                    To = new List<string> { recipient.Email },
+                    Subject = subject,
+                    Body = body
+                };
+
+                // Possibly do placeholder replacement here before sending:
+                // body = body.Replace("{{FirstName}}", recipient.FirstName) ...
+                await EmailService.SendAsync(message);
+            }
+
+            SuccessMessage = $"Emails sent to {SelectedRecipients.Count} recipients successfully.";
+            ErrorMessage = null;
+
+            // Optionally redirect or reset the wizard
+            // NavigationManager.NavigateTo("/communication");
+            // or reset to step 1:
+            CurrentStep = WizardStep.ChooseTarget;
+            SelectedRecipients.Clear();
+            SelectedTemplate = null;
+            SelectedTemplateId = Guid.Empty;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error sending emails: {ex.Message}";
+        }
+    }
+}

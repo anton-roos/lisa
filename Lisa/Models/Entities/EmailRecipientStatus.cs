@@ -7,5 +7,4 @@ public enum EmailRecipientStatus
     Opened,
     Clicked,
     Bounced,
-    Unsubscribed
 }

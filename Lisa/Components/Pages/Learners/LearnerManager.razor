@@ -115,7 +115,8 @@
                         {
                             <div class="col-3">
                                 <input type="radio" id="math" name="math" value="MATH"
-                                    @onchange="@(() => OnMathRadioChanged(@MathSubject.Id))" checked="@MathSelection.Equals(MathSubject.Id)" />
+                                    @onchange="@(() => OnMathRadioChanged(@MathSubject.Id))"
+                                    checked="@MathSelection.Equals(MathSubject.Id)" />
                                 <label for="math">@MathSubject.Description</label><br>
                             </div>
                         }
@@ -349,6 +350,16 @@
         .ToList();
 
         LearnerModel.SubjectIds = existingLearner.LearnerSubjects.Select(s => s.SubjectId).ToList();
+
+        if (MathSubjects != null)
+        {
+            var chosenMathSubject = MathSubjects
+            .FirstOrDefault(ms => LearnerModel.SubjectIds.Contains(ms.Id));
+            if (chosenMathSubject != null)
+            {
+                MathSelection = chosenMathSubject.Id;
+            }
+        }
 
         if (LearnerModel.RegisterClassId.HasValue)
         {

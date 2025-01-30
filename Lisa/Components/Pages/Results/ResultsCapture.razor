@@ -10,10 +10,10 @@
 @inject LearnerService LearnerService
 @inject GradeService GradeService
 @inject SubjectService SubjectService
-@inherits EventAwareComponentBase
 @inject ILogger<Result> Logger
 @inject UserService UserService
 @inject ResultService ResultService
+@inherits EventAwareComponentBase
 
 <AuthorizeView Context="AuthContext"
     Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
@@ -259,7 +259,7 @@
 
     private async Task LoadLearners()
     {
-        if (string.IsNullOrEmpty(gradeId) || subjectId == "0")
+        if (string.IsNullOrEmpty(gradeId) ||string.IsNullOrEmpty(gradeId))
             return;
 
         Loading = true;

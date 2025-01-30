@@ -160,8 +160,10 @@ else
         NavigationManager.NavigateTo("/learners/add");
     }
 
-    private void DeleteLearner(Learner learner)
+    private async Task DeleteLearner(Learner learner)
     {
-        NavigationManager.NavigateTo($"/learners/delete/{learner.Id}");
+        await LearnerService.DeleteLearner(learner);
+        await LoadLearners();
+        await InvokeAsync(StateHasChanged);
     }
 }

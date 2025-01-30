@@ -40,15 +40,23 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory)
         await _context.SaveChangesAsync();
     }
 
-    public Task<List<Subject>> GetSubjectsByIdsAsync(IEnumerable<int> ids)
+    public async Task<List<Subject>> GetSubjectsByIdsAsync(IEnumerable<int> ids)
     {
         var _context = _dbContextFactory.CreateDbContext();
-        return _context.Subjects
+        return await _context.Subjects
             .AsNoTracking()
             .Where(s => ids.Contains(s.Id))
             .ToListAsync();
     }
-    
+
+    public async Task<List<Subject>> GetMathSubjects()
+    {
+        var context = _dbContextFactory.CreateDbContext();
+        return await context.Subjects
+        .Where(s => s.SubjectType == SubjectType.MathCombination)
+        .ToListAsync();
+    }
+
     public async Task DeleteAsync(int id)
     {
         var _context = _dbContextFactory.CreateDbContext();

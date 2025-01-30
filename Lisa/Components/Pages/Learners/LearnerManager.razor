@@ -8,7 +8,7 @@
 @inject SchoolService SchoolService
 @inject CombinationService combinationService
 @inject RegisterClassService registerClassService
-@inject SubjectService subjectService
+@inject SubjectService SubjectService
 @inject ILogger<LearnerManager> Logger
 
 @inherits EventAwareComponentBase
@@ -111,16 +111,14 @@
                 <div class="mb-8" id="math-selection">
                     <h3>Select 1 (Mathematics or Maths Literacy)</h3>
                     <div class="row justify-content-start">
-                        <div class="col-3">
-                            <input type="radio" id="math" name="math" value="MATH"
-                                @onchange="@(() => OnMathRadioChanged("MATH"))" checked="@SelectedMathOption.Equals("MATH")" />
-                            <label for="math">Mathematics</label><br>
-                        </div>
-                        <div class="col-3">
-                            <input type="radio" id="math-lit" name="math" value="MATL"
-                                @onchange="@(() => OnMathRadioChanged("MATL"))" checked="@SelectedMathOption.Equals("MATL")" />
-                            <label for="math-lit">Mathematical Literacy</label><br>
-                        </div>
+                        @foreach (var MathSubject in MathSubjects)
+                        {
+                            <div class="col-3">
+                                <input type="radio" id="math" name="math" value="MATH"
+                                    @onchange="@(() => OnMathRadioChanged(@MathSubject.Id))" checked="@MathSelection.Equals(MathSubject.Id)" />
+                                <label for="math">@MathSubject.Description</label><br>
+                            </div>
+                        }
                     </div>
                 </div>
             }
@@ -233,12 +231,13 @@
     private List<RegisterClass> RegisterClasses = new();
     private List<CareGroup> CareGroups = new();
     private IEnumerable<Combination>? AllCombinations;
+    private List<Subject>? MathSubjects;
     private RegisterClass? CurrentRegisterClass;
     private School? SelectedSchool;
     private string? SelectedRegisterClassId = string.Empty;
-    private string? SelectedMathOption = string.Empty;
     private IEnumerable<Combination>? CombinationsToChoseFrom;
     private Dictionary<Guid, int> CombinationSelections = new();
+    private int MathSelection;
     private string? AlertMessage;
     private string AlertType = "success";
     private EditContext? ParentEditContext;
@@ -249,7 +248,6 @@
         SubscribeToEvent(UiEvents.SchoolSelected);
 
         await LoadDropdowns();
-        await LoadSubjects();
 
         InitializeParentEditContext();
 
@@ -287,12 +285,6 @@
         }
         await base.HandleEventAsync(eventName, payload);
     }
-
-    private async Task LoadSubjects()
-    {
-        var allSubjects = await subjectService.GetAllAsync();
-    }
-
     private async Task LoadDropdowns()
     {
         if (SelectedSchool != null)
@@ -300,12 +292,14 @@
             RegisterClasses = await LearnerService.GetRegisterClassesBySchoolId(SelectedSchool.Id);
             AllCombinations = await combinationService.GetCombinationsBySchoolId(SelectedSchool.Id);
             CareGroups = await LearnerService.GetCareGroupsBySchoolId(SelectedSchool.Id);
+            MathSubjects = await SubjectService.GetMathSubjects();
         }
         else if (LearnerModel.RegisterClassId.HasValue)
         {
             RegisterClasses = await LearnerService.GetRegisterClassesBySchoolId(LearnerModel.SchoolId);
             AllCombinations = await combinationService.GetCombinationsBySchoolId(LearnerModel.SchoolId);
             CareGroups = await LearnerService.GetCareGroupsBySchoolId(LearnerModel.SchoolId);
+            MathSubjects = await SubjectService.GetMathSubjects();
         }
         else
         {
@@ -394,13 +388,13 @@
             {
                 return;
             }
-            
+
             LearnerModel.RegisterClassId = newRegisterClassId;
             CurrentRegisterClass = await registerClassService.GetByIdAsync(LearnerModel.RegisterClassId.Value);
 
             LearnerModel.SubjectIds.Clear();
             CombinationSelections.Clear();
-            SelectedMathOption = string.Empty;
+            MathSelection = 0;
 
             foreach (var subj in CurrentRegisterClass.CompulsorySubjects)
             {
@@ -433,28 +427,18 @@
         }
     }
 
-    private void OnMathRadioChanged(string optionValue)
+    private void OnMathRadioChanged(int MathSubjectId)
     {
-        SelectedMathOption = optionValue;
+        MathSelection = MathSubjectId;
 
-        if (CurrentRegisterClass != null && CurrentRegisterClass.MathSelectionEnabled)
+        if (LearnerModel.SubjectIds.Contains(MathSubjectId))
         {
-            
+            LearnerModel.SubjectIds.Remove(MathSubjectId);
         }
-        
-        // Example of how you'd switch subject IDs:
-        // var mathSubjects = new Dictionary<string, Guid>
-        // {
-        // { "MATH", new Guid("11111111-1111-1111-1111-111111111111") },
-        // { "MATL", new Guid("22222222-2222-2222-2222-222222222222") }
-        // };
-        //
-        // // Remove both possible math subjects
-        // LearnerModel.SubjectIds.Remove(mathSubjects["MATH"]);
-        // LearnerModel.SubjectIds.Remove(mathSubjects["MATL"]);
-        //
-        // // Add the selected one
-        // LearnerModel.SubjectIds.Add(mathSubjects[optionValue]);
+        else
+        {
+            LearnerModel.SubjectIds.Add(MathSubjectId);
+        }
     }
 
     private void OnCombinationSubjectChanged(Combination combo, Subject newSubject)

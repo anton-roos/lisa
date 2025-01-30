@@ -41,7 +41,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
                             .Include(c => c.Subjects)
                             .ToListAsync();
     }
-
+    
     public async Task<IEnumerable<Combination>> GetAllAsync()
     {
         var _context = _dbContextFactory.CreateDbContext();

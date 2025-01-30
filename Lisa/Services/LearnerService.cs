@@ -2,6 +2,7 @@ using Lisa.Data;
 using Lisa.Models.Entities;
 using Lisa.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json.Serialization;
 
 namespace Lisa.Services;
 
@@ -49,7 +50,12 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
             IdNumber = model.IdNumber,
             LastName = model.LastName,
             RegisterClassId = model.RegisterClassId,
-            SchoolId = schoolId
+            SchoolId = schoolId,
+            LearnerSubjects = [.. model.SubjectIds.Select(sid => new LearnerSubject
+            {
+                LearnerId = newLearnerId,
+                SubjectId = sid
+            })]
         };
 
         context.Learners.Add(learner);
@@ -255,7 +261,8 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         var learners = await context.Learners
             .Where(l => l.RegisterClass != null && l.RegisterClass.GradeId == gradeId)
-            .Include (l => l.LearnerSubjects)
+            .Include(l => l.LearnerSubjects)
+                .ThenInclude(ls => ls.Subject)
             .Include(l => l.RegisterClass!)
                 .ThenInclude(rc => rc.CompulsorySubjects)
             .Include(l => l.Combination!)
@@ -308,5 +315,13 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
             .Where(ls => ls.LearnerId == learnerId)
             .Select(ls => ls.Subject)
             .ToListAsync();
+    }
+
+    public async Task DeleteLearner(Learner learner)
+    {
+        using var context = _dbContextFactory.CreateDbContext();
+        context.Learners.Remove(learner);
+        await context.SaveChangesAsync();
+        LearnersUpdated?.Invoke();
     }
 }

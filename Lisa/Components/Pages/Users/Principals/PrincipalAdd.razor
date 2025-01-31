@@ -18,13 +18,13 @@
             <ValidationSummary />
 
             <div class="form-group">
-                <label for="firstName">First Name</label>
-                <InputText id="firstName" class="form-control" @bind-Value="Principal.FirstName" />
+                <label for="surname">Surname</label>
+                <InputText id="surname" class="form-control" @bind-Value="Principal.Surname" />
             </div>
 
             <div class="form-group">
-                <label for="lastName">Last Name</label>
-                <InputText id="lastName" class="form-control" @bind-Value="Principal.LastName" />
+                <label for="name">Name</label>
+                <InputText id="name" class="form-control" @bind-Value="Principal.Name" />
             </div>
 
             <div class="form-group">
@@ -81,8 +81,8 @@
             }
             var userEntity = new Principal
                 {
-                    FirstName = Principal.FirstName,
-                    LastName = Principal.LastName,
+                    Surname = Principal.Surname,
+                    Name = Principal.Name,
                     Email = Principal.Email,
                     UserName = Principal.Email,
                     SchoolId = SelectedSchool.Id
@@ -92,7 +92,7 @@
             {
                 throw new Exception("Password is required.");
             }
-            
+
             var result = await UserManager.CreateAsync(userEntity, Principal.Password);
             if (result.Succeeded)
             {

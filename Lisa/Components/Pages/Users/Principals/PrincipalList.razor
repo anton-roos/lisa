@@ -29,6 +29,7 @@ else
     <table class="table table-striped">
         <thead>
             <tr>
+                <th>Surname</th>
                 <th>Name</th>
                 <th>School</th>
                 <th>Actions</th>
@@ -38,7 +39,8 @@ else
             @foreach (var Principal in Principals)
             {
                 <tr>
-                    <td>@($"{Principal.FirstName} {Principal.LastName}")</td>
+                    <td>@Principal.Surname</td>
+                    <td>@Principal.Name</td>
                     <td>@Principal.School?.ShortName</td>
                     <ActionButtons TEntity="Principal" Entity="Principal" OnView="ViewPrincipal" OnEdit="EditPrincipal"
                         OnDelete="DeletePrincipal" />

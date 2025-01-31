@@ -26,7 +26,9 @@
     </div>
 
     <div class="mb-3">
-        <Switch Class="mt-3" Value="MathSelected" Label="Do you need to choose between Mathematics and Mathematical Literacy in this grade?" ValueExpression="() => MathSelected" ValueChanged="ToggleMathSelected" />
+        <Switch Class="mt-3" Value="MathSelected"
+            Label="Do you need to choose between Mathematics and Mathematical Literacy in this grade?"
+            ValueExpression="() => MathSelected" ValueChanged="ToggleMathSelected" />
     </div>
 
     <div class="mb-3">
@@ -37,7 +39,7 @@
             {
                 @foreach (var teacher in Teachers)
                 {
-                    <option value="@teacher.Id">@($"{teacher.FirstName} {teacher.LastName}")</option>
+                    <option value="@teacher.Id">@($"{teacher.Surname} {teacher.Name}")</option>
                 }
             }
         </select>
@@ -47,10 +49,8 @@
         <label class="form-label">Compulsory Subjects</label>
         <div class="mb-3">
             <label class="form-label">Search Subjects</label>
-            <InputText class="form-control"
-            @bind-Value="SearchText"
-            @oninput="OnInputChange"
-            placeholder="Type to filter subjects..." />
+            <InputText class="form-control" @bind-Value="SearchText" @oninput="OnInputChange"
+                placeholder="Type to filter subjects..." />
         </div>
         <div role="group">
             @if (FilteredSubjects != null)
@@ -60,9 +60,7 @@
                     bool isChecked = RegisterClass.SubjectIds.Contains(subject.Id);
 
                     <div>
-                        <input type="checkbox"
-                        checked="@isChecked"
-                        @onchange="@(() => ToggleSubjectAsync(subject.Id))" />
+                        <input type="checkbox" checked="@isChecked" @onchange="@(() => ToggleSubjectAsync(subject.Id))" />
                         <label>@subject.Name</label>
                     </div>
                 }

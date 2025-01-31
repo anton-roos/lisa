@@ -33,13 +33,13 @@
                 <ValidationSummary />
 
                 <div class="form-group">
-                    <label for="firstName">First Name</label>
-                    <InputText id="firstName" class="form-control" @bind-Value="SysAdmin.FirstName" />
+                    <label for="surname">Surname</label>
+                    <InputText id="surname" class="form-control" @bind-Value="SysAdmin.Surname" />
                 </div>
 
                 <div class="form-group">
-                    <label for="lastName">Last Name</label>
-                    <InputText id="lastName" class="form-control" @bind-Value="SysAdmin.LastName" />
+                    <label for="name">Name</label>
+                    <InputText id="name" class="form-control" @bind-Value="SysAdmin.Name" />
                 </div>
 
                 <div class="form-group">
@@ -101,8 +101,8 @@
 
                 SysAdmin = new SystemAdminViewModel
                     {
-                        FirstName = userEntity.FirstName,
-                        LastName = userEntity.LastName,
+                        Surname = userEntity.Surname,
+                        Name = userEntity.Name,
                         Email = userEntity.Email
                     };
             }
@@ -142,8 +142,8 @@
 
                 var newUser = new User
                     {
-                        FirstName = SysAdmin.FirstName,
-                        LastName = SysAdmin.LastName,
+                        Surname = SysAdmin.Surname,
+                        Name = SysAdmin.Name,
                         Email = SysAdmin.Email,
                         UserName = SysAdmin.Email
                     };
@@ -181,8 +181,8 @@
                     return;
                 }
 
-                existingUser.FirstName = SysAdmin.FirstName;
-                existingUser.LastName = SysAdmin.LastName;
+                existingUser.Surname = SysAdmin.Surname;
+                existingUser.Name = SysAdmin.Name;
                 existingUser.Email = SysAdmin.Email;
                 existingUser.UserName = SysAdmin.Email;
 

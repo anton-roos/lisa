@@ -15,11 +15,11 @@ else
         <dt class="col-sm-2">Code</dt>
         <dd class="col-sm-10">@Learner.Code</dd>
 
-        <dt class="col-sm-2">Name</dt>
-        <dd class="col-sm-10">@($"{Learner.FirstName} {Learner.LastName}")</dd>
+        <dt class="col-sm-2">Surname</dt>
+        <dd class="col-sm-10">@Learner.Surname</dd>
 
         <dt class="col-sm-2">Name</dt>
-        <dd class="col-sm-10">@($"{Learner.FirstName} {Learner.LastName}")</dd>
+        <dd class="col-sm-10">@Learner.Name</dd>
 
         <dt class="col-sm-2">Active?</dt>
         <dd class="col-sm-10">@Learner.Active</dd>
@@ -74,7 +74,8 @@ else
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th>Parent Name</th>
+                    <th>Surname</th>
+                    <th>Name</th>
                     <th>Relationship</th>
                     <th>Primary Email</th>
                     <th>Secondary Email</th>
@@ -87,7 +88,8 @@ else
                 @foreach (var lp in Learner.Parents)
                 {
                     <tr>
-                        <td>@(lp.FirstName ?? "Unknown") @(lp.LastName ?? "Unkown")</td>
+                        <td>@(lp.Surname ?? "Unknown")</td>
+                        <td>@(lp.Name ?? "Unkown")</td>
                         <td>@(lp.Relationship ?? "Unknown")</td>
                         <td>@(lp.PrimaryEmail ?? "Unknown")</td>
                         <td>@(lp.SecondaryEmail ?? "Unknown")</td>

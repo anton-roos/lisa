@@ -16,5 +16,5 @@ public class Result
     public string? AbsentReason { get; set; }
     public Learner? Learner { get; set; }
     public Subject? Subject { get; set; }
-    public string? FullName => $"{Learner?.FirstName} {Learner?.LastName}";
+    public string? FullName => $"{Learner?.Surname} {Learner?.Name}";
 }

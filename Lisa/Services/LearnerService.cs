@@ -2,7 +2,6 @@ using Lisa.Data;
 using Lisa.Models.Entities;
 using Lisa.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json.Serialization;
 
 namespace Lisa.Services;
 
@@ -46,9 +45,9 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
             CellNumber = model.CellNumber,
             Code = model.Code,
             Email = model.Email,
-            FirstName = model.FirstName,
+            Surname = model.Surname,
             IdNumber = model.IdNumber,
-            LastName = model.LastName,
+            Name = model.Name,
             RegisterClassId = model.RegisterClassId,
             SchoolId = schoolId,
             LearnerSubjects = [.. model.SubjectIds.Select(sid => new LearnerSubject
@@ -66,8 +65,8 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
             {
                 Id = Guid.NewGuid(),
                 LearnerId = newLearnerId,
-                FirstName = pm.FirstName,
-                LastName = pm.LastName,
+                Surname = pm.Surname,
+                Name = pm.Name,
                 Relationship = pm.Relationship,
                 PrimaryEmail = pm.PrimaryEmail,
                 SecondaryEmail = pm.SecondaryEmail,
@@ -94,52 +93,143 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
         if (existing == null)
             throw new InvalidOperationException("Learner not found.");
 
+        // Update Learner properties
         existing.Active = model.Active;
         existing.CareGroupId = model.CareGroupId;
         existing.CellNumber = model.CellNumber;
         existing.Code = model.Code;
         existing.Email = model.Email;
-        existing.FirstName = model.FirstName;
+        existing.Surname = model.Surname;
         existing.IdNumber = model.IdNumber;
-        existing.LastName = model.LastName;
+        existing.Name = model.Name;
         existing.RegisterClassId = model.RegisterClassId;
 
+        // Handle Parents
         var existingParentIds = existing.Parents.Select(p => p.Id).ToList();
-        var updatedParentIds = parents.Select(p => p.Id).ToList();
+        var updatedParentIds = parents.Select(p => p.Id).Where(id => id.HasValue).Select(id => id.Value).ToList();
 
-        var toRemove = existing.Parents.Where(p => !updatedParentIds.Contains(p.Id)).ToList();
+        var toRemove = existing.Parents
+            .Where(p => !updatedParentIds.Contains(p.Id))
+            .ToList();
+
         foreach (var p in toRemove)
         {
             existing.Parents.Remove(p);
             context.Parents.Remove(p);
+            Console.WriteLine($"Marking Parent {p.Id} for removal.");
         }
 
         foreach (var pm in parents)
         {
-            var parent = existing.Parents.FirstOrDefault(x => x.Id == pm.Id);
-            if (parent == null)
+            if (pm.Id.HasValue && existingParentIds.Contains(pm.Id.Value))
             {
-                parent = new Parent
+                // Existing parent, update properties
+                var parent = existing.Parents.FirstOrDefault(x => x.Id == pm.Id.Value);
+                if (parent != null)
+                {
+                    parent.Surname = pm.Surname;
+                    parent.Name = pm.Name;
+                    parent.Relationship = pm.Relationship;
+                    parent.PrimaryEmail = pm.PrimaryEmail;
+                    parent.SecondaryEmail = pm.SecondaryEmail;
+                    parent.PrimaryCellNumber = pm.PrimaryCellNumber;
+                    parent.SecondaryCellNumber = pm.SecondaryCellNumber;
+                    parent.WhatsAppNumber = pm.WhatsAppNumber;
+                    Console.WriteLine($"Updating existing Parent {parent.Id}.");
+                }
+            }
+            else
+            {
+                // New parent, add to context
+                var newParent = new Parent
                 {
                     Id = Guid.NewGuid(),
-                    LearnerId = existing.Id
+                    LearnerId = existing.Id,
+                    Surname = pm.Surname,
+                    Name = pm.Name,
+                    Relationship = pm.Relationship,
+                    PrimaryEmail = pm.PrimaryEmail,
+                    SecondaryEmail = pm.SecondaryEmail,
+                    PrimaryCellNumber = pm.PrimaryCellNumber,
+                    SecondaryCellNumber = pm.SecondaryCellNumber,
+                    WhatsAppNumber = pm.WhatsAppNumber
                 };
-                existing.Parents.Add(parent);
-            }
 
-            parent.FirstName = pm.FirstName;
-            parent.LastName = pm.LastName;
-            parent.Relationship = pm.Relationship;
-            parent.PrimaryEmail = pm.PrimaryEmail;
-            parent.SecondaryEmail = pm.SecondaryEmail;
-            parent.PrimaryCellNumber = pm.PrimaryCellNumber;
-            parent.SecondaryCellNumber = pm.SecondaryCellNumber;
-            parent.WhatsAppNumber = pm.WhatsAppNumber;
+                context.Parents.Add(newParent);
+                existing.Parents.Add(newParent);
+                Console.WriteLine($"Adding new Parent with Id: {newParent.Id}");
+            }
         }
 
-        await context.SaveChangesAsync();
+        // Log entity states before saving
+        Console.WriteLine("ChangeTracker Entries before SaveChangesAsync:");
+        foreach (var entry in context.ChangeTracker.Entries())
+        {
+            Console.WriteLine($"Entity: {entry.Entity.GetType().Name}, Id: {GetEntityId(entry.Entity)}, State: {entry.State}");
+        }
 
-        await UpdateLearnerSubjectsAsync(existing.Id, model.SubjectIds, context);
+        // First Save: Learner and Parents
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            // Log detailed information
+            Console.WriteLine($"Concurrency Exception during Learner/Parents update: {ex.Message}");
+
+            foreach (var entry in ex.Entries)
+            {
+                if (entry.Entity is Learner)
+                {
+                    var proposedValues = entry.CurrentValues;
+                    var databaseValues = await entry.GetDatabaseValuesAsync();
+
+                    Console.WriteLine("Conflict detected on Learner:");
+                    // Log specific values if needed
+                }
+                else if (entry.Entity is Parent)
+                {
+                    var proposedValues = entry.CurrentValues;
+                    var databaseValues = await entry.GetDatabaseValuesAsync();
+
+                    Console.WriteLine($"Conflict detected on Parent Id {((Parent)entry.Entity).Id}:");
+                    // Log specific values if needed
+                }
+            }
+
+            throw;
+        }
+
+        // Log entity states after first SaveChangesAsync
+        Console.WriteLine("ChangeTracker Entries after first SaveChangesAsync:");
+        foreach (var entry in context.ChangeTracker.Entries())
+        {
+            Console.WriteLine($"Entity: {entry.Entity.GetType().Name}, Id: {GetEntityId(entry.Entity)}, State: {entry.State}");
+        }
+
+        // Second Save: LearnerSubjects
+        try
+        {
+            await UpdateLearnerSubjectsAsync(existing.Id, model.SubjectIds, context);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            // Log detailed information
+            Console.WriteLine($"Concurrency Exception during LearnerSubjects update: {ex.Message}");
+            throw;
+        }
+    }
+
+    private static Guid GetEntityId(object entity)
+    {
+        return entity switch
+        {
+            Learner learner => learner.Id,
+            Parent parent => parent.Id,
+            LearnerSubject ls => ls.LearnerId,
+            _ => Guid.Empty
+        };
     }
 
     public async Task UpdateLearnerSubjectsAsync(Guid learnerId, List<int> subjectIds, LisaDbContext context)
@@ -173,8 +263,8 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
     {
         var newParent = new Parent
         {
-            FirstName = parent.FirstName,
-            LastName = parent.LastName,
+            Surname = parent.Surname,
+            Name = parent.Name,
             PrimaryEmail = parent.PrimaryEmail,
             SecondaryEmail = parent.SecondaryEmail,
             PrimaryCellNumber = parent.PrimaryCellNumber,
@@ -199,8 +289,17 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
         return await context.Learners
         .Include(l => l.RegisterClass!)
             .ThenInclude(rc => rc.Grade)
-            .Where(l => l.SchoolId == schoolId)
-            .ToListAsync();
+        .Where(l => l.SchoolId == schoolId)
+        .ToListAsync();
+    }
+
+    public async Task<List<Learner>> GetLearnersBySchoolWithParentsAsync(Guid schoolId)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Learners
+        .Include(l => l.Parents)
+        .Where(l => l.SchoolId == schoolId && l.Parents!.Any())
+        .ToListAsync();
     }
 
     public async Task<List<RegisterClass>> GetRegisterClasses(School? SelectedSchool)

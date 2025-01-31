@@ -64,8 +64,12 @@
                             Responsive="true">
 
                             <GridColumns>
-                                <GridColumn TItem="Result" HeaderText="Student" PropertyName="FullName">
-                                    @context.Learner?.FirstName @context.Learner?.LastName
+                                <GridColumn TItem="Result" HeaderText="Surname" PropertyName="Surname">
+                                    @context.Learner?.Surname
+                                </GridColumn>
+                                
+                                <GridColumn TItem="Result" HeaderText="Name" PropertyName="Name">
+                                     @context.Learner?.Name
                                 </GridColumn>
 
                                 <GridColumn TItem="Result" HeaderText="Score" PropertyName="Score" FilterTextboxWidth="50">

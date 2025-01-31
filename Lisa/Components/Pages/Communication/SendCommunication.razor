@@ -75,7 +75,7 @@ else
                         ValueChanged="OnTemplateChange" ValueExpression="@(() => SelectedTemplateId)">
                         <option value="">-- Select Tempalte --</option>
                         <option value="1">Newsletter</option>
-                        <option value="2">Progress Feedbacl</option>
+                        <option value="2">Progress Feedback</option>
                     </InputSelect>
                     <button type="button" class="btn btn-primary btn-sm"
                         @onclick="() => SendCommunicationToAllLearners(SelectedSchool)">
@@ -136,7 +136,7 @@ else
                     @foreach (var learner in FilteredLearners)
                     {
                         <tr>
-                            <td>@learner.FirstName @learner.LastName</td>
+                            <td>@learner.Surname @learner.Name</td>
                             <td>@learner.RegisterClass?.Grade?.Name</td>
                             <td>
                                 <button type="button" class="btn btn-primary btn-sm"
@@ -247,7 +247,7 @@ else
         {
             var term = SearchTerm.Trim().ToLower();
             query = query.Where(l =>
-            ($"{l.FirstName} {l.LastName}").ToLower().Contains(term));
+            ($"{l.Surname} {l.Name}").ToLower().Contains(term));
         }
 
         return query;
@@ -272,7 +272,7 @@ else
 
     private async Task OnTemplateChange(string e)
     {
-       SelectedTemplateId = e;
+        SelectedTemplateId = e;
         @* var template = await EmailTemplateService.GetByIdAsync(Guid.Parse(e));
         var email = new Email
         {

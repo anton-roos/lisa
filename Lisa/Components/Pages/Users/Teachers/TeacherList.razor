@@ -57,6 +57,7 @@
                     <table class="table table-striped">
                         <thead>
                             <tr>
+                                <th>Surname</th>
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Actions</th>
@@ -66,7 +67,8 @@
                             @foreach (var teacher in Teachers)
                             {
                                 <tr>
-                                    <td>@teacher.FirstName @teacher.LastName</td>
+                                    <td>@teacher.Surname</td>
+                                    <td>@teacher.Name</td>
                                     <td>@teacher.Email</td>
                                     <ActionButtons TEntity="Teacher" Entity="teacher" OnView="ViewTeacher" OnEdit="EditTeacher"
                                         OnDelete="DeleteTeacher" />

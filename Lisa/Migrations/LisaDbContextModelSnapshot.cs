@@ -214,8 +214,14 @@ namespace Lisa.Migrations
                     b.Property<Guid?>("EmailCampaignId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("LearnerId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("OpenedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -229,9 +235,14 @@ namespace Lisa.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("EmailCampaignId");
+
+                    b.HasIndex("LearnerId");
 
                     b.ToTable("EmailRecipients", (string)null);
                 });
@@ -987,7 +998,27 @@ namespace Lisa.Migrations
                         .HasForeignKey("EmailCampaignId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("Lisa.Models.Entities.Parent", "Parent")
+                        .WithMany("EmailReceipts")
+                        .HasForeignKey("EmailCampaignId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Lisa.Models.Entities.User", "User")
+                        .WithMany("EmailReceipts")
+                        .HasForeignKey("EmailCampaignId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Lisa.Models.Entities.Learner", "Learner")
+                        .WithMany()
+                        .HasForeignKey("LearnerId");
+
                     b.Navigation("EmailCampaign");
+
+                    b.Navigation("Learner");
+
+                    b.Navigation("Parent");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.Grade", b =>
@@ -1297,6 +1328,11 @@ namespace Lisa.Migrations
                     b.Navigation("Results");
                 });
 
+            modelBuilder.Entity("Lisa.Models.Entities.Parent", b =>
+                {
+                    b.Navigation("EmailReceipts");
+                });
+
             modelBuilder.Entity("Lisa.Models.Entities.RegisterClass", b =>
                 {
                     b.Navigation("Learners");
@@ -1326,6 +1362,11 @@ namespace Lisa.Migrations
             modelBuilder.Entity("Lisa.Models.Entities.Subject", b =>
                 {
                     b.Navigation("LearnerSubjects");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.User", b =>
+                {
+                    b.Navigation("EmailReceipts");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.Teacher", b =>

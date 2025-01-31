@@ -13,7 +13,7 @@ public class CommunicationService
 
     public async Task<EmailCampaign> SendForAllLearnersBySchool(School SelectedSchool)
     {
-        var learners = await _learnerService.GetLearnersBySchoolAsync(SelectedSchool.Id);
+        var learners = await _learnerService.GetLearnersBySchoolWithParentsAsync(SelectedSchool.Id);
         var emailRecipients = new List<EmailRecipient>();
 
         foreach (var learner in learners)

@@ -30,7 +30,8 @@ else
             @foreach (var systemAdministrator in SystemAdministrators)
             {
                 <tr>
-                    <td>@($"{systemAdministrator.FirstName} {systemAdministrator.LastName}")</td>
+                    <td>@systemAdministrator.Surname</td>
+                    <td>@systemAdministrator.Name</td>
                     <ActionButtons TEntity="User" Entity="systemAdministrator" OnView="ViewSystemAdministrator"
                         OnEdit="EditSystemAdministrator" OnDelete="DeleteSystemAdministrator" />
                 </tr>

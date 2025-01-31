@@ -8,10 +8,10 @@ public class LearnerViewModel
     public Guid? Id { get; set; }
     [Required(AllowEmptyStrings = false, ErrorMessage = "Learner Code is required")]
     public string? Code { get; set; }
-    [Required(AllowEmptyStrings = false, ErrorMessage = "First Name is required")]
-    public string? FirstName { get; set; }
-    [Required(AllowEmptyStrings = false, ErrorMessage = "Last Name is required")]
-    public string? LastName { get; set; }
+    [Required(AllowEmptyStrings = false, ErrorMessage = "Surname is required")]
+    public string? Surname { get; set; }
+    [Required(AllowEmptyStrings = false, ErrorMessage = "Name is required")]
+    public string? Name { get; set; }
     public string? IdNumber { get; set; }
     public string? Email { get; set; }
     public string? CellNumber { get; set; }

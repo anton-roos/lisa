@@ -41,8 +41,8 @@ public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         var existing = await _context.Teachers.FindAsync(teacher.Id);
         if (existing == null) return;
 
-        existing.FirstName = teacher.FirstName;
-        existing.LastName = teacher.LastName;
+        existing.Surname = teacher.Surname;
+        existing.Name = teacher.Name;
         existing.Email = teacher.Email;
         existing.PhoneNumber = teacher.PhoneNumber;
         existing.SchoolId = teacher.SchoolId;

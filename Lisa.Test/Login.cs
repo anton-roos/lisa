@@ -42,10 +42,10 @@ public class Login : PageTest
 
         // Add Teacher
         await Page.GetByRole(AriaRole.Button, new() { Name = "Add Teacher" }).ClickAsync();
-        await Page.GetByRole(AriaRole.Textbox, new() { Name = "First Name" }).ClickAsync();
-        await Page.GetByRole(AriaRole.Textbox, new() { Name = "First Name" }).FillAsync("Test Teacher");
-        await Page.GetByRole(AriaRole.Textbox, new() { Name = "First Name" }).PressAsync("Tab");
-        await Page.GetByRole(AriaRole.Textbox, new() { Name = "Last Name" }).FillAsync("Test Teacher Playwright");
+        await Page.GetByRole(AriaRole.Textbox, new() { Name = "Surname" }).ClickAsync();
+        await Page.GetByRole(AriaRole.Textbox, new() { Name = "Surname" }).FillAsync("Test Teacher");
+        await Page.GetByRole(AriaRole.Textbox, new() { Name = "Surname" }).PressAsync("Tab");
+        await Page.GetByRole(AriaRole.Textbox, new() { Name = "Name" }).FillAsync("Test Teacher Playwright");
         await Page.GetByRole(AriaRole.Textbox, new() { Name = "Email" }).ClickAsync();
         await Page.GetByRole(AriaRole.Textbox, new() { Name = "Email" }).FillAsync("playwright@teacher.com");
         await Page.GetByRole(AriaRole.Textbox, new() { Name = "Email" }).PressAsync("Tab");

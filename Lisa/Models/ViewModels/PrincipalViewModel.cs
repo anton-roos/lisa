@@ -4,10 +4,15 @@ namespace Lisa.Models.ViewModels;
 
 public class PrincipalViewModel
 {
-    public string? FirstName { get; set; }
-    public string? LastName { get; set; }
+    [Required(AllowEmptyStrings = false, ErrorMessage = "Surname is required")]
+    public string? Surname { get; set; }
+
+    [Required(AllowEmptyStrings = false, ErrorMessage = "Name is required")]
+    public string? Name { get; set; }
+
     [Required(AllowEmptyStrings = false, ErrorMessage = "Email is required")]
     public string? Email { get; set; }
+
     [Required(AllowEmptyStrings = false, ErrorMessage = "Password is required")]
     public string? Password { get; set; }
 }

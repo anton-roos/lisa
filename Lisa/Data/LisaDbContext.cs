@@ -74,7 +74,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
         modelBuilder.Entity<Teacher>()
             .HasBaseType<User>();
         modelBuilder.Entity<Teacher>()
-            .Property(t => t.FirstName)
+            .Property(t => t.Surname)
             .HasMaxLength(50);
         modelBuilder.Entity<Teacher>()
             .HasOne(t => t.School)
@@ -350,6 +350,14 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
                   .HasMaxLength(50);
             entity.HasOne(r => r.EmailCampaign)
                   .WithMany(ec => ec.EmailRecipients)
+                  .HasForeignKey(r => r.EmailCampaignId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(r => r.Parent)
+                  .WithMany(ec => ec.EmailReceipts)
+                  .HasForeignKey(r => r.EmailCampaignId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(r => r.User)
+                  .WithMany(ec => ec.EmailReceipts)
                   .HasForeignKey(r => r.EmailCampaignId)
                   .OnDelete(DeleteBehavior.Cascade);
             entity.Property(r => r.CreatedAt)

@@ -19,7 +19,7 @@ else if (teacher == null)
 else
 {
     <div>
-        <p>Are you sure you want to delete <strong>@teacher.FirstName</strong>?</p>
+        <p>Are you sure you want to delete <strong>@teacher.Surname @teacher.Name</strong>?</p>
 
         @if (hasRegisterClasses)
         {
@@ -31,7 +31,7 @@ else
                     <option value="">-- Select School --</option>
                     @foreach (var teacher in availableTeachers!)
                     {
-                        <option value="@teacher.Id">@teacher.FirstName</option>
+                        <option value="@teacher.Id">@teacher.Surname @teacher.Name</option>
                     }
                 </InputSelect>
             </div>

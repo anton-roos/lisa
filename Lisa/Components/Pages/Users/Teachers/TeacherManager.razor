@@ -33,13 +33,13 @@
                 <ValidationSummary />
 
                 <div class="mb-3">
-                    <label for="firstName" class="form-label">First Name</label>
-                    <InputText id="firstName" class="form-control" @bind-Value="TeacherViewModel.FirstName" />
+                    <label for="surname" class="form-label">Surname</label>
+                    <InputText id="surname" class="form-control" @bind-Value="TeacherViewModel.Surname" />
                 </div>
 
                 <div class="mb-3">
-                    <label for="lastName" class="form-label">Last Name</label>
-                    <InputText id="lastName" class="form-control" @bind-Value="TeacherViewModel.LastName" />
+                    <label for="name" class="form-label">Name</label>
+                    <InputText id="name" class="form-control" @bind-Value="TeacherViewModel.Name" />
                 </div>
 
                 <div class="mb-3">
@@ -106,7 +106,7 @@
 
             Schools = await SchoolService.GetAllAsync();
 
-            if (IsEdit && Id != null )
+            if (IsEdit && Id != null)
             {
                 var teacherEntity = await TeacherService.GetByIdAsync(Id.Value);
                 if (teacherEntity == null)
@@ -120,8 +120,8 @@
                 TeacherViewModel = new TeacherViewModel
                     {
                         Id = teacherEntity.Id,
-                        FirstName = teacherEntity.FirstName,
-                        LastName = teacherEntity.LastName,
+                        Surname = teacherEntity.Surname,
+                        Name = teacherEntity.Name,
                         Email = teacherEntity.Email,
                         SchoolId = teacherEntity.SchoolId
                     };
@@ -177,8 +177,8 @@
 
                 var teacherEntity = new Teacher
                     {
-                        FirstName = TeacherViewModel.FirstName,
-                        LastName = TeacherViewModel.LastName,
+                        Surname = TeacherViewModel.Surname,
+                        Name = TeacherViewModel.Name,
                         Email = TeacherViewModel.Email,
                         SchoolId = TeacherViewModel.SchoolId,
                         UserName = TeacherViewModel.Email
@@ -197,13 +197,13 @@
                     throw new Exception("Teacher not found.");
 
                 // Update general fields
-                teacherEntity.FirstName = TeacherViewModel.FirstName;
-                teacherEntity.LastName = TeacherViewModel.LastName;
+                teacherEntity.Surname = TeacherViewModel.Surname;
+                teacherEntity.Name = TeacherViewModel.Name;
                 teacherEntity.Email = TeacherViewModel.Email;
                 teacherEntity.SchoolId = TeacherViewModel.SchoolId;
                 teacherEntity.UserName = TeacherViewModel.Email; // keep sync with email
 
-                
+
                 await TeacherService.UpdateAsync(teacherEntity);
 
                 // If user entered a password, update it. Otherwise, do nothing.

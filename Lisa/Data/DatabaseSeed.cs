@@ -58,8 +58,8 @@ public static class DatabaseSeed
             {
                 UserName = AdminEmail,
                 Email = AdminEmail,
-                FirstName = "System",
-                LastName = "Admin",
+                Surname = "System",
+                Name = "Admin",
             };
             await userManager.CreateAsync(user, AdminPassword);
         }

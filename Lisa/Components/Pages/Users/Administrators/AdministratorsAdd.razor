@@ -18,13 +18,13 @@
             <ValidationSummary />
 
             <div class="form-group">
-                <label for="firstName">First Name</label>
-                <InputText id="firstName" class="form-control" @bind-Value="Administrator.FirstName" />
+                <label for="surname">Surname</label>
+                <InputText id="surname" class="form-control" @bind-Value="Administrator.Surname" />
             </div>
 
             <div class="form-group">
-                <label for="lastName">Last Name</label>
-                <InputText id="lastName" class="form-control" @bind-Value="Administrator.LastName" />
+                <label for="name">Name</label>
+                <InputText id="name" class="form-control" @bind-Value="Administrator.Name" />
             </div>
 
             <div class="form-group">
@@ -66,8 +66,8 @@
             }
             var userEntity = new Administrator
                 {
-                    FirstName = Administrator.FirstName,
-                    LastName = Administrator.LastName,
+                    Surname = Administrator.Surname,
+                    Name = Administrator.Name,
                     Email = Administrator.Email,
                     UserName = Administrator.Email,
                     SchoolId = SelectedSchool.Id,

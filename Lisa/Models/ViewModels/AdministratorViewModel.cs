@@ -8,6 +8,6 @@ public class AdministratorViewModel
     public string? Email { get; set; }
     [Required(AllowEmptyStrings = false, ErrorMessage = "Password is required")]
     public string? Password { get; set; }
-    public string? FirstName { get; set; }
-    public string? LastName { get; set; }
+    public string? Surname { get; set; }
+    public string? Name { get; set; }
 }

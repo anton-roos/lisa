@@ -289,6 +289,10 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory)
         return await context.Learners
         .Include(l => l.RegisterClass!)
             .ThenInclude(rc => rc.Grade)
+        .Include(l => l.LearnerSubjects)
+            .ThenInclude(ls => ls.Subject)
+        .Include(l => l.CareGroup)
+        .Include(l => l.Parents)
         .Where(l => l.SchoolId == schoolId)
         .ToListAsync();
     }

@@ -38,8 +38,13 @@
         <table class="table table-striped">
             <thead>
                 <tr>
+                    <th>Code</th>
+                    <th>Surname</th>
                     <th>Name</th>
                     <th>Grade</th>
+                    <th>Subjects</th>
+                    <th>Parents</th>
+                    <th>Care Group</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -47,8 +52,13 @@
                 @foreach (var learner in FilteredLearners)
                 {
                     <tr>
-                        <td>@learner.Surname @learner.Name</td>
-                        <td>@learner.RegisterClass?.Grade?.Name</td>
+                        <td>@learner.Code</td>
+                        <td>@learner.Surname</td>
+                        <td>@learner.Name</td>
+                        <td>@(learner.RegisterClass?.Grade?.Name ?? "Unassigned")</td>
+                        <td>@learner.LearnerSubjects.Count()</td>
+                        <td>@learner.Parents.Count()</td>
+                        <td>@learner.CareGroup.Name</td>
                         <ActionButtons TEntity="Learner" Entity="learner" OnView="ViewLearner" OnEdit="EditLearner"
                             OnDelete="DeleteLearner" />
                     </tr>

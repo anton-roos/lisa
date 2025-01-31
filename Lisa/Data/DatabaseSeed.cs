@@ -4,31 +4,68 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Data;
 
-public static class DatabaseSeed
+public class DatabaseSeed
 {
-    const string AdminEmail = "admin@dcegroup.co.za";
-    const string AdminPassword = "Lis@Adm!n7Dc3Gr0up";
+    private const string DefaultAdminEmail = "admin@dcegroup.co.za";
+    private static string AdminPassword = "Lis@Adm!n7Dc3Gr0up"; // Securely overridden
 
+    /// <summary>
+    /// Runs all seed methods in a single transaction for efficiency.
+    /// </summary>
     public static async Task Seed(IServiceProvider serviceProvider)
     {
-        await SeedRoles(serviceProvider);
-        await SeedAdmin(serviceProvider);
-        await SeedSchoolTypes(serviceProvider);
-        await SeedSchoolSubjects(serviceProvider);
-        await SeedSchoolCurriculum(serviceProvider);
-        await ApplyMigrations(serviceProvider);
+        var logger = serviceProvider.GetRequiredService<ILogger<DatabaseSeed>>();
+        logger.LogInformation("Starting database seeding...");
+
+        try
+        {
+            await using var dbContext = serviceProvider.GetRequiredService<LisaDbContext>();
+
+            // Apply Migrations First
+            await ApplyMigrations(dbContext, logger);
+
+            // Seed Data in a Single Transaction
+            await using var transaction = await dbContext.Database.BeginTransactionAsync();
+            await SeedRoles(serviceProvider, logger);
+            await SeedAdmin(serviceProvider, logger);
+            await SeedSchoolTypes(dbContext, logger);
+            await SeedSchoolSubjects(dbContext, logger);
+            await SeedSchoolCurriculum(dbContext, logger);
+            await transaction.CommitAsync();
+
+            logger.LogInformation("Database seeding completed successfully.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "An error occurred while seeding the database.");
+            throw;
+        }
     }
 
-    private static async Task ApplyMigrations(IServiceProvider serviceProvider)
+    /// <summary>
+    /// Applies pending migrations only if required.
+    /// </summary>
+    private static async Task ApplyMigrations(LisaDbContext dbContext, ILogger logger)
     {
-        var dbContext = serviceProvider.GetRequiredService<LisaDbContext>();
-        await dbContext.Database.MigrateAsync();
+        var pendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync()).Any();
+        if (pendingMigrations)
+        {
+            logger.LogInformation("Applying database migrations...");
+            await dbContext.Database.MigrateAsync();
+            logger.LogInformation("Migrations applied successfully.");
+        }
+        else
+        {
+            logger.LogInformation("No pending migrations found.");
+        }
     }
 
-    private static async Task SeedRoles(IServiceProvider serviceProvider)
+    /// <summary>
+    /// Seeds system roles if they do not exist.
+    /// </summary>
+    private static async Task SeedRoles(IServiceProvider serviceProvider, ILogger logger)
     {
         var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
-
         var roles = new[]
         {
             Roles.SystemAdministrator,
@@ -43,75 +80,95 @@ public static class DatabaseSeed
             if (!await roleManager.RoleExistsAsync(role))
             {
                 await roleManager.CreateAsync(new IdentityRole<Guid>(role));
+                logger.LogInformation("Created role: {Role}", role);
             }
         }
     }
 
-    private static async Task SeedAdmin(IServiceProvider serviceProvider)
+    /// <summary>
+    /// Seeds an admin user with a secure password.
+    /// </summary>
+    private static async Task SeedAdmin(IServiceProvider serviceProvider, ILogger logger)
     {
         var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
+        var config = serviceProvider.GetRequiredService<IConfiguration>();
 
-        var adminUser = await userManager.FindByEmailAsync(AdminEmail);
+        // Fetch Admin Password from Configuration (Environment Variables or appsettings.json)
+        var configuredPassword = config["AdminPassword"];
+        AdminPassword = !string.IsNullOrWhiteSpace(configuredPassword) ? configuredPassword : AdminPassword;
+
+        var adminUser = await userManager.FindByEmailAsync(DefaultAdminEmail);
         if (adminUser == null)
         {
             var user = new User
             {
-                UserName = AdminEmail,
-                Email = AdminEmail,
+                UserName = DefaultAdminEmail,
+                Email = DefaultAdminEmail,
                 Surname = "System",
                 Name = "Admin",
             };
-            await userManager.CreateAsync(user, AdminPassword);
+
+            var result = await userManager.CreateAsync(user, AdminPassword);
+            if (result.Succeeded)
+            {
+                logger.LogInformation("Admin user created.");
+            }
+            else
+            {
+                logger.LogError("Failed to create admin user: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));
+            }
         }
 
         if (adminUser != null && !await userManager.IsInRoleAsync(adminUser, Roles.SystemAdministrator))
         {
             await userManager.AddToRoleAsync(adminUser, Roles.SystemAdministrator);
+            logger.LogInformation("Admin assigned to SystemAdministrator role.");
         }
     }
 
-    private static async Task SeedSchoolTypes(IServiceProvider serviceProvider)
+    /// <summary>
+    /// Seeds school types.
+    /// </summary>
+    private static async Task SeedSchoolTypes(LisaDbContext dbContext, ILogger logger)
     {
-        var dbContext = serviceProvider.GetRequiredService<LisaDbContext>();
-
-        if (!dbContext.SchoolTypes.Any())
+        if (!await dbContext.SchoolTypes.AnyAsync())
         {
-            dbContext.SchoolTypes.AddRange(
-            [
+            await dbContext.SchoolTypes.AddRangeAsync([
                 new SchoolType { Name = "Primary School" },
                 new SchoolType { Name = "High School" },
                 new SchoolType { Name = "Combined School" }
             ]);
-
             await dbContext.SaveChangesAsync();
+            logger.LogInformation("Seeded School Types.");
         }
     }
 
-    private static async Task SeedSchoolCurriculum(IServiceProvider serviceProvider)
+    /// <summary>
+    /// Seeds school curriculums.
+    /// </summary>
+    private static async Task SeedSchoolCurriculum(LisaDbContext dbContext, ILogger logger)
     {
-        var dbContext = serviceProvider.GetRequiredService<LisaDbContext>();
-
-        if (!dbContext.SchoolCurriculums.Any())
+        if (!await dbContext.SchoolCurriculums.AnyAsync())
         {
-            dbContext.SchoolCurriculums.AddRange(
-            [
+            await dbContext.SchoolCurriculums.AddRangeAsync([
                 new SchoolCurriculum { Name = "CAPS", Description = "Curriculum Assessment Policy Statements" },
                 new SchoolCurriculum { Name = "IEB", Description = "Independent Examinations Board" },
-                new SchoolCurriculum { Name = "CIE", Description = "Cambridge International Examinations" },
+                new SchoolCurriculum { Name = "CIE", Description = "Cambridge International Examinations" }
             ]);
-
             await dbContext.SaveChangesAsync();
+            logger.LogInformation("Seeded School Curriculums.");
         }
     }
 
-    private static async Task SeedSchoolSubjects(IServiceProvider serviceProvider)
+    /// <summary>
+    /// Seeds school subjects.
+    /// </summary>
+    private static async Task SeedSchoolSubjects(LisaDbContext dbContext, ILogger logger)
     {
-        var dbContext = serviceProvider.GetRequiredService<LisaDbContext>();
-
-        if (!dbContext.Subjects.Any())
+        if (!await dbContext.Subjects.AnyAsync())
         {
-            dbContext.Subjects.AddRange(
-            [
+            await dbContext.Subjects.AddRangeAsync([
+
                 new Subject {
                     Id = 1,
                     Name = "English HL (RRR - 12)",
@@ -319,8 +376,8 @@ public static class DatabaseSeed
                     SubjectType = SubjectType.Combination
                 }
             ]);
-
             await dbContext.SaveChangesAsync();
+            logger.LogInformation("Seeded School Subjects.");
         }
     }
 }

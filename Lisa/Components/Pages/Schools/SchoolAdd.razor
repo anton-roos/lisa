@@ -34,7 +34,7 @@
 
     private async Task HandleValidSubmit()
     {
-        EventBus.Publish(new AddSchoolEvent { School = School });
+        await EventBus.PublishAsync(new AddSchoolEvent { School = School });
         await SchoolService.AddSchoolAsync(School);
         Navigation.NavigateTo("/schools");
     }

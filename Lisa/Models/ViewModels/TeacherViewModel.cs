@@ -13,7 +13,7 @@ public class TeacherViewModel
     public string Name { get; set; } = string.Empty;
 
     [Required(AllowEmptyStrings = false, ErrorMessage = "Email is required")]
-    [EmailAddress]
+    [EmailAddress(ErrorMessage = "Invalid email format")]
     public string Email { get; set; } = string.Empty;
 
     public string? Password { get; set; }

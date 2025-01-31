@@ -11,6 +11,7 @@ public class PrincipalViewModel
     public string? Name { get; set; }
 
     [Required(AllowEmptyStrings = false, ErrorMessage = "Email is required")]
+    [EmailAddress(ErrorMessage = "Invalid email format")]
     public string? Email { get; set; }
 
     [Required(AllowEmptyStrings = false, ErrorMessage = "Password is required")]

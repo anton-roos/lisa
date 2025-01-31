@@ -1,108 +1,251 @@
+using System.Collections.Concurrent;
+using Hangfire;
 using Lisa.Data;
 using Lisa.Models.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
 
-namespace Lisa.Services
+namespace Lisa.Services;
+
+public class EmailCampaignService
+(
+    IDbContextFactory<LisaDbContext> contextFactory,
+    IUiEventService uiEventService,
+    ILogger<EmailCampaignService> logger,
+    EmailService emailService
+)
 {
-    public class EmailCampaignService
+    private readonly IDbContextFactory<LisaDbContext> _contextFactory = contextFactory;
+    private readonly IUiEventService _uiEventService = uiEventService;
+    private readonly ILogger<EmailCampaignService> _logger = logger;
+    private static readonly ConcurrentDictionary<Guid, CancellationTokenSource> _campaignTokens = new();
+    private readonly EmailService _emailService = emailService;
+
+    /// <summary>
+    /// Schedules an email campaign using Hangfire.
+    /// </summary>
+    public async Task ScheduleCampaignAsync(Guid campaignId)
     {
-        private readonly IDbContextFactory<LisaDbContext> _contextFactory;
-
-        public EmailCampaignService(IDbContextFactory<LisaDbContext> contextFactory)
+        var campaign = await GetByIdAsync(campaignId);
+        if (campaign == null || campaign.Status == EmailCampaignStatus.Sent)
         {
-            _contextFactory = contextFactory;
+            _logger.LogWarning("Campaign {campaignId} not found or already sent.", campaignId);
+            return;
         }
 
-        /// <summary>
-        /// Get a list of all EmailCampaigns.
-        /// </summary>
-        public async Task<List<EmailCampaign>> GetAllAsync()
-        {
-            var context = await _contextFactory.CreateDbContextAsync();
-            return await context.EmailCampaigns
-                .AsNoTracking()
-                .ToListAsync();
-        }
+        _logger.LogInformation("Scheduling email campaign {campaignId} using Hangfire.", campaignId);
+        BackgroundJob.Enqueue(() => StartCampaignAsync(campaignId));
+    }
 
-        /// <summary>
-        /// Get a single EmailCampaign by Id.
-        /// </summary>
-        public async Task<EmailCampaign?> GetByIdAsync(Guid? id)
-        {
-            if (id == null) return null;
+    /// <summary>
+    /// Get a list of all EmailCampaigns.
+    /// </summary>
+    public async Task<List<EmailCampaign>> GetAllAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.EmailCampaigns
+            .AsNoTracking()
+            .ToListAsync();
+    }
 
-            var context = await _contextFactory.CreateDbContextAsync();
-            return await context.EmailCampaigns
-                .Include(ec => ec.EmailRecipients) // Optional: if you want to load recipients too
-                .FirstOrDefaultAsync(ec => ec.Id == id);
-        }
-
-        /// <summary>
-        /// Create a new EmailCampaign.
-        /// </summary>
-        public async Task<EmailCampaign> CreateAsync(EmailCampaign campaign)
+    /// <summary>
+    /// Starts the email campaign and processes emails asynchronously using Hangfire.
+    /// </summary>
+    [JobDisplayName("Email Campaign Processing")]
+    public async Task StartCampaignAsync(Guid campaignId)
+    {
+        try
         {
-            if (campaign.Id == null || campaign.Id == Guid.Empty)
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var campaign = await context.EmailCampaigns
+                .Include(c => c.EmailRecipients)
+                .FirstOrDefaultAsync(c => c.Id == campaignId);
+
+            if (campaign == null || campaign.Status == EmailCampaignStatus.Sent)
             {
-                campaign.Id = Guid.NewGuid(); // ensure there's a GUID
+                _logger.LogWarning("Campaign {campaignId} not found or already sent.", campaignId);
+                return;
             }
 
-            campaign.CreatedAt = DateTime.UtcNow;
-            campaign.UpdatedAt = DateTime.UtcNow;
-
-            var context = await _contextFactory.CreateDbContextAsync();
-
-            context.EmailCampaigns.Add(campaign);
+            campaign.Status = EmailCampaignStatus.Sending;
             await context.SaveChangesAsync();
 
-            return campaign;
-        }
+            await _uiEventService.PublishAsync(UiEvents.EmailCampaignStarted, new { Id = campaign.Id });
 
-        /// <summary>
-        /// Update an existing EmailCampaign.
-        /// </summary>
-        public async Task UpdateAsync(EmailCampaign campaign)
+            var tokenSource = new CancellationTokenSource();
+            if (!_campaignTokens.TryAdd(campaignId, tokenSource))
+            {
+                _logger.LogError("Failed to add campaign {campaignId} to token dictionary.", campaignId);
+                return;
+            }
+
+            await ProcessEmailsAsync(campaignId, tokenSource.Token);
+        }
+        catch (Exception ex)
         {
-            var context = await _contextFactory.CreateDbContextAsync();
-
-            var existing = await context.EmailCampaigns.FindAsync(campaign.Id);
-            if (existing == null) return;
-
-            // Update fields as needed
-            existing.Name = campaign.Name;
-            existing.Description = campaign.Description;
-            existing.SubjectLine = campaign.SubjectLine;
-            existing.SenderName = campaign.SenderName;
-            existing.SenderEmail = campaign.SenderEmail;
-            existing.ContentHtml = campaign.ContentHtml;
-            existing.ContentText = campaign.ContentText;
-            existing.Status = campaign.Status;
-            existing.ScheduledAt = campaign.ScheduledAt;
-            existing.CompletedAt = campaign.CompletedAt;
-            existing.TrackOpens = campaign.TrackOpens;
-            existing.TrackClicks = campaign.TrackClicks;
-            existing.StatsSentCount = campaign.StatsSentCount;
-            existing.StatsOpenCount = campaign.StatsOpenCount;
-            existing.StatsClickCount = campaign.StatsClickCount;
-            existing.UpdatedAt = DateTime.UtcNow;
-
-            // EF tracks the changes automatically. Just save them.
-            await context.SaveChangesAsync();
+            _logger.LogError("Error starting campaign {campaignId}: {ex.Message}", campaignId, ex.Message);
         }
+    }
 
-        /// <summary>
-        /// Delete an EmailCampaign by Id.
-        /// </summary>
-        public async Task DeleteAsync(Guid id)
+    private async Task ProcessEmailsAsync(Guid campaignId, CancellationToken cancellationToken)
+    {
+        try
         {
-            var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var campaign = await context.EmailCampaigns
+                .Include(c => c.EmailRecipients)
+                .FirstOrDefaultAsync(c => c.Id == campaignId);
 
-            var existing = await context.EmailCampaigns.FindAsync(id);
-            if (existing == null) return;
+            if (campaign == null) return;
 
-            context.EmailCampaigns.Remove(existing);
+            int total = campaign.EmailRecipients?.Count ?? 0;
+            int sent = 0;
+
+            foreach (var recipient in campaign.EmailRecipients!)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(recipient.EmailAddress))
+                    {
+                        string subject = campaign.SubjectLine ?? "No Subject";
+                        string body = campaign.ContentHtml ?? "No Content";
+
+                        BackgroundJob.Enqueue(() => SendEmailWithRetryAsync(recipient, subject, body));
+
+                        recipient.Status = EmailRecipientStatus.Sent;
+                    }
+                    else
+                    {
+                        recipient.Status = EmailRecipientStatus.Bounced;
+                    }
+
+                    sent++;
+                    var progress = (int)((double)sent / total * 100);
+
+                    await _uiEventService.PublishAsync(UiEvents.EmailCampaignProgressUpdated, new
+                    {
+                        Id = campaign.Id,
+                        Progress = progress,
+                        Total = total,
+                        Sent = sent
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Error sending email to {recipient.EmailAddress}: {ex.Message}", recipient.EmailAddress, ex.Message);
+                    recipient.Status = EmailRecipientStatus.Bounced;
+                }
+            }
+
+            campaign.Status = EmailCampaignStatus.Sent;
+            await context.SaveChangesAsync(cancellationToken);
+
+            await _uiEventService.PublishAsync(UiEvents.EmailCampaignCompleted, new { Id = campaign.Id });
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Email campaign {campaignId} was cancelled.", campaignId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Unexpected error in ProcessEmailsAsync for campaign {campaignId}: {ex.Message}", campaignId, ex.Message);
+        }
+        finally
+        {
+            _campaignTokens.TryRemove(campaignId, out _);
+        }
+    }
+
+    /// <summary>
+    /// Sends an email with automatic retries using Hangfire.
+    /// </summary>
+    [AutomaticRetry(Attempts = 3)]
+    public async Task SendEmailWithRetryAsync(EmailRecipient recipient, string subject, string body)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(recipient.EmailAddress))
+            {
+                await _emailService.SendEmailAsync(to: recipient.EmailAddress, subject: subject, body: body);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to send email to {recipient.EmailAddress}: {ex.Message}", recipient.EmailAddress, ex.Message);
+            throw;
+        }
+    }
+
+    public async Task PauseCampaignAsync(Guid campaignId)
+    {
+        if (!TryCancelCampaign(campaignId))
+            return;
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var campaign = await context.EmailCampaigns.FindAsync(campaignId);
+        if (campaign != null)
+        {
+            campaign.Status = EmailCampaignStatus.Paused;
             await context.SaveChangesAsync();
         }
+
+        await _uiEventService.PublishAsync(UiEvents.EmailCampaignPaused, new { Id = campaignId });
+    }
+
+    public async Task StopCampaignAsync(Guid campaignId)
+    {
+        if (!TryCancelCampaign(campaignId))
+            return;
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var campaign = await context.EmailCampaigns.FindAsync(campaignId);
+        if (campaign != null)
+        {
+            campaign.Status = EmailCampaignStatus.Cancelled;
+            await context.SaveChangesAsync();
+        }
+
+        await _uiEventService.PublishAsync(UiEvents.EmailCampaignCancelled, new { Id = campaignId });
+    }
+
+    private bool TryCancelCampaign(Guid campaignId)
+    {
+        if (_campaignTokens.TryGetValue(campaignId, out var tokenSource))
+        {
+            tokenSource.Cancel();
+            _campaignTokens.TryRemove(campaignId, out _);
+            return true;
+        }
+
+        _logger.LogWarning("Attempted to cancel campaign {campaignId}, but no active task was found.", campaignId);
+        return false;
+    }
+
+    public async Task<EmailCampaign?> GetByIdAsync(Guid id)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.EmailCampaigns.FindAsync(id);
+    }
+
+    /// <summary>
+    /// Create a new EmailCampaign.
+    /// </summary>
+    public async Task<EmailCampaign> CreateAsync(EmailCampaign campaign)
+    {
+        if (campaign.Id == null || campaign.Id == Guid.Empty)
+        {
+            campaign.Id = Guid.NewGuid(); // ensure there's a GUID
+        }
+
+        campaign.CreatedAt = DateTime.UtcNow;
+        campaign.UpdatedAt = DateTime.UtcNow;
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        context.EmailCampaigns.Add(campaign);
+        await context.SaveChangesAsync();
+
+        return campaign;
     }
 }

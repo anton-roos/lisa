@@ -3,79 +3,137 @@
 
 @inject Lisa.Services.EmailCampaignService EmailCampaignService
 
+@inherits EventAwareComponentBase
+
 <PageTitle>Email Campaign</PageTitle>
 
-<div class="container my-4">
-    @if (Campaign == null)
-    {
-        <p>Loading campaign data...</p>
-    }
-    else
-    {
-        <h3>@Campaign.Name</h3>
+<AuthorizeView>
+    <Authorized>
+        <h3>Email Campaign</h3>
 
+        <div>
+            @if (Campaign == null)
+            {
+                <p>Loading campaign data...</p>
+            }
+            else
+            {
+                <h3>@Campaign.Name</h3>
 
-        // Calculate total recipients and how many have been 'Sent'
-        var totalRecipients = Campaign.EmailRecipients?.Count() ?? 0;
-        var sentRecipientsCount = Campaign.EmailRecipients?
-        .Count(r => r.Status != EmailRecipientStatus.Pending) ?? 0;
+                <Progress Class="mb-3">
+                    <ProgressBar Width="@ProgressPercent" Label="@($"{ProgressPercent}%")" />
+                </Progress>
 
-        // Calculate the progress percentage
-        // Avoid divide-by-zero if totalRecipients == 0
-        var progressPercent = totalRecipients == 0
-        ? 0
-        : (int)Math.Round((double)sentRecipientsCount / totalRecipients * 100);
+                <p>Sending @SentCount of @TotalRecipients emails...</p>
 
+                <Button Color="ButtonColor.Success" Size="ButtonSize.Medium" @onclick="Start">
+                    <Icon Name="IconName.BoxArrowRight"></Icon>
+                    Start
+                </Button>
 
-        <!-- Progress Bar -->
-        <Progress Class="mb-3">
-            <ProgressBar Width="@progressPercent" Label="@($"{progressPercent}%")" />
-        </Progress>
+                <Button Color="ButtonColor.Secondary" Size="ButtonSize.Medium" @onclick="Pause" class="ms-2">
+                    <Icon Name="IconName.PauseBtnFill"></Icon>
+                    Pause
+                </Button>
 
-        <!-- Sending "X of Y" text -->
-        <p>Sending @sentRecipientsCount of @totalRecipients emails...</p>
+                <Button Color="ButtonColor.Danger" Size="ButtonSize.Medium" @onclick="Stop" class="ms-2">
+                    <Icon Name="IconName.SignStopFill"></Icon>
+                    Cancel
+                </Button>
 
-        <!-- Action Buttons -->
-        <Button Color="ButtonColor.Secondary" Size="ButtonSize.Medium" @onclick="Pause">
-            <Icon Name="IconName.PauseBtnFill"></Icon>
-            Pause
-        </Button>
-
-        <Button Color="ButtonColor.Danger" Size="ButtonSize.Medium" @onclick="Stop" class="ms-2">
-            <Icon Name="IconName.SignStopFill"></Icon>
-            Cancel
-        </Button>
-    }
-</div>
+                @if (!string.IsNullOrEmpty(StatusMessage))
+                {
+                    <p><strong>Status:</strong> @StatusMessage</p>
+                }
+            }
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
     private EmailCampaign? Campaign { get; set; }
+    private int ProgressPercent { get; set; } = 0;
+    private int SentCount { get; set; } = 0;
+    private int TotalRecipients { get; set; } = 0;
+    private string? StatusMessage = null;
 
     protected override async Task OnInitializedAsync()
     {
-        // Load the campaign (including recipients if desired)
+        SubscribeToEvent(UiEvents.EmailCampaignStarted);
+        SubscribeToEvent(UiEvents.EmailCampaignPaused);
+        SubscribeToEvent(UiEvents.EmailCampaignCancelled);
+        SubscribeToEvent(UiEvents.EmailCampaignCompleted);
+        SubscribeToEvent(UiEvents.EmailCampaignProgressUpdated);
+        SubscribeToEvent(UiEvents.EmailCampaignStatusUpdated);
+
         Campaign = await EmailCampaignService.GetByIdAsync(Id);
+        if (Campaign != null)
+        {
+            TotalRecipients = Campaign.EmailRecipients?.Count() ?? 0;
+            SentCount = Campaign.EmailRecipients?.Count(r => r.Status != EmailRecipientStatus.Pending) ?? 0;
+            ProgressPercent = TotalRecipients == 0 ? 0 : (int)Math.Round((double)SentCount / TotalRecipients * 100);
+        }
     }
 
-    private async Task Pause()
+    protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        if (Campaign is null) return;
+        if (payload is not null)
+        {
+            if (payload is { } eventPayload)
+            {
+                var payloadDict = eventPayload.GetType()
+                .GetProperties()
+                .ToDictionary(prop => prop.Name, prop => prop.GetValue(eventPayload));
 
-        Campaign.Status = EmailCampaignStatus.Paused;
-        await EmailCampaignService.UpdateAsync(Campaign);
-        // Optionally refresh UI or invoke other logic after pausing
+                if (payloadDict.TryGetValue("Id", out var payloadCampaignId) && payloadCampaignId is Guid campaignId)
+                {
+                    if (campaignId != Id)
+                    {
+                        return;
+                    }
+                }
+
+                if (payloadDict.TryGetValue("Progress", out var progressValue) && progressValue is int progress)
+                {
+                    ProgressPercent = progress;
+                    SentCount = (int)Math.Round((TotalRecipients * progress) / 100.0);
+                }
+            }
+        }
+
+        switch (eventName)
+        {
+            case UiEvents.EmailCampaignStarted:
+                StatusMessage = "Campaign Started";
+                break;
+
+            case UiEvents.EmailCampaignPaused:
+                StatusMessage = "Campaign Paused";
+                break;
+
+            case UiEvents.EmailCampaignCancelled:
+                StatusMessage = "Campaign Cancelled";
+                break;
+
+            case UiEvents.EmailCampaignCompleted:
+                StatusMessage = "Campaign Completed";
+                ProgressPercent = 100;
+                break;
+
+            case UiEvents.EmailCampaignStatusUpdated when payload is string status:
+                StatusMessage = status;
+                break;
+        }
+
+        await base.HandleEventAsync(eventName, payload);
     }
 
-    private async Task Stop()
-    {
-        if (Campaign is null) return;
-
-        // If your enum has no 'Stopped' value,
-        // use 'Cancelled' or another appropriate status
-        Campaign.Status = EmailCampaignStatus.Cancelled;
-        await EmailCampaignService.UpdateAsync(Campaign);
-        // Optionally refresh UI or invoke other logic after stopping
-    }
+    private async Task Pause() => await EmailCampaignService.PauseCampaignAsync(Id);
+    private async Task Stop() => await EmailCampaignService.StopCampaignAsync(Id);
+    private async Task Start() => await EmailCampaignService.StartCampaignAsync(Id);
 }

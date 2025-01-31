@@ -2,7 +2,7 @@
 
 @using Lisa.Models.Entities
 @inject Lisa.Services.EmailCampaignService CampaignService
-@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
 
 <h3>Email Campaigns</h3>
 
@@ -31,11 +31,8 @@ else if (EmailCampaignList is not null && EmailCampaignList.Count > 0)
                     <td>@campaign.SubjectLine</td>
                     <td>@campaign.CreatedAt.ToLocalTime()</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" @onclick="@(() => EditCampaign(campaign.Id.Value))">
-                            Edit
-                        </button>
-                        <button class="btn btn-sm btn-danger" @onclick="@(() => DeleteCampaign(campaign.Id.Value))">
-                            Delete
+                        <button class="btn btn-sm btn-primary" @onclick="@(() => View(campaign.Id.Value))">
+                            View
                         </button>
                     </td>
                 </tr>
@@ -47,8 +44,6 @@ else
 {
     <p>No campaigns found.</p>
 }
-
-<button class="btn btn-success" @onclick="CreateNewCampaign">Create New Campaign</button>
 
 @code {
     private bool isLoading = false;
@@ -67,27 +62,8 @@ else
         StateHasChanged();
     }
 
-    private void CreateNewCampaign()
+    private void View(Guid campaignId)
     {
-        // Navigate to a create form, or show a modal, etc.
-        // For example, if using NavigationManager:
-        // NavigationManager.NavigateTo("/email-campaigns/create");
-    }
-
-    private void EditCampaign(Guid campaignId)
-    {
-        // Navigate to an edit form or show inline editing
-        // e.g., NavigationManager.NavigateTo($"/email-campaigns/edit/{campaignId}");
-    }
-
-    private async Task DeleteCampaign(Guid campaignId)
-    {
-        // Confirm delete (optional)
-        bool confirm = await JSRuntime.InvokeAsync<bool>("confirm", 
-            new object[] { "Are you sure you want to delete this campaign?" });
-        if (!confirm) return;
-
-        await CampaignService.DeleteAsync(campaignId);
-        await ReloadCampaigns();
+        NavigationManager.NavigateTo($"/email-campaign/{campaignId}");
     }
 }

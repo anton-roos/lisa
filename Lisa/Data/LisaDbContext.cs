@@ -332,6 +332,8 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
                   .WithOne(r => r.EmailCampaign)
                   .HasForeignKey(r => r.EmailCampaignId)
                   .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(r => r.CreatedAt)
+                  .IsRequired();
             entity.Property(ec => ec.UpdatedAt)
                   .IsRequired();
         });
@@ -339,31 +341,45 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
         modelBuilder.Entity<EmailRecipient>(entity =>
         {
             entity.ToTable("EmailRecipients");
+
             entity.HasKey(r => r.Id);
+
             entity.Property(r => r.Id)
-                  .ValueGeneratedNever();
+                .ValueGeneratedNever();
+
             entity.Property(r => r.EmailAddress)
-                  .HasMaxLength(255)
-                  .IsRequired(true);
+                .HasMaxLength(255)
+                .IsRequired(true);
+
             entity.Property(r => r.Status)
-                  .HasConversion<string>()
-                  .HasMaxLength(50);
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
             entity.HasOne(r => r.EmailCampaign)
-                  .WithMany(ec => ec.EmailRecipients)
-                  .HasForeignKey(r => r.EmailCampaignId)
-                  .OnDelete(DeleteBehavior.Cascade);
+                .WithMany(ec => ec.EmailRecipients)
+                .HasForeignKey(r => r.EmailCampaignId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             entity.HasOne(r => r.Parent)
-                  .WithMany(ec => ec.EmailReceipts)
-                  .HasForeignKey(r => r.EmailCampaignId)
-                  .OnDelete(DeleteBehavior.Cascade);
+                .WithMany(p => p.EmailReceipts)
+                .HasForeignKey(r => r.ParentId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(r => r.Learner)
+                .WithMany(l => l.EmailReceipts)
+                .HasForeignKey(r => r.LearnerId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             entity.HasOne(r => r.User)
-                  .WithMany(ec => ec.EmailReceipts)
-                  .HasForeignKey(r => r.EmailCampaignId)
-                  .OnDelete(DeleteBehavior.Cascade);
+                .WithMany(u => u.EmailReceipts)
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             entity.Property(r => r.CreatedAt)
-                  .ValueGeneratedOnAdd();
+                .IsRequired();
+
             entity.Property(r => r.UpdatedAt)
-                  .ValueGeneratedOnAddOrUpdate();
+                .IsRequired();
         });
     }
 

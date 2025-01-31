@@ -202,7 +202,6 @@ namespace Lisa.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("EmailAddress")
@@ -231,7 +230,6 @@ namespace Lisa.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("UserId")
@@ -242,6 +240,10 @@ namespace Lisa.Migrations
                     b.HasIndex("EmailCampaignId");
 
                     b.HasIndex("LearnerId");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("EmailRecipients", (string)null);
                 });
@@ -997,19 +999,20 @@ namespace Lisa.Migrations
                         .HasForeignKey("EmailCampaignId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("Lisa.Models.Entities.Learner", "Learner")
+                        .WithMany("EmailReceipts")
+                        .HasForeignKey("LearnerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Lisa.Models.Entities.Parent", "Parent")
                         .WithMany("EmailReceipts")
-                        .HasForeignKey("EmailCampaignId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Lisa.Models.Entities.User", "User")
                         .WithMany("EmailReceipts")
-                        .HasForeignKey("EmailCampaignId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.HasOne("Lisa.Models.Entities.Learner", "Learner")
-                        .WithMany()
-                        .HasForeignKey("LearnerId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("EmailCampaign");
 
@@ -1320,6 +1323,8 @@ namespace Lisa.Migrations
 
             modelBuilder.Entity("Lisa.Models.Entities.Learner", b =>
                 {
+                    b.Navigation("EmailReceipts");
+
                     b.Navigation("LearnerSubjects");
 
                     b.Navigation("Parents");

@@ -6,7 +6,7 @@ namespace Lisa.Services;
 
 public interface IEventBus
 {
-    void Publish<TEvent>(TEvent @event) where TEvent : class;
+    Task PublishAsync<TEvent>(TEvent @event) where TEvent : class;
     void Subscribe<TEvent>(Func<TEvent, Task> handler) where TEvent : class;
 }
 
@@ -15,10 +15,13 @@ public class EventBus(IServiceProvider serviceProvider) : IEventBus
     private readonly ConcurrentDictionary<Type, List<Func<object, Task>>> _handlers = new();
     private readonly IServiceProvider _serviceProvider = serviceProvider;
 
-    public async void Publish<TEvent>(TEvent @event) where TEvent : class
+    /// <summary>
+    /// Publishes an event and notifies all subscribed handlers.
+    /// </summary>
+    public async Task PublishAsync<TEvent>(TEvent @event) where TEvent : class
     {
         var eventType = typeof(TEvent).Name;
-        
+
         var settings = new JsonSerializerSettings
         {
             ReferenceLoopHandling = ReferenceLoopHandling.Ignore
@@ -28,20 +31,31 @@ public class EventBus(IServiceProvider serviceProvider) : IEventBus
 
         try
         {
-            // Resolve a scope for logging the event to the database
             using var scope = _serviceProvider.CreateScope();
             var eventLogRepository = scope.ServiceProvider.GetRequiredService<IEventLogRepository>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<EventBus>>();
 
             // Log the event to the database
             await eventLogRepository.LogEventAsync(eventType, eventData);
+            logger.LogInformation("Event published: {EventType}", eventType);
 
-            // Fire all registered handlers for the event
+            // Dispatch event to all subscribers
             if (_handlers.TryGetValue(typeof(TEvent), out var handlers))
             {
-                foreach (var handler in handlers)
+                var tasks = handlers.Select(handler =>
                 {
-                    Task.Run(() => handler(@event));
-                }
+                    try
+                    {
+                        return handler(@event);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Error handling event {EventType}", eventType);
+                        return Task.CompletedTask;
+                    }
+                }).ToArray();
+
+                await Task.WhenAll(tasks);
             }
         }
         catch (Exception ex)
@@ -51,14 +65,13 @@ public class EventBus(IServiceProvider serviceProvider) : IEventBus
         }
     }
 
+    /// <summary>
+    /// Subscribes a handler to an event type.
+    /// </summary>
     public void Subscribe<TEvent>(Func<TEvent, Task> handler) where TEvent : class
     {
         var eventType = typeof(TEvent);
-        if (!_handlers.ContainsKey(eventType))
-        {
-            _handlers[eventType] = [];
-        }
-
-        _handlers[eventType].Add(e => handler((TEvent)e));
+        _handlers.GetOrAdd(eventType, _ => new List<Func<object, Task>>())
+                 .Add(e => handler((TEvent)e));
     }
 }

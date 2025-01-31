@@ -2,11 +2,44 @@ using Hangfire.Dashboard;
 using Lisa.Data;
 
 namespace Lisa.Middleware;
-public class HangfireAuthorizationFilter : IDashboardAuthorizationFilter
+
+/// <summary>
+/// Custom authorization filter for securing Hangfire Dashboard.
+/// </summary>
+public class HangfireAuthorizationFilter(ILogger<HangfireAuthorizationFilter> logger)
+    : IDashboardAuthorizationFilter
 {
+    private readonly ILogger<HangfireAuthorizationFilter> _logger = logger;
+    private static readonly List<string> AllowedRoles = [Roles.SystemAdministrator];
+
+    /// <summary>
+    /// Authorizes access to the Hangfire dashboard.
+    /// </summary>
     public bool Authorize(DashboardContext context)
     {
         var httpContext = context.GetHttpContext();
-        return httpContext.User?.Identity?.IsAuthenticated == true && httpContext.User.IsInRole(Roles.SystemAdministrator);
+        var user = httpContext.User;
+
+        if (user?.Identity?.IsAuthenticated != true)
+        {
+            _logger.LogWarning("Unauthorized access attempt to Hangfire Dashboard. User not authenticated.");
+            return false;
+        }
+
+        if (!UserHasAccess(user))
+        {
+            _logger.LogWarning("Unauthorized access attempt by user {User}.", user.Identity?.Name);
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Checks if the user has an allowed role.
+    /// </summary>
+    private static bool UserHasAccess(System.Security.Claims.ClaimsPrincipal user)
+    {
+        return AllowedRoles.Any(user.IsInRole);
     }
 }

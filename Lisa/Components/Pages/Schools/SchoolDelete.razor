@@ -81,7 +81,7 @@
                     throw new Exception("School not found.");
                 }
 
-                EventBus.Publish(new DeleteSchoolEvent { School = School });
+                await EventBus.PublishAsync(new DeleteSchoolEvent { School = School });
                 await SchoolService.DeleteSchoolAsync(School);
                 NavigationManager.NavigateTo("/schools");
             }

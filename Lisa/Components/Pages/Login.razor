@@ -5,12 +5,14 @@
 @using Microsoft.AspNetCore.Identity
 @using System.ComponentModel.DataAnnotations
 @using Lisa.Services
+@using System.Security.Claims
 @inject SignInManager<User> SignInManager
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<User> UserManager
 @inject ILogger<Login> Logger
 @inject IEventBus EventBus
+@inject ILoginStore LoginStore
 
 <h3>Login</h3>
 
@@ -51,7 +53,9 @@ else
             </div>
         }
 
-        <button type="submit" class="btn btn-primary mt-3">Log in</button>
+        <button type="submit" class="btn btn-primary mt-3" disabled="@isLoading">
+            @(isLoading ? "Logging in..." : "Log in")
+        </button>
     </EditForm>
 }
 
@@ -59,7 +63,6 @@ else
     private LoginModel loginModel = new();
     private string loginError = string.Empty;
     private bool isLoading = false;
-
 
     protected override async Task OnInitializedAsync()
     {
@@ -76,53 +79,62 @@ else
     {
         isLoading = true;
 
-        var user = await UserManager.FindByEmailAsync(loginModel.Email!);
-        if (user == null)
+        try
         {
-            loginError = "A User with that email does not exist.";
-            isLoading = false;
-            return;
-        }
-
-        if (await SignInManager.CanSignInAsync(user))
-        {
-            var result = await SignInManager.CheckPasswordSignInAsync(user, loginModel.Password!, false);
-            if (result == Microsoft.AspNetCore.Identity.SignInResult.Success)
+            var user = await UserManager.FindByEmailAsync(loginModel.Email!);
+            if (user == null)
             {
-                isLoading = false;
-
-                Guid key = Guid.NewGuid();
-                BlazorAuthMiddleware.Logins[key] = new LoginInfo { Email = loginModel.Email, Password = loginModel.Password };
-
-                try
-                {
-                    Logger.LogInformation($"User {loginModel.Email} logged in.");
-
-                    EventBus.Publish(new UserLogInEvent
-                        {
-                            Email = loginModel.Email,
-                        });
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError($"Error logging analytics event {ex.Message}");
-                    Console.WriteLine($"Error logging analytics event {ex.Message}");
-                }
-
-                NavigationManager.NavigateTo($"/login?key={key}", true);
-            }
-            else
-            {
-                loginError = "Invalid username or password.";
-                isLoading = false;
+                loginError = "Invalid email or password.";
                 return;
             }
+
+            bool canSignIn = await SignInManager.CanSignInAsync(user);
+            Logger.LogInformation($"CanSignIn result: {canSignIn}");
+
+            bool isLockedOut = await UserManager.IsLockedOutAsync(user);
+            Logger.LogInformation($"IsLockedOut result: {isLockedOut}");
+
+            bool isEmailConfirmed = await UserManager.IsEmailConfirmedAsync(user);
+            Logger.LogInformation($"IsEmailConfirmed: {isEmailConfirmed}");
+
+            var identityErrors = await UserManager.GetUserAsync(new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
+            {
+            new Claim(ClaimTypes.Email, user.Email)
+                        }, "custom")));
+
+            Logger.LogInformation($"UserManager Check: {identityErrors}");
+
+            if (!canSignIn)
+            {
+                loginError = "Can't sign in.";
+                return;
+            }
+
+            if (isLockedOut)
+            {
+                loginError = "Account is locked out.";
+                return;
+            }
+
+            var result = await SignInManager.CheckPasswordSignInAsync(user, loginModel.Password!, false);
+            if (!result.Succeeded)
+            {
+                loginError = "Invalid email or password.";
+                return;
+            }
+
+            // Securely store login info and redirect
+            Guid key = LoginStore.StoreLoginInfo(loginModel.Email!, loginModel.Password!);
+            NavigationManager.NavigateTo($"/login?key={key}", true);
         }
-        else
+        catch (Exception ex)
         {
-            loginError = "User is blocked.";
+            Logger.LogError($"Login error: {ex.Message}");
+            loginError = "An error occurred while logging in. Please try again.";
+        }
+        finally
+        {
             isLoading = false;
-            return;
         }
     }
 

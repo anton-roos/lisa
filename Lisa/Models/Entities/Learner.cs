@@ -23,4 +23,5 @@ public class Learner
     public Guid SchoolId { get; set; }
     public School? School { get; set; }
     public ICollection<LearnerSubject>? LearnerSubjects { get; set; }
+    public ICollection<EmailRecipient>? EmailReceipts { get; set; }
 }

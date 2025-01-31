@@ -184,10 +184,10 @@
                         UserName = TeacherViewModel.Email
                     };
 
-                EventBus.Publish(new AddTeacherEvent { Teacher = teacherEntity });
+                await EventBus.PublishAsync(new AddTeacherEvent { Teacher = teacherEntity });
 
                 // Create user
-                await UserService.AddUser(teacherEntity, TeacherViewModel.Password);
+                await UserService.AddUserAsync(teacherEntity, TeacherViewModel.Password);
             }
             else
             {
@@ -210,7 +210,7 @@
                 if (!string.IsNullOrWhiteSpace(TeacherViewModel.Password))
                 {
                     // Example: custom method to update the password
-                    await UserService.UpdateUserPassword(teacherEntity, TeacherViewModel.Password);
+                    await UserService.UpdateUserPasswordAsync(teacherEntity, TeacherViewModel.Password);
                 }
             }
 

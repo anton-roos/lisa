@@ -4,67 +4,167 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory)
+public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<SubjectService> logger)
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
+    private readonly ILogger<SubjectService> _logger = logger;
 
+    /// <summary>
+    /// Retrieves all subjects.
+    /// </summary>
     public async Task<List<Subject>> GetAllAsync()
     {
-        var _context = _dbContextFactory.CreateDbContext();
-        return await _context.Subjects.ToListAsync();
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            return await context.Subjects
+                .AsNoTracking()
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching all subjects.");
+            return new List<Subject>();
+        }
     }
 
-    public async Task CreateAsync(Subject subject)
+    /// <summary>
+    /// Creates a new subject.
+    /// </summary>
+    public async Task<bool> CreateAsync(Subject subject)
     {
-        var _context = _dbContextFactory.CreateDbContext();
-        _context.Subjects.Add(subject);
-        await _context.SaveChangesAsync();
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            await context.Subjects.AddAsync(subject);
+            await context.SaveChangesAsync();
+            _logger.LogInformation("Created new subject: {SubjectId}", subject.Id);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating subject.");
+            return false;
+        }
     }
 
+    /// <summary>
+    /// Retrieves a subject by ID.
+    /// </summary>
     public async Task<Subject?> GetByIdAsync(int id)
     {
-        var _context = _dbContextFactory.CreateDbContext();
-        return await _context.Subjects.FindAsync(id);
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            return await context.Subjects
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Id == id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching subject with ID: {SubjectId}", id);
+            return null;
+        }
     }
 
-    public async Task UpdateAsync(Subject subject)
+    /// <summary>
+    /// Updates an existing subject.
+    /// </summary>
+    public async Task<bool> UpdateAsync(Subject subject)
     {
-        var _context = _dbContextFactory.CreateDbContext();
-        var existing = await _context.Subjects.FindAsync(subject.Id);
-        if (existing == null) return;
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            var existing = await context.Subjects.FindAsync(subject.Id);
 
-        existing.Name = subject.Name;
-        existing.Code = subject.Code;
-        existing.Description = subject.Description;
+            if (existing == null)
+            {
+                _logger.LogWarning("Attempted to update non-existent subject. SubjectId: {SubjectId}", subject.Id);
+                return false;
+            }
 
-        await _context.SaveChangesAsync();
+            existing.Name = subject.Name;
+            existing.Code = subject.Code;
+            existing.Description = subject.Description;
+
+            context.Entry(existing).State = EntityState.Modified;
+            await context.SaveChangesAsync();
+            _logger.LogInformation("Updated subject: {SubjectId}", subject.Id);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating subject with ID: {SubjectId}", subject.Id);
+            return false;
+        }
     }
 
+    /// <summary>
+    /// Retrieves subjects by a list of IDs.
+    /// </summary>
     public async Task<List<Subject>> GetSubjectsByIdsAsync(IEnumerable<int> ids)
     {
-        var _context = _dbContextFactory.CreateDbContext();
-        return await _context.Subjects
-            .AsNoTracking()
-            .Where(s => ids.Contains(s.Id))
-            .ToListAsync();
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            return await context.Subjects
+                .AsNoTracking()
+                .Where(s => ids.Contains(s.Id))
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching subjects by IDs.");
+            return [];
+        }
     }
 
-    public async Task<List<Subject>> GetMathSubjects()
+    /// <summary>
+    /// Retrieves all math-related subjects.
+    /// </summary>
+    public async Task<List<Subject>> GetMathSubjectsAsync()
     {
-        var context = _dbContextFactory.CreateDbContext();
-        return await context.Subjects
-        .Where(s => s.SubjectType == SubjectType.MathCombination)
-        .ToListAsync();
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            return await context.Subjects
+                .AsNoTracking()
+                .Where(s => s.SubjectType == SubjectType.MathCombination)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching math subjects.");
+            return [];
+        }
     }
 
-    public async Task DeleteAsync(int id)
+    /// <summary>
+    /// Deletes a subject by ID.
+    /// </summary>
+    public async Task<bool> DeleteAsync(int id)
     {
-        var _context = _dbContextFactory.CreateDbContext();
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            var existing = await context.Subjects.FindAsync(id);
 
-        var existing = await _context.Subjects.FindAsync(id);
-        if (existing == null) return;
+            if (existing == null)
+            {
+                _logger.LogWarning("Attempted to delete non-existent subject. SubjectId: {SubjectId}", id);
+                return false;
+            }
 
-        _context.Subjects.Remove(existing);
-        await _context.SaveChangesAsync();
+            context.Subjects.Remove(existing);
+            await context.SaveChangesAsync();
+            _logger.LogInformation("Deleted subject: {SubjectId}", id);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting subject with ID: {SubjectId}", id);
+            return false;
+        }
     }
 }
+

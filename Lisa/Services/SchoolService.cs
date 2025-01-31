@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using FluentAssertions;
 using Lisa.Data;
 using Lisa.Models.Entities;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
@@ -8,131 +7,203 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class SchoolService
+public class SchoolService(
+    IDbContextFactory<LisaDbContext> dbContextFactory,
+    IUiEventService uiEventService,
+    UserManager<User> userManager,
+    IHttpContextAccessor httpContextAccessor,
+    ProtectedSessionStorage sessionStorage,
+    ILogger<SchoolService> logger
+)
 {
-    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory;
-    private readonly IUiEventService _uiEventService;
-    private readonly UserManager<User> _userManager;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ProtectedSessionStorage _sessionStorage;
-
+    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
+    private readonly IUiEventService _uiEventService = uiEventService;
+    private readonly UserManager<User> _userManager = userManager;
+    private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
+    private readonly ProtectedSessionStorage _sessionStorage = sessionStorage;
+    private readonly ILogger<SchoolService> _logger = logger;
     private School? _selectedSchool;
-    private static int _instanceCounter;
-    private readonly int _instanceId;
 
-    public SchoolService(
-        IDbContextFactory<LisaDbContext> dbContextFactory,
-        IUiEventService uiEventService,
-        UserManager<User> userManager,
-        IHttpContextAccessor httpContextAccessor,
-        ProtectedSessionStorage sessionStorage
-        )
-    {
-        _dbContextFactory = dbContextFactory;
-        _uiEventService = uiEventService;
-        _userManager = userManager;
-        _httpContextAccessor = httpContextAccessor;
-        _sessionStorage = sessionStorage;
-
-        _instanceId = Interlocked.Increment(ref _instanceCounter);
-        Console.WriteLine($"SchoolService created. ID: {_instanceId}");
-    }
-
+    /// <summary>
+    /// Sets the current selected school.
+    /// </summary>
     public async Task<School?> SetCurrentSchoolAsync(Guid? schoolId)
     {
-        if (schoolId == null)
+        try
         {
-            _selectedSchool = null;
+            if (schoolId == null)
+            {
+                _selectedSchool = null;
+                await _sessionStorage.SetAsync("selectedSchool", string.Empty);
+                await _uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
+                return null;
+            }
 
-            await _sessionStorage.SetAsync("selectedSchool", string.Empty);
-            await _uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
-            return null;
-        }
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            _selectedSchool = await context.Schools.FindAsync(schoolId);
 
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
-        _selectedSchool = await context.Schools.FindAsync(schoolId);
-        _selectedSchool.Should().NotBeNull();
-        if (_selectedSchool != null)
-        {
+            if (_selectedSchool == null)
+            {
+                _logger.LogWarning("Attempted to select a school that does not exist. SchoolId: {SchoolId}", schoolId);
+                return null;
+            }
+
             await _sessionStorage.SetAsync("selectedSchool", _selectedSchool);
             await _uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
             return _selectedSchool;
         }
-        else
+        catch (Exception ex)
         {
-            throw new InvalidOperationException("School was null when trying to SetCurrentSchoolAsync");
+            _logger.LogError(ex, "Error setting current school. SchoolId: {SchoolId}", schoolId);
+            return null;
         }
     }
 
+    /// <summary>
+    /// Gets the currently logged-in user.
+    /// </summary>
     public async Task<IdentityUser<Guid>?> GetCurrentUserAsync()
     {
-        var userId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        return userId != null ? await _userManager.FindByIdAsync(userId) : null;
+        try
+        {
+            var userId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return userId != null ? await _userManager.FindByIdAsync(userId) : null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving current user.");
+            return null;
+        }
     }
 
     public School? GetSelectedSchool() => _selectedSchool;
 
+    /// <summary>
+    /// Gets the total count of schools.
+    /// </summary>
     public async Task<int> GetCountAsync()
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Schools.CountAsync();
     }
 
+    /// <summary>
+    /// Retrieves all schools.
+    /// </summary>
     public async Task<List<School>> GetAllAsync()
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.Schools.ToListAsync();
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            return await context.Schools
+                .AsNoTracking()
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching all schools.");
+            return [];
+        }
     }
 
+    /// <summary>
+    /// Retrieves all school types.
+    /// </summary>
     public async Task<List<SchoolType>> GetSchoolTypesAsync()
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.SchoolTypes.ToListAsync();
+        return await context.SchoolTypes.AsNoTracking().ToListAsync();
     }
 
+    /// <summary>
+    /// Retrieves a school by ID with related entities.
+    /// </summary>
     public async Task<School?> GetSchoolAsync(Guid id)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.Schools
-        .Include(s => s.SchoolType)
-        .Include(s => s.Curriculum)
-        .Include(s => s.Grades)
-        .Include(s => s.RegisterClasses)
-        .Include(s => s.Teachers)
-        .Include(s => s.Principals)
-        .Include(s => s.Administrators)
-        .Include(s => s.SchoolManagements)
-        .Include(s => s.Learners)
-        .Where(x => x.Id == id)
-        .FirstOrDefaultAsync();
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            return await context.Schools
+                .AsNoTracking()
+                .Include(s => s.SchoolType!)
+                .Include(s => s.Curriculum!)
+                .Include(s => s.Grades!)
+                .Include(s => s.RegisterClasses!)
+                .Include(s => s.Teachers!)
+                .Include(s => s.Principals!)
+                .Include(s => s.Administrators!)
+                .Include(s => s.SchoolManagements!)
+                .Include(s => s.Learners!)
+                .FirstOrDefaultAsync(x => x.Id == id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching school with ID: {SchoolId}", id);
+            return null;
+        }
     }
 
+    /// <summary>
+    /// Retrieves all school curriculums.
+    /// </summary>
     public async Task<List<SchoolCurriculum>> GetSchoolCurriculumsAsync()
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.SchoolCurriculums.ToListAsync();
+        return await context.SchoolCurriculums.AsNoTracking().ToListAsync();
     }
 
-    public async Task AddSchoolAsync(School school)
+    /// <summary>
+    /// Adds a new school.
+    /// </summary>
+    public async Task<bool> AddSchoolAsync(School school)
     {
-        await ModifySchoolAsync(async context => await Task.Run(() => context.Schools.Add(school)));
+        return await ModifySchoolAsync(async context =>
+        {
+            await context.Schools.AddAsync(school);
+        });
     }
 
-    public async Task UpdateAsync(School school)
+    /// <summary>
+    /// Updates an existing school.
+    /// </summary>
+    public async Task<bool> UpdateAsync(School school)
     {
-        await ModifySchoolAsync(async context => await Task.Run(() => context.Schools.Update(school)));
+        return await ModifySchoolAsync(context =>
+        {
+            context.Schools.Update(school);
+            return Task.CompletedTask;
+        });
     }
 
-    public async Task DeleteSchoolAsync(School school)
+    /// <summary>
+    /// Deletes a school.
+    /// </summary>
+    public async Task<bool> DeleteSchoolAsync(School school)
     {
-        await ModifySchoolAsync(async context => await Task.Run(() => context.Schools.Remove(school)));
+        return await ModifySchoolAsync(context =>
+        {
+            context.Schools.Remove(school);
+            return Task.CompletedTask;
+        });
     }
 
-    private async Task ModifySchoolAsync(Func<LisaDbContext, Task> action)
+    /// <summary>
+    /// Modifies a school entity and triggers an event.
+    /// </summary>
+    private async Task<bool> ModifySchoolAsync(Func<LisaDbContext, Task> action)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
-        await action(context);
-        await context.SaveChangesAsync();
-        await _uiEventService.PublishAsync(UiEvents.SchoolsUpdated, _selectedSchool);
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            await action(context);
+            await context.SaveChangesAsync();
+            await _uiEventService.PublishAsync(UiEvents.SchoolsUpdated, _selectedSchool);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error modifying school data.");
+            return false;
+        }
     }
 }

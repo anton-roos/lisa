@@ -13,6 +13,7 @@ public class LearnerViewModel
     [Required(AllowEmptyStrings = false, ErrorMessage = "Name is required")]
     public string? Name { get; set; }
     public string? IdNumber { get; set; }
+    [EmailAddress(ErrorMessage = "Invalid email format")]
     public string? Email { get; set; }
     public string? CellNumber { get; set; }
     public bool Active { get; set; }

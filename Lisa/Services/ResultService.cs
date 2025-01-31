@@ -2,74 +2,126 @@ using Lisa.Data;
 using Lisa.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace Lisa.Services
+namespace Lisa.Services;
+
+public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<ResultService> logger)
 {
-    public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<ResultService> logger)
+    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
+    private readonly ILogger<ResultService> _logger = logger;
+
+    /// <summary>
+    /// Creates a new result entry.
+    /// </summary>
+    public async Task<bool> CreateAsync(Result result)
     {
-        private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-        private readonly ILogger<ResultService> _logger = logger;
-
-        public async Task CreateAsync(Result result)
+        try
         {
-            await using var context = _dbContextFactory.CreateDbContext();
-            context.Results.Add(result);
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            await context.Results.AddAsync(result);
             await context.SaveChangesAsync();
-            _logger.LogInformation("Result created for LearnerId: {result.LearnerId}, SubjectId: {result.SubjectId}", result.LearnerId, result.SubjectId);
+            _logger.LogInformation("Created Result for LearnerId: {LearnerId}, SubjectId: {SubjectId}", result.LearnerId, result.SubjectId);
+            return true;
         }
-
-        public async Task<int> GetCountAsync()
+        catch (Exception ex)
         {
-            await using var context = _dbContextFactory.CreateDbContext();
-            return await context.Results.CountAsync();
+            _logger.LogError(ex, "Error creating result for LearnerId: {LearnerId}, SubjectId: {SubjectId}", result.LearnerId, result.SubjectId);
+            return false;
         }
+    }
 
-        public async Task<Result?> GetByIdAsync(Guid id)
+    /// <summary>
+    /// Gets the total count of results.
+    /// </summary>
+    public async Task<int> GetCountAsync()
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Results.CountAsync();
+    }
+
+    /// <summary>
+    /// Retrieves a result by ID, including related data.
+    /// </summary>
+    public async Task<Result?> GetByIdAsync(Guid id)
+    {
+        try
         {
-            await using var context = _dbContextFactory.CreateDbContext();
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Results
-                .Include(r => r.Learner!)
-                 .ThenInclude(l => l.RegisterClass!)
-                    .ThenInclude(rc => rc.Grade)
-                .Include(r => r.Subject)
-                .FirstOrDefaultAsync(r => r.Id == id);
-        }
-
-        public async Task<List<Result>> GetAllAsync()
-        {
-            await using var context = _dbContextFactory.CreateDbContext();
-            return await context.Results
-                .Include(r => r.Learner)
-                .Include(r => r.Subject)
-                .ToListAsync();
-        }
-
-        public async Task<List<Result>> GetResultsByFiltersAsync(Guid schoolId, Guid gradeId, int subjectId)
-        {
-            await using var context = _dbContextFactory.CreateDbContext();
-
-            var results = await context.Results
+                .AsNoTracking()
                 .Include(r => r.Learner!)
                     .ThenInclude(l => l.RegisterClass!)
-                        .ThenInclude(rc => rc.Grade)
+                        .ThenInclude(rc => rc.Grade!)
+                .Include(r => r.Subject!)
+                .FirstOrDefaultAsync(r => r.Id == id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching Result with ID: {ResultId}", id);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Retrieves all results.
+    /// </summary>
+    public async Task<List<Result>> GetAllAsync()
+    {
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            return await context.Results
+                .AsNoTracking()
+                .Include(r => r.Learner!)
+                .Include(r => r.Subject!)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching all results.");
+            return new List<Result>();
+        }
+    }
+
+    /// <summary>
+    /// Retrieves results based on filters.
+    /// </summary>
+    public async Task<List<Result>> GetResultsByFiltersAsync(Guid schoolId, Guid gradeId, int subjectId)
+    {
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            return await context.Results
+                .AsNoTracking()
+                .Include(r => r.Learner!)
+                    .ThenInclude(l => l.RegisterClass!)
+                        .ThenInclude(rc => rc.Grade!)
                 .Include(r => r.Subject!)
                 .Where(r => r.SubjectId == subjectId &&
                             r.Learner!.RegisterClass != null &&
                             r.Learner.RegisterClass.GradeId == gradeId &&
                             r.Learner.RegisterClass.Grade!.SchoolId == schoolId)
                 .ToListAsync();
-
-            return results;
         }
-
-
-        public async Task UpdateAsync(Result result)
+        catch (Exception ex)
         {
-            await using var context = _dbContextFactory.CreateDbContext();
+            _logger.LogError(ex, "Error fetching results for SchoolId: {SchoolId}, GradeId: {GradeId}, SubjectId: {SubjectId}", schoolId, gradeId, subjectId);
+            return new List<Result>();
+        }
+    }
+
+    /// <summary>
+    /// Updates an existing result.
+    /// </summary>
+    public async Task<bool> UpdateAsync(Result result)
+    {
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
             var existingResult = await context.Results.FindAsync(result.Id);
             if (existingResult == null)
             {
-                _logger.LogWarning($"Result with ID {result.Id} not found.");
-                return;
+                _logger.LogWarning("Result with ID {ResultId} not found.", result.Id);
+                return false;
             }
 
             existingResult.Score = result.Score;
@@ -79,23 +131,42 @@ namespace Lisa.Services
             existingResult.AssessmentTopic = result.AssessmentTopic;
             existingResult.AssessmentType = result.AssessmentType;
 
+            context.Entry(existingResult).State = EntityState.Modified;
             await context.SaveChangesAsync();
-            _logger.LogInformation($"Result updated for LearnerId: {result.LearnerId}, SubjectId: {result.SubjectId}");
+            _logger.LogInformation("Updated Result for LearnerId: {LearnerId}, SubjectId: {SubjectId}", result.LearnerId, result.SubjectId);
+            return true;
         }
-
-        public async Task DeleteAsync(Guid id)
+        catch (Exception ex)
         {
-            await using var context = _dbContextFactory.CreateDbContext();
+            _logger.LogError(ex, "Error updating result for LearnerId: {LearnerId}, SubjectId: {SubjectId}", result.LearnerId, result.SubjectId);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Deletes a result.
+    /// </summary>
+    public async Task<bool> DeleteAsync(Guid id)
+    {
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
             var result = await context.Results.FindAsync(id);
             if (result == null)
             {
-                _logger.LogWarning($"Result with ID {id} not found.");
-                return;
+                _logger.LogWarning("Result with ID {ResultId} not found.", id);
+                return false;
             }
 
             context.Results.Remove(result);
             await context.SaveChangesAsync();
-            _logger.LogInformation($"Result with ID {id} deleted.");
+            _logger.LogInformation("Deleted Result with ID {ResultId}", id);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting Result with ID: {ResultId}", id);
+            return false;
         }
     }
 }

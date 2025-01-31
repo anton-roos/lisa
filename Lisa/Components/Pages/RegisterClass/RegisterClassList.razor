@@ -137,7 +137,7 @@ else
         {
             if (registerClass != null)
             {
-                await RegisterClassService.DeleteAsync(registerClass);
+                await RegisterClassService.DeleteAsync(registerClass.Id);
                 await LoadRegisterClasses();
             await InvokeAsync(StateHasChanged);
             }

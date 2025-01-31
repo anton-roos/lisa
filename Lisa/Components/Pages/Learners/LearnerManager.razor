@@ -3,13 +3,14 @@
 
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
-@inject NavigationManager navigationManager
+@inject NavigationManager NavigationManager
 @inject LearnerService LearnerService
 @inject SchoolService SchoolService
-@inject CombinationService combinationService
-@inject RegisterClassService registerClassService
+@inject CombinationService CombinationService
+@inject RegisterClassService RegisterClassService
 @inject SubjectService SubjectService
 @inject ILogger<LearnerManager> Logger
+@inject CareGroupService CareGroupService
 
 @inherits EventAwareComponentBase
 
@@ -290,17 +291,17 @@
     {
         if (SelectedSchool != null)
         {
-            RegisterClasses = await LearnerService.GetRegisterClassesBySchoolId(SelectedSchool.Id);
-            AllCombinations = await combinationService.GetCombinationsBySchoolId(SelectedSchool.Id);
-            CareGroups = await LearnerService.GetCareGroupsBySchoolId(SelectedSchool.Id);
-            MathSubjects = await SubjectService.GetMathSubjects();
+            RegisterClasses = await RegisterClassService.GetBySchoolIdAsync(SelectedSchool.Id);
+            AllCombinations = await CombinationService.GetCombinationsBySchoolId(SelectedSchool.Id);
+            CareGroups = await CareGroupService.GetBySchoolAsync(SelectedSchool.Id);
+            MathSubjects = await SubjectService.GetMathSubjectsAsync();
         }
         else if (LearnerModel.RegisterClassId.HasValue)
         {
-            RegisterClasses = await LearnerService.GetRegisterClassesBySchoolId(LearnerModel.SchoolId);
-            AllCombinations = await combinationService.GetCombinationsBySchoolId(LearnerModel.SchoolId);
-            CareGroups = await LearnerService.GetCareGroupsBySchoolId(LearnerModel.SchoolId);
-            MathSubjects = await SubjectService.GetMathSubjects();
+            RegisterClasses = await RegisterClassService.GetBySchoolIdAsync(LearnerModel.SchoolId);
+            AllCombinations = await CombinationService.GetCombinationsBySchoolId(LearnerModel.SchoolId);
+            CareGroups = await CareGroupService.GetBySchoolAsync(LearnerModel.SchoolId);
+            MathSubjects = await SubjectService.GetMathSubjectsAsync();
         }
         else
         {
@@ -316,7 +317,7 @@
         if (existingLearner is null)
         {
             SetAlert("danger", "Learner not found.");
-            navigationManager.NavigateTo("/learners");
+            NavigationManager.NavigateTo("/learners");
             return;
         }
 
@@ -364,7 +365,7 @@
         if (LearnerModel.RegisterClassId.HasValue)
         {
             SelectedRegisterClassId = LearnerModel.RegisterClassId.Value.ToString();
-            CurrentRegisterClass = await registerClassService.GetByIdAsync(LearnerModel.RegisterClassId.Value);
+            CurrentRegisterClass = await RegisterClassService.GetByIdAsync(LearnerModel.RegisterClassId.Value);
             CombinationsToChoseFrom = AllCombinations?
             .Where(c => c.GradeId == CurrentRegisterClass.GradeId &&
             c.CombinationType == CombinationType.SubjectCombination);
@@ -401,7 +402,7 @@
             }
 
             LearnerModel.RegisterClassId = newRegisterClassId;
-            CurrentRegisterClass = await registerClassService.GetByIdAsync(LearnerModel.RegisterClassId.Value);
+            CurrentRegisterClass = await RegisterClassService.GetByIdAsync(LearnerModel.RegisterClassId.Value);
 
             LearnerModel.SubjectIds.Clear();
             CombinationSelections.Clear();
@@ -509,7 +510,7 @@
                 SetAlert("success", "Learner and Parents added successfully.");
             }
 
-            navigationManager.NavigateTo("/learners");
+            NavigationManager.NavigateTo("/learners");
         }
         catch (Exception ex)
         {

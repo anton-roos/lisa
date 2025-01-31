@@ -172,7 +172,7 @@ else
 
     private async Task DeleteLearner(Learner learner)
     {
-        await LearnerService.DeleteLearner(learner);
+        await LearnerService.DeleteLearnerAsync(learner.Id);
         await LoadLearners();
         await InvokeAsync(StateHasChanged);
     }

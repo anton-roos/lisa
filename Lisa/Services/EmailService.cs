@@ -11,19 +11,6 @@ namespace Lisa.Services
         private readonly LearnerService _learnerService = learnerService;
         private readonly ILogger<EmailService> _logger = logger;
 
-        /// <summary>
-        /// Queues a job that will send a progress report email for the given learner.
-        /// The mail(s) will be sent to the learner’s parent(s), if they have valid addresses.
-        /// </summary>
-        public void QueueLearnerProgressFeedbackEmail(Guid schoolId, Guid learnerId, string subject, string body)
-        {
-            BackgroundJob.Schedule(
-                () => SendLearnerProgressFeedbackEmail(schoolId, learnerId, subject, body),
-                TimeSpan.FromSeconds(5)
-            );
-            Thread.Sleep(5000);
-        }
-
         public async Task SendBugReportEmailAsync(BugReport bugReport)
         {
             using var smtpClient = new SmtpClient("smtp.office365.com")
@@ -74,6 +61,27 @@ namespace Lisa.Services
             await smtpClient.SendMailAsync(mailMessage);
         }
 
+        public async Task SendEmailAsync(string to, string subject, string body)
+        {
+            using var smtpClient = new SmtpClient("smtp.office365.com")
+            {
+                Port = 587,
+                Credentials = new NetworkCredential("portalDCEG@dcegroup.co.za", "Portal@DCEG"),
+                EnableSsl = true
+            };
+
+            var mailMessage = new MailMessage
+            {
+                From = new MailAddress("portalDCEG@dcegroup.co.za"),
+                Subject = subject,
+                Body = body,
+                IsBodyHtml = true
+            };
+
+            mailMessage.To.Add(to);
+            await smtpClient.SendMailAsync(mailMessage);
+        }
+
         /// <summary>
         /// Actually sends the email(s) for the learner’s parents.
         /// The method is called by Hangfire (hence the parameter signature is serializable).
@@ -95,7 +103,7 @@ namespace Lisa.Services
                 EnableSsl = true
             };
 
-            var learner = await _learnerService.GetLearnerWithParentsAsync(learnerId);
+            var learner = await _learnerService.GetByIdAsync(learnerId);
 
             if (learner == null)
             {

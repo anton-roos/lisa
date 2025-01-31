@@ -1,10 +1,11 @@
-namespace Lisa.Services
+using System.Reflection;
+
+namespace Lisa.Services;
+
+public class VersionService
 {
-    public class VersionService
+    public string GetVersion()
     {
-        public string GetVersion()
-        {
-            return "1.0.4";
-        }
+        return Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown Version";
     }
 }

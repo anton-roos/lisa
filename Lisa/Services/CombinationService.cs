@@ -9,51 +9,64 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
 
+    /// <summary>
+    /// Create a new Combination.
+    /// </summary>
     public async Task<Combination> CreateAsync(Combination subjectCombination)
     {
-        var _context = _dbContextFactory.CreateDbContext();
-        _context.Combinations.Add(subjectCombination);
-        await _context.SaveChangesAsync();
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        await context.Combinations.AddAsync(subjectCombination);
+        await context.SaveChangesAsync();
         return subjectCombination;
     }
 
-    public async Task<Combination> GetByIdAsync(Guid id)
+    /// <summary>
+    /// Retrieve a Combination by ID.
+    /// </summary>
+    public async Task<Combination?> GetByIdAsync(Guid id)
     {
-        var _context = _dbContextFactory.CreateDbContext();
-        var combination = await _context.Combinations
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Combinations
+            .AsNoTracking()
             .Include(sc => sc.Subjects)
             .Include(sc => sc.Grade)
                 .ThenInclude(g => g!.School)
             .FirstOrDefaultAsync(sc => sc.Id == id);
-
-        if (combination == null)
-        {
-            throw new KeyNotFoundException($"Combination with id {id} not found.");
-        }
-
-        return combination;
     }
-    public async Task<List<Combination>> GetCombinationsBySchoolId(Guid schoolId)
-    {
-        await using var context = _dbContextFactory.CreateDbContext();
-        return await context.Combinations
-                            .Where(c => c.Grade!.SchoolId == schoolId)
-                            .Include(c => c.Subjects)
-                            .ToListAsync();
-    }
-    
+
+    /// <summary>
+    /// Retrieve all Combinations.
+    /// </summary>
     public async Task<IEnumerable<Combination>> GetAllAsync()
     {
-        var _context = _dbContextFactory.CreateDbContext();
-        return await _context.Combinations
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Combinations
+            .AsNoTracking()
             .Include(sc => sc.Subjects)
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Retrieve Combinations for a specific School ID.
+    /// </summary>
+    public async Task<List<Combination>> GetCombinationsBySchoolId(Guid schoolId)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Combinations
+            .AsNoTracking()
+            .Where(c => c.Grade!.SchoolId == schoolId)
+            .Include(c => c.Subjects)
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Retrieve Subject Combinations for a specific School.
+    /// </summary>
     public async Task<IEnumerable<Combination>> GetSubjectCombinationsForSchool(School school)
     {
-        var _context = _dbContextFactory.CreateDbContext();
-        return await _context.Combinations
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Combinations
+            .AsNoTracking()
             .Include(sc => sc.Subjects)
             .Include(sc => sc.Grade)
                 .ThenInclude(g => g!.School)
@@ -61,77 +74,94 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Delete a Combination by ID.
+    /// </summary>
     public async Task DeleteAsync(Guid id)
     {
-        var _context = _dbContextFactory.CreateDbContext();
-        var subjectCombination = await _context.Combinations.FindAsync(id);
-        if (subjectCombination != null)
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        var subjectCombination = await context.Combinations.FindAsync(id);
+        if (subjectCombination == null)
         {
-            _context.Combinations.Remove(subjectCombination);
+            return; // No need to save changes if nothing was found.
         }
-        else
-        {
-            throw new KeyNotFoundException($"Combination with id {id} not found.");
-        }
-        await _context.SaveChangesAsync();
+
+        context.Combinations.Remove(subjectCombination);
+        await context.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Add a new Combination.
+    /// </summary>
     public async Task AddCombinationAsync(CombinationViewModel model, IEnumerable<Subject> selectedSubjects)
     {
-        using var _context = _dbContextFactory.CreateDbContext();
-
-        foreach (var subject in selectedSubjects)
-        {
-            _context.Attach(subject);
-        }
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
 
         var newCombination = new Combination
         {
             Name = model.Name,
             GradeId = model.GradeId,
             CombinationType = model.CombinationType,
-            Subjects = selectedSubjects.ToList()
+            Subjects = new List<Subject>()
         };
 
-        _context.Combinations.Add(newCombination);
-        await _context.SaveChangesAsync();
+        foreach (var subject in selectedSubjects)
+        {
+            var trackedSubject = await context.Subjects.FindAsync(subject.Id)
+                ?? context.Subjects.Attach(subject).Entity;
+
+            newCombination.Subjects.Add(trackedSubject);
+        }
+
+        await context.Combinations.AddAsync(newCombination);
+        await context.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Update an existing Combination.
+    /// </summary>
     public async Task UpdateCombinationAsync(CombinationViewModel model, IEnumerable<Subject> selectedSubjects)
     {
-        using var context = _dbContextFactory.CreateDbContext();
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
 
         var existingCombination = await context.Combinations
             .Include(c => c.Subjects)
-            .FirstOrDefaultAsync(c => c.Id == model.Id) 
-            ?? throw new InvalidOperationException("Combination not found.");
-        
+            .FirstOrDefaultAsync(c => c.Id == model.Id)
+            ?? throw new KeyNotFoundException($"Combination with ID {model.Id} not found.");
+
         existingCombination.Name = model.Name;
         existingCombination.GradeId = model.GradeId;
         existingCombination.CombinationType = model.CombinationType;
 
-        var currentSubjectIds = existingCombination.Subjects.Select(s => s.Id).ToList();
-        var newSubjectIds = selectedSubjects.Select(s => s.Id).ToList();
+        var currentSubjectIds = existingCombination.Subjects?
+            .Select(s => s.Id)
+            .ToList() ?? [];
 
-        var subjectsToAdd = selectedSubjects
-            .Where(s => !currentSubjectIds.Contains(s.Id))
-            .ToList();
+        var newSubjectIds = selectedSubjects?
+            .Select(s => s.Id)
+            .ToList() ?? [];
 
-        var subjectsToRemove = existingCombination.Subjects
+        var subjectsToRemove = existingCombination.Subjects?
             .Where(s => !newSubjectIds.Contains(s.Id))
-            .ToList();
+            .ToList() ?? [];
 
-        foreach (var subject in subjectsToRemove)
+        if (existingCombination.Subjects != null)
         {
-            existingCombination.Subjects.Remove(subject);
+            foreach (var subject in subjectsToRemove)
+            {
+                existingCombination.Subjects.Remove(subject);
+            }
         }
 
-        foreach (var subject in subjectsToAdd)
+        foreach (var subject in selectedSubjects ?? [])
         {
-            var trackedSubject = context.Subjects.Local.FirstOrDefault(s => s.Id == subject.Id)
-                ?? context.Subjects.Attach(subject).Entity;
+            if (!currentSubjectIds.Contains(subject.Id))
+            {
+                var trackedSubject = await context.Subjects.FindAsync(subject.Id)
+                    ?? context.Subjects.Attach(subject).Entity;
 
-            existingCombination.Subjects.Add(trackedSubject);
+                existingCombination.Subjects?.Add(trackedSubject);
+            }
         }
 
         await context.SaveChangesAsync();

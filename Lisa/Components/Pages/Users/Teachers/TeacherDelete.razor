@@ -93,8 +93,8 @@ else
                 await TeacherService.TransferRegisterClassesAsync(TeacherId, Guid.Parse(selectedTeacherId));
             }
 
-            EventBus.Publish(new DeleteTeacherEvent { TeacherId = selectedTeacherId });
-            await TeacherService.DeleteTeacherAsync(TeacherId);
+            await EventBus.PublishAsync(new DeleteTeacherEvent { TeacherId = selectedTeacherId });
+            await TeacherService.DeleteAsync(TeacherId);
 
             Navigation.NavigateTo("/teachers");
         }

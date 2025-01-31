@@ -333,7 +333,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
                   .HasForeignKey(r => r.EmailCampaignId)
                   .OnDelete(DeleteBehavior.Cascade);
             entity.Property(ec => ec.UpdatedAt)
-                  .ValueGeneratedOnAddOrUpdate();
+                  .IsRequired();
         });
 
         modelBuilder.Entity<EmailRecipient>(entity =>
@@ -396,7 +396,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
     {
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.State == EntityState.Added || entry.State == EntityState.Modified)
+
             {
                 if (entry.Entity is IValidatable validatable)
                 {

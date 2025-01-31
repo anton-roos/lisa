@@ -19,11 +19,13 @@ public class CommunicationService
         foreach (var learner in learners)
         {
             if (learner.Parents == null) continue;
-            
+
             foreach (var parent in learner.Parents)
             {
                 emailRecipients.Add(new EmailRecipient
                 {
+                    Id = Guid.NewGuid(),
+                    ParentId = parent.Id,
                     EmailAddress = parent.PrimaryEmail,
                     Status = EmailRecipientStatus.Pending
                 });
@@ -32,6 +34,8 @@ public class CommunicationService
                 {
                     emailRecipients.Add(new EmailRecipient
                     {
+                        Id = Guid.NewGuid(),
+                        ParentId = parent.Id,
                         EmailAddress = parent.SecondaryEmail,
                         Status = EmailRecipientStatus.Pending
                     });

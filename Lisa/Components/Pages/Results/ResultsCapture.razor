@@ -67,9 +67,9 @@
                     </div>
 
                     <label>Assessment Topic</label>
-                    <InputText @bind-Value="AssessmentTopic"></InputText>
+                    <InputText class="form-control" @bind-Value="AssessmentTopic"></InputText>
                     <label>Assessment Type</label>
-                    <InputText @bind-Value="AssessmentType"></InputText>
+                    <InputText class="form-control" @bind-Value="AssessmentType"></InputText>
 
                     <hr />
                     <table class="table table-striped">
@@ -87,8 +87,10 @@
                                 <tr>
                                     <td>@entry.LearnerName</td>
                                     <td>
-                                        <InputNumber @bind-Value="entry.ResultViewModel.Score" class="form-control" min="0" max="100"
-                                            step="1" />
+                                        <InputNumber Value="entry.ResultViewModel.Score"
+                                            ValueChanged="EventCallback.Factory.Create<int?>(this, value => OnScoreChanged(value, entry))" class="form-control" min="0"
+                                            ValueExpression="@(() => entry.ResultViewModel.Score)"
+                                            max="100" step="1" />
                                     </td>
                                     <td>
                                         <InputCheckbox @bind-Value="entry.ResultViewModel.Absent" />
@@ -136,7 +138,7 @@
     private List<Subject> Subjects = new();
     private School? SelectedSchool;
     private List<LearnerResult> LearnerResults = new();
-    private DateTime SelectedResultDate { get; set; } = DateTime.Today;
+    private DateTime SelectedResultDate { get; set; }
     private ClaimsPrincipal User { get; set; }
     private string? AssessmentTopic { get; set; }
     private string? AssessmentType { get; set; }
@@ -259,7 +261,7 @@
 
     private async Task LoadLearners()
     {
-        if (string.IsNullOrEmpty(gradeId) ||string.IsNullOrEmpty(gradeId))
+        if (string.IsNullOrEmpty(gradeId) || string.IsNullOrEmpty(gradeId))
             return;
 
         Loading = true;
@@ -272,7 +274,10 @@
 
             foreach (var learner in learners)
             {
-                if (learner.LearnerSubjects != null && learner.LearnerSubjects.Any(ls => ls.SubjectId == int.Parse(subjectId)))
+                if (learner.LearnerSubjects != null 
+                && subjectId != null 
+                && learner.LearnerSubjects
+                    .Any(ls => ls.SubjectId == int.Parse(subjectId)))
                 {
                     LearnerResults.Add(new LearnerResult
                         {
@@ -331,5 +336,11 @@
         public Guid LearnerId { get; set; }
         public string LearnerName { get; set; } = string.Empty;
         public ResultViewModel ResultViewModel { get; set; } = new();
+    }
+
+    private void OnScoreChanged(int? value, LearnerResult entry)
+    {
+        entry.ResultViewModel.Score = value;
+        Console.WriteLine($"Score updated: {value}");
     }
 }

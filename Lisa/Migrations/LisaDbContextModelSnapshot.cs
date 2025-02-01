@@ -558,7 +558,7 @@ namespace Lisa.Migrations
                     b.Property<DateTime>("ResultDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<decimal>("Score")
+                    b.Property<decimal?>("Score")
                         .HasColumnType("decimal(5, 2)");
 
                     b.Property<int>("SubjectId")
@@ -934,7 +934,16 @@ namespace Lisa.Migrations
                 {
                     b.HasBaseType("Lisa.Models.Entities.User");
 
+                    b.Property<string>("Abbreviation")
+                        .HasColumnType("text");
+
                     b.HasIndex("SchoolId");
+
+                    b.ToTable("AspNetUsers", t =>
+                        {
+                            t.Property("Abbreviation")
+                                .HasColumnName("Principal_Abbreviation");
+                        });
 
                     b.HasDiscriminator().HasValue("Principal");
                 });
@@ -951,6 +960,9 @@ namespace Lisa.Migrations
             modelBuilder.Entity("Lisa.Models.Entities.Teacher", b =>
                 {
                     b.HasBaseType("Lisa.Models.Entities.User");
+
+                    b.Property<string>("Abbreviation")
+                        .HasColumnType("text");
 
                     b.HasIndex("SchoolId");
 

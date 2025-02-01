@@ -56,7 +56,7 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
     options.Password.RequireLowercase = true;
     options.Password.RequireNonAlphanumeric = true;
     options.Password.RequireUppercase = true;
-    options.Password.RequiredLength = 8;  // 🔹 Increased security
+    options.Password.RequiredLength = 8; 
     options.Password.RequiredUniqueChars = 1;
 
     // Lockout settings

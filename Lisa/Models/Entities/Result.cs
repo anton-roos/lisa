@@ -5,7 +5,7 @@ public class Result
     public Guid Id { get; set; }
     public Guid LearnerId { get; set; }
     public int SubjectId { get; set; }
-    public decimal Score { get; set; }
+    public int? Score { get; set; }
     public DateTime ResultDate { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -16,5 +16,4 @@ public class Result
     public string? AbsentReason { get; set; }
     public Learner? Learner { get; set; }
     public Subject? Subject { get; set; }
-    public string? FullName => $"{Learner?.Surname} {Learner?.Name}";
 }

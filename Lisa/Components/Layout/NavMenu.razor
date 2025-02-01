@@ -39,8 +39,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext"
-            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="register-class">
@@ -58,8 +57,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext"
-            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="combinations">
                     <span class="bi combination-icon" aria-hidden="true"></span> Combinations
@@ -67,7 +65,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="care-groups">
                     <span class="bi care-groups-icon" aria-hidden="true"></span> Care Groups
@@ -85,7 +83,8 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
+        <AuthorizeView Context="authContext"
+            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="capture-results">
@@ -95,7 +94,8 @@
             </Authorized>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
+        <AuthorizeView Context="authContext"
+            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="results">
@@ -103,6 +103,25 @@
                     </NavLink>
                 </div>
             </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Context="authContext"
+            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="results">
+                        <span class="bi marks-icon" aria-hidden="true"></span> Teacher Results
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/email-templates">
+                    <span class="bi communication-icon" aria-hidden="true"></span> Email Templates
+                </NavLink>
+            </div>
         </AuthorizeView>
 
         <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
@@ -117,14 +136,6 @@
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="/email-campaigns">
                     <span class="bi communication-icon" aria-hidden="true"></span> Email Campaigns
-                </NavLink>
-            </div>
-        </AuthorizeView>
-
-        <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="/email-templates">
-                    <span class="bi communication-icon" aria-hidden="true"></span> Email Templates
                 </NavLink>
             </div>
         </AuthorizeView>

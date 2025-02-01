@@ -141,4 +141,11 @@ Combination -> Validation for each combination at least one needs to be selected
 
 Extra subject for only 10, 11, 12
 
+# Class List
+--> Register Class bv 8A -> Export
+--> Combination Class List (10 - 12)
+  --> Grade
+  --> Physical Science -> Export
+--> Combination Class List
+--> Grade 
 

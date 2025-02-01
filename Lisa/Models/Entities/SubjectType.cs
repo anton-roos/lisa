@@ -4,5 +4,6 @@ public enum SubjectType
 {
     Compulsory,
     Combination,
-    MathCombination
+    MathCombination,
+    AdditionalSubject
 }

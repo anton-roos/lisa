@@ -99,7 +99,14 @@ namespace Lisa.Services
                 SchoolId = selectedSchool.Id,
                 Audience = Audience.Parents,
                 TemplateId = template.Id,
-                // Additional parameters as needed
+                ContentHtml = template.Content,
+                ContentText = template.Content,
+                Description = template.Name,
+                SenderEmail = selectedSchool.SmtpEmail,
+                SenderName = selectedSchool.LongName,
+                GradeId = null,
+                SubjectId = 0,
+                SubjectLine = template.Subject
             };
 
             return await SendCommunicationAsync(request);
@@ -175,7 +182,15 @@ namespace Lisa.Services
                     return learners.Concat(staff).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
                 case Audience.Grade:
-                    return await GetGradeEmailsAsync(request.GradeId.Value);
+                    if (request.GradeId.HasValue)
+                    {
+                        return await GetGradeEmailsAsync(request.GradeId.Value);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Grade ID is null when retrieving grade emails.");
+                        return [];
+                    }
 
                 case Audience.Subject:
                     return await GetSubjectEmailsAsync(request.SubjectId);
@@ -204,7 +219,7 @@ namespace Lisa.Services
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            return emails;
+            return emails.Where(email => email != null).ToList()!;
         }
 
         /// <summary>
@@ -225,7 +240,7 @@ namespace Lisa.Services
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            return emails;
+            return emails.Where(email => email != null).ToList()!;
         }
 
         /// <summary>
@@ -284,8 +299,13 @@ namespace Lisa.Services
         /// <summary>
         /// Creates an EmailCampaign object based on the request and recipient emails.
         /// </summary>
-        private EmailCampaign CreateEmailCampaign(CommunicationRequest request, List<string> recipientEmails)
+        private static EmailCampaign CreateEmailCampaign(CommunicationRequest request, List<string> recipientEmails)
         {
+            if (request?.SchoolId == null)
+            {
+                throw new Exception("School ID is required to create an email campaign.");
+            }
+
             var emailCampaign = new EmailCampaign
             {
                 Id = Guid.NewGuid(),
@@ -305,14 +325,15 @@ namespace Lisa.Services
                 StatsClickCount = 0,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                EmailRecipients = recipientEmails.Select(email => new EmailRecipient
+                EmailRecipients = [.. recipientEmails.Select(email => new EmailRecipient
                 {
                     Id = Guid.NewGuid(),
                     EmailAddress = email,
                     Status = EmailRecipientStatus.Pending,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
-                }).ToList()
+                })],
+                SchoolId = request.SchoolId
             };
 
             return emailCampaign;
@@ -321,9 +342,9 @@ namespace Lisa.Services
         /// <summary>
         /// Generates a campaign name based on the audience and current timestamp.
         /// </summary>
-        private string GenerateCampaignName(Audience audience)
+        private static string GenerateCampaignName(Audience audience)
         {
-            return $"{audience}-Campaign-{DateTime.UtcNow:yyyyMMddHHmmss}";
+            return $"{audience} Campaign {DateTime.UtcNow:yyyyMMddHHmmss}";
         }
     }
 }

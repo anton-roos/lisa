@@ -47,16 +47,14 @@ else
     <TemplateSelection OnTemplateSelected="OnTemplateSelected" />
 
     <button type="button" class="btn btn-primary btn-sm mt-2" @onclick="SendCommunication"
-        disabled="@IsSendDisabled || IsSending">
+        disabled="@(IsSendDisabled || IsSending)">
         @if (IsSending)
         {
             <i class="bi bi-hourglass-split">Sending...</i>
-
         }
         else
         {
             <i class="bi bi-envelope-arrow-up">Send Communication</i>
-
         }
     </button>
 
@@ -189,8 +187,13 @@ Task.Run(async () => Subjects = await SubjectService.GetAllAsync())
                     return;
             }
 
-            if (result != null)
+            if (result != null && result.Id.HasValue)
+            {
                 StatusMessage = "Communication sent successfully!";
+                {
+                    NavigateToCampaign(result.Id.Value);
+                }
+            }
             else
                 StatusMessage = "Error: No recipients found!";
         }
@@ -239,6 +242,11 @@ Task.Run(async () => Subjects = await SubjectService.GetAllAsync())
         {
             IsSending = false;
         }
+    }
+
+    private void NavigateToCampaign(Guid campaignId)
+    {
+        NavigationManager.NavigateTo($"/email-campaign/{campaignId}");
     }
 
     private async Task OnTemplateSelected(EmailTemplate? template)

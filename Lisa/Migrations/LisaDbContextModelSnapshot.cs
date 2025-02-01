@@ -150,6 +150,9 @@ namespace Lisa.Migrations
                     b.Property<DateTime?>("ScheduledAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("SenderEmail")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");

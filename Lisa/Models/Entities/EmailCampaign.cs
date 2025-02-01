@@ -21,4 +21,5 @@ public class EmailCampaign
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public ICollection<EmailRecipient>? EmailRecipients { get; set; }
+    public Guid SchoolId { get; set; }
 }

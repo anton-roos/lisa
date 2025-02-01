@@ -44,34 +44,24 @@
     </div>
 
     <div class="form-group">
-    <button class="btn btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#smtpDetailsCollapse" aria-expanded="false" aria-controls="smtpDetailsCollapse">
-        <h5>School SMTP Details</h5>
-    </button>
-
-    <div class="collapse" id="smtpDetailsCollapse">
-        <div class="card card-body">
-            <div class="form-group">
-                <label for="email">Email</label>
-                <InputText id="email" class="form-control" @bind-Value="School.SmtpEmail" />
-            </div>
-
-            <div class="form-group">
-                <label for="password">Password</label>
-                <InputText id="password" type="password" class="form-control" @bind-Value="School.SmtpPassword" />
-            </div>
-
-            <div class="form-group">
-                <label for="port">Port</label>
-                <InputNumber id="port" class="form-control" @bind-Value="School.SmtpPort" />
-            </div>
-
-            <div class="form-group">
-                <label for="host">Host</label>
-                <InputText id="host" class="form-control" @bind-Value="School.SmtpHost" />
-            </div>
-        </div>
+        <label for="email">Email</label>
+        <InputText id="email" class="form-control" @bind-Value="School.SmtpEmail" />
     </div>
-</div>
+
+    <div class="form-group">
+        <label for="password">Password</label>
+        <InputText id="password" type="password" class="form-control" @bind-Value="School.SmtpPassword" />
+    </div>
+
+    <div class="form-group">
+        <label for="port">Port</label>
+        <InputNumber id="port" class="form-control" @bind-Value="School.SmtpPort" />
+    </div>
+
+    <div class="form-group">
+        <label for="host">Host</label>
+        <InputText id="host" class="form-control" @bind-Value="School.SmtpHost" />
+    </div>
 
     <button type="submit" class="btn btn-primary">Save</button>
     <button type="button" class="btn btn-secondary" @onclick="OnCancel">Cancel</button>

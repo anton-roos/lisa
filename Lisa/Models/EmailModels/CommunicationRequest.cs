@@ -5,7 +5,7 @@ namespace Lisa.Models.EmailModels;
 
 public class CommunicationRequest
 {
-    public Guid? SchoolId { get; set; }
+    public Guid SchoolId { get; set; }
     public Guid? GradeId { get; set; }
     public int SubjectId { get; set; }
     [Required]

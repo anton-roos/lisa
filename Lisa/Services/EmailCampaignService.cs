@@ -111,7 +111,8 @@ public class EmailCampaignService
                         string subject = campaign.SubjectLine ?? "No Subject";
                         string body = campaign.ContentHtml ?? "No Content";
 
-                        BackgroundJob.Enqueue(() => SendEmailWithRetryAsync(recipient, subject, body));
+                        BackgroundJob.Enqueue(() => SendEmailWithRetryAsync(recipient.EmailAddress, subject, body, campaign.SchoolId));
+                        Thread.Sleep(2000);
 
                         recipient.Status = EmailRecipientStatus.Sent;
                     }
@@ -161,18 +162,18 @@ public class EmailCampaignService
     /// Sends an email with automatic retries using Hangfire.
     /// </summary>
     [AutomaticRetry(Attempts = 3)]
-    public async Task SendEmailWithRetryAsync(EmailRecipient recipient, string subject, string body)
+    public async Task SendEmailWithRetryAsync(string recipientEmailAddress, string subject, string body, Guid schoolId)
     {
         try
         {
-            if (!string.IsNullOrWhiteSpace(recipient.EmailAddress))
+            if (!string.IsNullOrWhiteSpace(recipientEmailAddress))
             {
-                await _emailService.SendEmailAsync(to: recipient.EmailAddress, subject: subject, body: body);
+                await _emailService.SendEmailAsync(schoolId: schoolId, to: recipientEmailAddress, subject: subject, body: body);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError("Failed to send email to {recipient.EmailAddress}: {ex.Message}", recipient.EmailAddress, ex.Message);
+            _logger.LogError("Failed to send email to {recipient.EmailAddress}: {ex.Message}", recipientEmailAddress, ex.Message);
             throw;
         }
     }

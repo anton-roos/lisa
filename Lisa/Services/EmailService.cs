@@ -10,7 +10,6 @@ namespace Lisa.Services
         private readonly SchoolService _schoolService = schoolService;
         private readonly LearnerService _learnerService = learnerService;
         private readonly ILogger<EmailService> _logger = logger;
-
         public async Task SendBugReportEmailAsync(BugReport bugReport)
         {
             using var smtpClient = new SmtpClient("smtp.office365.com")
@@ -61,25 +60,42 @@ namespace Lisa.Services
             await smtpClient.SendMailAsync(mailMessage);
         }
 
-        public async Task SendEmailAsync(string to, string subject, string body)
+        public async Task SendEmailAsync(string to, string subject, string body, Guid schoolId)
         {
-            using var smtpClient = new SmtpClient("smtp.office365.com")
+            try
             {
-                Port = 587,
-                Credentials = new NetworkCredential("portalDCEG@dcegroup.co.za", "Portal@DCEG"),
-                EnableSsl = true
-            };
+                var school = await _schoolService.GetSchoolAsync(schoolId);
 
-            var mailMessage = new MailMessage
+                if (school == null)
+                {
+                    _logger.LogError("School with ID {schoolId} not found.", schoolId);
+                    throw new Exception($"School with ID {schoolId} not found.");
+                }
+
+                using var smtpClient = new SmtpClient("smtp.office365.com")
+                {
+                    Port = school.SmtpPort,
+                    Credentials = new NetworkCredential(school.SmtpEmail, school.SmtpPassword),
+                    EnableSsl = true
+                };
+
+                var mailMessage = new MailMessage
+                {
+                    From = new MailAddress(school.SmtpEmail ?? throw new Exception("SMTP email not set.")),
+                    Subject = subject,
+                    Body = body,
+                    IsBodyHtml = true
+                };
+
+                mailMessage.To.Add(to);
+                await smtpClient.SendMailAsync(mailMessage);
+
+            }
+            catch (SmtpException ex)
             {
-                From = new MailAddress("portalDCEG@dcegroup.co.za"),
-                Subject = subject,
-                Body = body,
-                IsBodyHtml = true
-            };
-
-            mailMessage.To.Add(to);
-            await smtpClient.SendMailAsync(mailMessage);
+                _logger.LogError("Failed to send email to {to}: {ex.Message}", to, ex.Message);
+                throw;
+            }
         }
 
         /// <summary>

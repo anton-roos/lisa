@@ -1,0 +1,120 @@
+@using Lisa.Models.Entities
+@inherits ComponentBase
+
+<div class="mb-3">
+    <label for="learnerSearch">Search by Name:</label>
+    <input id="learnerSearch" type="text" class="form-control" placeholder="Enter learner name..."
+        @oninput="DebounceSearch" />
+</div>
+
+@if (IsLoading)
+{
+    <div class="text-center">
+        <i class="bi bi-hourglass-split text-primary"></i> Loading...
+    </div>
+}
+else if (!Learners.Any())
+{
+    <div class="text-center text-muted">No learners found.</div>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Grade</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var learner in Learners)
+            {
+                <tr>
+                    <td>@learner.Surname @learner.Name</td>
+                    <td>@learner.RegisterClass?.Grade?.Name</td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" @onclick="() => SendCommunication(learner)"
+                            disabled="@IsSending">
+                            <i class="bi bi-envelope-fill"></i> Send Communication
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    /// <summary>
+    /// The current search term entered by the user.
+    /// </summary>
+    [Parameter]
+    public string? SearchTerm { get; set; }
+
+    /// <summary>
+    /// Event callback triggered when the search term changes.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnSearchTermChanged { get; set; }
+
+    /// <summary>
+    /// The list of learners to display.
+    /// </summary>
+    [Parameter]
+    public IEnumerable<Learner> Learners { get; set; } = Enumerable.Empty<Learner>();
+
+    /// <summary>
+    /// Event callback triggered when the user clicks "Send Communication" for a learner.
+    /// </summary>
+    [Parameter]
+    public EventCallback<Learner> OnSend { get; set; }
+
+    private bool IsLoading { get; set; } = false;
+    private bool IsSending { get; set; } = false;
+    private System.Timers.Timer? searchDebounceTimer;
+
+    /// <summary>
+    /// Debounce function to delay API calls while the user is typing.
+    /// </summary>
+    private void DebounceSearch(ChangeEventArgs e)
+    {
+        if (searchDebounceTimer != null)
+        {
+            searchDebounceTimer.Stop();
+            searchDebounceTimer.Dispose();
+        }
+
+        searchDebounceTimer = new System.Timers.Timer(500) { AutoReset = false };
+        searchDebounceTimer.Elapsed += async (sender, args) =>
+        {
+            await InvokeAsync(async () =>
+    {
+    IsLoading = true;
+    await OnSearchTermChanged.InvokeAsync(SearchTerm);
+    IsLoading = false;
+            });
+        };
+        searchDebounceTimer.Start();
+    }
+
+    /// <summary>
+    /// Sends communication to the selected learner.
+    /// </summary>
+    private async Task SendCommunication(Learner learner)
+    {
+        try
+        {
+            IsSending = true;
+            await OnSend.InvokeAsync(learner);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error sending communication: {ex.Message}");
+        }
+        finally
+        {
+            IsSending = false;
+        }
+    }
+}

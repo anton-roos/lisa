@@ -1,0 +1,54 @@
+@using Lisa.Models.Entities
+@inject EmailTemplateService EmailTemplateService
+@inherits ComponentBase
+
+<div class="mb-3">
+    <label for="templateSelect">Select Template</label>
+    <InputSelect id="templateSelect" class="form-select" TValue="EmailTemplate"
+        ValueChanged="@(async (template) => await TemplateChanged(template))">
+        <option value="">-- Select Template --
+        </option>
+        @if (Templates != null)
+        {
+            @foreach (var template in Templates)
+            {
+                <option value="@template.Id">@template.Name</option>
+            }
+        }
+    </InputSelect>
+</div>
+
+@code {
+    /// <summary>
+    /// The currently selected template ID.
+    /// </summary>
+    [Parameter]
+    public EmailTemplate? SelectedTemplate { get; set; }
+
+    /// <summary>
+    /// Callback to notify when the template selection changes.
+    /// </summary>
+    [Parameter]
+    public EventCallback<EmailTemplate?> OnTemplateSelected { get; set; }
+
+    /// <summary>
+    /// The list of available email templates.
+    /// </summary>
+    private List<EmailTemplate> Templates = new();
+
+    /// <summary>
+    /// Loads all email templates on component initialization.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        Templates = await EmailTemplateService.GetAllTemplatesAsync();
+    }
+
+    /// <summary>
+    /// Invoked when the user changes the selection.
+    /// </summary>
+    private async Task TemplateChanged(EmailTemplate SelectedTemplate)
+    {
+        await OnTemplateSelected.InvokeAsync(SelectedTemplate);
+    }
+}

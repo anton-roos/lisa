@@ -1,0 +1,32 @@
+@inherits ComponentBase
+
+<div class="mb-3">
+    <label class="form-label">Select Audience</label>
+    <InputSelect class="form-select" id="SelectedSchoolAudienceId" @bind-Value="SelectedAudience"
+                 @onchange="HandleChange">
+        <option value="">-- Select Audience --</option>
+        <option value="Parents">Parents</option>
+        <option value="Staff">Staff</option>
+        <option value="LearnersAndStaff">Learners and Staff</option>
+    </InputSelect>
+</div>
+
+@code {
+    /// <summary>
+    /// The currently selected audience.
+    /// </summary>
+    [Parameter]
+    public string? SelectedAudience { get; set; }
+
+    /// <summary>
+    /// Event callback to notify parent when the audience selection changes.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string?> OnAudienceSelected { get; set; }
+
+    private async Task HandleChange(ChangeEventArgs e)
+    {
+        SelectedAudience = e.Value?.ToString();
+        await OnAudienceSelected.InvokeAsync(SelectedAudience);
+    }
+}

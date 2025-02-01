@@ -239,8 +239,10 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
         modelBuilder.Entity<Subject>()
             .HasKey(s => s.Id);
         modelBuilder.Entity<Subject>()
-            .HasIndex(s => s.Name)
-            .IsUnique();
+            .Property(s => s.Id)
+            .UseIdentityColumn();
+        modelBuilder.Entity<Subject>()
+            .HasIndex(s => s.Name);
         modelBuilder.Entity<Subject>()
             .HasIndex(s => s.Code)
             .IsUnique();

@@ -18,6 +18,7 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         {
             await using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Subjects
+                .OrderBy(s => s.Order)
                 .AsNoTracking()
                 .ToListAsync();
         }
@@ -25,6 +26,22 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         {
             _logger.LogError(ex, "Error fetching all subjects.");
             return new List<Subject>();
+        }
+    }
+
+    public async Task<Subject?> GetByCodeAsync(string code)
+    {
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            return await context.Subjects
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Code == code);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching subject by code: {SubjectCode}", code);
+            return null;
         }
     }
 
@@ -108,6 +125,7 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         {
             await using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Subjects
+                .OrderBy(s => s.Order)
                 .AsNoTracking()
                 .Where(s => ids.Contains(s.Id))
                 .ToListAsync();
@@ -128,6 +146,7 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         {
             await using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Subjects
+                .OrderBy(s => s.Order)
                 .AsNoTracking()
                 .Where(s => s.SubjectType == SubjectType.MathCombination)
                 .ToListAsync();

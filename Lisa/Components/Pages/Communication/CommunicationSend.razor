@@ -1,0 +1,156 @@
+@page "/communication/send"
+@using Lisa.Models.EmailModels
+@using Lisa.Models.Entities
+@using Lisa.Enums
+@using Lisa.Components.Layout.Communciation
+@inject SchoolService SchoolService
+@inject GradeService GradeService
+@inject SubjectService SubjectService
+@inject LearnerService LearnerService
+@inject EmailTemplateService EmailTemplateService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Send Communication</PageTitle>
+
+@if (SelectedSchool == null)
+{
+    <div class="alert alert-info">
+        Please select a school to send communication.
+    </div>
+}
+else
+{
+    <h3>Send Communication</h3>
+    <CommunicationTypeSelector SelectedTarget="@SelectedTarget" OnTargetChanged="OnOptionChanged" />
+
+    @switch (SelectedTarget)
+    {
+        case CommunicationTarget.School:
+            <SchoolAudienceSelector OnAudienceSelected="OnSchoolAudienceSelected" SelectedAudience="SelectedSchoolAudienceId" />
+            break;
+
+        case CommunicationTarget.Grade:
+            <GradeSelection Grades="Grades" SelectedGradeId="@SelectedGradeId" OnGradeSelected="OnGradeSelected" />
+            break;
+
+        case CommunicationTarget.Subject:
+            <SubjectSelection Subjects="Subjects" SelectedSubjectId="@SelectedSubjectId" OnSubjectSelected="OnSubjectSelected" />
+            break;
+
+        case CommunicationTarget.Learner:
+            <LearnerSearch SearchTerm="@SearchTerm" OnSearchTermChanged="OnSearchTermChanged" Learners="FilteredLearners"
+                OnSend="SendCommunicationForLearner" />
+            break;
+    }
+
+    <TemplateSelection OnTemplateSelected="OnTemplateSelected" SelectedTemplate="@SelectedTemplate" />
+    <button type="button" class="btn btn-primary btn-sm mt-2" @onclick="SendCommunication" disabled="@IsSendDisabled">
+        Send Communication <i class="bi bi-envelope-arrow-up"></i>
+    </button>
+}
+
+@code {
+    private CommunicationTarget SelectedTarget { get; set; } = CommunicationTarget.Learner;
+    private string? SearchTerm { get; set; }
+    private List<Learner> Learners = new();
+    private IEnumerable<Learner> FilteredLearners => ApplyFilters();
+    private School? SelectedSchool { get; set; }
+    private Guid? SelectedGradeId { get; set; }
+    private string? SelectedSchoolAudienceId { get; set; }
+    private IEnumerable<Grade> Grades = new List<Grade>();
+    private IEnumerable<Subject> Subjects = new List<Subject>();
+    private int SelectedSubjectId { get; set; }
+    private EmailTemplate? SelectedTemplate { get; set; }
+    private bool IsSendDisabled => SelectedTemplate == null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SelectedSchool = SchoolService.GetSelectedSchool();
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        if (SelectedSchool != null)
+        {
+            var tasks = new List<Task>
+{
+Task.Run(async () => Learners = await LearnerService.GetLearnersBySchoolAsync(SelectedSchool.Id)),
+Task.Run(async () => Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id)),
+Task.Run(async () => Subjects = await SubjectService.GetAllAsync())
+};
+            await Task.WhenAll(tasks);
+        }
+    }
+
+    private async Task OnGradeSelected(Guid? selectedGradeId)
+    {
+        SelectedGradeId = selectedGradeId;
+    }
+
+    private async Task OnSubjectSelected(int selectedSubjectId)
+    {
+        SelectedSubjectId = selectedSubjectId;
+    }
+
+    private void OnOptionChanged(CommunicationTarget target)
+    {
+        SelectedTarget = target;
+    }
+
+    private void OnSearchTermChanged(string? searchTerm)
+    {
+        SearchTerm = searchTerm;
+    }
+
+    private IEnumerable<Learner> ApplyFilters()
+    {
+        if (Learners is null || !Learners.Any()) return Enumerable.Empty<Learner>();
+
+        var query = Learners.AsEnumerable();
+
+        if (SelectedGradeId.HasValue)
+            query = query.Where(l => l.RegisterClass?.Grade?.Id == SelectedGradeId);
+
+        if (!string.IsNullOrEmpty(SearchTerm))
+        {
+            var term = SearchTerm.Trim().ToLower();
+            query = query.Where(l => $"{l.Surname} {l.Name}".ToLower().Contains(term));
+        }
+
+        return query;
+    }
+
+    private async Task SendCommunication()
+    {
+        if (SelectedTemplate == null)
+        {
+            Console.WriteLine("No template selected!");
+            return;
+        }
+
+        // Implement your email sending logic here
+    }
+
+    private async Task SendCommunicationForLearner(Learner learner)
+    {
+        if (SelectedTemplate == null)
+        {
+            Console.WriteLine("No template selected!");
+            return;
+        }
+
+        // Implement your email sending logic here
+    }
+
+    private async Task OnTemplateSelected(EmailTemplate? template)
+    {
+        SelectedTemplate = template;
+        await InvokeAsync(StateHasChanged); // Force UI update
+    }
+
+    private async Task OnSchoolAudienceSelected(string? audienceId)
+    {
+        SelectedSchoolAudienceId = audienceId;
+    }
+}

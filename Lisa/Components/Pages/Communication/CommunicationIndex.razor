@@ -3,15 +3,11 @@
 @using Lisa.Models.Entities
 @using Lisa.Services
 @using RazorLight
-@inject EmailService EmailService
-@inject EmailTemplateService _emailTemplateService
-@inject IRazorLightEngine _razorLightEngine
-@inject ResultService _resultService
-@inject NavigationManager NavigationManager
-@inject SchoolService SchoolService
+
 @inherits EventAwareComponentBase
 
 <PageTitle>Communication</PageTitle>
+
 @if (SelectedSchool == null)
 {
     <div class="alert alert-info">
@@ -21,45 +17,35 @@
 else
 {
     <h3>Communication</h3>
-    <button class="btn btn-primary" @onclick="SendCommunication">Send Communication</button>
-    <button class="btn btn-primary" @onclick="ViewTemplates">View Templates</button>
-    <button class="btn btn-primary" @onclick="NavigateToEmailCampaigns">Email Campaigns</button>
+    <div class="d-grid gap-2 d-md-flex justify-content-start">
+        <button class="btn btn-primary" @onclick="SendCommunication">Send Communication</button>
+        <button class="btn btn-secondary" @onclick="ViewTemplates">View Templates</button>
+        <button class="btn btn-info" @onclick="NavigateToEmailCampaigns">Email Campaigns</button>
+    </div>
 }
 
 @code {
+    [Inject] private SchoolService SchoolService { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+
     private School? SelectedSchool;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         SelectedSchool = SchoolService.GetSelectedSchool();
         SubscribeToEvent(UiEvents.SchoolSelected);
+        await base.OnInitializedAsync();
     }
 
-    private void ViewTemplates()
-    {
-        NavigationManager.NavigateTo("/communication/email-templates");
-    }
-    
-    private void NavigateToEmailCampaigns()
-    {
-        NavigationManager.NavigateTo("/email-campaigns");
-    }
-
-    private void SendCommunication()
-    {
-        NavigationManager.NavigateTo("/communication/send");
-    }
+    private void ViewTemplates() => NavigationManager.NavigateTo("/communication/email-templates");
+    private void NavigateToEmailCampaigns() => NavigationManager.NavigateTo("/email-campaigns");
+    private void SendCommunication() => NavigationManager.NavigateTo("/communication/send");
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        switch (eventName)
+        if (eventName == UiEvents.SchoolSelected && payload is School school)
         {
-            case UiEvents.SchoolSelected:
-                if (payload is School school)
-                {
-                    SelectedSchool = school;
-                }
-                break;
+            SelectedSchool = school;
         }
 
         await base.HandleEventAsync(eventName, payload);

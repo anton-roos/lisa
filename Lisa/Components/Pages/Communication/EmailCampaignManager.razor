@@ -1,57 +1,52 @@
 @page "/email-campaign/{Id:guid}"
 @using Lisa.Models.Entities
-
-@inject Lisa.Services.EmailCampaignService EmailCampaignService
-
-@inherits EventAwareComponentBase
+@inject EmailCampaignService EmailCampaignService
+@inject NavigationManager NavigationManager
 
 <PageTitle>Email Campaign</PageTitle>
 
-<AuthorizeView>
-    <Authorized>
-        <h3>Email Campaign</h3>
+@if (isLoading)
+{
+    <p>Loading campaign details...</p>
+}
+else if (Campaign == null)
+{
+    <div class="alert alert-danger">Campaign not found.</div>
+}
+else
+{
+    <div class="card p-4 shadow-lg">
+        <h3>@Campaign.Name</h3>
 
-        <div>
-            @if (Campaign == null)
-            {
-                <p>Loading campaign data...</p>
-            }
-            else
-            {
-                <h3>@Campaign.Name</h3>
-
-                <Progress Class="mb-3">
-                    <ProgressBar Width="@ProgressPercent" Label="@($"{ProgressPercent}%")" />
-                </Progress>
-
-                <p>Sending @SentCount of @TotalRecipients emails...</p>
-
-                <Button Color="ButtonColor.Success" Size="ButtonSize.Medium" @onclick="Start">
-                    <Icon Name="IconName.BoxArrowRight"></Icon>
-                    Start
-                </Button>
-
-                <Button Color="ButtonColor.Secondary" Size="ButtonSize.Medium" @onclick="Pause" class="ms-2">
-                    <Icon Name="IconName.PauseBtnFill"></Icon>
-                    Pause
-                </Button>
-
-                <Button Color="ButtonColor.Danger" Size="ButtonSize.Medium" @onclick="Stop" class="ms-2">
-                    <Icon Name="IconName.SignStopFill"></Icon>
-                    Cancel
-                </Button>
-
-                @if (!string.IsNullOrEmpty(StatusMessage))
-                {
-                    <p><strong>Status:</strong> @StatusMessage</p>
-                }
-            }
+        <div class="progress my-3">
+            <div class="progress-bar" role="progressbar" style="width: @ProgressPercent%;" 
+                 aria-valuenow="@ProgressPercent" aria-valuemin="0" aria-valuemax="100">
+                @ProgressPercent%
+            </div>
         </div>
-    </Authorized>
-    <NotAuthorized>
-        <Unauthorized />
-    </NotAuthorized>
-</AuthorizeView>
+
+        <p>Sent @SentCount of @TotalRecipients emails...</p>
+
+        <div class="d-flex gap-3">
+            <button class="btn btn-success" @onclick="StartCampaign" disabled="@isProcessing">
+                <i class="bi bi-play-fill"></i> Start
+            </button>
+
+            <button class="btn btn-warning" @onclick="PauseCampaign" disabled="@isProcessing">
+                <i class="bi bi-pause-fill"></i> Pause
+            </button>
+
+            <button class="btn btn-danger" @onclick="StopCampaign" disabled="@isProcessing">
+                <i class="bi bi-x-circle-fill"></i> Cancel
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(StatusMessage))
+        {
+            <div class="alert alert-info mt-3">@StatusMessage</div>
+        }
+    </div>
+}
 
 @code {
     [Parameter] public Guid Id { get; set; }
@@ -61,79 +56,75 @@
     private int SentCount { get; set; } = 0;
     private int TotalRecipients { get; set; } = 0;
     private string? StatusMessage = null;
+    private bool isLoading = true;
+    private bool isProcessing = false;
 
     protected override async Task OnInitializedAsync()
     {
-        SubscribeToEvent(UiEvents.EmailCampaignStarted);
-        SubscribeToEvent(UiEvents.EmailCampaignPaused);
-        SubscribeToEvent(UiEvents.EmailCampaignCancelled);
-        SubscribeToEvent(UiEvents.EmailCampaignCompleted);
-        SubscribeToEvent(UiEvents.EmailCampaignProgressUpdated);
-        SubscribeToEvent(UiEvents.EmailCampaignStatusUpdated);
-
-        Campaign = await EmailCampaignService.GetByIdAsync(Id);
-        if (Campaign != null)
+        try
         {
-            TotalRecipients = Campaign.EmailRecipients?.Count() ?? 0;
-            SentCount = Campaign.EmailRecipients?.Count(r => r.Status != EmailRecipientStatus.Pending) ?? 0;
-            ProgressPercent = TotalRecipients == 0 ? 0 : (int)Math.Round((double)SentCount / TotalRecipients * 100);
-        }
-    }
-
-    protected override async Task HandleEventAsync(string eventName, object? payload)
-    {
-        if (payload is not null)
-        {
-            if (payload is { } eventPayload)
+            isLoading = true;
+            Campaign = await EmailCampaignService.GetByIdAsync(Id);
+            if (Campaign != null)
             {
-                var payloadDict = eventPayload.GetType()
-                .GetProperties()
-                .ToDictionary(prop => prop.Name, prop => prop.GetValue(eventPayload));
-
-                if (payloadDict.TryGetValue("Id", out var payloadCampaignId) && payloadCampaignId is Guid campaignId)
-                {
-                    if (campaignId != Id)
-                    {
-                        return;
-                    }
-                }
-
-                if (payloadDict.TryGetValue("Progress", out var progressValue) && progressValue is int progress)
-                {
-                    ProgressPercent = progress;
-                    SentCount = (int)Math.Round((TotalRecipients * progress) / 100.0);
-                }
+                TotalRecipients = Campaign.EmailRecipients?.Count() ?? 0;
+                SentCount = Campaign.EmailRecipients?.Count(r => r.Status != EmailRecipientStatus.Pending) ?? 0;
+                ProgressPercent = TotalRecipients == 0 ? 0 : (int)Math.Round((double)SentCount / TotalRecipients * 100);
             }
         }
-
-        switch (eventName)
+        catch (Exception ex)
         {
-            case UiEvents.EmailCampaignStarted:
-                StatusMessage = "Campaign Started";
-                break;
-
-            case UiEvents.EmailCampaignPaused:
-                StatusMessage = "Campaign Paused";
-                break;
-
-            case UiEvents.EmailCampaignCancelled:
-                StatusMessage = "Campaign Cancelled";
-                break;
-
-            case UiEvents.EmailCampaignCompleted:
-                StatusMessage = "Campaign Completed";
-                ProgressPercent = 100;
-                break;
-
-            case UiEvents.EmailCampaignStatusUpdated when payload is string status:
-                StatusMessage = status;
-                break;
+            Console.WriteLine($"Error loading campaign: {ex.Message}");
+            StatusMessage = "Failed to load campaign details.";
         }
-
-        await base.HandleEventAsync(eventName, payload);
+        finally
+        {
+            isLoading = false;
+        }
     }
 
-    private async Task Pause() => await EmailCampaignService.PauseCampaignAsync(Id);
-    private async Task Stop() => await EmailCampaignService.StopCampaignAsync(Id);
-    private async Task Start() => await EmailCampaignService.StartCampaignAsync(Id);
+    private async Task StartCampaign()
+    {
+        await ExecuteCampaignAction(async () =>
+        {
+            await EmailCampaignService.StartCampaignAsync(Id);
+            StatusMessage = "Campaign Started";
+        });
+    }
+
+    private async Task PauseCampaign()
+    {
+        await ExecuteCampaignAction(async () =>
+        {
+            await EmailCampaignService.PauseCampaignAsync(Id);
+            StatusMessage = "Campaign Paused";
+        });
+    }
+
+    private async Task StopCampaign()
+    {
+        await ExecuteCampaignAction(async () =>
+        {
+            await EmailCampaignService.StopCampaignAsync(Id);
+            StatusMessage = "Campaign Cancelled";
+        });
+    }
+
+    private async Task ExecuteCampaignAction(Func<Task> campaignAction)
+    {
+        try
+        {
+            isProcessing = true;
+            await campaignAction();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating campaign: {ex.Message}");
+            StatusMessage = "Error processing campaign action.";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
 }

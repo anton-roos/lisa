@@ -1,9 +1,10 @@
-namespace Lisa.Data;
+namespace Lisa.Enums;
 
 public enum CommunicationTarget
 {
     School,
     Grade,
     Subject,
-    Learner
+    Learner,
+    Parent
 }

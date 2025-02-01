@@ -23,7 +23,7 @@
 @code {
     private void GoHome()
     {
-        NavigationManager.NavigateTo("/");
+        NavigationManager.NavigateTo("/" , forceLoad: true);
     }
 
     private void Login()

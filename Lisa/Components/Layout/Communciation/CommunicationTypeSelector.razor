@@ -1,0 +1,56 @@
+@using Lisa.Enums
+@inherits ComponentBase
+
+<div class="mb-3">
+    <label class="form-label">Send Communication Per:</label>
+
+    <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" id="schoolOption" name="communicationTarget"
+            value="@CommunicationTarget.School" @onchange="HandleChange"
+            checked="@(SelectedTarget == CommunicationTarget.School)">
+        <label class="form-check-label" for="schoolOption">School</label>
+    </div>
+
+    <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" id="gradeOption" name="communicationTarget"
+            value="@CommunicationTarget.Grade" @onchange="HandleChange"
+            checked="@(SelectedTarget == CommunicationTarget.Grade)">
+        <label class="form-check-label" for="gradeOption">Grade</label>
+    </div>
+
+    <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" id="subjectOption" name="communicationTarget"
+            value="@CommunicationTarget.Subject" @onchange="HandleChange"
+            checked="@(SelectedTarget == CommunicationTarget.Subject)">
+        <label class="form-check-label" for="subjectOption">Subject</label>
+    </div>
+
+    <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" id="learnerOption" name="communicationTarget"
+            value="@CommunicationTarget.Learner" @onchange="HandleChange"
+            checked="@(SelectedTarget == CommunicationTarget.Learner)">
+        <label class="form-check-label" for="learnerOption">Learner</label>
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// The currently selected communication target.
+    /// </summary>
+    [Parameter]
+    public CommunicationTarget SelectedTarget { get; set; }
+
+    /// <summary>
+    /// Event callback to notify when the target selection changes.
+    /// </summary>
+    [Parameter]
+    public EventCallback<CommunicationTarget> OnTargetChanged { get; set; }
+
+    private async Task HandleChange(ChangeEventArgs e)
+    {
+        if (Enum.TryParse(e.Value?.ToString(), out CommunicationTarget newTarget))
+        {
+            await OnTargetChanged.InvokeAsync(newTarget);
+        }
+    }
+}

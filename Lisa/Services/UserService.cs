@@ -35,9 +35,30 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
         }
     }
 
+    public async Task<List<User>> GetAllStaffForSchoolAsync(Guid? schoolId = null)
+    {
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            var query = context.Users.AsNoTracking();
+
+            if (schoolId != null)
+            {
+                query = query.Where(u => u.SchoolId == schoolId);
+            }
+
+            return await query.ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching staff for SchoolId {SchoolId}.", schoolId);
+            return [];
+        }
+    }
+
     /// <summary>
     /// Retrieves a user by ID.
-    /// </summary>
+    /// </summary>s
     public async Task<TUser?> GetByIdAsync<TUser>(Guid id) where TUser : User
     {
         try

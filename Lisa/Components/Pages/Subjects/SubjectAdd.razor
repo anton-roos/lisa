@@ -25,15 +25,30 @@
         <InputText class="form-control" @bind-Value="newSubject.Description" />
     </div>
 
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
     <button class="btn btn-primary" type="submit">Save</button>
     <button class="btn btn-secondary" type="button" @onclick="Cancel">Cancel</button>
 </EditForm>
 
 @code {
     private Subject newSubject = new();
+    private string errorMessage = string.Empty;
 
     private async Task HandleValidSubmit()
     {
+        // Check if a subject with the same code already exists
+        var existingSubject = await SubjectService.GetByCodeAsync(newSubject.Code);
+        if (existingSubject != null)
+        {
+            errorMessage = "A subject with this code already exists.";
+            return;
+        }
+
+        // Proceed to create a new subject
         await SubjectService.CreateAsync(newSubject);
         Navigation.NavigateTo("/subjects");
     }

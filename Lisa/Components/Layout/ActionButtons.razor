@@ -8,7 +8,7 @@
     <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OnEdit.InvokeAsync(Entity)">
         <i class="bi bi-pencil-fill"></i>
     </button>
-    <button type="button" class="btn btn-danger btn-sm" @onclick="async () => await OnDelete.InvokeAsync(Entity)">
+    <button type="button" class="btn btn-danger btn-sm" @onclick="() => OnDelete.InvokeAsync(Entity)">
         <i class="bi bi-trash3-fill"></i>
     </button>
 </td>

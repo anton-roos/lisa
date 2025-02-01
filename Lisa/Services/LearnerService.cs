@@ -42,6 +42,24 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     }
 
     /// <summary>
+    /// Retrieves a list of Learners by Subject Id
+    /// </summary>
+    public async Task<List<Learner>> GetBySubjectIdAsync(int subjectId)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.LearnerSubjects
+            .Where(ls => ls.SubjectId == subjectId)
+            .Select(ls => ls.Learner)
+            .ToListAsync();
+    }
+
+    public async Task<bool> LearnerExistsByCodeAsync(string code)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Learners.AnyAsync(l => l.Code == code);
+    }
+
+    /// <summary>
     /// Adds a new learner.
     /// </summary>
     public async Task<bool> AddLearnerAsync(LearnerViewModel model, List<ParentViewModel> parents, Guid schoolId)

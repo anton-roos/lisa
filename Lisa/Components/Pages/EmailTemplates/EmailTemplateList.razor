@@ -1,4 +1,4 @@
-@page "/communication/email-templates"
+@page "/email-templates"
 @using Lisa.Models.Entities
 @inject EmailTemplateService EmailTemplateService
 @inject NavigationManager NavigationManager
@@ -80,12 +80,12 @@ else
 
     private void ViewTemplate(EmailTemplate template)
     {
-        NavigationManager.NavigateTo($"/communication/email-template/details/{template.Id}");
+        NavigationManager.NavigateTo($"/email-template/details/{template.Id}");
     }
 
     private void EditTemplate(EmailTemplate template)
     {
-        NavigationManager.NavigateTo($"/communication/email-template/edit/{template.Id}");
+        NavigationManager.NavigateTo($"/email-template/edit/{template.Id}");
     }
 
     private async Task DeleteTemplate(EmailTemplate template)
@@ -96,7 +96,7 @@ else
 
     private void CreateNewTemplate()
     {
-        NavigationManager.NavigateTo("/communication/email-template/add");
+        NavigationManager.NavigateTo("/email-template/add");
     }
 
     private void ConfirmDelete(EmailTemplate template)

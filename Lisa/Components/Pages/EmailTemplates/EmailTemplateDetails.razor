@@ -1,4 +1,4 @@
-@page "/communication/email-template/details/{Id:guid}"
+@page "/email-template/details/{Id:guid}"
 @using Lisa.Models.EmailModels
 @using Lisa.Models.Entities
 @inject EmailTemplateService EmailTemplateService
@@ -49,6 +49,6 @@ else
 
     private void Back()
     {
-        NavigationManager.NavigateTo("/communication/email-templates");
+        NavigationManager.NavigateTo("/email-templates");
     }
 }

@@ -19,8 +19,6 @@ else
     <h3>Communication</h3>
     <div class="d-grid gap-2 d-md-flex justify-content-start">
         <button class="btn btn-primary" @onclick="SendCommunication">Send Communication</button>
-        <button class="btn btn-secondary" @onclick="ViewTemplates">View Templates</button>
-        <button class="btn btn-info" @onclick="NavigateToEmailCampaigns">Email Campaigns</button>
     </div>
 }
 
@@ -36,9 +34,7 @@ else
         SubscribeToEvent(UiEvents.SchoolSelected);
         await base.OnInitializedAsync();
     }
-
-    private void ViewTemplates() => NavigationManager.NavigateTo("/communication/email-templates");
-    private void NavigateToEmailCampaigns() => NavigationManager.NavigateTo("/email-campaigns");
+    
     private void SendCommunication() => NavigationManager.NavigateTo("/communication/send");
 
     protected override async Task HandleEventAsync(string eventName, object? payload)

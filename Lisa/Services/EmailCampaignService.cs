@@ -20,6 +20,16 @@ public class EmailCampaignService
     private static readonly ConcurrentDictionary<Guid, CancellationTokenSource> _campaignTokens = new();
     private readonly EmailService _emailService = emailService;
 
+    public async Task<List<EmailCampaign>> GetBySchoolIdAsync(Guid schoolId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        return await context.EmailCampaigns
+            .Where(c => c.SchoolId == schoolId)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
     /// <summary>
     /// Schedules an email campaign using Hangfire.
     /// </summary>

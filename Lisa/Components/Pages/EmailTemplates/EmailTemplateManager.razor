@@ -1,4 +1,4 @@
-@page "/communication/email-template/{action}/{id:guid?}"
+@page "/email-template/{action}/{id:guid?}"
 @inject EmailTemplateService EmailTemplateService
 @inject NavigationManager NavigationManager
 @using Lisa.Models.Entities
@@ -93,12 +93,12 @@ else
                 Template = await EmailTemplateService.GetTemplateByIdAsync(Id.Value) ?? new EmailTemplate();
                 if (string.IsNullOrWhiteSpace(Template.Id.ToString()))
                 {
-                    NavigationManager.NavigateTo("/communication/email-templates");
+                    NavigationManager.NavigateTo("/email-templates");
                 }
             }
             else
             {
-                NavigationManager.NavigateTo("/communication/email-templates");
+                NavigationManager.NavigateTo("/email-templates");
             }
         }
     }
@@ -129,13 +129,13 @@ else
             StateHasChanged();
             await Task.Delay(500);
 
-            NavigationManager.NavigateTo("/communication/email-templates");
+            NavigationManager.NavigateTo("/email-templates");
         }
     }
 
     private void Cancel()
     {
-        NavigationManager.NavigateTo("/communication/email-templates");
+        NavigationManager.NavigateTo("/email-templates");
     }
 
     private bool IsEditorInitialized = false;

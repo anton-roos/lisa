@@ -8,6 +8,7 @@
 @inject SubjectService SubjectService
 @inject LearnerService LearnerService
 @inject EmailTemplateService EmailTemplateService
+@inject CommunicationService CommunicationService
 @inject NavigationManager NavigationManager
 
 <PageTitle>Send Communication</PageTitle>
@@ -44,9 +45,25 @@ else
     }
 
     <TemplateSelection OnTemplateSelected="OnTemplateSelected" />
-    <button type="button" class="btn btn-primary btn-sm mt-2" @onclick="SendCommunication" disabled="@IsSendDisabled">
-        Send Communication <i class="bi bi-envelope-arrow-up"></i>
+
+    <button type="button" class="btn btn-primary btn-sm mt-2" @onclick="SendCommunication"
+        disabled="@IsSendDisabled || IsSending">
+        @if (IsSending)
+        {
+            <i class="bi bi-hourglass-split">Sending...</i>
+
+        }
+        else
+        {
+            <i class="bi bi-envelope-arrow-up">Send Communication</i>
+
+        }
     </button>
+
+    @if (!string.IsNullOrEmpty(StatusMessage))
+    {
+        <div class="alert alert-info mt-2">@StatusMessage</div>
+    }
 }
 
 @code {
@@ -62,6 +79,8 @@ else
     private int SelectedSubjectId { get; set; }
     private EmailTemplate? SelectedTemplate { get; set; }
     private bool IsSendDisabled => SelectedTemplate == null;
+    private bool IsSending { get; set; } = false;
+    private string? StatusMessage { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -123,24 +142,103 @@ Task.Run(async () => Subjects = await SubjectService.GetAllAsync())
 
     private async Task SendCommunication()
     {
-        if (SelectedTemplate == null)
+        if (SelectedTemplate == null || SelectedSchool == null)
         {
-            Console.WriteLine("No template selected!");
+            StatusMessage = "Error: Please select a template and school!";
             return;
         }
 
-        // Implement your email sending logic here
+        IsSending = true;
+        StatusMessage = "Sending communication...";
+
+        EmailCampaign? result = null;
+
+        try
+        {
+            switch (SelectedTarget)
+            {
+                case CommunicationTarget.School:
+                    if (string.IsNullOrWhiteSpace(SelectedSchoolAudienceId))
+                    {
+                        StatusMessage = "Error: Please select an audience!";
+                        return;
+                    }
+                    result = await SendToSchoolAudience();
+                    break;
+
+                case CommunicationTarget.Grade:
+                    if (!SelectedGradeId.HasValue)
+                    {
+                        StatusMessage = "Error: Please select a grade!";
+                        return;
+                    }
+                    result = await CommunicationService.SendToGradeAsync(SelectedGradeId.Value, SelectedTemplate);
+                    break;
+
+                case CommunicationTarget.Subject:
+                    if (SelectedSubjectId <= 0)
+                    {
+                        StatusMessage = "Error: Please select a subject!";
+                        return;
+                    }
+                    result = await CommunicationService.SendToSubjectAsync(SelectedSubjectId, SelectedTemplate);
+                    break;
+
+                default:
+                    StatusMessage = "Invalid communication target!";
+                    return;
+            }
+
+            if (result != null)
+                StatusMessage = "Communication sent successfully!";
+            else
+                StatusMessage = "Error: No recipients found!";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsSending = false;
+        }
+    }
+
+    private async Task<EmailCampaign?> SendToSchoolAudience()
+    {
+        return SelectedSchoolAudienceId switch
+        {
+            "Parents" => await CommunicationService.SendToParentsAsync(SelectedSchool, SelectedTemplate),
+            "Staff" => await CommunicationService.SendToStaffAsync(SelectedSchool, SelectedTemplate),
+            "LearnersAndStaff" => await CommunicationService.SendToLearnersAndStaffAsync(SelectedSchool, SelectedTemplate),
+            _ => null
+        };
     }
 
     private async Task SendCommunicationForLearner(Learner learner)
     {
         if (SelectedTemplate == null)
         {
-            Console.WriteLine("No template selected!");
+            StatusMessage = "No template selected!";
             return;
         }
 
-        // Implement your email sending logic here
+        IsSending = true;
+        StatusMessage = "Sending communication to learner...";
+
+        try
+        {
+            var result = await CommunicationService.SendToAllLearnersAsync(SelectedSchool!, SelectedTemplate);
+            StatusMessage = result != null ? "Communication sent successfully!" : "Error sending communication!";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsSending = false;
+        }
     }
 
     private async Task OnTemplateSelected(EmailTemplate? template)
@@ -148,7 +246,6 @@ Task.Run(async () => Subjects = await SubjectService.GetAllAsync())
         SelectedTemplate = template;
         await InvokeAsync(StateHasChanged);
     }
-
 
     private async Task OnSchoolAudienceSelected(string? audienceId)
     {

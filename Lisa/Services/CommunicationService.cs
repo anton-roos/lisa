@@ -105,16 +105,12 @@ namespace Lisa.Services
         /// <summary>
         /// Sends a progress feedback email for a learner.
         /// </summary>
-        public async Task<EmailCampaign?> SendProgressFeedbackAsync(Guid learnerId, Guid schoolId, Guid templateId)
+        public async Task<EmailCampaign?> SendProgressFeedbackAsync(Guid schoolId, Guid templateId)
         {
             try
             {
-                var learner = await _learnerService.GetByIdAsync(learnerId);
-                if (learner == null)
-                {
-                    _logger.LogError("Learner with ID {learnerId} not found.", learnerId);
-                    return null;
-                }
+                var learners = await _learnerService.GetLearnersBySchoolAsync(schoolId);
+                var parents = new List<Parent>();
 
                 var school = await _schoolService.GetSchoolAsync(schoolId);
                 if (school == null)
@@ -123,10 +119,17 @@ namespace Lisa.Services
                     return null;
                 }
 
-                var parents = learner.Parents;
+                foreach (var learner in learners)
+                {
+                    foreach (var parent in learner.Parents)
+                    {
+                        parents.Add(parent);
+                    }
+                }
+
                 if (parents == null || parents.Count == 0)
                 {
-                    _logger.LogWarning("No parents found for learner with ID {learnerId}.", learnerId);
+                    _logger.LogWarning("No parents found for learner with ID {learnerId}.");
                     return null;
                 }
 
@@ -152,12 +155,12 @@ namespace Lisa.Services
 
                 foreach (var parent in parents)
                 {
-                    string emailBody = GenerateEmailBody(emailTemplate, learner, parent, school, "Mathematics", marksTable);
+                    string emailBody = GenerateEmailBody(emailTemplate, new Learner(), parent, school, "Mathematics", marksTable);
 
                     var emailCampaign = new EmailCampaign
                     {
                         Id = Guid.NewGuid(),
-                        Name = $"Progress Feedback for {learner.Name}",
+                        Name = $"Progress Feedback for Piet Pompies",
                         SubjectLine = emailTemplate.Subject,
                         SenderName = "School Admin",
                         SenderEmail = "admin@school.com",
@@ -176,7 +179,7 @@ namespace Lisa.Services
                     };
 
                     await _emailCampaignService.CreateAsync(emailCampaign);
-                    _logger.LogInformation("Progress feedback email campaign created for {learner.Name}.", learner.Name);
+                    _logger.LogInformation("Progress feedback email campaign created for {learner.Name}.");
                 }
 
                 return null; // Return null if no campaign was created

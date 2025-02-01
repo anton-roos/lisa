@@ -44,6 +44,7 @@
                     <tr>
                         <th>Name</th>
                         <th>Grade</th>
+                        <th>Subjects</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -53,6 +54,12 @@
                         <tr>
                             <td>@combination.Name</td>
                             <td>@combination.Grade?.Name</td>
+                            <td>
+                                @foreach (var subject in combination.Subjects)
+                                {
+                                    <span class="badge bg-secondary">@subject.Code</span>
+                                }
+                            </td>
                             <ActionButtons TEntity="Combination" Entity="combination" OnView="ViewCombination"
                                 OnEdit="EditCombination" OnDelete="DeleteCombination" />
                         </tr>

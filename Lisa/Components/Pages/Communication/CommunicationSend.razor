@@ -211,7 +211,7 @@ Task.Run(async () => Subjects = await SubjectService.GetAllAsync())
     {
         return SelectedSchoolAudienceId switch
         {
-            "Parents" => await CommunicationService.SendToParentsAsync(SelectedSchool, SelectedTemplate),
+            //"Parents" => await CommunicationService.SendProgressFeedbackAsync(SelectedSchool, SelectedTemplate),
             "Staff" => await CommunicationService.SendToStaffAsync(SelectedSchool, SelectedTemplate),
             "LearnersAndStaff" => await CommunicationService.SendToLearnersAndStaffAsync(SelectedSchool, SelectedTemplate),
             _ => null

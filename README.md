@@ -125,3 +125,10 @@ n Result is n rekord so as ons n Learner of n Subject Delete dan gebeer daar nik
 # CareGroup
 Waneer n Skool Delete word word alle CareGroups Delete.
 Waneer n CareGroup Delete Word Unlink hy alle Learners van daai CareGroup af.
+
+
+# Audience per campaing
+# Caregroup <--> Teacher
+
+# Subject show on UI which grades it is applicable for
+# public List<Grade>? GradesApplicable { get; set; }

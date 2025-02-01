@@ -1,13 +1,11 @@
 @using Lisa.Models.Entities
 @inject EmailTemplateService EmailTemplateService
-@inherits ComponentBase
 
 <div class="mb-3">
     <label for="templateSelect">Select Template</label>
-    <InputSelect id="templateSelect" class="form-select" TValue="EmailTemplate"
-        ValueChanged="@(async (template) => await TemplateChanged(template))">
-        <option value="">-- Select Template --
-        </option>
+    <InputSelect id="templateSelect" class="form-select" TValue="Guid?"
+        ValueChanged="@(async (id) => await TemplateChanged(id))" ValueExpression="(() => SelectedTemplateId)">
+        <option value="">-- Select Template --</option>
         @if (Templates != null)
         {
             @foreach (var template in Templates)
@@ -22,8 +20,7 @@
     /// <summary>
     /// The currently selected template ID.
     /// </summary>
-    [Parameter]
-    public EmailTemplate? SelectedTemplate { get; set; }
+    private Guid? SelectedTemplateId { get; set; }
 
     /// <summary>
     /// Callback to notify when the template selection changes.
@@ -45,10 +42,14 @@
     }
 
     /// <summary>
-    /// Invoked when the user changes the selection.
+    /// Invoked when the user selects a new template.
     /// </summary>
-    private async Task TemplateChanged(EmailTemplate SelectedTemplate)
+    private async Task TemplateChanged(Guid? templateId)
     {
-        await OnTemplateSelected.InvokeAsync(SelectedTemplate);
+        SelectedTemplateId = templateId;
+
+        // Find the selected template by its ID
+        var selectedTemplate = Templates.FirstOrDefault(t => t.Id == templateId);
+        await OnTemplateSelected.InvokeAsync(selectedTemplate);
     }
 }

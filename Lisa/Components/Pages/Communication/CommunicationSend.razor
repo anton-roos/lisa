@@ -43,14 +43,14 @@ else
             break;
     }
 
-    <TemplateSelection OnTemplateSelected="OnTemplateSelected" SelectedTemplate="@SelectedTemplate" />
+    <TemplateSelection OnTemplateSelected="OnTemplateSelected" />
     <button type="button" class="btn btn-primary btn-sm mt-2" @onclick="SendCommunication" disabled="@IsSendDisabled">
         Send Communication <i class="bi bi-envelope-arrow-up"></i>
     </button>
 }
 
 @code {
-    private CommunicationTarget SelectedTarget { get; set; } = CommunicationTarget.Learner;
+    private CommunicationTarget SelectedTarget { get; set; } = CommunicationTarget.School;
     private string? SearchTerm { get; set; }
     private List<Learner> Learners = new();
     private IEnumerable<Learner> FilteredLearners => ApplyFilters();
@@ -146,11 +146,13 @@ Task.Run(async () => Subjects = await SubjectService.GetAllAsync())
     private async Task OnTemplateSelected(EmailTemplate? template)
     {
         SelectedTemplate = template;
-        await InvokeAsync(StateHasChanged); // Force UI update
+        await InvokeAsync(StateHasChanged);
     }
+
 
     private async Task OnSchoolAudienceSelected(string? audienceId)
     {
         SelectedSchoolAudienceId = audienceId;
+        await InvokeAsync(StateHasChanged);
     }
 }

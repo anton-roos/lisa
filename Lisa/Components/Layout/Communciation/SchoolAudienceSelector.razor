@@ -1,32 +1,48 @@
 @inherits ComponentBase
 
 <div class="mb-3">
-    <label class="form-label">Select Audience</label>
-    <InputSelect class="form-select" id="SelectedSchoolAudienceId" @bind-Value="SelectedAudience"
-                 @onchange="HandleChange">
+    <label for="audienceSelect">Select Audience</label>
+    <InputSelect id="audienceSelect" class="form-select" TValue="string"
+        ValueChanged="@(async (id) => await AudienceChanged(id))" ValueExpression="(() => SelectedAudienceId)">
         <option value="">-- Select Audience --</option>
-        <option value="Parents">Parents</option>
-        <option value="Staff">Staff</option>
-        <option value="LearnersAndStaff">Learners and Staff</option>
+        @foreach (var audience in AudienceOptions)
+        {
+            <option value="@audience.Key">@audience.Value</option>
+        }
     </InputSelect>
 </div>
 
 @code {
     /// <summary>
-    /// The currently selected audience.
+    /// The currently selected audience ID.
     /// </summary>
-    [Parameter]
-    public string? SelectedAudience { get; set; }
+    private string? SelectedAudienceId { get; set; }
 
     /// <summary>
-    /// Event callback to notify parent when the audience selection changes.
+    /// Event callback to notify when the audience selection changes.
     /// </summary>
     [Parameter]
     public EventCallback<string?> OnAudienceSelected { get; set; }
 
-    private async Task HandleChange(ChangeEventArgs e)
+    [Parameter]
+    public string? SelectedAudience { get; set; }
+
+    /// <summary>
+    /// Available audience options.
+    /// </summary>
+    private readonly Dictionary<string, string> AudienceOptions = new()
+{
+{ "Parents", "Parents" },
+{ "Staff", "Staff" },
+{ "LearnersAndStaff", "Learners and Staff" }
+};
+
+    /// <summary>
+    /// Called when the user selects a new audience.
+    /// </summary>
+    private async Task AudienceChanged(string? audienceId)
     {
-        SelectedAudience = e.Value?.ToString();
-        await OnAudienceSelected.InvokeAsync(SelectedAudience);
+        SelectedAudienceId = audienceId;
+        await OnAudienceSelected.InvokeAsync(SelectedAudienceId);
     }
 }

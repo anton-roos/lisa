@@ -5,29 +5,25 @@ using Lisa.Models.EmailModels;
 namespace Lisa.Services
 {
     public class CommunicationService
+    (
+        EmailCampaignService emailCampaignService,
+        LearnerService learnerService,
+        UserService userService,
+        GradeService gradeService,
+        SubjectService subjectService,
+        ILogger<CommunicationService> logger,
+        SchoolService schoolService,
+        EmailTemplateService emailTemplateService
+    )
     {
-        private readonly EmailCampaignService _emailCampaignService;
-        private readonly LearnerService _learnerService;
-        private readonly UserService _userService;
-        private readonly GradeService _gradeService;
-        private readonly SubjectService _subjectService;
-        private readonly ILogger<CommunicationService> _logger;
-
-        public CommunicationService(
-            EmailCampaignService emailCampaignService,
-            LearnerService learnerService,
-            UserService userService,
-            GradeService gradeService,
-            SubjectService subjectService,
-            ILogger<CommunicationService> logger)
-        {
-            _emailCampaignService = emailCampaignService;
-            _learnerService = learnerService;
-            _userService = userService;
-            _gradeService = gradeService;
-            _subjectService = subjectService;
-            _logger = logger;
-        }
+        private readonly EmailCampaignService _emailCampaignService = emailCampaignService;
+        private readonly LearnerService _learnerService = learnerService;
+        private readonly UserService _userService = userService;
+        private readonly GradeService _gradeService = gradeService;
+        private readonly SubjectService _subjectService = subjectService;
+        private readonly ILogger<CommunicationService> _logger = logger;
+        private readonly SchoolService _schoolService = schoolService;
+        private readonly EmailTemplateService _emailTemplateService = emailTemplateService;
 
         /// <summary>
         /// General method to send communication based on the CommunicationRequest.
@@ -55,6 +51,23 @@ namespace Lisa.Services
                 _logger.LogError(ex, "Error while sending communication: {Message}", ex.Message);
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Replaces placeholders in the email template with actual learner data.
+        /// </summary>
+        private string GenerateEmailBody(EmailTemplate template, Learner learner, Parent parent, School school, string subject, string marksTable)
+        {
+            return template.Content
+                .Replace("{Learner.Surname}", learner.Surname)
+                .Replace("{Learner.Name}", learner.Name)
+                .Replace("{Parent.Surname}", parent.Surname)
+                .Replace("{Parent.Name}", parent.Name)
+                .Replace("{Subject}", subject)
+                .Replace("{MarksTable}", marksTable)
+                .Replace("{School.Name}", school.LongName)
+                .Replace("{School.Email}", school.SmtpEmail)
+                .Replace("{School.Phone}", "0813049304");
         }
 
         /// <summary>
@@ -87,6 +100,92 @@ namespace Lisa.Services
             };
 
             return await SendCommunicationAsync(request);
+        }
+
+        /// <summary>
+        /// Sends a progress feedback email for a learner.
+        /// </summary>
+        public async Task<EmailCampaign?> SendProgressFeedbackAsync(Guid learnerId, Guid schoolId, Guid templateId)
+        {
+            try
+            {
+                var learner = await _learnerService.GetByIdAsync(learnerId);
+                if (learner == null)
+                {
+                    _logger.LogError("Learner with ID {learnerId} not found.", learnerId);
+                    return null;
+                }
+
+                var school = await _schoolService.GetSchoolAsync(schoolId);
+                if (school == null)
+                {
+                    _logger.LogError("School with ID {schoolId} not found.", schoolId);
+                    return null;
+                }
+
+                var parents = learner.Parents;
+                if (parents == null || parents.Count == 0)
+                {
+                    _logger.LogWarning("No parents found for learner with ID {learnerId}.", learnerId);
+                    return null;
+                }
+
+                var emailTemplate = await _emailTemplateService.GetByIdAsync(templateId);
+                if (emailTemplate == null)
+                {
+                    _logger.LogError("Email template with ID {templateId} not found.", templateId);
+                    return null;
+                }
+
+                // Generate the marks table dynamically (this should come from actual results)
+                string marksTable = @"
+            <tr>
+                <td>27/11</td> <td>88%</td> 
+                <td>20/11</td> <td>79%</td>
+                <td>11/11</td> <td>80%</td>
+            </tr>
+            <tr>
+                <td>09/11</td> <td>70%</td>
+                <td>01/11</td> <td>70%</td>
+                <td>29/10</td> <td>70%</td>
+            </tr>";
+
+                foreach (var parent in parents)
+                {
+                    string emailBody = GenerateEmailBody(emailTemplate, learner, parent, school, "Mathematics", marksTable);
+
+                    var emailCampaign = new EmailCampaign
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = $"Progress Feedback for {learner.Name}",
+                        SubjectLine = emailTemplate.Subject,
+                        SenderName = "School Admin",
+                        SenderEmail = "admin@school.com",
+                        ContentHtml = emailBody,
+                        CreatedAt = DateTime.UtcNow,
+                        EmailRecipients = new List<EmailRecipient>
+                    {
+                        new EmailRecipient
+                        {
+                            Id = Guid.NewGuid(),
+                            EmailAddress = parent.PrimaryEmail,
+                            Status = EmailRecipientStatus.Pending,
+                            CreatedAt = DateTime.UtcNow
+                        }
+                    }
+                    };
+
+                    await _emailCampaignService.CreateAsync(emailCampaign);
+                    _logger.LogInformation("Progress feedback email campaign created for {learner.Name}.", learner.Name);
+                }
+
+                return null; // Return null if no campaign was created
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while sending progress feedback email.");
+                return null;
+            }
         }
 
         /// <summary>

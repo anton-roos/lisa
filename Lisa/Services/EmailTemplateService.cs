@@ -9,6 +9,13 @@ public class EmailTemplateService(IDbContextFactory<LisaDbContext> contextFactor
     private readonly IDbContextFactory<LisaDbContext> _contextFactory = contextFactory;
     private readonly ILogger<EmailTemplateService> _logger = logger;
 
+
+    public async Task<EmailTemplate?> GetByIdAsync(Guid id)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.EmailTemplates.FindAsync(id);
+    }
+
     /// <summary>
     /// Retrieves all email templates ordered by the most recent update.
     /// </summary>

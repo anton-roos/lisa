@@ -132,3 +132,13 @@ Waneer n CareGroup Delete Word Unlink hy alle Learners van daai CareGroup af.
 
 # Subject show on UI which grades it is applicable for
 # public List<Grade>? GradesApplicable { get; set; }
+
+Select 1 (Mathematics or Maths Literacy)
+ Mathematics
+ Mathematical Literacy
+
+Combination -> Validation for each combination at least one needs to be selected.
+
+Extra subject for only 10, 11, 12
+
+

@@ -42,7 +42,8 @@
                     <th>Surname</th>
                     <th>Name</th>
                     <th>Grade</th>
-                    <th>Subjects</th>
+                    <th>Subjects Count</th>
+                    <th>Combination Subjects (A to C)</th>
                     <th>Parents</th>
                     <th>Care Group</th>
                     <th>Actions</th>
@@ -57,6 +58,28 @@
                         <td>@learner.Name</td>
                         <td>@(learner.RegisterClass?.Grade?.Name ?? "Unassigned")</td>
                         <td>@learner.LearnerSubjects.Count()</td>
+                        <td>
+
+                            @foreach (var subject in learner.LearnerSubjects)
+                            {
+                                switch (subject.Subject.SubjectType)
+                                {
+                                    case SubjectType.Compulsory:
+                                        <span class="badge bg-primary px-1">@subject.Subject.Code</span>
+                                        break;
+                                    case SubjectType.MathCombination:
+                                        <span class="badge bg-success px-1">@subject.Subject.Code</span>
+                                        break;
+                                    case SubjectType.Combination:
+                                        
+                                        <span class="badge bg-danger px-1">@subject.Subject.Code</span>
+                                        break;
+                                    default:
+                                        <span class="badge bg-light px-1s">@subject.Subject.Code</span>
+                                        break;
+                                }
+                            }
+                        </td>
                         <td>@learner.Parents.Count()</td>
                         <td>@learner.CareGroup.Name</td>
                         <ActionButtons TEntity="Learner" Entity="learner" OnView="ViewLearner" OnEdit="EditLearner"

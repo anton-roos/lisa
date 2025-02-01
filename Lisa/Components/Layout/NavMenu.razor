@@ -88,18 +88,18 @@
         <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
             <Authorized>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="results">
-                        <span class="bi marks-icon" aria-hidden="true"></span> Results
+                    <NavLink class="nav-link" href="capture-results">
+                        <span class="bi marks-icon" aria-hidden="true"></span> Capture Results
                     </NavLink>
                 </div>
             </Authorized>
         </AuthorizeView>
-        
+
         <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
             <Authorized>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="capture-results">
-                        <span class="bi marks-icon" aria-hidden="true"></span> Capture Results
+                    <NavLink class="nav-link" href="results">
+                        <span class="bi marks-icon" aria-hidden="true"></span> Results
                     </NavLink>
                 </div>
             </Authorized>
@@ -112,7 +112,7 @@
                 </NavLink>
             </div>
         </AuthorizeView>
-        
+
         <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="/email-campaigns">
@@ -120,7 +120,7 @@
                 </NavLink>
             </div>
         </AuthorizeView>
-        
+
         <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="/email-templates">

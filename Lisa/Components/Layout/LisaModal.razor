@@ -1,0 +1,50 @@
+<div class="modal fade @(Show ? "show d-block" : "d-none")" tabindex="-1" style="background-color: rgba(0,0,0,0.5);"
+    role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@Title</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="OnCancelClicked"></button>
+            </div>
+            <div class="modal-body">
+                <p>@Message</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" @onclick="OnConfirmClicked">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public bool Show { get; set; }
+
+    [Parameter]
+    public string Title { get; set; } = "Modal Title";
+
+    [Parameter]
+    public string Message { get; set; } = "Modal message goes here.";
+
+    [Parameter]
+    public EventCallback OnConfirm { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private async Task OnConfirmClicked()
+    {
+        if (OnConfirm.HasDelegate)
+        {
+            await OnConfirm.InvokeAsync(null);
+        }
+    }
+
+    private async Task OnCancelClicked()
+    {
+        if (OnCancel.HasDelegate)
+        {
+            await OnCancel.InvokeAsync(null);
+        }
+    }
+}

@@ -100,7 +100,7 @@ else
     {
         await ResultService.UpdateAsync(Result);
         await InvokeAsync(StateHasChanged);
-        NavigationManager.NavigateTo($"/results/list/{SelectedSchool?.Id}/{Result.Learner?.RegisterClass?.GradeId}/{Result.SubjectId}");
+        NavigationManager.NavigateTo($"/results/list/{SelectedSchool?.Id}/{Result.Learner?.RegisterClass?.SchoolGradeId}/{Result.SubjectId}");
     }
 
     private void HandleEvent()

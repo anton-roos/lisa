@@ -5,11 +5,11 @@
     <label for="gradeSelect">Select Grade</label>
     <InputSelect id="gradeSelect" class="form-select" @bind-Value="SelectedGradeId" @onchange="HandleGradeChange">
         <option value="">-- Select Grade --</option>
-        @if (Grades != null)
+        @if (SchoolGrades != null)
         {
-            foreach (var grade in Grades)
+            foreach (var grade in SchoolGrades)
             {
-                <option value="@grade.Id">@grade.Name</option>
+                <option value="@grade.Id">@grade.SystemGrade.Name</option>
             }
         }
     </InputSelect>
@@ -20,7 +20,7 @@
     /// The list of grades to display.
     /// </summary>
     [Parameter]
-    public IEnumerable<SchoolGrades> SchoolGrades { get; set; } = Enumerable.Empty<SchoolGrades>();
+    public IEnumerable<SchoolGrade> SchoolGrades { get; set; } = Enumerable.Empty<SchoolGrade>();
 
     /// <summary>
     /// The currently selected grade ID.

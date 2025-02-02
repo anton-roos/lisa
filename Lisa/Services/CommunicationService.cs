@@ -9,7 +9,7 @@ namespace Lisa.Services
         EmailCampaignService emailCampaignService,
         LearnerService learnerService,
         UserService userService,
-        GradeService gradeService,
+        SchoolGradeService SchoolGradeService,
         SubjectService subjectService,
         ILogger<CommunicationService> logger,
         SchoolService schoolService,
@@ -19,7 +19,7 @@ namespace Lisa.Services
         private readonly EmailCampaignService _emailCampaignService = emailCampaignService;
         private readonly LearnerService _learnerService = learnerService;
         private readonly UserService _userService = userService;
-        private readonly GradeService _gradeService = gradeService;
+        private readonly SchoolGradeService _gradeService = SchoolGradeService;
         private readonly SubjectService _subjectService = subjectService;
         private readonly ILogger<CommunicationService> _logger = logger;
         private readonly SchoolService _schoolService = schoolService;

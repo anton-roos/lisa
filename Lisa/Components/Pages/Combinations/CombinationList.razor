@@ -2,7 +2,7 @@
 @using Lisa.Models.Entities
 @inject NavigationManager Navigation
 @inject CombinationService CombinationService
-@inject GradeService GradeService
+@inject SchoolGradeService SchoolGradeService
 @inherits EventAwareComponentBase
 @inject SchoolService SchoolService
 
@@ -21,7 +21,7 @@
         {
             <p>Loading...</p>
         }
-        else if (Grades == null || !Grades.Any())
+        else if (SchoolGrades == null || !SchoolGrades.Any())
         {
             <h3>Combinations</h3>
             <button class="btn btn-primary mb-3" @onclick="AddCombination">Add Combination</button>
@@ -55,7 +55,7 @@
                     {
                         <tr>
                             <td>@combination.Name</td>
-                            <td>@combination.Grade?.Name</td>
+                            <td>@combination.SchoolGrade?.SystemGrade.Name</td>
                             <td>
                                 @foreach (var subject in combination.Subjects)
                                 {
@@ -77,7 +77,7 @@
 
 @code {
     private IEnumerable<Combination>? SubjectCombinations;
-    private IEnumerable<Grade>? Grades;
+    private IEnumerable<SchoolGrade>? SchoolGrades;
     private School? SelectedSchool;
 
     protected override async Task OnInitializedAsync()
@@ -91,7 +91,7 @@
         SelectedSchool = SchoolService.GetSelectedSchool();
         if (SelectedSchool != null)
         {
-            Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+            SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
             SubjectCombinations = await CombinationService.GetSubjectCombinationsForSchool(SelectedSchool);
         }
     }

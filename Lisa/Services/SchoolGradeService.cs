@@ -4,20 +4,20 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class GradeService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<GradeService> logger)
+public class SchoolGradeService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<SchoolGradeService> logger)
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-    private readonly ILogger<GradeService> _logger = logger;
+    private readonly ILogger<SchoolGradeService> _logger = logger;
 
     /// <summary>
     /// Creates a new grade.
     /// </summary>
-    public async Task<Grade> CreateGradeAsync(Grade grade)
+    public async Task<SchoolGrade> CreateAsync(SchoolGrade grade)
     {
         try
         {
             await using var context = await _dbContextFactory.CreateDbContextAsync();
-            await context.Grades.AddAsync(grade);
+            await context.SchoolGrades.AddAsync(grade);
             await context.SaveChangesAsync();
             _logger.LogInformation("Created a new grade: {GradeId}", grade.Id);
             return grade;
@@ -32,22 +32,26 @@ public class GradeService(IDbContextFactory<LisaDbContext> dbContextFactory, ILo
     /// <summary>
     /// Retrieves a grade by ID.
     /// </summary>
-    public async Task<Grade?> GetByIdAsync(Guid id)
+    public async Task<SchoolGrade?> GetByIdAsync(Guid id)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.Grades
+        return await context.SchoolGrades
             .AsNoTracking()
+            .Include(g => g.SystemGrade)
+            .Include(g => g.RegisterClasses)
+            .Include(g => g.Combinations)
             .FirstOrDefaultAsync(grade => grade.Id == id);
     }
 
     /// <summary>
     /// Retrieves a grade with its register classes and learners.
     /// </summary>
-    public async Task<Grade?> GetGradeWithRegisterClassesAsync(Guid id)
+    public async Task<SchoolGrade?> GetGradeWithRegisterClassesAsync(Guid id)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.Grades
+        return await context.SchoolGrades
             .AsNoTracking()
+            .Include(g => g.SystemGrade)
             .Include(g => g.RegisterClasses!)
                 .ThenInclude(rc => rc.Learners)
             .Include(g => g.Combinations)
@@ -57,23 +61,24 @@ public class GradeService(IDbContextFactory<LisaDbContext> dbContextFactory, ILo
     /// <summary>
     /// Retrieves all grades.
     /// </summary>
-    public async Task<IEnumerable<Grade>> GetAllAsync()
+    public async Task<IEnumerable<SchoolGrade>> GetAllAsync()
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.Grades
+        return await context.SchoolGrades
             .AsNoTracking()
+            .Include(g => g.SystemGrade)
             .ToListAsync();
     }
 
     /// <summary>
     /// Updates an existing grade.
     /// </summary>
-    public async Task<bool> UpdateGradeAsync(Grade grade)
+    public async Task<bool> UpdateGradeAsync(SchoolGrade grade)
     {
         try
         {
             await using var context = await _dbContextFactory.CreateDbContextAsync();
-            var existingGrade = await context.Grades.FindAsync(grade.Id);
+            var existingGrade = await context.SchoolGrades.FindAsync(grade.Id);
 
             if (existingGrade == null)
             {
@@ -86,9 +91,8 @@ public class GradeService(IDbContextFactory<LisaDbContext> dbContextFactory, ILo
             // do we need to update the register classes?
             // do we need to update the sequence number?
             // check the UI and see what makes sense.
-            existingGrade.Name = grade.Name;
+            existingGrade.SystemGradeId = grade.SystemGradeId;
             existingGrade.RegisterClasses = grade.RegisterClasses;
-            existingGrade.SequenceNumber = grade.SequenceNumber;
 
             context.Entry(existingGrade).State = EntityState.Modified;
             await context.SaveChangesAsync();
@@ -105,19 +109,19 @@ public class GradeService(IDbContextFactory<LisaDbContext> dbContextFactory, ILo
     /// <summary>
     /// Deletes a grade by ID.
     /// </summary>
-    public async Task<bool> DeleteGradeAsync(Guid id)
+    public async Task<bool> DeleteAsync(Guid id)
     {
         try
         {
             await using var context = await _dbContextFactory.CreateDbContextAsync();
-            var grade = await context.Grades.FindAsync(id);
+            var grade = await context.SchoolGrades.FindAsync(id);
             if (grade == null)
             {
                 _logger.LogWarning("Attempted to delete grade {GradeId}, but it does not exist.", id);
                 return false;
             }
 
-            context.Grades.Remove(grade);
+            context.SchoolGrades.Remove(grade);
             await context.SaveChangesAsync();
             _logger.LogInformation("Deleted grade: {GradeId}", id);
             return true;
@@ -132,12 +136,24 @@ public class GradeService(IDbContextFactory<LisaDbContext> dbContextFactory, ILo
     /// <summary>
     /// Retrieves all grades for a given school.
     /// </summary>
-    public async Task<List<Grade>> GetGradesForSchool(Guid schoolId)
+    public async Task<List<SchoolGrade>> GetGradesForSchool(Guid schoolId)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.Grades
+        return await context.SchoolGrades
             .AsNoTracking()
+            .Include(g => g.SystemGrade)
             .Where(s => s.SchoolId == schoolId)
+            .OrderBy(s => s.SystemGrade.SequenceNumber)
             .ToListAsync();
+    }
+
+    public async Task<SchoolGrade?> GetBySystemGradeAndSchoolAsync(int systemGradeId, Guid SelectedSchoolId)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.SchoolGrades
+            .AsNoTracking()
+            .Include(g => g.SystemGrade)
+            .Where(s => s.SystemGradeId == systemGradeId && s.SchoolId == SelectedSchoolId)
+            .FirstOrDefaultAsync();
     }
 }

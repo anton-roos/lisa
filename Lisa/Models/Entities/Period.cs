@@ -11,7 +11,7 @@ public class Period : IValidatable
     public DateTime EndTime { get; set; }
     public PeriodStatus Status { get; set; }
     public string? Description { get; set; }
-    public Guid GradeId { get; set; }
+    public Guid SchoolGradeId { get; set; }
     public SchoolGrade? SchoolGrade { get; set; }
     public Guid TeacherId { get; set; }
     public Teacher? Teacher { get; set; }

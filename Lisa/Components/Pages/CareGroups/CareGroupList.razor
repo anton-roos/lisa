@@ -22,7 +22,6 @@
         }
         else if (!CareGroups.Any())
         {
-            <h3>Care Groups</h3>
             <button class="btn btn-primary mb-3" @onclick="AddCareGroup">Add Care Group</button>
             <div class="alert alert-info">
                 No Care Groups for <strong>@SelectedSchool.ShortName</strong>.
@@ -30,12 +29,12 @@
         }
         else
         {
-            <h3>Care Groups</h3>
             <button class="btn btn-primary mb-3" @onclick="AddCareGroup">Add Care Group</button>
             <table class="table table-striped">
                 <thead>
                     <tr>
                         <th>Name</th>
+                        <th>Teacher</th>
                         <th>Learner Count</th>
                         <th>Actions</th>
                     </tr>
@@ -45,6 +44,19 @@
                     {
                         <tr>
                             <td>@careGroup.Name</td>
+                            <td>
+                                @if (@careGroup.Teacher != null)
+                                {
+                                    <Pill Color="primary" AdditionalClasses="me-2">
+                                        @careGroup.Teacher.Abbreviation
+                                    </Pill>
+                                    @($"{careGroup.Teacher.Surname} {careGroup.Teacher.Name}")
+                                }
+                                else
+                                {
+                                    <Pill Color="danger" AdditionalClasses="me-2">No Teacher</Pill>
+                                }
+                            </td>
                             <td>@careGroup.CareGroupMembers?.Count().ToString()
                             </td>
                             <ActionButtons TEntity="CareGroup" Entity="careGroup" OnView="ViewCareGroup" OnEdit="EditCareGroup"

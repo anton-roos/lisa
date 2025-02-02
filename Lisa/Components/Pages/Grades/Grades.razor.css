@@ -1,0 +1,36 @@
+.skeleton {
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    animation: pulse 1.5s infinite;
+}
+
+.skeleton-text {
+    height: 26px;
+    width: 80px;
+}
+
+.skeleton-switch {
+    width: 35px;
+    height: 15px;
+    border-radius: 10px;
+}
+
+.skeleton-pill {
+    height: 1.5em;
+    width: 100px;
+    border-radius: 20px;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}

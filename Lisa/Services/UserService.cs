@@ -138,7 +138,7 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
     /// <summary>
     /// Deletes a user by ID.
     /// </summary>
-    public async Task<IdentityResult> DeleteAsync<TUser>(Guid id) where TUser : User
+    public async Task<IdentityResult> DeleteAsync(Guid id)
     {
         try
         {
@@ -165,6 +165,28 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
         {
             _logger.LogError(ex, "Error deleting user {UserId}.", id);
             return IdentityResult.Failed(new IdentityError { Description = "An error occurred while deleting the user." });
+        }
+    }
+
+
+    public async Task<List<User>> GetAllUsersBySchoolAsync(Guid schoolId)
+    {
+        try
+        {
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            var query = context.Users.AsNoTracking();
+
+            if (schoolId != null)
+            {
+                query = query.Where(u => u.SchoolId == schoolId);
+            }
+
+            return await query.ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching staff for SchoolId {SchoolId}.", schoolId);
+            return [];
         }
     }
 

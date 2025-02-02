@@ -3,7 +3,7 @@ namespace Lisa.Enums;
 public enum CommunicationTarget
 {
     School,
-    Grade,
+    SchoolGrade,
     Subject,
     Learner,
     Parent

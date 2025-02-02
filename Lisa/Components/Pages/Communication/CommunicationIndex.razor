@@ -5,7 +5,7 @@
 @using Lisa.Services
 @using Lisa.Components.Layout.Communciation
 @inject SchoolService SchoolService
-@inject GradeService GradeService
+@inject SchoolGradeService SchoolGradeService
 @inject SubjectService SubjectService
 @inject LearnerService LearnerService
 @inject CommunicationService CommunicationService
@@ -34,8 +34,9 @@
                         SelectedAudience="SelectedSchoolAudienceId" />
                     break;
 
-                case CommunicationTarget.Grade:
-                    <GradeSelection Grades="SchoolGrades" SelectedGradeId="@SelectedGradeId" OnGradeSelected="OnGradeSelected" />
+                case CommunicationTarget.SchoolGrade:
+                    <GradeSelection SchoolGrades="SchoolGrades" SelectedGradeId="@SelectedGradeId"
+                        OnGradeSelected="OnGradeSelected" />
                     break;
 
                 case CommunicationTarget.Subject:
@@ -117,7 +118,7 @@
         if (SelectedSchool == null) return;
 
         Learners = await LearnerService.GetLearnersBySchoolAsync(SelectedSchool.Id);
-        SchoolGrades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+        SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
         Subjects = await SubjectService.GetAllAsync();
     }
 
@@ -185,7 +186,7 @@
                     result = await SendToSchoolAudience();
                     break;
 
-                case CommunicationTarget.Grade:
+                case CommunicationTarget.SchoolGrade:
                     if (!SelectedGradeId.HasValue)
                     {
                         StatusMessage = "Error: Please select a grade!";

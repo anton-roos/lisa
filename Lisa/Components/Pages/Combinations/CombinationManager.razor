@@ -7,7 +7,7 @@
 @inject CombinationService CombinationService
 @inject SubjectService SubjectService
 @inject SchoolService SchoolService
-@inject GradeService GradeService
+@inject SchoolGradeService SchoolGradeService
 
 <PageTitle>@(IsEdit ? "Edit Subject Combination" : "Add Subject Combination")</PageTitle>
 <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
@@ -27,9 +27,9 @@
                 <label class="form-label">Grade</label>
                 <select class="form-select" @bind="CombinationModel.GradeId">
                     <option value="">-- Select Grade --</option>
-                    @foreach (var grade in Grades)
+                    @foreach (var grade in SchoolGrades)
                     {
-                        <option value="@grade.Id">@grade.Name</option>
+                        <option value="@grade.Id">@grade.SystemGrade.Name</option>
                     }
                 </select>
             </div>
@@ -101,7 +101,7 @@
     private bool IsEdit => Id.HasValue;
 
     private CombinationViewModel CombinationModel = new();
-    private List<Grade> Grades = new();
+    private List<SchoolGrade> SchoolGrades = new();
     private List<Subject> AllSubjects = new();
     private List<int> SelectedSubjectIds = new();
     private string searchText = string.Empty;
@@ -123,7 +123,7 @@
         }
 
         AllSubjects = await SubjectService.GetAllAsync();
-        Grades = await GradeService.GetGradesForSchool(school.Id);
+        SchoolGrades = await SchoolGradeService.GetGradesForSchool(school.Id);
 
         // If editing, load existing combination
         if (IsEdit)
@@ -146,7 +146,7 @@
             {
                 Id = existing.Id,
                 Name = existing.Name,
-                GradeId = existing.GradeId,
+                GradeId = existing.SchoolGradeId,
                 CombinationType = existing.CombinationType,
                 SubjectIds = existing.Subjects.Select(s => s.Id).ToList()
             };

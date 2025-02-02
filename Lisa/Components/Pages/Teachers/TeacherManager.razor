@@ -1,5 +1,4 @@
-@page "/teachers/manage"
-@page "/teachers/manage/{Id:guid}"
+@page "/teachers/manage/{Id:guid?}"
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
 @using Microsoft.AspNetCore.Components
@@ -9,11 +8,11 @@
 @inject UserService UserService
 @inject TeacherService TeacherService
 @inject SchoolService SchoolService
+@inject CareGroupService CareGroupService
+@inject ILogger<TeacherManager> Logger
 @inherits EventAwareComponentBase
-@using FluentAssertions
 
-
-<AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator}")">
+<AuthorizeView Context="AuthContext" Roles="@($"{Roles.SystemAdministrator}")">
     <Authorized>
         <h3>@(IsEdit ? "Edit Teacher" : "Add Teacher")</h3>
 
@@ -35,6 +34,11 @@
                 <div class="mb-3">
                     <label for="surname" class="form-label">Surname</label>
                     <InputText id="surname" class="form-control" @bind-Value="TeacherViewModel.Surname" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="abbreviation" class="form-label">Abbreviation</label>
+                    <InputText id="abbreviation" class="form-control" @bind-Value="TeacherViewModel.Abbreviation" />
                 </div>
 
                 <div class="mb-3">
@@ -61,17 +65,25 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">School</label>
-                    <select class="form-select" @bind="TeacherViewModel.SchoolId">
-                        <option value="">-- Select School --</option>
-                        @if (Schools is not null)
+                    <label class="form-label">Assign Care Groups</label>
+                    <div>
+                        @if (CareGroups == null || !CareGroups.Any())
                         {
-                            @foreach (var s in Schools)
+                            <p>No care groups available to choose for this teacher.</p>
+                        }
+                        else
+                        {
+                            @foreach (var careGroup in CareGroups)
                             {
-                                <option value="@s.Id">@s.ShortName</option>
+                                <div>
+                                    <input class="form-check-input" type="checkbox"
+                                        checked="@TeacherViewModel.SelectedCareGroupIds.Contains(careGroup.Id)"
+                                        @onchange="@(() => ToggleCareGroup(careGroup.Id))" />
+                                    <label>@careGroup.Name</label>
+                                </div>
                             }
                         }
-                    </select>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-primary">
@@ -88,15 +100,12 @@
 
 @code {
     [Parameter] public Guid? Id { get; set; }
-
     private bool IsEdit => Id.HasValue && Id.Value != Guid.Empty;
     private bool IsLoading { get; set; } = true;
-
     private TeacherViewModel TeacherViewModel { get; set; } = new();
-    private List<School> Schools = new();
     private string ErrorMessage { get; set; } = string.Empty;
-
-    private School SelectedSchool { get; set; } = new();
+    private School? SelectedSchool { get; set; }
+    private IEnumerable<CareGroup>? CareGroups { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -104,7 +113,11 @@
         {
             SubscribeToEvent(UiEvents.SchoolSelected);
 
-            Schools = await SchoolService.GetAllAsync();
+            SelectedSchool = SchoolService.GetSelectedSchool();
+            if (SelectedSchool != null)
+            {
+                CareGroups = await CareGroupService.GetBySchoolAsync(SelectedSchool.Id);
+            }
 
             if (IsEdit && Id != null)
             {
@@ -115,29 +128,26 @@
                     return;
                 }
 
-                teacherEntity.Should().NotBeNull();
-
                 TeacherViewModel = new TeacherViewModel
                     {
                         Id = teacherEntity.Id,
                         Surname = teacherEntity.Surname,
+                        Abbreviation = teacherEntity.Abbreviation,
                         Name = teacherEntity.Name,
                         Email = teacherEntity.Email,
-                        SchoolId = teacherEntity.SchoolId
+                        SchoolId = teacherEntity.SchoolId,
+                        SelectedCareGroupIds = teacherEntity.CareGroups.Select(cg => cg.Id).ToList()
                     };
             }
-            else
+            else if (SelectedSchool != null)
             {
-                SelectedSchool = SchoolService.GetSelectedSchool();
-                if (SelectedSchool != null)
-                {
-                    TeacherViewModel.SchoolId = SelectedSchool.Id;
-                }
+                TeacherViewModel.SchoolId = SelectedSchool.Id;
             }
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Error loading page: " + ex.Message;
+            ErrorMessage = $"An error occurred: {ex.Message}";
+            Logger.LogError("Error calling OnInitializedAsync on Teacher Management Page: {ex}", ex);
         }
         finally
         {
@@ -160,6 +170,7 @@
                 }
                 break;
         }
+
         await base.HandleEventAsync(eventName, payload);
     }
 
@@ -169,49 +180,22 @@
         {
             if (!IsEdit)
             {
-                // ADD TEACHER
                 if (string.IsNullOrWhiteSpace(TeacherViewModel.Password))
-                {
                     throw new Exception("Password is required for new teacher.");
-                }
 
-                var teacherEntity = new Teacher
-                    {
-                        Surname = TeacherViewModel.Surname,
-                        Name = TeacherViewModel.Name,
-                        Email = TeacherViewModel.Email,
-                        SchoolId = TeacherViewModel.SchoolId,
-                        UserName = TeacherViewModel.Email
-                    };
-
-                await EventBus.PublishAsync(new AddTeacherEvent { Teacher = teacherEntity });
-
-                // Create user
-                await UserService.AddUserAsync(teacherEntity, TeacherViewModel.Password);
+                await TeacherService.CreateAsync(TeacherViewModel);
             }
             else
             {
-                // EDIT TEACHER
                 var teacherEntity = await TeacherService.GetByIdAsync(TeacherViewModel.Id);
                 if (teacherEntity is null)
                     throw new Exception("Teacher not found.");
 
-                // Update general fields
-                teacherEntity.Surname = TeacherViewModel.Surname;
-                teacherEntity.Name = TeacherViewModel.Name;
-                teacherEntity.Email = TeacherViewModel.Email;
-                teacherEntity.SchoolId = TeacherViewModel.SchoolId;
-                teacherEntity.UserName = TeacherViewModel.Email; // keep sync with email
-
-
-                await TeacherService.UpdateAsync(teacherEntity);
-
-                // If user entered a password, update it. Otherwise, do nothing.
-                if (!string.IsNullOrWhiteSpace(TeacherViewModel.Password))
-                {
-                    // Example: custom method to update the password
-                    await UserService.UpdateUserPasswordAsync(teacherEntity, TeacherViewModel.Password);
-                }
+                await TeacherService.UpdateAsync(
+                teacherEntity,
+                TeacherViewModel.SelectedCareGroupIds,
+                string.IsNullOrWhiteSpace(TeacherViewModel.Password) ? null : TeacherViewModel.Password
+                );
             }
 
             Navigation.NavigateTo("/teachers");
@@ -229,5 +213,13 @@
     private void Cancel()
     {
         Navigation.NavigateTo("/teachers");
+    }
+
+    private void ToggleCareGroup(Guid careGroupId)
+    {
+        if (!TeacherViewModel.SelectedCareGroupIds.Remove(careGroupId))
+        {
+            TeacherViewModel.SelectedCareGroupIds.Add(careGroupId);
+        }
     }
 }

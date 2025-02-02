@@ -30,11 +30,12 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         return await context.Learners
             .AsNoTracking()
             .Include(l => l.RegisterClass)
-                .ThenInclude(rc => rc!.Grade)
+            .ThenInclude(rc => rc!.SchoolGrade)
+            .ThenInclude(sg => sg!.SystemGrade)
             .Include(l => l.Combination)
-                .ThenInclude(c => c!.Subjects)
+            .ThenInclude(c => c!.Subjects)
             .Include(l => l.LearnerSubjects!)
-                .ThenInclude(ls => ls.Subject!)
+            .ThenInclude(ls => ls.Subject!)
             .Include(l => l.CareGroup)
             .Include(l => l.Parents!)
             .Include(l => l.School)
@@ -275,9 +276,10 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners
             .Include(l => l.RegisterClass!)
-                .ThenInclude(rc => rc.Grade!)
+            .ThenInclude(rc => rc.SchoolGrade!)
+            .ThenInclude(sg => sg.SystemGrade)
             .Include(l => l.LearnerSubjects!)
-                .ThenInclude(ls => ls.Subject!)
+            .ThenInclude(ls => ls.Subject!)
             .Include(l => l.CareGroup!)
             .Include(l => l.Parents!)
             .Where(l => l.SchoolId == schoolId)
@@ -288,9 +290,9 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners
-        .Include(l => l.Parents)
-        .Where(l => l.SchoolId == schoolId && l.Parents!.Any())
-        .ToListAsync();
+            .Include(l => l.Parents)
+            .Where(l => l.SchoolId == schoolId && l.Parents!.Any())
+            .ToListAsync();
     }
 
 
@@ -298,8 +300,12 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         var learners = await context.Learners
-            .Where(l => l.RegisterClass != null && l.RegisterClass.GradeId == gradeId)
+            .Where(l => l.RegisterClass != null && l.RegisterClass.SchoolGradeId == gradeId)
             .Include(l => l.RegisterClass!)
+            .ThenInclude(r => r.SchoolGrade)
+            .ThenInclude(sg => sg.SystemGrade)
+            .Include(l => l.LearnerSubjects)
+            .ThenInclude(ls => ls.Subject!)
             .ToListAsync();
         return learners;
     }
@@ -308,13 +314,13 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners
-            .Where(l => l.RegisterClass != null && l.RegisterClass.GradeId == gradeId)
+            .Where(l => l.RegisterClass != null && l.RegisterClass.SchoolGradeId == gradeId)
             .Include(l => l.LearnerSubjects!)
-                .ThenInclude(ls => ls.Subject!)
+            .ThenInclude(ls => ls.Subject!)
             .Include(l => l.RegisterClass!)
-                .ThenInclude(rc => rc.CompulsorySubjects!)
+            .ThenInclude(rc => rc.CompulsorySubjects!)
             .Include(l => l.Combination!)
-                .ThenInclude(c => c.Subjects!)
+            .ThenInclude(c => c.Subjects!)
             .ToListAsync();
     }
 

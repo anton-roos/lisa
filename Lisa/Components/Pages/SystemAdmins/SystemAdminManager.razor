@@ -1,7 +1,6 @@
 @page "/system-administrators/manage"
 @page "/system-administrators/manage/{Id:guid}"
 
-@using FluentAssertions
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
 @using Microsoft.AspNetCore.Components
@@ -170,8 +169,6 @@
                     ErrorMessage = "Invalid user ID.";
                     return;
                 }
-
-                Id.Should().NotBeNull();
 
                 var existingUser = await UserManager.FindByIdAsync(Id.ToString()!);
 

@@ -8,7 +8,7 @@
 @inject NavigationManager Navigation
 @inject SchoolService SchoolService
 @inject LearnerService LearnerService
-@inject GradeService GradeService
+@inject SchoolGradeService SchoolGradeService
 @inject SubjectService SubjectService
 @inject ILogger<Result> Logger
 @inject UserService UserService
@@ -38,9 +38,9 @@
                     <InputSelect class="form-select" id="gradeDropdown" TValue="string" Value="@gradeId"
                         ValueChanged="@(async (value) => await OnGradeChange(value))" ValueExpression="@(() => gradeId)">
                         <option value="">-- Select Grade --</option>
-                        @foreach (var grade in Grades)
+                        @foreach (var grade in SchoolGrades)
                         {
-                            <option value="@grade.Id">@grade.Name</option>
+                            <option value="@grade.Id">@grade.SystemGrade.Name</option>
                         }
                     </InputSelect>
                 </div>
@@ -57,7 +57,7 @@
                     </InputSelect>
                 </div>
             </div>
-            @if (Grades.Any())
+            @if (SchoolGrades.Any())
             {
                 @if (LearnerResults.Any())
                 {
@@ -134,7 +134,7 @@
 </AuthorizeView>
 
 @code {
-    private List<Grade> Grades = new();
+    private List<SchoolGrade> SchoolGrades = new();
     private List<Subject> Subjects = new();
     private School? SelectedSchool;
     private List<LearnerResult> LearnerResults = new();
@@ -235,7 +235,7 @@
     {
         if (SelectedSchool != null)
         {
-            Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+            SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
         }
         else
         {
@@ -250,7 +250,7 @@
         if (SelectedSchool != null)
         {
             Subjects = await SubjectService.GetAllAsync();
-            Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+            SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
         }
         else
         {

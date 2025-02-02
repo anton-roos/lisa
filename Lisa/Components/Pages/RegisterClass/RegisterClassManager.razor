@@ -11,7 +11,7 @@
 @inject RegisterClassService RegisterClassService
 @inject SchoolService SchoolService
 @inject SubjectService SubjectService
-@inject GradeService GradeService
+@inject SchoolGradeService SchoolGradeService
 @inject TeacherService TeacherService
 @inject IDbContextFactory<LisaDbContext> DbContextFactory
 @inherits EventAwareComponentBase
@@ -40,7 +40,7 @@
         }
         else
         {
-            <RegisterClassForm RegisterClass="@RegisterClassModel" Grades="@Grades" Teachers="@Teachers"
+            <RegisterClassForm RegisterClass="@RegisterClassModel" SchoolGrades="@SchoolGrades" Teachers="@Teachers"
                 FilteredSubjects="@FilteredSubjects" SearchText="@SearchText" OnInputChange="@OnInputChange"
                 ToggleSubject="@ToggleSubject" OnCancel="@Cancel" OnValidSubmit="@HandleValidSubmit"
                 AllSubjects="@AllSubjects" MathSelected="@MathSelected" ToggleMathSelected="ToggleMathSelected" />
@@ -59,7 +59,7 @@
 
     private RegisterClassViewModel RegisterClassModel { get; set; } = new();
     private School? SelectedSchool;
-    private List<Grade>? Grades;
+    private List<SchoolGrade>? SchoolGrades;
     private List<Teacher>? Teachers;
     private List<Subject> AllSubjects = new();
     private string SearchText = string.Empty;
@@ -83,7 +83,7 @@
 
             if (SelectedSchool != null)
             {
-                Grades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+                SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
                 Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id);
                 AllSubjects = await SubjectService.GetAllAsync();
             }
@@ -103,7 +103,7 @@
                 RegisterClassModel = new RegisterClassViewModel
                     {
                         Name = registerClassEntity.Name,
-                        GradeId = registerClassEntity.GradeId,
+                        GradeId = registerClassEntity.SchoolGradeId,
                         TeacherId = registerClassEntity.TeacherId,
                         SubjectIds = registerClassEntity.CompulsorySubjects.Select(s => s.Id).ToList(),
                     };
@@ -182,7 +182,7 @@
 
                 // Update scalar properties
                 existingEntity.Name = RegisterClassModel.Name;
-                existingEntity.GradeId = RegisterClassModel.GradeId;
+                existingEntity.SchoolGradeId = RegisterClassModel.GradeId;
                 existingEntity.TeacherId = RegisterClassModel.TeacherId;
                 existingEntity.MathSelectionEnabled = MathSelected;
 
@@ -203,7 +203,7 @@
                 var entity = new RegisterClass
                     {
                         Name = RegisterClassModel.Name,
-                        GradeId = RegisterClassModel.GradeId,
+                        SchoolGradeId = RegisterClassModel.GradeId,
                         CompulsorySubjects = selectedSubjects,
                         TeacherId = RegisterClassModel.TeacherId,
                         MathSelectionEnabled = MathSelected

@@ -41,9 +41,9 @@ else
             {
                 <tr>
                     <td>@registerClass.Name</td>
-                    @if (registerClass.Grade != null)
+                    @if (registerClass.SchoolGrade != null)
                     {
-                        <td>@registerClass.Grade.Name</td>
+                        <td>@registerClass.SchoolGrade.SystemGrade.Name</td>
                     }
                     else
                     {
@@ -111,7 +111,7 @@ else
         if (unfiltedRegisterClasses != null)
         {
             RegisterClasses = unfiltedRegisterClasses
-            .Where(rc => rc.Grade != null && rc.Grade.SchoolId == SelectedSchool.Id)
+            .Where(rc => rc.SchoolGrade != null && rc.SchoolGrade.SchoolId == SelectedSchool.Id)
             .ToList();
         }
     }

@@ -5,7 +5,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Lisa.Services;
 
-public class RegisterClassService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<RegisterClassService> logger)
+public class RegisterClassService(
+    IDbContextFactory<LisaDbContext> dbContextFactory,
+    ILogger<RegisterClassService> logger)
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly ILogger<RegisterClassService> _logger = logger;
@@ -20,7 +22,7 @@ public class RegisterClassService(IDbContextFactory<LisaDbContext> dbContextFact
             await using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.RegisterClasses
                 .AsNoTracking()
-                .Include(rc => rc.Grade!)
+                .Include(rc => rc.SchoolGrade!)
                 .Include(rc => rc.Teacher!)
                 .Include(rc => rc.CompulsorySubjects!)
                 .Include(rc => rc.Learners!)
@@ -42,8 +44,8 @@ public class RegisterClassService(IDbContextFactory<LisaDbContext> dbContextFact
         {
             await using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.RegisterClasses
-                .Where(rc => rc.Grade != null && rc.Grade.SchoolId == schoolId)
-                .Include(rc => rc.Grade!)
+                .Where(rc => rc.SchoolGrade != null && rc.SchoolGrade.SchoolId == schoolId)
+                .Include(rc => rc.SchoolGrade!)
                 .ToListAsync();
         }
         catch (Exception ex)
@@ -63,8 +65,10 @@ public class RegisterClassService(IDbContextFactory<LisaDbContext> dbContextFact
             await using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.RegisterClasses
                 .AsNoTracking()
-                .Include(rc => rc.Grade!)
-                    .ThenInclude(g => g.School!)
+                .Include(rc => rc.SchoolGrade!)
+                .ThenInclude(g => g.School!)
+                .Include(rc => rc.SchoolGrade!)
+                .ThenInclude(g => g.SystemGrade!)
                 .Include(rc => rc.Teacher!)
                 .Include(rc => rc.CompulsorySubjects!)
                 .Include(rc => rc.Learners!)
@@ -109,13 +113,14 @@ public class RegisterClassService(IDbContextFactory<LisaDbContext> dbContextFact
 
             if (existing == null)
             {
-                _logger.LogWarning("Attempted to update non-existent RegisterClass {RegisterClassId}.", registerClass.Id);
+                _logger.LogWarning("Attempted to update non-existent RegisterClass {RegisterClassId}.",
+                    registerClass.Id);
                 return false;
             }
 
             existing.Name = registerClass.Name;
             existing.TeacherId = registerClass.TeacherId;
-            existing.GradeId = registerClass.GradeId;
+            existing.SchoolGradeId = registerClass.SchoolGradeId;
             existing.CompulsorySubjects = registerClass.CompulsorySubjects;
 
             context.Entry(existing).State = EntityState.Modified;
@@ -142,7 +147,8 @@ public class RegisterClassService(IDbContextFactory<LisaDbContext> dbContextFact
 
             if (registerClass == null)
             {
-                _logger.LogWarning("Attempted to delete non-existent RegisterClass {RegisterClassId}.", registerClassId);
+                _logger.LogWarning("Attempted to delete non-existent RegisterClass {RegisterClassId}.",
+                    registerClassId);
                 return false;
             }
 
@@ -168,7 +174,7 @@ public class RegisterClassService(IDbContextFactory<LisaDbContext> dbContextFact
             await using var context = await _dbContextFactory.CreateDbContextAsync();
             var existingCombination = await context.Combinations
                 .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.GradeId == combination.GradeId && c.Name == combination.Name);
+                .FirstOrDefaultAsync(c => c.SchoolGradeId == combination.SchoolGradeId && c.Name == combination.Name);
 
             if (existingCombination != null)
             {
@@ -180,8 +186,8 @@ public class RegisterClassService(IDbContextFactory<LisaDbContext> dbContextFact
             {
                 Id = Guid.NewGuid(),
                 Name = combination.Name,
-                GradeId = combination.GradeId,
-                Grade = combination.Grade,
+                SchoolGradeId = combination.SchoolGradeId,
+                SchoolGrade = combination.SchoolGrade,
                 Subjects = combination.Subjects
             };
 

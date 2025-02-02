@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Lisa.Data;
+using Lisa.Models.Entities;
 
 namespace Lisa.Models.ViewModels;
 
@@ -19,11 +20,10 @@ public class TeacherViewModel
     [Required(AllowEmptyStrings = false, ErrorMessage = "Email is required")]
     [EmailAddress(ErrorMessage = "Invalid email format")]
     public string Email { get; set; } = string.Empty;
-
-    [Required(AllowEmptyStrings = false, ErrorMessage = "Password is required")]
     public string? Password { get; set; }
-
+    public string? PhoneNumber { get; set; }
     public List<string> SelectedRoles { get; set; } = [Roles.Teacher];
-
     public Guid? SchoolId { get; set; }
+    public List<CareGroup> CareGroups { get; set; } = [];
+    public List<Guid> SelectedCareGroupIds { get; set; } = new();
 }

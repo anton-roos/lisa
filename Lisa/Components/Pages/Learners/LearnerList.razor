@@ -17,7 +17,7 @@
                 {
                     @foreach (var grade in AvailableGrades)
                     {
-                        <option value="@grade.Id">@grade.Name</option>
+                        <option value="@grade.Id">@grade.SystemGrade.Name</option>
                     }
                 }
             </select>
@@ -56,7 +56,7 @@
                         <td>@learner.Code</td>
                         <td>@learner.Surname</td>
                         <td>@learner.Name</td>
-                        <td>@(learner.RegisterClass?.Grade?.Name ?? "Unassigned")</td>
+                        <td>@(learner.RegisterClass?.SchoolGrade?.SystemGrade.Name ?? "Unassigned")</td>
                         <td>@learner.LearnerSubjects.Count()</td>
                         <td>
 
@@ -71,7 +71,7 @@
                                         <span class="badge bg-success mx-1">@subject.Subject.Code</span>
                                         break;
                                     case SubjectType.Combination:
-                                        
+
                                         <span class="badge bg-danger mx-1">@subject.Subject.Code</span>
                                         break;
                                     default:
@@ -110,7 +110,7 @@ else
 
     private string? SelectedGradeId { get; set; }
     private string? SearchTerm { get; set; }
-    private List<Grade>? AvailableGrades { get; set; }
+    private List<SchoolGrade>? AvailableGrades { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -140,15 +140,15 @@ else
             Learners = await LearnerService.GetLearnersBySchoolAsync(SelectedSchool.Id);
 
             AvailableGrades = Learners
-            .Where(l => l.RegisterClass?.Grade != null)
-            .Select(l => l.RegisterClass!.Grade!)
+            .Where(l => l.RegisterClass?.SchoolGrade != null)
+            .Select(l => l.RegisterClass!.SchoolGrade!)
             .DistinctBy(g => g.Id)
             .ToList();
         }
         else
         {
             Learners = new List<Learner>();
-            AvailableGrades = new List<Grade>();
+            AvailableGrades = new List<SchoolGrade>();
         }
     }
 
@@ -158,8 +158,8 @@ else
 
         if (!string.IsNullOrEmpty(SelectedGradeId))
         {
-            query = query.Where(l => l.RegisterClass?.Grade != null
-            && l.RegisterClass.Grade.Id == Guid.Parse(SelectedGradeId));
+            query = query.Where(l => l.RegisterClass?.SchoolGrade != null
+            && l.RegisterClass.SchoolGrade.Id == Guid.Parse(SelectedGradeId));
         }
 
         if (!string.IsNullOrEmpty(SearchTerm))

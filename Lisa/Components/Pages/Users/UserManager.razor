@@ -4,7 +4,7 @@
 @using Lisa.Models.Entities
 @using Microsoft.AspNetCore.Identity
 @inject NavigationManager Navigation
-@inject UserManager<User> UserManager
+@inject UserManager<User> UserManagerService
 @inject SchoolService SchoolService
 @inject UserService UserService
 
@@ -89,7 +89,7 @@
                         Abbreviation = existingUser.Abbreviation,
                         Name = existingUser.Name,
                         Email = existingUser.Email,
-                        SelectedRoles = (await UserManager.GetRolesAsync(existingUser)).ToList(),
+                        SelectedRoles = (await UserManagerService.GetRolesAsync(existingUser)).ToList(),
                         SchoolId = existingUser.SchoolId
                     };
             }
@@ -122,18 +122,18 @@
 
             if (IsEdit)
             {
-                var existingUser = await UserManager.FindByIdAsync(User.Id.ToString());
+                var existingUser = await UserManagerService.FindByIdAsync(User.Id.ToString());
                 if (existingUser == null) throw new Exception("User not found.");
 
                 existingUser.Surname = User.Surname;
                 existingUser.Abbreviation = User.Abbreviation;
                 existingUser.Name = User.Name;
 
-                await UserManager.UpdateAsync(existingUser);
+                await UserManagerService.UpdateAsync(existingUser);
 
-                var currentRoles = await UserManager.GetRolesAsync(existingUser);
-                await UserManager.RemoveFromRolesAsync(existingUser, currentRoles);
-                await UserManager.AddToRolesAsync(existingUser, User.SelectedRoles);
+                var currentRoles = await UserManagerService.GetRolesAsync(existingUser);
+                await UserManagerService.RemoveFromRolesAsync(existingUser, currentRoles);
+                await UserManagerService.AddToRolesAsync(existingUser, User.SelectedRoles);
             }
             else
             {
@@ -151,10 +151,10 @@
                         SchoolId = SelectedSchool.Id
                     };
 
-                var result = await UserManager.CreateAsync(newUser, User.Password);
+                var result = await UserManagerService.CreateAsync(newUser, User.Password);
                 if (result.Succeeded)
                 {
-                    await UserManager.AddToRolesAsync(newUser, User.SelectedRoles);
+                    await UserManagerService.AddToRolesAsync(newUser, User.SelectedRoles);
                 }
             }
 

@@ -15,11 +15,11 @@
         <label class="form-label">Grade</label>
         <select class="form-select" @bind="RegisterClass.GradeId">
             <option value="">-- Select Grade --</option>
-            @if (Grades != null)
+            @if (SchoolGrades != null)
             {
-                @foreach (var grade in Grades)
+                @foreach (var grade in SchoolGrades)
                 {
-                    <option value="@grade.Id">@grade.Name</option>
+                    <option value="@grade.Id">@grade.SystemGrade.Name</option>
                 }
             }
         </select>
@@ -74,7 +74,7 @@
 
 @code {
     [Parameter] public RegisterClassViewModel RegisterClass { get; set; } = new();
-    [Parameter] public List<Grade>? Grades { get; set; }
+    [Parameter] public List<SchoolGrade>? SchoolGrades { get; set; }
     [Parameter] public List<Teacher>? Teachers { get; set; }
     [Parameter] public IEnumerable<Subject>? FilteredSubjects { get; set; }
     [Parameter] public string SearchText { get; set; } = string.Empty;

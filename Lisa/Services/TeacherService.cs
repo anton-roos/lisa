@@ -1,15 +1,22 @@
 using Lisa.Data;
 using Lisa.Models.Entities;
+using Lisa.Models.ViewModels;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Lisa.Services;
 
-public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory, IUiEventService uiEventService, ILogger<TeacherService> logger)
+public class TeacherService(
+    IDbContextFactory<LisaDbContext> dbContextFactory,
+    IUiEventService uiEventService,
+    ILogger<TeacherService> logger,
+    IPasswordHasher<Teacher> passwordHasher)
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly IUiEventService _uiEventService = uiEventService;
     private readonly ILogger<TeacherService> _logger = logger;
+    private readonly IPasswordHasher<Teacher> _passwordHasher = passwordHasher;
 
     /// <summary>
     /// Retrieves all teachers.
@@ -30,18 +37,48 @@ public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         }
     }
 
-    /// <summary>
-    /// Creates a new teacher.
-    /// </summary>
-    public async Task<bool> CreateAsync(Teacher teacher)
+    public async Task<bool> CreateAsync(TeacherViewModel teacher)
     {
         try
         {
             await using var context = await _dbContextFactory.CreateDbContextAsync();
-            await context.Teachers.AddAsync(teacher);
+
+            if (await context.Teachers.AnyAsync(t => t.Email == teacher.Email))
+            {
+                _logger.LogError("Duplicate email detected: {Email}", teacher.Email);
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(teacher.Password))
+            {
+                _logger.LogError("Password is required for new teacher: {Email}", teacher.Email);
+                return false;
+            }
+
+            var existingCareGroups = await context.CareGroups
+                .Where(cg => teacher.SelectedCareGroupIds.Contains(cg.Id))
+                .ToListAsync();
+
+            var teacherEntity = new Teacher
+            {
+                Surname = teacher.Surname,
+                Abbreviation = teacher.Abbreviation,
+                Name = teacher.Name,
+                Email = teacher.Email,
+                PhoneNumber = teacher.PhoneNumber,
+                SchoolId = teacher.SchoolId,
+                CareGroups = existingCareGroups,
+                UserName = teacher.Email,
+            };
+
+            teacherEntity.PasswordHash = _passwordHasher.HashPassword(teacherEntity, teacher.Password);
+
+            context.Teachers.Add(teacherEntity);
             await context.SaveChangesAsync();
+
             await _uiEventService.PublishAsync(UiEvents.TeachersUpdated);
-            _logger.LogInformation("Created new teacher: {TeacherId}", teacher.Id);
+            _logger.LogInformation("Created new teacher: {TeacherId}", teacherEntity.Id);
+
             return true;
         }
         catch (Exception ex)
@@ -64,8 +101,10 @@ public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory, I
                 .Include(t => t.School!)
                 .Include(t => t.Subjects!)
                 .Include(t => t.RegisterClasses!)
-                    .ThenInclude(rc => rc.Grade!)
+                .ThenInclude(rc => rc.SchoolGrade!)
+                .ThenInclude(sg => sg.SystemGrade!)
                 .Include(t => t.Periods!)
+                .Include(t => t.CareGroups!)
                 .FirstOrDefaultAsync(t => t.Id == id);
         }
         catch (Exception ex)
@@ -78,25 +117,55 @@ public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     /// <summary>
     /// Updates an existing teacher.
     /// </summary>
-    public async Task<bool> UpdateAsync(Teacher teacher)
+    public async Task<bool> UpdateAsync(Teacher teacher, IEnumerable<Guid> selectedCareGroupIds, string? newPassword)
     {
         try
         {
             await using var context = await _dbContextFactory.CreateDbContextAsync();
-            var existing = await context.Teachers.FindAsync(teacher.Id);
+            var existing = await context.Teachers
+                .Include(t => t.CareGroups)
+                .FirstOrDefaultAsync(t => t.Id == teacher.Id);
+
             if (existing == null)
             {
                 _logger.LogWarning("Attempted to update non-existent teacher. TeacherId: {TeacherId}", teacher.Id);
                 return false;
             }
 
+            if (existing.Email != teacher.Email)
+            {
+                var emailExists = await context.Teachers.AnyAsync(t => t.Email == teacher.Email && t.Id != teacher.Id);
+                if (emailExists)
+                {
+                    _logger.LogWarning("Attempted to update teacher with duplicate email: {Email}", teacher.Email);
+                    return false;
+                }
+            }
+
             existing.Surname = teacher.Surname;
+            existing.Abbreviation = teacher.Abbreviation;
             existing.Name = teacher.Name;
             existing.Email = teacher.Email;
             existing.PhoneNumber = teacher.PhoneNumber;
             existing.SchoolId = teacher.SchoolId;
 
-            context.Entry(existing).State = EntityState.Modified;
+            var existingCareGroups = await context.CareGroups
+                .Where(cg => selectedCareGroupIds.Contains(cg.Id))
+                .ToListAsync();
+
+            existing.CareGroups.Clear();
+            foreach (var careGroup in existingCareGroups)
+            {
+                context.CareGroups.Attach(careGroup);
+                existing.CareGroups.Add(careGroup);
+            }
+
+            if (!string.IsNullOrWhiteSpace(newPassword))
+            {
+                existing.PasswordHash = _passwordHasher.HashPassword(existing, newPassword);
+                _logger.LogInformation("Updated password for teacher: {TeacherId}", teacher.Id);
+            }
+
             await context.SaveChangesAsync();
             await _uiEventService.PublishAsync(UiEvents.TeachersUpdated);
             _logger.LogInformation("Updated teacher: {TeacherId}", teacher.Id);
@@ -208,7 +277,9 @@ public class TeacherService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             await registerClasses.ForEachAsync(rc => rc.TeacherId = newTeacherId);
 
             await context.SaveChangesAsync();
-            _logger.LogInformation("Transferred register classes from TeacherId {OldTeacherId} to TeacherId {NewTeacherId}", oldTeacherId, newTeacherId);
+            _logger.LogInformation(
+                "Transferred register classes from TeacherId {OldTeacherId} to TeacherId {NewTeacherId}", oldTeacherId,
+                newTeacherId);
             return true;
         }
         catch (Exception ex)

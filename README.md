@@ -75,9 +75,9 @@ Portal@DCEG
 As ’n Skool delete word, delete dit (cascade) ook Principals, Administrators, SchoolManagements, Teachers, Grades en Learners.
 Die Skool het ’n unieke ShortName nie langer as 20 karakters nie.
 
-## Grade
+## SchoolGrade
 Link na School met OnDelete.Cascade → as die Skool delete word, word alle Grades ook delete.
-RegisterClass link na Grade met OnDelete.Restrict → jy moet eers RegisterClass verwyder of aanpas voordat jy die Grade kan uitvee.
+RegisterClass link na SchoolGrade met OnDelete.Restrict → jy moet eers RegisterClass verwyder of aanpas voordat jy die SchoolGrade kan uitvee.
 
 # Learner
 Link na School met OnDelete.Cascade → as die Skool delete word, word Learners ook delete.
@@ -90,7 +90,7 @@ Het meer as een LearnerSubjects → OnDelete.Cascade vanaf die Learner kant: As 
 Link na Learner met OnDelete.Cascade → as ’n Learner delete word, word sy Parents ook delete.
 
 # RegisterClass
-Link na Grade met OnDelete.Restrict → Kan nie n Grade delete as daar n RegisterClass gekoppel is nie.
+Link na SchoolGrade met OnDelete.Restrict → Kan nie n SchoolGrade delete as daar n RegisterClass gekoppel is nie.
 Link na Teacher met OnDelete.Restrict → kan nie n Teacher delete as daar n RegisterClass gekoppel is nie.
 Het baie Learners OnDelete.Restrict → Waneer n RegisterClass delete word hou hy die Students "unparented". 
 
@@ -99,7 +99,7 @@ OnDelete.Restrict aan die SubjectId-kant, Waneer n RegisterClassSubject delete w
 OnDelete.Cascade aan die RegisterClassId-kant, Waneer n RegisterClass delete word, delete hy al die RegisterClassSubjects.
 
 # Combination
-Link na Grade met OnDelete.Restrict → kan nie Grade delete as daar Combinations is wat daarna Link nie.
+Link na SchoolGrade met OnDelete.Restrict → kan nie SchoolGrade delete as daar Combinations is wat daarna Link nie.
 Baie-tot-baie met Subject via CombinationSubject:
 OnDelete.Restrict aan die SubjectId-kant, sal nie n subject delete as die CombinationSubject delete word nie.
 OnDelete.Cascade aan die CombinationId-kant. As n combination delete word delete dit al sy CombinationSubjects.
@@ -115,7 +115,7 @@ Link na Learner met OnDelete.Cascade → as ’n Learner delete word, word sy Le
 Link na Subject met OnDelete.Restrict → kan nie Subject uitvee as ’n LearnerSubject nog daarna Link nie.
 
 # Period
-Link na Teacher, Subject en Grade met OnDelete.Restrict → jy moet eers die Period verwyder/aanpas as jy daardie entiteite wil uitvee.
+Link na Teacher, Subject en SchoolGrade met OnDelete.Restrict → jy moet eers die Period verwyder/aanpas as jy daardie entiteite wil uitvee.
 Die databassis maak seker n Teacher het net een Period op n slag tussen n StartTime en EndTime. 
 En die sisteem check dat StartTime kleiner is as EndTime.
 
@@ -131,7 +131,7 @@ Waneer n CareGroup Delete Word Unlink hy alle Learners van daai CareGroup af.
 # Caregroup <--> Teacher
 
 # Subject show on UI which grades it is applicable for
-# public List<Grade>? GradesApplicable { get; set; }
+# public List<SystemGrade>? GradesApplicable { get; set; }
 
 Select 1 (Mathematics or Maths Literacy)
  Mathematics
@@ -144,8 +144,8 @@ Extra subject for only 10, 11, 12
 # Class List
 --> Register Class bv 8A -> Export
 --> Combination Class List (10 - 12)
-  --> Grade
+  --> SchoolGrade
   --> Physical Science -> Export
 --> Combination Class List
---> Grade 
+--> SchoolGrade 
 

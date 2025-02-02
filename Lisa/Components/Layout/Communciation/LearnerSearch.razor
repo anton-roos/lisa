@@ -32,7 +32,7 @@ else
             {
                 <tr>
                     <td>@learner.Surname @learner.Name</td>
-                    <td>@learner.RegisterClass?.Grade?.Name</td>
+                    <td>@learner.RegisterClass?.SchoolGrade?.SystemGrade.Name</td>
                     <td>
                         <button class="btn btn-primary btn-sm" @onclick="() => SendCommunication(learner)"
                             disabled="@IsSending">

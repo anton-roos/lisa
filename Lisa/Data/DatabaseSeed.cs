@@ -31,6 +31,7 @@ public class DatabaseSeed
             await SeedSchoolTypes(dbContext, logger);
             await SeedSchoolSubjects(dbContext, logger);
             await SeedSchoolCurriculum(dbContext, logger);
+            await SeedSytemGrades(dbContext, logger);
             await transaction.CommitAsync();
 
             logger.LogInformation("Database seeding completed successfully.");
@@ -97,30 +98,34 @@ public class DatabaseSeed
         var configuredPassword = config["AdminPassword"];
         AdminPassword = !string.IsNullOrWhiteSpace(configuredPassword) ? configuredPassword : AdminPassword;
 
+        // Try retrieving the admin user from the database
         var adminUser = await userManager.FindByEmailAsync(DefaultAdminEmail);
+
         if (adminUser == null)
         {
-            var user = new User
+            // Create new admin user
+            adminUser = new User
             {
                 UserName = DefaultAdminEmail,
                 Email = DefaultAdminEmail,
                 Surname = "System",
                 Abbreviation = "SA",
                 Name = "Admin",
+                EmailConfirmed = true
             };
 
-            var result = await userManager.CreateAsync(user, AdminPassword);
-            if (result.Succeeded)
-            {
-                logger.LogInformation("Admin user created.");
-            }
-            else
+            var result = await userManager.CreateAsync(adminUser, AdminPassword);
+            if (!result.Succeeded)
             {
                 logger.LogError("Failed to create admin user: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));
+                return; // Exit if user creation failed
             }
+
+            logger.LogInformation("Admin user created successfully.");
         }
 
-        if (adminUser != null && !await userManager.IsInRoleAsync(adminUser, Roles.SystemAdministrator))
+        // Ensure the admin user is assigned to the SystemAdministrator role
+        if (!await userManager.IsInRoleAsync(adminUser, Roles.SystemAdministrator))
         {
             await userManager.AddToRoleAsync(adminUser, Roles.SystemAdministrator);
             logger.LogInformation("Admin assigned to SystemAdministrator role.");
@@ -166,21 +171,21 @@ public class DatabaseSeed
         if (!await dbContext.SystemGrades.AnyAsync())
         {
             await dbContext.SystemGrades.AddRangeAsync([
-                new SystemGrade { SequenceNumber = -2, Name = "Gr RRR"},
-                new SystemGrade { SequenceNumber = -1, Name = "Gr RR"},
-                new SystemGrade { SequenceNumber = -0, Name = "Gr R"},
-                new SystemGrade { SequenceNumber = 1, Name = "Gr 1"},
-                new SystemGrade { SequenceNumber = 2, Name = "Gr 2"},
-                new SystemGrade { SequenceNumber = 3, Name = "Gr 3"},
-                new SystemGrade { SequenceNumber = 4, Name = "Gr 4"},
-                new SystemGrade { SequenceNumber = 5, Name = "Gr 5"},
-                new SystemGrade { SequenceNumber = 6, Name = "Gr 6"},
-                new SystemGrade { SequenceNumber = 7, Name = "Gr 7"},
-                new SystemGrade { SequenceNumber = 8, Name = "Gr 8"},
-                new SystemGrade { SequenceNumber = 9, Name = "Gr 9"},
-                new SystemGrade { SequenceNumber = 10, Name = "Gr 10"},
-                new SystemGrade { SequenceNumber = 11, Name = "Gr 11"},
-                new SystemGrade { SequenceNumber = 12, Name = "Gr 12"},
+                new SystemGrade { SequenceNumber = -2, Name = "Gr RRR", MathGrade = false, CombinationGrade = false},
+                new SystemGrade { SequenceNumber = -1, Name = "Gr RR", MathGrade = false, CombinationGrade = false},
+                new SystemGrade { SequenceNumber = -0, Name = "Gr R", MathGrade = false, CombinationGrade = false},
+                new SystemGrade { SequenceNumber = 1, Name = "Gr 1", MathGrade = false, CombinationGrade = false},
+                new SystemGrade { SequenceNumber = 2, Name = "Gr 2", MathGrade = false, CombinationGrade = false},
+                new SystemGrade { SequenceNumber = 3, Name = "Gr 3", MathGrade = false, CombinationGrade = false},
+                new SystemGrade { SequenceNumber = 4, Name = "Gr 4", MathGrade = false, CombinationGrade = false},
+                new SystemGrade { SequenceNumber = 5, Name = "Gr 5", MathGrade = false, CombinationGrade = false},
+                new SystemGrade { SequenceNumber = 6, Name = "Gr 6", MathGrade = false, CombinationGrade = false},
+                new SystemGrade { SequenceNumber = 7, Name = "Gr 7", MathGrade = false, CombinationGrade = false},
+                new SystemGrade { SequenceNumber = 8, Name = "Gr 8", MathGrade = false, CombinationGrade = false},
+                new SystemGrade { SequenceNumber = 9, Name = "Gr 9", MathGrade = false, CombinationGrade = false},
+                new SystemGrade { SequenceNumber = 10, Name = "Gr 10", MathGrade = true, CombinationGrade = true},
+                new SystemGrade { SequenceNumber = 11, Name = "Gr 11", MathGrade = true, CombinationGrade = true},
+                new SystemGrade { SequenceNumber = 12, Name = "Gr 12", MathGrade = true, CombinationGrade = true},
             ]);
             await dbContext.SaveChangesAsync();
             logger.LogInformation("Seeded System Grades.");
@@ -199,7 +204,7 @@ public class DatabaseSeed
 
                 new Subject {
                     Id = 1,
-                    Name = "English HL (RRR - 12)",
+                    Name = "English HL",
                     GradesApplicable = [-2,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
                     Code = "Eng HL",
                     Description = "English Home Language",
@@ -209,7 +214,7 @@ public class DatabaseSeed
 
                 new Subject {
                     Id = 2,
-                    Name = "Afrikaans FAL (RRR - 12)",
+                    Name = "Afrikaans FAL",
                     GradesApplicable = [-2,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
                     Code = "Afr FAL",
                     Description = "Afrikaans First Additional Language",
@@ -219,9 +224,9 @@ public class DatabaseSeed
 
                 new Subject {
                     Id = 3,
-                    Name = "Life Skills (RRR - 6)",
+                    Name = "Life Skills",
                     GradesApplicable = [-2,-1, 0, 1, 2, 3, 4, 5, 6],
-                    Code = "LSK",
+                    Code = "LS",
                     Description = "Life Skills",
                     Order = 3,
                     SubjectType = SubjectType.Compulsory
@@ -229,7 +234,7 @@ public class DatabaseSeed
 
                 new Subject {
                     Id = 4,
-                    Name = "Life Orientation (7 - 12)",
+                    Name = "Life Orientation",
                     GradesApplicable = [7, 8, 9, 10, 11, 12],
                     Code = "LO",
                     Description = "Life Orientation",
@@ -239,9 +244,9 @@ public class DatabaseSeed
 
                 new Subject {
                     Id = 5,
-                    Name = "Mathematics (RRR - 9)",
+                    Name = "Mathematics",
                     GradesApplicable = [-2,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-                    Code = "MATF",
+                    Code = "MA",
                     Description = "Mathematics",
                     Order = 5,
                     SubjectType = SubjectType.Compulsory
@@ -249,9 +254,9 @@ public class DatabaseSeed
 
                 new Subject {
                     Id = 6,
-                    Name = "Mathematics (10 - 12)",
+                    Name = "Mathematics",
                     GradesApplicable = [10, 11, 12],
-                    Code = "MATH",
+                    Code = "MAT",
                     Description = "Mathematics",
                     Order = 6,
                     SubjectType = SubjectType.MathCombination
@@ -259,9 +264,9 @@ public class DatabaseSeed
 
                 new Subject {
                     Id = 7,
-                    Name = "Mathematical Literacy (10 - 12)",
+                    Name = "Mathematical Literacy",
                     GradesApplicable = [10, 11, 12],
-                    Code = "MATL",
+                    Code = "ML",
                     Description = "Mathematical Literacy",
                     Order = 7,
                     SubjectType = SubjectType.MathCombination
@@ -269,7 +274,7 @@ public class DatabaseSeed
 
                 new Subject {
                     Id = 8,
-                    Name = "Natural Sciences (4 - 9)",
+                    Name = "Natural Sciences",
                     GradesApplicable = [4, 5, 6, 7, 8, 9],
                     Code = "NS",
                     Description = "Natural Sciences",
@@ -279,7 +284,7 @@ public class DatabaseSeed
 
                 new Subject {
                     Id = 9,
-                    Name = "Physical Sciences (10 - 12)",
+                    Name = "Physical Sciences",
                     GradesApplicable = [10, 11, 12],
                     Code = "PS",
                     Description = "Physical Sciences",
@@ -289,9 +294,9 @@ public class DatabaseSeed
 
                 new Subject {
                     Id = 10,
-                    Name = "Life Sciences (10 - 12)",
+                    Name = "Life Sciences",
                     GradesApplicable = [10, 11, 12],
-                    Code = "LSC",
+                    Code = "LS",
                     Description = "Life Sciences",
                     Order = 10,
                     SubjectType = SubjectType.Combination
@@ -308,123 +313,132 @@ public class DatabaseSeed
                 },
 
                 new Subject {
-                    Id = 11,
+                    Id = 12,
                     Name = "EMS - Business",
                     GradesApplicable = [8, 9],
                     Code = "EMSBS",
                     Description = "Economic and Management Sciences - Business",
-                    Order = 11,
-                    SubjectType = SubjectType.Compulsory
-                },
-
-                new Subject {
-                    Id = 12,
-                    Name = "EMS - Accounting",
-                    GradesApplicable = [8, 9],
-                    Code = "EMSAC",
-                    Description = "Economic and Management Sciences - Accounting",
                     Order = 12,
                     SubjectType = SubjectType.Compulsory
                 },
 
                 new Subject {
                     Id = 13,
-                    Name = "Business Studies",
-                    GradesApplicable = [10, 11, 12],
-                    Code = "BUS",
-                    Description = "Business Studies",
+                    Name = "EMS - Accounting",
+                    GradesApplicable = [8, 9],
+                    Code = "EMSAC",
+                    Description = "Economic and Management Sciences - Accounting",
                     Order = 13,
-                    SubjectType = SubjectType.Combination
+                    SubjectType = SubjectType.Compulsory
                 },
 
                 new Subject {
                     Id = 14,
-                    Name = "Accounting",
+                    Name = "Business Studies",
                     GradesApplicable = [10, 11, 12],
-                    Code = "ACC",
-                    Description = "Accounting",
+                    Code = "BUS",
+                    Description = "Business Studies",
                     Order = 14,
                     SubjectType = SubjectType.Combination
                 },
 
                 new Subject {
                     Id = 15,
-                    Name = "Economics (10 - 12)",
-                    Code = "ECO",
-                    Description = "Economics",
+                    Name = "Accounting",
+                    GradesApplicable = [10, 11, 12],
+                    Code = "ACC",
+                    Description = "Accounting",
                     Order = 15,
                     SubjectType = SubjectType.Combination
                 },
 
                 new Subject {
                     Id = 16,
-                    Name = "Tourism (10 - 12)",
-                    Code = "TOUR",
-                    Description = "Tourism",
+                    Name = "Economics",
+                    GradesApplicable = [10, 11, 12],
+                    Code = "ECO",
+                    Description = "Economics",
                     Order = 16,
                     SubjectType = SubjectType.Combination
                 },
 
                 new Subject {
                     Id = 17,
-                    Name = "SS History (4 - 9)",
-                    Code = "SS HIS",
-                    Description = "Social Sciences - History",
+                    Name = "Tourism",
+                    GradesApplicable = [10, 11, 12],
+                    Code = "TO",
+                    Description = "Tourism",
                     Order = 17,
-                    SubjectType = SubjectType.Compulsory
+                    SubjectType = SubjectType.Combination
                 },
 
                 new Subject {
                     Id = 18,
-                    Name = "SS Geography (4 - 9)",
-                    Code = "SS GEO",
-                    Description = "Social Sciences - Geography",
+                    Name = "SS History",
+                    GradesApplicable = [4, 5, 6, 7, 8, 9],
+                    Code = "SSHIS",
+                    Description = "Social Sciences - History",
                     Order = 18,
                     SubjectType = SubjectType.Compulsory
                 },
 
                 new Subject {
                     Id = 19,
-                    Name = "History (10 - 12)",
-                    Code = "HIS",
-                    Description = "History",
+                    Name = "SS Geography",
+                    GradesApplicable = [4, 5, 6, 7, 8, 9],
+                    Code = "SSGEO",
+                    Description = "Social Sciences - Geography",
                     Order = 19,
-                    SubjectType = SubjectType.Combination
+                    SubjectType = SubjectType.Compulsory
                 },
 
                 new Subject {
                     Id = 20,
-                    Name = "Geography (10 - 12)",
-                    Code = "GEO",
-                    Description = "Geography",
+                    Name = "History",
+                    GradesApplicable = [10, 11, 12],
+                    Code = "HIS",
+                    Description = "History",
                     Order = 20,
                     SubjectType = SubjectType.Combination
                 },
 
                 new Subject {
                     Id = 21,
-                    Name = "Creative Arts (4 - 9)",
-                    Code = "CA",
-                    Description = "Creative Arts",
+                    Name = "Geography",
+                    GradesApplicable = [10, 11, 12],
+                    Code = "GEO",
+                    Description = "Geography",
                     Order = 21,
-                    SubjectType = SubjectType.Compulsory
+                    SubjectType = SubjectType.Combination
                 },
 
                 new Subject {
                     Id = 22,
-                    Name = "Technology (7 - 9)",
-                    Code = "TECH",
-                    Description = "Technology",
+                    Name = "Creative Arts",
+                    GradesApplicable = [4, 5, 6, 7, 8, 9],
+                    Code = "CA",
+                    Description = "Creative Arts",
                     Order = 22,
                     SubjectType = SubjectType.Compulsory
                 },
 
                 new Subject {
                     Id = 23,
-                    Name = "CAT (10 - 12)",
+                    Name = "Technology",
+                    GradesApplicable = [7, 8, 9],
+                    Code = "TEC",
+                    Description = "Technology",
+                    Order = 23,
+                    SubjectType = SubjectType.Compulsory
+                },
+
+                new Subject {
+                    Id = 24,
+                    Name = "Computer Applications Technology",
+                    GradesApplicable = [10, 11, 12],
                     Code = "CAT",
                     Description = "Computer Applications Technology",
-                    Order = 23,
+                    Order = 42,
                     SubjectType = SubjectType.Combination
                 }
             ]);

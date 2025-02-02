@@ -19,12 +19,14 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             await using var context = await _dbContextFactory.CreateDbContextAsync();
             await context.Results.AddAsync(result);
             await context.SaveChangesAsync();
-            _logger.LogInformation("Created Result for LearnerId: {LearnerId}, SubjectId: {SubjectId}", result.LearnerId, result.SubjectId);
+            _logger.LogInformation("Created Result for LearnerId: {LearnerId}, SubjectId: {SubjectId}",
+                result.LearnerId, result.SubjectId);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating result for LearnerId: {LearnerId}, SubjectId: {SubjectId}", result.LearnerId, result.SubjectId);
+            _logger.LogError(ex, "Error creating result for LearnerId: {LearnerId}, SubjectId: {SubjectId}",
+                result.LearnerId, result.SubjectId);
             return false;
         }
     }
@@ -49,8 +51,9 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             return await context.Results
                 .AsNoTracking()
                 .Include(r => r.Learner!)
-                    .ThenInclude(l => l.RegisterClass!)
-                        .ThenInclude(rc => rc.Grade!)
+                .ThenInclude(l => l.RegisterClass!)
+                .ThenInclude(rc => rc.SchoolGrade!)
+                .ThenInclude(sg => sg.SystemGrade)
                 .Include(r => r.Subject!)
                 .FirstOrDefaultAsync(r => r.Id == id);
         }
@@ -93,18 +96,21 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             return await context.Results
                 .AsNoTracking()
                 .Include(r => r.Learner!)
-                    .ThenInclude(l => l.RegisterClass!)
-                        .ThenInclude(rc => rc.Grade!)
+                .ThenInclude(l => l.RegisterClass!)
+                .ThenInclude(rc => rc.SchoolGrade!)
+                .ThenInclude(sg => sg.SystemGrade!)
                 .Include(r => r.Subject!)
                 .Where(r => r.SubjectId == subjectId &&
                             r.Learner!.RegisterClass != null &&
-                            r.Learner.RegisterClass.GradeId == gradeId &&
-                            r.Learner.RegisterClass.Grade!.SchoolId == schoolId)
+                            r.Learner.RegisterClass.SchoolGradeId == gradeId &&
+                            r.Learner.RegisterClass.SchoolGrade!.SchoolId == schoolId)
                 .ToListAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching results for SchoolId: {SchoolId}, GradeId: {GradeId}, SubjectId: {SubjectId}", schoolId, gradeId, subjectId);
+            _logger.LogError(ex,
+                "Error fetching results for SchoolId: {SchoolId}, GradeId: {GradeId}, SubjectId: {SubjectId}", schoolId,
+                gradeId, subjectId);
             return new List<Result>();
         }
     }
@@ -133,12 +139,14 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
 
             context.Entry(existingResult).State = EntityState.Modified;
             await context.SaveChangesAsync();
-            _logger.LogInformation("Updated Result for LearnerId: {LearnerId}, SubjectId: {SubjectId}", result.LearnerId, result.SubjectId);
+            _logger.LogInformation("Updated Result for LearnerId: {LearnerId}, SubjectId: {SubjectId}",
+                result.LearnerId, result.SubjectId);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating result for LearnerId: {LearnerId}, SubjectId: {SubjectId}", result.LearnerId, result.SubjectId);
+            _logger.LogError(ex, "Error updating result for LearnerId: {LearnerId}, SubjectId: {SubjectId}",
+                result.LearnerId, result.SubjectId);
             return false;
         }
     }

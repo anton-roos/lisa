@@ -68,10 +68,6 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
     options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
     options.User.RequireUniqueEmail = true;
 
-    // Sign In settings
-    options.SignIn.RequireConfirmedEmail = true; // 🔹 Important for production
-    options.SignIn.RequireConfirmedAccount = true;
-    options.SignIn.RequireConfirmedPhoneNumber = false;
 })
 .AddEntityFrameworkStores<LisaDbContext>()
 .AddDefaultTokenProviders();
@@ -107,7 +103,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<CareGroupService>();
 builder.Services.AddScoped<CombinationService>();
 builder.Services.AddScoped<EmailService>();
-builder.Services.AddScoped<GradeService>();
+builder.Services.AddScoped<SchoolGradeService>();
 builder.Services.AddScoped<LearnerService>();
 builder.Services.AddScoped<RegisterClassService>();
 builder.Services.AddScoped<SubjectService>();
@@ -127,6 +123,7 @@ builder.Services.AddScoped<CommunicationService>();
 builder.Services.AddSingleton<ILoginStore, InMemoryLoginStore>();
 builder.Services.AddSingleton<HangfireAuthorizationFilter>();
 builder.Services.AddScoped<SystemGradeService>();
+builder.Services.AddScoped<IPasswordHasher<Teacher>, PasswordHasher<Teacher>>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();

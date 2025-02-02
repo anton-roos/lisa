@@ -1,0 +1,79 @@
+@page "/system-administrators"
+@using Lisa.Models.Entities
+@inject NavigationManager Navigation
+@inject SchoolService SchoolService
+@inject UserService UserService
+
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+    <Authorized>
+        <h3>System Administrators</h3>
+        <button class="btn btn-primary mb-3" @onclick="AddSystemAdministrator">
+            Add System Administrator
+        </button>
+
+        @if (SystemAdministrators == null)
+        {
+            <p>Loading...</p>
+        }
+        else if (SystemAdministrators.Count == 0)
+        {
+            <p>No System Administrators found.</p>
+        }
+        else
+        {
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Surname</th>
+                        <th>Name</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var systemAdministrator in SystemAdministrators)
+                    {
+                        <tr>
+                            <td>@systemAdministrator.Surname</td>
+                            <td>@systemAdministrator.Abbreviation</td>
+                            <td>@systemAdministrator.Name</td>
+                            <ActionButtons TEntity="User" Entity="systemAdministrator" OnView="ViewSystemAdministrator"
+                                OnEdit="EditSystemAdministrator" OnDelete="DeleteSystemAdministrator" />
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<User>? SystemAdministrators;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SystemAdministrators = await UserService.GetAllByRoleAndSchoolAsync<User>();
+    }
+
+    private void AddSystemAdministrator()
+    {
+        Navigation.NavigateTo("/system-administrators/manage/");
+    }
+
+    private void EditSystemAdministrator(User systemAdministrator)
+    {
+        Navigation.NavigateTo($"/system-administrators/manage/{systemAdministrator.Id}");
+    }
+
+    private void DeleteSystemAdministrator(User systemAdministrator)
+    {
+        Navigation.NavigateTo($"/system-administrators/edit/{systemAdministrator.Id}");
+    }
+
+    private void ViewSystemAdministrator(User systemAdministrator)
+    {
+        Navigation.NavigateTo($"/system-administrators/view/{systemAdministrator.Id}");
+    }
+}

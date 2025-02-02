@@ -56,7 +56,7 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
     options.Password.RequireLowercase = true;
     options.Password.RequireNonAlphanumeric = true;
     options.Password.RequireUppercase = true;
-    options.Password.RequiredLength = 8; 
+    options.Password.RequiredLength = 8;
     options.Password.RequiredUniqueChars = 1;
 
     // Lockout settings
@@ -126,6 +126,7 @@ builder.Services.AddScoped<EmailCampaignService>();
 builder.Services.AddScoped<CommunicationService>();
 builder.Services.AddSingleton<ILoginStore, InMemoryLoginStore>();
 builder.Services.AddSingleton<HangfireAuthorizationFilter>();
+builder.Services.AddScoped<SystemGradeService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();

@@ -7,7 +7,8 @@ public class Subject
     public string? Description { get; set; }
     public string? Code { get; set; }
     public int Order { get; set; }
+    public List<int>? GradesApplicable { get; set; }
     public SubjectType SubjectType { get; set; }
-    public ICollection<Combination>? Combinations { get; set; }
-    public ICollection<LearnerSubject>? LearnerSubjects { get; set; }
+    //public ICollection<Combination>? Combinations { get; set; }
+    //public ICollection<LearnerSubject>? LearnerSubjects { get; set; }
 }

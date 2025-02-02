@@ -1,49 +1,284 @@
 @page "/communication"
+@using Lisa.Enums
 @using Lisa.Models.EmailModels
 @using Lisa.Models.Entities
 @using Lisa.Services
-@using RazorLight
+@using Lisa.Components.Layout.Communciation
+@inject SchoolService SchoolService
+@inject GradeService GradeService
+@inject SubjectService SubjectService
+@inject LearnerService LearnerService
+@inject CommunicationService CommunicationService
+@inject NavigationManager NavigationManager
 
 @inherits EventAwareComponentBase
 
-<PageTitle>Communication</PageTitle>
+<PageTitle>Care Groups</PageTitle>
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+    <Authorized>
+        @if (SelectedSchool == null)
+        {
+            <div class="alert alert-info">
+                Please select a school to send communication.
+            </div>
+        }
+        else
+        {
+            <h3>Send Communication</h3>
+            <CommunicationTypeSelector SelectedTarget="@SelectedTarget" OnTargetChanged="OnOptionChanged" />
 
-@if (SelectedSchool == null)
-{
-    <div class="alert alert-info">
-        Please select a school to view communication.
-    </div>
-}
-else
-{
-    <h3>Communication</h3>
-    <div class="d-grid gap-2 d-md-flex justify-content-start">
-        <button class="btn btn-primary" @onclick="SendCommunication">Send Communication</button>
-    </div>
-}
+            @switch (SelectedTarget)
+            {
+                case CommunicationTarget.School:
+                    <SchoolAudienceSelector OnAudienceSelected="OnSchoolAudienceSelected"
+                        SelectedAudience="SelectedSchoolAudienceId" />
+                    break;
+
+                case CommunicationTarget.Grade:
+                    <GradeSelection Grades="SchoolGrades" SelectedGradeId="@SelectedGradeId" OnGradeSelected="OnGradeSelected" />
+                    break;
+
+                case CommunicationTarget.Subject:
+                    <SubjectSelection Subjects="Subjects" SelectedSubjectId="@SelectedSubjectId"
+                        OnSubjectSelected="OnSubjectSelected" />
+                    break;
+
+                case CommunicationTarget.Learner:
+                    <LearnerSearch SearchTerm="@SearchTerm" OnSearchTermChanged="OnSearchTermChanged" Learners="FilteredLearners"
+                        OnSend="SendCommunicationForLearner" />
+                    break;
+            }
+
+            <TemplateSelection OnTemplateSelected="OnTemplateSelected" />
+
+            <button type="button" class="btn btn-primary btn-sm mt-2" @onclick="SendCommunication"
+                disabled="@(IsSendDisabled || IsSending)">
+                @if (IsSending)
+                {
+                    <i class="bi bi-hourglass-split">Sending...</i>
+                }
+                else
+                {
+                    <i class="bi bi-envelope-arrow-up">Send Communication</i>
+                }
+            </button>
+
+            @if (!string.IsNullOrEmpty(StatusMessage))
+            {
+                <div class="alert alert-info mt-2">@StatusMessage</div>
+            }
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
-    [Inject] private SchoolService SchoolService { get; set; } = default!;
-    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
-
-    private School? SelectedSchool;
+    private CommunicationTarget SelectedTarget { get; set; } = CommunicationTarget.School;
+    private string? SearchTerm { get; set; }
+    private List<Learner> Learners = new();
+    private IEnumerable<Learner> FilteredLearners => ApplyFilters();
+    private School? SelectedSchool { get; set; }
+    private Guid? SelectedGradeId { get; set; }
+    private string? SelectedSchoolAudienceId { get; set; }
+    private IEnumerable<SchoolGrade> SchoolGrades = new List<SchoolGrade>();
+    private IEnumerable<Subject> Subjects = new List<Subject>();
+    private int SelectedSubjectId { get; set; }
+    private EmailTemplate? SelectedTemplate { get; set; }
+    private bool IsSendDisabled => SelectedTemplate == null;
+    private bool IsSending { get; set; } = false;
+    private string? StatusMessage { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         SelectedSchool = SchoolService.GetSelectedSchool();
         SubscribeToEvent(UiEvents.SchoolSelected);
+        await LoadData();
         await base.OnInitializedAsync();
     }
-    
-    private void SendCommunication() => NavigationManager.NavigateTo("/communication/send");
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
         if (eventName == UiEvents.SchoolSelected && payload is School school)
         {
-            SelectedSchool = school;
+            if (SelectedSchool?.Id != school.Id) // Only load if school changes
+            {
+                SelectedSchool = school;
+                await LoadData();
+            }
         }
 
         await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadData()
+    {
+        if (SelectedSchool == null) return;
+
+        Learners = await LearnerService.GetLearnersBySchoolAsync(SelectedSchool.Id);
+        SchoolGrades = await GradeService.GetGradesForSchool(SelectedSchool.Id);
+        Subjects = await SubjectService.GetAllAsync();
+    }
+
+    private async Task OnGradeSelected(Guid? selectedGradeId)
+    {
+        SelectedGradeId = selectedGradeId;
+    }
+
+    private async Task OnSubjectSelected(int selectedSubjectId)
+    {
+        SelectedSubjectId = selectedSubjectId;
+    }
+
+    private void OnOptionChanged(CommunicationTarget target)
+    {
+        SelectedTarget = target;
+    }
+
+    private void OnSearchTermChanged(string? searchTerm)
+    {
+        SearchTerm = searchTerm;
+    }
+
+    private IEnumerable<Learner> ApplyFilters()
+    {
+        if (Learners is null || !Learners.Any()) return Enumerable.Empty<Learner>();
+
+        var query = Learners.AsEnumerable();
+
+        if (SelectedGradeId.HasValue)
+            query = query.Where(l => l.RegisterClass?.SchoolGrade?.Id == SelectedGradeId);
+
+        if (!string.IsNullOrEmpty(SearchTerm))
+        {
+            var term = SearchTerm.Trim().ToLower();
+            query = query.Where(l => $"{l.Surname} {l.Name}".ToLower().Contains(term));
+        }
+
+        return query;
+    }
+
+    private async Task SendCommunication()
+    {
+        if (SelectedTemplate == null || SelectedSchool == null)
+        {
+            StatusMessage = "Error: Please select a template and school!";
+            return;
+        }
+
+        IsSending = true;
+        StatusMessage = "Sending communication...";
+
+        EmailCampaign? result = null;
+
+        try
+        {
+            switch (SelectedTarget)
+            {
+                case CommunicationTarget.School:
+                    if (string.IsNullOrWhiteSpace(SelectedSchoolAudienceId))
+                    {
+                        StatusMessage = "Error: Please select an audience!";
+                        return;
+                    }
+                    result = await SendToSchoolAudience();
+                    break;
+
+                case CommunicationTarget.Grade:
+                    if (!SelectedGradeId.HasValue)
+                    {
+                        StatusMessage = "Error: Please select a grade!";
+                        return;
+                    }
+                    result = await CommunicationService.SendToGradeAsync(SelectedGradeId.Value, SelectedTemplate);
+                    break;
+
+                case CommunicationTarget.Subject:
+                    if (SelectedSubjectId <= 0)
+                    {
+                        StatusMessage = "Error: Please select a subject!";
+                        return;
+                    }
+                    result = await CommunicationService.SendToSubjectAsync(SelectedSubjectId, SelectedTemplate);
+                    break;
+
+                default:
+                    StatusMessage = "Invalid communication target!";
+                    return;
+            }
+
+            if (result != null && result.Id.HasValue)
+            {
+                StatusMessage = "Communication sent successfully!";
+                {
+                    NavigateToCampaign(result.Id.Value);
+                }
+            }
+            else
+                StatusMessage = "Error: No recipients found!";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsSending = false;
+        }
+    }
+
+    private async Task<EmailCampaign?> SendToSchoolAudience()
+    {
+        return SelectedSchoolAudienceId switch
+        {
+            //"Parents" => await CommunicationService.SendProgressFeedbackAsync(SelectedSchool, SelectedTemplate),
+            "Staff" => await CommunicationService.SendToStaffAsync(SelectedSchool, SelectedTemplate),
+            "LearnersAndStaff" => await CommunicationService.SendToLearnersAndStaffAsync(SelectedSchool, SelectedTemplate),
+            _ => null
+        };
+    }
+
+    private async Task SendCommunicationForLearner(Learner learner)
+    {
+        if (SelectedTemplate == null)
+        {
+            StatusMessage = "No template selected!";
+            return;
+        }
+
+        IsSending = true;
+        StatusMessage = $"Sending communication to {learner.Name}...";
+
+        try
+        {
+            var result = await CommunicationService.SendToLearnerAsync(SelectedSchool, SelectedTemplate, learner);
+            StatusMessage = result != null ? "Communication sent successfully!" : "Error sending communication!";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsSending = false;
+        }
+    }
+
+    private void NavigateToCampaign(Guid campaignId)
+    {
+        NavigationManager.NavigateTo($"/email-campaign/{campaignId}");
+    }
+
+    private async Task OnTemplateSelected(EmailTemplate? template)
+    {
+        SelectedTemplate = template;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnSchoolAudienceSelected(string? audienceId)
+    {
+        SelectedSchoolAudienceId = audienceId;
+        await InvokeAsync(StateHasChanged);
     }
 }

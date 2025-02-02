@@ -71,6 +71,22 @@ namespace Lisa.Services
         }
 
         /// <summary>
+        /// Sends communication to a single learners in a selected school.
+        /// </summary>
+        public async Task<EmailCampaign?> SendToLearnerAsync(School selectedSchool, EmailTemplate template, Learner learner)
+        {
+            var request = new CommunicationRequest
+            {
+                SchoolId = selectedSchool.Id,
+                Audience = Audience.Learners,
+                TemplateId = template.Id,
+                // Additional parameters as needed
+            };
+
+            return await SendCommunicationAsync(request);
+        }
+
+        /// <summary>
         /// Sends communication to all learners in a selected school.
         /// </summary>
         public async Task<EmailCampaign?> SendToAllLearnersAsync(School selectedSchool, EmailTemplate template)

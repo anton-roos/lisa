@@ -2,17 +2,26 @@
 @using Lisa.Models.Entities
 @inject CareGroupService CareGroupService
 
-@if (CareGroup == null)
-{
-    <p>Loading care group...</p>
-}
-else
-{
-    <dl class="row">
-        <dt class="col-sm-2">Name</dt>
-        <dd class="col-sm-10">@CareGroup.Name</dd>
-    </dl>
-}
+<PageTitle>Care Group Details</PageTitle>
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+    <Authorized>
+        <h3>Care Group Details</h3>
+        @if (CareGroup == null)
+        {
+            <p>Loading care group...</p>
+        }
+        else
+        {
+            <dl class="row">
+                <dt class="col-sm-2">Name</dt>
+                <dd class="col-sm-10">@CareGroup.Name</dd>
+            </dl>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     [Parameter]

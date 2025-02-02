@@ -1,11 +1,10 @@
 using System.ComponentModel.DataAnnotations;
-using Lisa.Data;
 
 namespace Lisa.Models.ViewModels;
 
-public class TeacherViewModel
+public class UserViewModel
 {
-    public Guid Id { get; set; }
+    public Guid? Id { get; set; }
 
     [Required(AllowEmptyStrings = false, ErrorMessage = "Surname is required")]
     public string Surname { get; set; } = string.Empty;
@@ -21,9 +20,7 @@ public class TeacherViewModel
     public string Email { get; set; } = string.Empty;
 
     [Required(AllowEmptyStrings = false, ErrorMessage = "Password is required")]
-    public string? Password { get; set; }
-
-    public List<string> SelectedRoles { get; set; } = [Roles.Teacher];
-
+    public string Password { get; set; } = string.Empty;
     public Guid? SchoolId { get; set; }
+    public List<string> SelectedRoles { get; set; } = [];
 }

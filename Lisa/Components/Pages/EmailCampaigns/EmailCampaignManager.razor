@@ -1,52 +1,57 @@
 @page "/email-campaign/{Id:guid}"
 @using Lisa.Models.Entities
 @inject EmailCampaignService EmailCampaignService
-@inject NavigationManager NavigationManager
 
 <PageTitle>Email Campaign</PageTitle>
-
-@if (isLoading)
-{
-    <p>Loading campaign details...</p>
-}
-else if (Campaign == null)
-{
-    <div class="alert alert-danger">Campaign not found.</div>
-}
-else
-{
-    <div class="card p-4 shadow-lg">
-        <h3>@Campaign.Name</h3>
-
-        <div class="progress my-3">
-            <div class="progress-bar" role="progressbar" style="width: @ProgressPercent%;" 
-                 aria-valuenow="@ProgressPercent" aria-valuemin="0" aria-valuemax="100">
-                @ProgressPercent%
-            </div>
-        </div>
-
-        <p>Sent @SentCount of @TotalRecipients emails...</p>
-
-        <div class="d-flex gap-3">
-            <button class="btn btn-success" @onclick="StartCampaign" disabled="@isProcessing">
-                <i class="bi bi-play-fill"></i> Start
-            </button>
-
-            <button class="btn btn-warning" @onclick="PauseCampaign" disabled="@isProcessing">
-                <i class="bi bi-pause-fill"></i> Pause
-            </button>
-
-            <button class="btn btn-danger" @onclick="StopCampaign" disabled="@isProcessing">
-                <i class="bi bi-x-circle-fill"></i> Cancel
-            </button>
-        </div>
-
-        @if (!string.IsNullOrEmpty(StatusMessage))
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+    <Authorized>
+        @if (isLoading)
         {
-            <div class="alert alert-info mt-3">@StatusMessage</div>
+            <p>Loading campaign details...</p>
         }
-    </div>
-}
+        else if (Campaign == null)
+        {
+            <div class="alert alert-danger">Campaign not found.</div>
+        }
+        else
+        {
+            <div class="card p-4 shadow-lg">
+                <h3>@Campaign.Name</h3>
+
+                <div class="progress my-3">
+                    <div class="progress-bar" role="progressbar" style="width: @ProgressPercent%;"
+                        aria-valuenow="@ProgressPercent" aria-valuemin="0" aria-valuemax="100">
+                        @ProgressPercent%
+                    </div>
+                </div>
+
+                <p>Sent @SentCount of @TotalRecipients emails...</p>
+
+                <div class="d-flex gap-3">
+                    <button class="btn btn-success" @onclick="StartCampaign" disabled="@isProcessing">
+                        <i class="bi bi-play-fill"></i> Start
+                    </button>
+
+                    <button class="btn btn-warning" @onclick="PauseCampaign" disabled="@isProcessing">
+                        <i class="bi bi-pause-fill"></i> Pause
+                    </button>
+
+                    <button class="btn btn-danger" @onclick="StopCampaign" disabled="@isProcessing">
+                        <i class="bi bi-x-circle-fill"></i> Cancel
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrEmpty(StatusMessage))
+                {
+                    <div class="alert alert-info mt-3">@StatusMessage</div>
+                }
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     [Parameter] public Guid Id { get; set; }

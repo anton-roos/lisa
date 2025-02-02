@@ -7,6 +7,7 @@ namespace Lisa.Models.Entities;
 public class User : IdentityUser<Guid>
 {
     public string? Surname { get; set; }
+    public string? Abbreviation { get; set; }
     public string? Name { get; set; }
     public Guid? SchoolId { get; set; }
     public School? School { get; set; }

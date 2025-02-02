@@ -9,83 +9,92 @@
 @inject SchoolService SchoolService
 @inject GradeService GradeService
 
-<h3>@(IsEdit ? "Edit Subject Combination" : "Add Subject Combination")</h3>
+<PageTitle>@(IsEdit ? "Edit Subject Combination" : "Add Subject Combination")</PageTitle>
+<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+    <Authorized>
+        <h3>@(IsEdit ? "Edit Subject Combination" : "Add Subject Combination")</h3>
 
-<EditForm Context="edit" Model="@CombinationModel" OnValidSubmit="HandleValidSubmit">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+        <EditForm Context="edit" Model="@CombinationModel" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
 
-    <div class="mb-3">
-        <label class="form-label">Name</label>
-        <InputText class="form-control" @bind-Value="CombinationModel.Name" />
-    </div>
+            <div class="mb-3">
+                <label class="form-label">Name</label>
+                <InputText class="form-control" @bind-Value="CombinationModel.Name" />
+            </div>
 
-    <div class="mb-3">
-        <label class="form-label">Grade</label>
-        <select class="form-select" @bind="CombinationModel.GradeId">
-            <option value="">-- Select Grade --</option>
-            @foreach (var grade in Grades)
-            {
-                <option value="@grade.Id">@grade.Name</option>
-            }
-        </select>
-    </div>
+            <div class="mb-3">
+                <label class="form-label">Grade</label>
+                <select class="form-select" @bind="CombinationModel.GradeId">
+                    <option value="">-- Select Grade --</option>
+                    @foreach (var grade in Grades)
+                    {
+                        <option value="@grade.Id">@grade.Name</option>
+                    }
+                </select>
+            </div>
 
-    <div class="mb-3">
-        <label for="RegisterClassId">Register Class</label>
-        <InputSelect id="RegisterClassId" class="form-control" @bind-Value="CombinationModel.CombinationType"
-            TValue="CombinationType" @oninput="OnCombinationTypeChanged">
-            <option value="">Select Register Class</option>
-            @foreach (var type in Enum.GetValues(typeof(CombinationType)))
-            {
-                <option value="@type">@type</option>
-            }
-        </InputSelect>
-    </div>
+            <div class="mb-3">
+                <label for="RegisterClassId">Register Class</label>
+                <InputSelect id="RegisterClassId" class="form-control" @bind-Value="CombinationModel.CombinationType"
+                    TValue="CombinationType" @oninput="OnCombinationTypeChanged">
+                    <option value="">Select Register Class</option>
+                    @foreach (var type in Enum.GetValues(typeof(CombinationType)))
+                    {
+                        <option value="@type">@type</option>
+                    }
+                </InputSelect>
+            </div>
 
-    <div class="mb-3">
-        <label class="form-label">Search Subjects</label>
-        <InputText class="form-control" @oninput="OnInputChange" @bind-Value="searchText"
-            placeholder="Type to filter subjects..." />
-    </div>
+            <div class="mb-3">
+                <label class="form-label">Search Subjects</label>
+                <InputText class="form-control" @oninput="OnInputChange" @bind-Value="searchText"
+                    placeholder="Type to filter subjects..." />
+            </div>
 
-    <div class="mb-3">
-        <label class="form-label">Subjects</label>
+            <div class="mb-3">
+                <label class="form-label">Subjects</label>
 
-        @if (FilteredSubjects.Any())
-        {
-            @foreach (var subject in FilteredSubjects)
-            {
-                bool isChecked = SelectedSubjectIds.Contains(subject.Id);
-                bool isDisabled = (CombinationModel.CombinationType == CombinationType.MathCombination)
-                && !isChecked
-                && (SelectedSubjectIds.Count >= 2);
+                @if (FilteredSubjects.Any())
+                {
+                    @foreach (var subject in FilteredSubjects)
+                    {
+                        bool isChecked = SelectedSubjectIds.Contains(subject.Id);
+                        bool isDisabled = (CombinationModel.CombinationType == CombinationType.MathCombination)
+                        && !isChecked
+                        && (SelectedSubjectIds.Count >= 2);
 
-                <div>
-                    <input type="checkbox" checked="@isChecked" disabled="@isDisabled"
-                        @onchange="@(() => ToggleSubject(subject.Id))" />
-                    <label>@subject.Name</label>
-                </div>
-            }
-        }
-        else
-        {
-            <div>No matching subjects found.</div>
-        }
+                        <div>
+                            <input type="checkbox" checked="@isChecked" disabled="@isDisabled"
+                                @onchange="@(() => ToggleSubject(subject.Id))" />
+                            <label>@subject.Name</label>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div>No matching subjects found.</div>
+                }
 
-        @if (CombinationModel.CombinationType == CombinationType.MathCombination && SelectedSubjectIds.Count != 2)
-        {
-            <small class="text-danger">Exactly 2 subjects required for a Math Combination.</small>
-        }
-        else if (CombinationModel.CombinationType == CombinationType.MathCombination)
-        {
-            <small class="text-success">2 subjects selected.</small>
-        }
-    </div>
+                @if (CombinationModel.CombinationType == CombinationType.MathCombination && SelectedSubjectIds.Count !=
+                2)
+                {
+                    <small class="text-danger">Exactly 2 subjects required for a Math Combination.</small>
+                }
+                else if (CombinationModel.CombinationType == CombinationType.MathCombination)
+                {
+                    <small class="text-success">2 subjects selected.</small>
+                }
+            </div>
 
-    <button type="submit" class="btn btn-primary" disabled="@(!IsFormValid)">Save</button>
-    <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
-</EditForm>
+            <button type="submit" class="btn btn-primary" disabled="@(!IsFormValid)">Save</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+        </EditForm>
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     [Parameter] public Guid? Id { get; set; }

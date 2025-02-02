@@ -5,71 +5,77 @@
 @using Blazored.TextEditor
 
 <PageTitle>@(IsEdit ? "Edit Email Template" : "Add Email Template")</PageTitle>
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+    <Authorized>
+        <h3>@(IsEdit ? "Edit Email Template" : "Add Email Template")</h3>
 
-<h3>@(IsEdit ? "Edit Email Template" : "Add Email Template")</h3>
+        @if (IsEdit && Template == null)
+        {
+            <p>Loading...</p>
+        }
+        else
+        {
+            <EditForm Model="@Template" OnValidSubmit="HandleSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
 
-@if (IsEdit && Template == null)
-{
-    <p>Loading...</p>
-}
-else
-{
-    <EditForm Model="@Template" OnValidSubmit="HandleSubmit">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
+                <div class="mb-3">
+                    <label class="form-label">Name</label>
+                    <InputText class="form-control" @bind-Value="Template.Name" />
+                </div>
 
-        <div class="mb-3">
-            <label class="form-label">Name</label>
-            <InputText class="form-control" @bind-Value="Template.Name" />
-        </div>
+                <div class="mb-3">
+                    <label class="form-label">Subject</label>
+                    <InputText class="form-control" @bind-Value="Template.Subject" />
+                </div>
 
-        <div class="mb-3">
-            <label class="form-label">Subject</label>
-            <InputText class="form-control" @bind-Value="Template.Subject" />
-        </div>
+                <div class="mb-3">
+                    <label class="form-label">Content</label>
+                    <BlazoredTextEditor @ref="@TextEditor">
+                        <ToolbarContent>
+                            <select class="ql-header">
+                                <option selected=""></option>
+                                <option value="1"></option>
+                                <option value="2"></option>
+                                <option value="3"></option>
+                                <option value="4"></option>
+                                <option value="5"></option>
+                            </select>
+                            <span class="ql-formats">
+                                <button class="ql-bold"></button>
+                                <button class="ql-italic"></button>
+                                <button class="ql-underline"></button>
+                                <button class="ql-strike"></button>
+                            </span>
+                            <span class="ql-formats">
+                                <select class="ql-color"></select>
+                                <select class="ql-background"></select>
+                            </span>
+                            <span class="ql-formats">
+                                <button class="ql-list" value="ordered"></button>
+                                <button class="ql-list" value="bullet"></button>
+                            </span>
+                            <span class="ql-formats">
+                                <button class="ql-link"></button>
+                            </span>
+                        </ToolbarContent>
+                    </BlazoredTextEditor>
+                </div>
 
-        <div class="mb-3">
-            <label class="form-label">Content</label>
-            <BlazoredTextEditor @ref="@TextEditor">
-                <ToolbarContent>
-                    <select class="ql-header">
-                        <option selected=""></option>
-                        <option value="1"></option>
-                        <option value="2"></option>
-                        <option value="3"></option>
-                        <option value="4"></option>
-                        <option value="5"></option>
-                    </select>
-                    <span class="ql-formats">
-                        <button class="ql-bold"></button>
-                        <button class="ql-italic"></button>
-                        <button class="ql-underline"></button>
-                        <button class="ql-strike"></button>
-                    </span>
-                    <span class="ql-formats">
-                        <select class="ql-color"></select>
-                        <select class="ql-background"></select>
-                    </span>
-                    <span class="ql-formats">
-                        <button class="ql-list" value="ordered"></button>
-                        <button class="ql-list" value="bullet"></button>
-                    </span>
-                    <span class="ql-formats">
-                        <button class="ql-link"></button>
-                    </span>
-                </ToolbarContent>
-            </BlazoredTextEditor>
-        </div>
+                <button type="submit" class="btn btn-success">@SaveButtonLabel</button>
+                <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+            </EditForm>
+        }
 
-        <button type="submit" class="btn btn-success">@SaveButtonLabel</button>
-        <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
-    </EditForm>
-}
-
-@if (SuccessMessage != null)
-{
-    <div class="alert alert-success mt-3">@SuccessMessage</div>
-}
+        @if (SuccessMessage != null)
+        {
+            <div class="alert alert-success mt-3">@SuccessMessage</div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     [Parameter]

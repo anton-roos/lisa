@@ -5,30 +5,36 @@
 @inject NavigationManager NavigationManager
 
 <PageTitle>Email Template Details</PageTitle>
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+    <Authorized>
+        <h3>Email Template Details</h3>
 
-<h3>Email Template Details</h3>
+        @if (Template == null)
+        {
+            <p>Loading...</p>
+        }
+        else
+        {
+            <dl class="row">
+                <dt class="col-sm-2">Name</dt>
+                <dd class="col-sm-10">@Template.Name</dd>
 
-@if (Template == null)
-{
-    <p>Loading...</p>
-}
-else
-{
-    <dl class="row">
-        <dt class="col-sm-2">Name</dt>
-        <dd class="col-sm-10">@Template.Name</dd>
+                <dt class="col-sm-2">Subject</dt>
+                <dd class="col-sm-10">@Template.Subject</dd>
 
-        <dt class="col-sm-2">Subject</dt>
-        <dd class="col-sm-10">@Template.Subject</dd>
+                <dt class="col-sm-2">Content</dt>
+                <dd class="col-sm-10">
+                    <div>@((MarkupString)Template.Content)</div>
+                </dd>
 
-        <dt class="col-sm-2">Content</dt>
-        <dd class="col-sm-10">
-            <div>@((MarkupString)Template.Content)</div>
-        </dd>
-
-        <button type="button" class="btn btn-secondary" @onclick="Back">Cancel</button>
-    </dl>
-}
+                <button type="button" class="btn btn-secondary" @onclick="Back">Cancel</button>
+            </dl>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     [Parameter]

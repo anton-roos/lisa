@@ -17,7 +17,8 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
     public DbSet<School> Schools { get; set; } = null!;
     public DbSet<SchoolType> SchoolTypes { get; set; } = null!;
     public DbSet<SchoolCurriculum> SchoolCurriculums { get; set; } = null!;
-    public DbSet<Grade> Grades { get; set; } = null!;
+    public DbSet<SchoolGrade> SchoolGrades { get; set; } = null!;
+    public DbSet<SystemGrade> SystemGrades { get; set; } = null!;
     public DbSet<Learner> Learners { get; set; } = null!;
     public DbSet<Parent> Parents { get; set; } = null!;
     public DbSet<RegisterClass> RegisterClasses { get; set; } = null!;
@@ -114,13 +115,13 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .WithOne()
             .HasForeignKey(l => l.CareGroupId);
 
-        modelBuilder.Entity<Grade>()
+        modelBuilder.Entity<SchoolGrade>()
             .HasKey(g => g.Id);
-        modelBuilder.Entity<Grade>()
+        modelBuilder.Entity<SchoolGrade>()
             .HasIndex(g => g.SchoolId);
-        modelBuilder.Entity<Grade>()
+        modelBuilder.Entity<SchoolGrade>()
             .HasOne(g => g.School)
-            .WithMany(s => s.Grades)
+            .WithMany(s => s.SchoolGrades)
             .HasForeignKey(g => g.SchoolId)
             .OnDelete(DeleteBehavior.Cascade);
 
@@ -179,18 +180,18 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .WithMany(l => l.LearnerSubjects)
             .HasForeignKey(ls => ls.LearnerId)
             .OnDelete(DeleteBehavior.Cascade);
-        modelBuilder.Entity<LearnerSubject>()
-            .HasOne(ls => ls.Subject)
-            .WithMany(s => s.LearnerSubjects)
-            .HasForeignKey(ls => ls.SubjectId)
-            .OnDelete(DeleteBehavior.Cascade);
+        // modelBuilder.Entity<LearnerSubject>()
+        //     .HasOne(ls => ls.Subject)
+        //     .WithMany(s => s.LearnerSubjects)
+        //     .HasForeignKey(ls => ls.SubjectId)
+        //     .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<RegisterClass>()
             .HasKey(rc => rc.Id);
         modelBuilder.Entity<RegisterClass>()
             .HasIndex(rc => rc.GradeId);
         modelBuilder.Entity<RegisterClass>()
-            .HasOne(rc => rc.Grade)
+            .HasOne(rc => rc.SchoolGrade)
             .WithMany(g => g.RegisterClasses)
             .HasForeignKey(rc => rc.GradeId)
             .OnDelete(DeleteBehavior.Cascade);
@@ -218,13 +219,14 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
         modelBuilder.Entity<Combination>()
             .HasKey(sc => sc.Id);
         modelBuilder.Entity<Combination>()
-            .HasOne(sc => sc.Grade)
+            .HasOne(sc => sc.SchoolGrade)
             .WithMany(g => g.Combinations)
             .HasForeignKey(sc => sc.GradeId)
             .OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<Combination>()
             .HasMany(c => c.Subjects)
-            .WithMany(s => s.Combinations)
+            //.WithMany(s => s.Combinations)
+            .WithMany()
             .UsingEntity<Dictionary<string, object>>(
                 "CombinationSubject",
                 j => j.HasOne<Subject>()
@@ -267,7 +269,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .HasForeignKey(p => p.SubjectId)
             .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<Period>()
-            .HasOne(p => p.Grade)
+            .HasOne(p => p.SchoolGrade)
             .WithMany()
             .HasForeignKey(p => p.GradeId)
             .OnDelete(DeleteBehavior.Restrict);

@@ -1,0 +1,107 @@
+@page "/grades/manage/{Id:guid?}"
+@inject SchoolService SchoolService
+@inject GradeService GradeService
+@inject NavigationManager Navigation
+@inject ILogger<GradeManager> Logger
+@using Lisa.Models.Entities
+@using Lisa.Models.ViewModels
+@using Microsoft.AspNetCore.Components.Forms
+
+<h3>@(IsEdit ? "Edit Grade" : $"Add Grade for {SelectedSchool?.ShortName}")</h3>
+
+@if (!IsEdit && SelectedSchool is null)
+{
+    <div class="alert alert-warning">
+        No school selected. Please select a school first.
+    </div>
+}
+else if (GradeModel is null)
+{
+    <p>Loading grade...</p>
+}
+else
+{
+    <EditForm Model="@GradeModel" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">Grade Name</label>
+            <InputText class="form-control" @bind-Value="GradeModel.Name" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private GradeViewModel? GradeModel = new();
+    private School? SelectedSchool;
+    private bool IsEdit => Id.HasValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SelectedSchool = SchoolService.GetSelectedSchool();
+
+        if (IsEdit && Id.HasValue)
+        {
+            var existingGrade = await GradeService.GetByIdAsync(Id.Value);
+            if (existingGrade != null)
+            {
+                GradeModel = new GradeViewModel
+                    {
+                        Name = existingGrade.Name,
+                        SequenceNumber = existingGrade.SequenceNumber
+                    };
+            }
+        }
+        else
+        {
+            if (SelectedSchool == null)
+            {
+                GradeModel = null; // Prevent form from rendering when no school is selected.
+                return;
+            }
+
+            GradeModel = new GradeViewModel();
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (GradeModel == null || (IsEdit && !Id.HasValue)) return;
+
+        if (IsEdit)
+        {
+            var grade = await GradeService.GetByIdAsync(Id.Value);
+            if (grade == null) return;
+
+            grade.Name = GradeModel.Name;
+            grade.SequenceNumber = GradeModel.SequenceNumber;
+            await GradeService.UpdateGradeAsync(grade);
+        }
+        else
+        {
+            if (SelectedSchool == null) return;
+
+            var newGrade = new Grade
+                {
+                    Name = GradeModel.Name,
+                    SequenceNumber = GradeModel.SequenceNumber,
+                    SchoolId = SelectedSchool.Id
+                };
+
+            await GradeService.CreateGradeAsync(newGrade);
+        }
+
+        Navigation.NavigateTo("/grades");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/grades");
+    }
+}

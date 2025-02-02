@@ -105,6 +105,7 @@ public class DatabaseSeed
                 UserName = DefaultAdminEmail,
                 Email = DefaultAdminEmail,
                 Surname = "System",
+                Abbreviation = "SA",
                 Name = "Admin",
             };
 
@@ -160,6 +161,33 @@ public class DatabaseSeed
         }
     }
 
+    private static async Task SeedSytemGrades(LisaDbContext dbContext, ILogger logger)
+    {
+        if (!await dbContext.SystemGrades.AnyAsync())
+        {
+            await dbContext.SystemGrades.AddRangeAsync([
+                new SystemGrade { SequenceNumber = -2, Name = "Gr RRR"},
+                new SystemGrade { SequenceNumber = -1, Name = "Gr RR"},
+                new SystemGrade { SequenceNumber = -0, Name = "Gr R"},
+                new SystemGrade { SequenceNumber = 1, Name = "Gr 1"},
+                new SystemGrade { SequenceNumber = 2, Name = "Gr 2"},
+                new SystemGrade { SequenceNumber = 3, Name = "Gr 3"},
+                new SystemGrade { SequenceNumber = 4, Name = "Gr 4"},
+                new SystemGrade { SequenceNumber = 5, Name = "Gr 5"},
+                new SystemGrade { SequenceNumber = 6, Name = "Gr 6"},
+                new SystemGrade { SequenceNumber = 7, Name = "Gr 7"},
+                new SystemGrade { SequenceNumber = 8, Name = "Gr 8"},
+                new SystemGrade { SequenceNumber = 9, Name = "Gr 9"},
+                new SystemGrade { SequenceNumber = 10, Name = "Gr 10"},
+                new SystemGrade { SequenceNumber = 11, Name = "Gr 11"},
+                new SystemGrade { SequenceNumber = 12, Name = "Gr 12"},
+            ]);
+            await dbContext.SaveChangesAsync();
+            logger.LogInformation("Seeded System Grades.");
+        }
+    }
+
+
     /// <summary>
     /// Seeds school subjects.
     /// </summary>
@@ -172,6 +200,7 @@ public class DatabaseSeed
                 new Subject {
                     Id = 1,
                     Name = "English HL (RRR - 12)",
+                    GradesApplicable = [-2,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
                     Code = "Eng HL",
                     Description = "English Home Language",
                     Order = 1,
@@ -181,6 +210,7 @@ public class DatabaseSeed
                 new Subject {
                     Id = 2,
                     Name = "Afrikaans FAL (RRR - 12)",
+                    GradesApplicable = [-2,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
                     Code = "Afr FAL",
                     Description = "Afrikaans First Additional Language",
                     Order = 2,
@@ -190,6 +220,7 @@ public class DatabaseSeed
                 new Subject {
                     Id = 3,
                     Name = "Life Skills (RRR - 6)",
+                    GradesApplicable = [-2,-1, 0, 1, 2, 3, 4, 5, 6],
                     Code = "LSK",
                     Description = "Life Skills",
                     Order = 3,
@@ -199,6 +230,7 @@ public class DatabaseSeed
                 new Subject {
                     Id = 4,
                     Name = "Life Orientation (7 - 12)",
+                    GradesApplicable = [7, 8, 9, 10, 11, 12],
                     Code = "LO",
                     Description = "Life Orientation",
                     Order = 4,
@@ -208,6 +240,7 @@ public class DatabaseSeed
                 new Subject {
                     Id = 5,
                     Name = "Mathematics (RRR - 9)",
+                    GradesApplicable = [-2,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
                     Code = "MATF",
                     Description = "Mathematics",
                     Order = 5,
@@ -217,6 +250,7 @@ public class DatabaseSeed
                 new Subject {
                     Id = 6,
                     Name = "Mathematics (10 - 12)",
+                    GradesApplicable = [10, 11, 12],
                     Code = "MATH",
                     Description = "Mathematics",
                     Order = 6,
@@ -226,6 +260,7 @@ public class DatabaseSeed
                 new Subject {
                     Id = 7,
                     Name = "Mathematical Literacy (10 - 12)",
+                    GradesApplicable = [10, 11, 12],
                     Code = "MATL",
                     Description = "Mathematical Literacy",
                     Order = 7,
@@ -235,6 +270,7 @@ public class DatabaseSeed
                 new Subject {
                     Id = 8,
                     Name = "Natural Sciences (4 - 9)",
+                    GradesApplicable = [4, 5, 6, 7, 8, 9],
                     Code = "NS",
                     Description = "Natural Sciences",
                     Order = 8,
@@ -244,6 +280,7 @@ public class DatabaseSeed
                 new Subject {
                     Id = 9,
                     Name = "Physical Sciences (10 - 12)",
+                    GradesApplicable = [10, 11, 12],
                     Code = "PS",
                     Description = "Physical Sciences",
                     Order = 9,
@@ -253,6 +290,7 @@ public class DatabaseSeed
                 new Subject {
                     Id = 10,
                     Name = "Life Sciences (10 - 12)",
+                    GradesApplicable = [10, 11, 12],
                     Code = "LSC",
                     Description = "Life Sciences",
                     Order = 10,
@@ -261,8 +299,19 @@ public class DatabaseSeed
 
                 new Subject {
                     Id = 11,
-                    Name = "EMS Business (8 - 9)",
-                    Code = "EMS BS",
+                    Name = "Economic and Management Sciences",
+                    GradesApplicable = [7],
+                    Code = "EMS",
+                    Description = "Economic and Management Sciences",
+                    Order = 11,
+                    SubjectType = SubjectType.Compulsory
+                },
+
+                new Subject {
+                    Id = 11,
+                    Name = "EMS - Business",
+                    GradesApplicable = [8, 9],
+                    Code = "EMSBS",
                     Description = "Economic and Management Sciences - Business",
                     Order = 11,
                     SubjectType = SubjectType.Compulsory
@@ -270,8 +319,9 @@ public class DatabaseSeed
 
                 new Subject {
                     Id = 12,
-                    Name = "EMS Accounting (8 - 9)",
-                    Code = "EMS AC",
+                    Name = "EMS - Accounting",
+                    GradesApplicable = [8, 9],
+                    Code = "EMSAC",
                     Description = "Economic and Management Sciences - Accounting",
                     Order = 12,
                     SubjectType = SubjectType.Compulsory
@@ -279,7 +329,8 @@ public class DatabaseSeed
 
                 new Subject {
                     Id = 13,
-                    Name = "Business Studies (10 - 12)",
+                    Name = "Business Studies",
+                    GradesApplicable = [10, 11, 12],
                     Code = "BUS",
                     Description = "Business Studies",
                     Order = 13,
@@ -288,7 +339,8 @@ public class DatabaseSeed
 
                 new Subject {
                     Id = 14,
-                    Name = "Accounting (10 - 12)",
+                    Name = "Accounting",
+                    GradesApplicable = [10, 11, 12],
                     Code = "ACC",
                     Description = "Accounting",
                     Order = 14,

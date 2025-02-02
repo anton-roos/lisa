@@ -5,9 +5,11 @@
 @inject SchoolService SchoolService
 @inherits EventAwareComponentBase
 
+<PageTitle>Care Groups</PageTitle>
 <AuthorizeView Roles="@Roles.SystemAdministrator">
     <Authorized>
-        <PageTitle>Care Groups</PageTitle>
+        <h3>Care Groups</h3>
+
         @if (SelectedSchool == null)
         {
             <div class="alert alert-info">
@@ -92,12 +94,12 @@
 
     private void AddCareGroup()
     {
-        Navigation.NavigateTo("/care-groups/add");
+        Navigation.NavigateTo("/care-groups/manage");
     }
 
     private void EditCareGroup(CareGroup careGroup)
     {
-        Navigation.NavigateTo($"/care-groups/edit/{careGroup.Id}");
+        Navigation.NavigateTo($"/care-groups/manage/{careGroup.Id}");
     }
     private void ViewCareGroup(CareGroup careGroup)
     {

@@ -14,7 +14,7 @@ public class School
     public Guid SchoolCurriculumId { get; set; }
     public SchoolType? SchoolType { get; set; }
     public SchoolCurriculum? Curriculum { get; set; }
-    public ICollection<Grade>? Grades { get; set; }
+    public ICollection<SchoolGrade>? SchoolGrades { get; set; }
     public ICollection<RegisterClass>? RegisterClasses { get; set; }
     public ICollection<Teacher>? Teachers { get; set; }
     public ICollection<Principal>? Principals { get; set; }

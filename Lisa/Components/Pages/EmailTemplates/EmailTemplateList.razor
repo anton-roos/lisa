@@ -3,69 +3,73 @@
 @inject EmailTemplateService EmailTemplateService
 @inject NavigationManager NavigationManager
 
-<h3>Email Templates</h3>
 
-<button class="btn btn-primary mb-3" @onclick="CreateNewTemplate">Create New Template</button>
+<PageTitle>Email Template Details</PageTitle>
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+    <Authorized>
+        <h3>Email Templates</h3>
 
-@if (emailTemplates == null)
-{
-    <p><em>Loading templates...</em></p>
-}
-else if (!emailTemplates.Any())
-{
-    <p>No email templates found.</p>
-}
-else
-{
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Subject</th>
-                <th>Created At</th>
-                <th>Updated At</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var template in emailTemplates)
-            {
-                <tr>
-                    <td>@template.Name</td>
-                    <td>@template.Subject</td>
-                    <td>@template.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
-                    <td>@template.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</td>
-                    <ActionButtons
-                        TEntity="EmailTemplate"
-                        Entity="template"
-                        OnView="ViewTemplate"
-                        OnEdit="EditTemplate"
-                        OnDelete="ConfirmDelete"
-                    />
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+        <button class="btn btn-primary mb-3" @onclick="CreateNewTemplate">Create New Template</button>
 
-<div class="modal-backdrop fade show" style="display: @(showModal ? "block" : "none");"></div>
-<div class="modal" tabindex="-1" style="display: @(showModal ? "block" : "none"); z-index: 1050; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Delete</h5>
-                <button type="button" class="btn-close" @onclick="CloseModal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete the template <strong>@selectedTemplate?.Name</strong>?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
-                <button type="button" class="btn btn-danger" @onclick="DeleteConfirmed">Delete</button>
+        @if (emailTemplates == null)
+        {
+            <p><em>Loading templates...</em></p>
+        }
+        else if (!emailTemplates.Any())
+        {
+            <p>No email templates found.</p>
+        }
+        else
+        {
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Subject</th>
+                        <th>Created At</th>
+                        <th>Updated At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var template in emailTemplates)
+                    {
+                        <tr>
+                            <td>@template.Name</td>
+                            <td>@template.Subject</td>
+                            <td>@template.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@template.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            <ActionButtons TEntity="EmailTemplate" Entity="template" OnView="ViewTemplate" OnEdit="EditTemplate"
+                                OnDelete="ConfirmDelete" />
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        <div class="modal-backdrop fade show" style="display: @(showModal ? "block" : "none");"></div>
+        <div class="modal" tabindex="-1"
+            style="display: @(showModal ? "block" : "none"); z-index: 1050; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirm Delete</h5>
+                        <button type="button" class="btn-close" @onclick="CloseModal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete the template <strong>@selectedTemplate?.Name</strong>?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                        <button type="button" class="btn btn-danger" @onclick="DeleteConfirmed">Delete</button>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
 
 
 @code {

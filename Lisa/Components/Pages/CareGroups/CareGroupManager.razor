@@ -1,0 +1,93 @@
+@page "/care-groups/manage/{Id:guid?}"
+@inject SchoolService SchoolService
+@inject CareGroupService CareGroupService
+@inject NavigationManager Navigation
+@inject ILogger<CareGroupManager> Logger
+@using Lisa.Models.Entities
+@using Lisa.Models.ViewModels
+@using Microsoft.AspNetCore.Components.Forms
+
+<PageTitle>@(IsEdit ? "Edit Care Group" : "Add Care Group")</PageTitle>
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+    <Authorized>
+        <h3>@(IsEdit ? "Edit Care Group" : $"Add Care Group for {SelectedSchool?.ShortName}")</h3>
+
+        @if (!IsEdit && SelectedSchool is null)
+        {
+            <div class="alert alert-info">
+                Please select a school to add care groups.
+            </div>
+        }
+        else if (CareGroup is null)
+        {
+            <p>Loading care group...</p>
+        }
+        else
+        {
+            <EditForm Model="@CareGroup" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label class="form-label">Care Group Name</label>
+                    <InputText class="form-control" @bind-Value="CareGroup.Name" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+            </EditForm>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private CareGroup CareGroup { get; set; } = new();
+    private School? SelectedSchool;
+    private bool IsEdit => Id.HasValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SelectedSchool = SchoolService.GetSelectedSchool();
+
+        if (IsEdit)
+        {
+            CareGroup = await CareGroupService.GetByIdAsync(Id.Value) ?? new();
+        }
+        else
+        {
+            if (SelectedSchool == null)
+            {
+                CareGroup = null;
+                return;
+            }
+
+            CareGroup = new CareGroup { SchoolId = SelectedSchool.Id };
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (CareGroup == null) return;
+
+        if (IsEdit)
+        {
+            await CareGroupService.UpdateAsync(CareGroup);
+            Navigation.NavigateTo($"/care-groups/view/{CareGroup.Id}");
+        }
+        else
+        {
+            await CareGroupService.CreateAsync(CareGroup);
+            Navigation.NavigateTo("/care-groups");
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/care-groups");
+    }
+}

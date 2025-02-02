@@ -18,7 +18,11 @@
 
     <div class="form-group">
         <label for="color">Color</label>
-        <input type="color" id="color" class="form-control form-control-color" @bind="School.Color" />
+        <div style="display: flex;">
+            <div style="background-color: @School.Color; height: 30px; width: 30px; border-radius: 5px; margin-right: 5px;
+            margin-top: 2px;"></div>
+            <InputText id="color" class="form-control" @bind-Value="School.Color" />
+        </div>
     </div>
 
     <div class="form-group">

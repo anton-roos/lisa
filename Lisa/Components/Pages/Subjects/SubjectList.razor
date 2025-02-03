@@ -30,8 +30,9 @@
             <div class="list-group">
                 @foreach (var subject in FilteredSubjects)
                 {
-                    <div class="row align-items-center subject-row" @ondragover:preventDefault="true"
-                        @ondrop="(e) => OnDrop(e, subject)">
+
+                    <div class="row subject-row" @ondragover="OnDragOver" @ondragover:preventDefault="true"
+                        @ondrop="(e) => OnDrop(e, subject)" @ondrop:preventDefault="true">
                         <div class="col-md-3 col-12 mb-2 mb-md-0">
                             <strong>@subject.Name</strong>
                         </div>
@@ -52,16 +53,6 @@
                                 <button class="btn btn-sm btn-secondary me-2 drag-handle" draggable="true"
                                     @ondragstart="(e) => OnDragStart(e, subject)">
                                     <i class="bi bi-grip-vertical"></i>
-                                </button>
-
-                                <button class="btn btn-sm btn-light me-1" @onclick="() => MoveUp(subject)" title="Move Up"
-                                    disabled="@(subjects.First() == subject)">
-                                    <i class="bi bi-arrow-up"></i>
-                                </button>
-
-                                <button class="btn btn-sm btn-light me-3" @onclick="() => MoveDown(subject)" title="Move Down"
-                                    disabled="@(subjects.Last() == subject)">
-                                    <i class="bi bi-arrow-down"></i>
                                 </button>
                             }
 
@@ -94,9 +85,9 @@
     ? subjects
     .Where(s =>
     string.IsNullOrWhiteSpace(searchText)
-    || (s.Name != null && s.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-    || (s.Code != null && s.Code.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-    || (s.Description != null && s.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+    || (s.Name ?? "").Contains(searchText, StringComparison.OrdinalIgnoreCase)
+    || (s.Code ?? "").Contains(searchText, StringComparison.OrdinalIgnoreCase)
+    || (s.Description ?? "").Contains(searchText, StringComparison.OrdinalIgnoreCase)
     )
     .OrderBy(s => s.Order)
     : Enumerable.Empty<Subject>();
@@ -180,35 +171,22 @@
         _ => grade.ToString()
     };
 
-    private async Task MoveUp(Subject subject)
-    {
-        int index = subjects.IndexOf(subject);
-        if (index > 0)
-        {
-            SwapOrder(index, index - 1);
-            await SaveOrderChanges();
-        }
-    }
-
-    private async Task MoveDown(Subject subject)
-    {
-        int index = subjects.IndexOf(subject);
-        if (index < subjects.Count - 1)
-        {
-            SwapOrder(index, index + 1);
-            await SaveOrderChanges();
-        }
-    }
-
     private void SwapOrder(int currentIndex, int newIndex)
     {
-        (subjects[currentIndex].Order, subjects[newIndex].Order) = (subjects[newIndex].Order, subjects[currentIndex].Order);
+        (subjects[currentIndex].Order, subjects[newIndex].Order)
+        = (subjects[newIndex].Order, subjects[currentIndex].Order);
         subjects = subjects.OrderBy(s => s.Order).ToList();
     }
 
     private void OnDragStart(DragEventArgs e, Subject subject)
     {
         draggedSubject = subject;
+    }
+
+    private void OnDragOver(DragEventArgs e)
+    {
+        if (e.DataTransfer != null)
+            e.DataTransfer.DropEffect = "move";
     }
 
     private async Task OnDrop(DragEventArgs e, Subject targetSubject)

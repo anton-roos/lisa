@@ -206,5 +206,15 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             return false;
         }
     }
+
+    public async Task UpdateOrderAsync(List<Subject> subjects)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        foreach (var subject in subjects)
+        {
+            context.Subjects.Update(subject);
+        }
+        await context.SaveChangesAsync();
+    }
 }
 

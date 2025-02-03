@@ -9,10 +9,6 @@
 
         <button class="btn btn-primary mb-3" @onclick="AddSubject">Add Subject</button>
 
-        <div class="alert alert-info" role="alert">
-            Subjects are shared across schools.
-        </div>
-
         <div class="mb-3">
             <label class="form-label">Search Subjects</label>
             <InputText class="form-control" @bind-Value="searchText" @oninput="OnInputChange"
@@ -34,28 +30,44 @@
             <div class="list-group">
                 @foreach (var subject in FilteredSubjects)
                 {
-                    <div class="list-group-item">
-                        <div class="row align-items-center">
-                            <div class="col-md-3 col-12 mb-2 mb-md-0">
-                                <strong>@subject.Name</strong>
+                    <div class="row align-items-center">
+                        <div class="col-md-3 col-12 mb-2 mb-md-0">
+                            <strong>@subject.Name</strong>
+                        </div>
+                        <div class="col-md-2 col-12 mb-2 mb-md-0">
+                            @subject.Code
+                        </div>
+                        <div class="col-md-2 col-12 mb-2 mb-md-0">
+                            <div class="d-flex flex-wrap gap-2">
+                                <Pill Color="info">@GetFirstAndLastGrade(subject)</Pill>
+                                <Pill Color="@GetPillColorForSubjectType(subject.SubjectType)">
+                                    @GetPillTextForSubjectType(subject.SubjectType)
+                                </Pill>
                             </div>
-                            <div class="col-md-2 col-12 mb-2 mb-md-0">
-                                @subject.Code
-                            </div>
-                            <div class="col-md-2 col-12 mb-2 mb-md-0">
-                                <div class="d-flex flex-wrap gap-2">
-                                    <Pill Color="info">
-                                        @GetFirstAndLastGrade(subject)
-                                    </Pill>
-                                    <Pill Color="@GetPillColorForSubjectType(subject.SubjectType)">
-                                        @GetPillTextForSubjectType(subject.SubjectType)
-                                    </Pill>
-                                </div>
-                            </div>
-                            <div class="col-md-4 col-12 d-flex justify-content-md-end justify-content-start">
-                                <ActionButtons TEntity="Subject" Entity="subject" OnView="ViewSubject" OnEdit="EditSubject"
-                                    OnDelete="DeleteSubject" />
-                            </div>
+                        </div>
+                        <div class="col-md-4 col-12 d-flex justify-content-md-end justify-content-start">
+                            @if (string.IsNullOrWhiteSpace(searchText))
+                            {
+                                <button class="btn btn-sm btn-secondary me-2 drag-handle" draggable="true"
+                                    @ondragstart="() => OnDragStart(subject)" @ondragover:preventDefault="true"
+                                    @ondrop="() => OnDrop(subject)">
+
+                                    <i class="bi bi-grip-vertical"></i>
+                                </button>
+
+                                <button class="btn btn-sm btn-light me-1" @onclick="() => MoveUp(subject)" title="Move Up"
+                                    disabled="@(subjects.First() == subject)">
+                                    <i class="bi bi-arrow-up"></i>
+                                </button>
+
+                                <button class="btn btn-sm btn-light me-3" @onclick="() => MoveDown(subject)" title="Move Down"
+                                    disabled="@(subjects.Last() == subject)">
+                                    <i class="bi bi-arrow-down"></i>
+                                </button>
+                            }
+
+                            <ActionButtons TEntity="Subject" Entity="subject" OnView="ViewSubject" OnEdit="EditSubject"
+                                OnDelete="DeleteSubject" />
                         </div>
                     </div>
                 }
@@ -70,11 +82,12 @@
 @code {
     private List<Subject>? subjects;
     private string searchText = string.Empty;
+    private Subject? draggedSubject;
 
     protected override async Task OnInitializedAsync()
     {
         subjects = await SubjectService.GetAllAsync();
-        subjects = subjects.OrderBy(s => s.Name).ToList();
+        subjects = subjects.OrderBy(s => s.Order).ToList();
     }
 
     private IEnumerable<Subject> FilteredSubjects
@@ -110,7 +123,7 @@
         {
             await SubjectService.DeleteAsync(subject.Id);
             subjects = await SubjectService.GetAllAsync();
-            subjects = subjects.OrderBy(s => s.Name).ToList();
+            subjects = subjects.OrderBy(s => s.Order).ToList();
         }
     }
 
@@ -141,12 +154,6 @@
         };
     }
 
-    /// <summary>
-    /// Returns a string displaying the first and last grade in the sequence.
-    /// If the first and last are the same, only a single value is returned.
-    /// </summary>
-    /// <param name="subject">The subject containing the applicable grades.</param>
-    /// <returns>A formatted string with the first and last grade, or an empty string if none exist.</returns>
     private string GetFirstAndLastGrade(Subject subject)
     {
         if (subject?.GradesApplicable == null || !subject.GradesApplicable.Any())
@@ -154,7 +161,6 @@
             return string.Empty;
         }
 
-        // Assume that GradesApplicable is already ordered.
         int firstGrade = subject.GradesApplicable.First();
         int lastGrade = subject.GradesApplicable.Last();
 
@@ -174,4 +180,56 @@
         0 => "R",
         _ => grade.ToString()
     };
+
+    private async Task MoveUp(Subject subject)
+    {
+        int index = subjects.IndexOf(subject);
+        if (index > 0)
+        {
+            SwapOrder(index, index - 1);
+            await SaveOrderChanges();
+        }
+    }
+
+    private async Task MoveDown(Subject subject)
+    {
+        int index = subjects.IndexOf(subject);
+        if (index < subjects.Count - 1)
+        {
+            SwapOrder(index, index + 1);
+            await SaveOrderChanges();
+        }
+    }
+
+    private void SwapOrder(int currentIndex, int newIndex)
+    {
+        (subjects[currentIndex].Order, subjects[newIndex].Order) = (subjects[newIndex].Order, subjects[currentIndex].Order);
+        subjects = subjects.OrderBy(s => s.Order).ToList();
+    }
+
+    private void OnDragStart(Subject subject)
+    {
+        draggedSubject = subject;
+    }
+
+    private async Task OnDrop(Subject targetSubject)
+    {
+        if (draggedSubject == null || draggedSubject == targetSubject)
+        {
+            return;
+        }
+
+        int draggedIndex = subjects.IndexOf(draggedSubject);
+        int targetIndex = subjects.IndexOf(targetSubject);
+
+        SwapOrder(draggedIndex, targetIndex);
+        await SaveOrderChanges();
+
+        draggedSubject = null;
+    }
+
+    private async Task SaveOrderChanges()
+    {
+        await SubjectService.UpdateOrderAsync(subjects);
+    }
 }

@@ -38,6 +38,24 @@
     <script src="@Assets["lib/chart/chartjs-plugin-datalabels.js"]"></script>
     <script src="@Assets["lib/chart/Sortable.js"]"></script>
     <script src="_content/Blazor.Bootstrap/blazor.bootstrap.js"></script>
+    <script>
+        document.addEventListener('dragstart', function (e) {
+            // Check if the event target has the 'drag-handle' class.
+            if (e.target && e.target.classList.contains('drag-handle')) {
+                // Find the closest parent with the 'subject-row' class.
+                var subjectRow = e.target.closest('.subject-row');
+                if (subjectRow) {
+                    // Get the bounding rectangle of the subject row.
+                    var rect = subjectRow.getBoundingClientRect();
+                    // Calculate the offset where the drag started relative to the subject row.
+                    var offsetX = e.clientX - rect.left;
+                    var offsetY = e.clientY - rect.top;
+                    // Set the drag image to be the entire subject row with the proper offset.
+                    e.dataTransfer.setDragImage(subjectRow, offsetX, offsetY);
+                }
+            }
+        });
+    </script>
 </body>
 
 </html>

@@ -30,7 +30,7 @@
             <div class="list-group">
                 @foreach (var subject in FilteredSubjects)
                 {
-                    <div class="row align-items-center">
+                    <div class="row align-items-center subject-row">
                         <div class="col-md-3 col-12 mb-2 mb-md-0">
                             <strong>@subject.Name</strong>
                         </div>
@@ -49,9 +49,8 @@
                             @if (string.IsNullOrWhiteSpace(searchText))
                             {
                                 <button class="btn btn-sm btn-secondary me-2 drag-handle" draggable="true"
-                                    @ondragstart="() => OnDragStart(subject)" @ondragover:preventDefault="true"
-                                    @ondrop="() => OnDrop(subject)">
-
+                                    @ondragstart="(e) => OnDragStart(e, subject)" @ondragover:preventDefault="true"
+                                    @ondrop="(e) => OnDrop(e, subject)">
                                     <i class="bi bi-grip-vertical"></i>
                                 </button>
 
@@ -207,12 +206,12 @@
         subjects = subjects.OrderBy(s => s.Order).ToList();
     }
 
-    private void OnDragStart(Subject subject)
+    private void OnDragStart(DragEventArgs e, Subject subject)
     {
         draggedSubject = subject;
     }
 
-    private async Task OnDrop(Subject targetSubject)
+    private async Task OnDrop(DragEventArgs e, Subject targetSubject)
     {
         if (draggedSubject == null || draggedSubject == targetSubject)
         {

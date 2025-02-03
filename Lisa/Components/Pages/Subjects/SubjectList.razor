@@ -7,15 +7,13 @@
     <Authorized>
         <h3>Subjects</h3>
 
-        <button class="btn btn-primary mb-3" @onclick="AddSubject">Add Subject</button>
-
-        <div class="mb-3">
-            <label class="form-label">Search Subjects</label>
-            <InputText class="form-control" @bind-Value="searchText" @oninput="OnInputChange"
-                placeholder="Type to filter subjects..." />
+        <div class="d-flex">
+            <button class="btn btn-primary mb-3 me-3" @onclick="AddSubject">Add Subject</button>
+            <div>
+                <InputText class="form-control" @bind-Value="searchText" @oninput="OnInputChange"
+                    placeholder="Type to filter subjects..." />
+            </div>
         </div>
-
-        <hr />
 
         @if (Subjects == null)
         {
@@ -157,7 +155,6 @@
         _ => grade.ToString()
     };
 
-
     private void OnDragStart(DragEventArgs e, Subject subject)
     {
         draggedSubject = subject;
@@ -176,11 +173,14 @@
             return;
         }
 
-        int draggedIndex = Subjects.IndexOf(draggedSubject);
-        int targetIndex = Subjects.IndexOf(targetSubject);
+        int oldIndex = Subjects.IndexOf(draggedSubject);
+        int newIndex = Subjects.IndexOf(targetSubject);
 
-        (Subjects[draggedIndex].Order, Subjects[targetIndex].Order) =
-        (Subjects[targetIndex].Order, Subjects[draggedIndex].Order);
+        if (oldIndex < newIndex) newIndex--;
+        if (newIndex < 0) newIndex = 0;
+
+        Subjects.RemoveAt(oldIndex);
+        Subjects.Insert(newIndex, draggedSubject);
 
         await SaveOrderChanges();
 
@@ -189,6 +189,11 @@
 
     private async Task SaveOrderChanges()
     {
+        for (int i = 0; i < Subjects.Count; i++)
+        {
+            Subjects[i].Order = i;
+        }
+
         await SubjectService.UpdateOrderAsync(Subjects);
         Subjects = await SubjectService.GetAllAsync();
         await InvokeAsync(StateHasChanged);

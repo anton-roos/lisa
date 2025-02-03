@@ -777,10 +777,6 @@ namespace Lisa.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
 
-                    b.PrimitiveCollection<List<string>>("Roles")
-                        .IsRequired()
-                        .HasColumnType("text[]");
-
                     b.Property<Guid?>("SchoolId")
                         .HasColumnType("uuid");
 

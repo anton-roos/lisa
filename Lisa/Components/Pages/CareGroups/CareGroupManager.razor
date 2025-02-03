@@ -77,7 +77,7 @@
         if (IsEdit)
         {
             await CareGroupService.UpdateAsync(CareGroup);
-            Navigation.NavigateTo($"/care-groups/view/{CareGroup.Id}");
+            Navigation.NavigateTo($"/care-groups/details/{CareGroup.Id}");
         }
         else
         {

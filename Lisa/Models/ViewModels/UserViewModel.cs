@@ -20,7 +20,8 @@ public class UserViewModel
     public string Email { get; set; } = string.Empty;
 
     [Required(AllowEmptyStrings = false, ErrorMessage = "Password is required")]
-    public string Password { get; set; } = string.Empty;
+    public string? Password { get; set; }
     public Guid? SchoolId { get; set; }
-    public List<string> SelectedRoles { get; set; } = [];
+    public List<string> Roles { get; set; } = new();
+    public List<string> SelectedRoles { get; set; } = new();
 }

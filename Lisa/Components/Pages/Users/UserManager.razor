@@ -16,47 +16,48 @@
             <DataAnnotationsValidator />
             <ValidationSummary />
 
-            <div class="form-group">
+            <div class="form-group mb-3">
                 <label for="surname">Surname</label>
                 <InputText id="surname" class="form-control" @bind-Value="User.Surname" />
             </div>
 
-            <div class="form-group">
+            <div class="form-group mb-3">
                 <label for="abbreviation">Abbreviation</label>
                 <InputText id="abbreviation" class="form-control" @bind-Value="User.Abbreviation" />
             </div>
 
-            <div class="form-group">
+            <div class="form-group mb-3">
                 <label for="name">Name</label>
                 <InputText id="name" class="form-control" @bind-Value="User.Name" />
             </div>
 
-            <div class="form-group">
+            <div class="form-group mb-3">
                 <label for="email">Email</label>
                 <InputText id="email" class="form-control" @bind-Value="User.Email" disabled="@(IsEdit)" />
             </div>
 
             @if (!IsEdit)
             {
-                <div class="form-group">
+                <div class="form-group mb-3">
                     <label for="password">Password</label>
                     <InputText id="password" type="password" class="form-control" @bind-Value="User.Password" />
                 </div>
             }
 
-            <div class="form-group">
+            <div class="form-group mb-3">
                 <label>Roles</label>
                 @foreach (var role in AvailableRoles)
                 {
-                    <div>
-                        <input type="checkbox" checked="@User.SelectedRoles.Contains(role)"
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="@($"role_{role}")"
+                            checked="@User.SelectedRoles.Contains(role)"
                             @onchange="(e) => ToggleRole(role, (bool)e.Value)" />
-                        @role
+                        <label class="form-check-label" for="@($"role_{role}")">@role</label>
                     </div>
                 }
             </div>
 
-            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="submit" class="btn btn-primary me-2">Save</button>
             <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
         </EditForm>
     </Authorized>
@@ -66,11 +67,20 @@
 </AuthorizeView>
 
 @code {
-    [Parameter] public Guid? UserId { get; set; }
+    [Parameter]
+    public Guid? UserId { get; set; }
 
     private UserViewModel User { get; set; } = new();
     private School? SelectedSchool;
-    private List<string> AvailableRoles = new() { Roles.Principal, Roles.Administrator, Roles.SchoolManagement };
+
+    private List<string> AvailableRoles = new()
+{
+Roles.Principal,
+Roles.Administrator,
+Roles.SchoolManagement,
+Roles.SystemAdministrator
+};
+
     private bool IsEdit => UserId.HasValue;
 
     protected override async Task OnInitializedAsync()
@@ -82,6 +92,8 @@
             var existingUser = await UserService.GetByIdAsync<User>(UserId.Value);
             if (existingUser != null)
             {
+                var currentRoles = await UserManagerService.GetRolesAsync(existingUser);
+
                 User = new UserViewModel
                     {
                         Id = existingUser.Id,
@@ -89,7 +101,7 @@
                         Abbreviation = existingUser.Abbreviation,
                         Name = existingUser.Name,
                         Email = existingUser.Email,
-                        SelectedRoles = (await UserManagerService.GetRolesAsync(existingUser)).ToList(),
+                        SelectedRoles = currentRoles.ToList(),
                         SchoolId = existingUser.SchoolId
                     };
             }
@@ -101,13 +113,12 @@
         if (isChecked)
         {
             if (!User.SelectedRoles.Contains(role))
-            {
                 User.SelectedRoles.Add(role);
-            }
         }
         else
         {
-            User.SelectedRoles.Remove(role);
+            if (User.SelectedRoles.Contains(role))
+                User.SelectedRoles.Remove(role);
         }
     }
 
@@ -123,11 +134,13 @@
             if (IsEdit)
             {
                 var existingUser = await UserManagerService.FindByIdAsync(User.Id.ToString());
-                if (existingUser == null) throw new Exception("User not found.");
+                if (existingUser == null)
+                    throw new Exception("User not found.");
 
                 existingUser.Surname = User.Surname;
                 existingUser.Abbreviation = User.Abbreviation;
                 existingUser.Name = User.Name;
+                existingUser.SchoolId = User.SchoolId.Value;
 
                 await UserManagerService.UpdateAsync(existingUser);
 
@@ -145,6 +158,7 @@
                 var newUser = new User
                     {
                         Surname = User.Surname,
+                        Abbreviation = User.Abbreviation,
                         Name = User.Name,
                         Email = User.Email,
                         UserName = User.Email,
@@ -152,7 +166,13 @@
                     };
 
                 var result = await UserManagerService.CreateAsync(newUser, User.Password);
-                if (result.Succeeded)
+                if (!result.Succeeded)
+                {
+                    var errorMessage = string.Join("; ", result.Errors.Select(e => e.Description));
+                    throw new Exception($"Failed to create user: {errorMessage}");
+                }
+
+                if (User.SelectedRoles.Any())
                 {
                     await UserManagerService.AddToRolesAsync(newUser, User.SelectedRoles);
                 }

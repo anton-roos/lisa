@@ -22,40 +22,56 @@
         {
             <p>Loading...</p>
         }
-        else if (Users.Count == 0)
-        {
-            <p>No users found for @SelectedSchool.ShortName.</p>
-        }
         else
         {
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Surname</th>
-                        <th>Abbreviation</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Roles</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var user in Users)
+            <div class="mb-3">
+                <label for="roleFilter" class="form-label">Filter by Role</label>
+                <select id="roleFilter" class="form-select" @onchange="OnRoleFilterChanged">
+                    <option value="">All Roles</option>
+                    @foreach (var role in AvailableRoles)
                     {
-                        <tr>
-                            <td>@user.Surname</td>
-                            <td>@user.Abbreviation</td>
-                            <td>@user.Name</td>
-                            <td>@user.Email</td>
-                            <td>@string.Join(", ", user.Roles)</td>
-                            <td>
-                                <button class="btn btn-secondary btn-sm" @onclick="() => EditUser(user.Id)">Edit</button>
-                                <button class="btn btn-danger btn-sm" @onclick="() => DeleteUser(user)">Delete</button>
-                            </td>
-                        </tr>
+                        <option value="@role">@role</option>
                     }
-                </tbody>
-            </table>
+                </select>
+            </div>
+
+            <hr />
+
+            @if (!FilteredUsers.Any())
+            {
+                <p>No users found for role: '@(string.IsNullOrEmpty(selectedRole) ? "All Roles" : selectedRole)'.</p>
+            }
+            else
+            {
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Surname</th>
+                            <th>Abbreviation</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Roles</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in FilteredUsers)
+                        {
+                            <tr>
+                                <td>@user.Surname</td>
+                                <td>@user.Abbreviation</td>
+                                <td>@user.Name</td>
+                                <td>@user.Email</td>
+                                <td>@string.Join(", ", user.Roles)</td>
+                                <td>
+                                    <button class="btn btn-secondary btn-sm" @onclick="() => EditUser(user.Id)">Edit</button>
+                                    <button class="btn btn-danger btn-sm" @onclick="() => DeleteUser(user)">Delete</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
         }
     </Authorized>
     <NotAuthorized>
@@ -66,6 +82,15 @@
 @code {
     private School? SelectedSchool;
     private List<User>? Users;
+
+    private string selectedRole = string.Empty;
+
+    private List<string> AvailableRoles = new List<string>()
+{
+Roles.Principal,
+Roles.Administrator,
+Roles.SchoolManagement
+};
 
     protected override async Task OnInitializedAsync()
     {
@@ -78,6 +103,22 @@
         }
     }
 
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        switch (eventName)
+        {
+            case UiEvents.SchoolSelected:
+                if (payload is School school)
+                {
+                    SelectedSchool = school;
+                    await LoadUsers();
+                }
+                break;
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
     private async Task LoadUsers()
     {
         if (SelectedSchool == null)
@@ -85,6 +126,27 @@
             throw new InvalidOperationException("No school selected.");
         }
         Users = await UserService.GetAllUsersBySchoolAsync(SelectedSchool.Id);
+    }
+
+    private IEnumerable<User> FilteredUsers
+    {
+        get
+        {
+            if (Users == null)
+                return Enumerable.Empty<User>();
+
+            if (string.IsNullOrWhiteSpace(selectedRole))
+            {
+                return Users.Where(u => !u.Roles.Contains(Roles.Teacher) && !u.Roles.Contains(Roles.SystemAdministrator));
+            }
+
+            return Users.Where(u => u.Roles.Contains(selectedRole));
+        }
+    }
+
+    private void OnRoleFilterChanged(ChangeEventArgs e)
+    {
+        selectedRole = e.Value?.ToString() ?? string.Empty;
     }
 
     private void GoToAddUser()
@@ -101,6 +163,6 @@
     {
         await UserService.DeleteAsync(user.Id);
         await LoadUsers();
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 }

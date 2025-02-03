@@ -1,5 +1,6 @@
 using Lisa.Data;
 using Lisa.Models.Entities;
+using Lisa.Models.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -170,25 +171,42 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
 
 
     public async Task<List<User>> GetAllUsersBySchoolAsync(Guid schoolId)
+{
+    try
     {
-        try
-        {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
-            var query = context.Users.AsNoTracking();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
 
-            if (schoolId != null)
-            {
-                query = query.Where(u => u.SchoolId == schoolId);
-            }
+        var users = await context.Users
+            .Where(u => u.SchoolId == schoolId)
+            .AsNoTracking()
+            .ToListAsync();
 
-            return await query.ToListAsync();
-        }
-        catch (Exception ex)
+        var userIds = users.Select(u => u.Id).ToList();
+
+        // Fetch roles for all users in a single query
+        var userRoles = await (from userRole in context.UserRoles
+                               join role in context.Roles on userRole.RoleId equals role.Id
+                               where userIds.Contains(userRole.UserId)
+                               select new { userRole.UserId, role.Name })
+                               .ToListAsync();
+
+        // Assign roles to users
+        foreach (var user in users)
         {
-            _logger.LogError(ex, "Error fetching staff for SchoolId {SchoolId}.", schoolId);
-            return [];
+            user.Roles = userRoles
+                .Where(ur => ur.UserId == user.Id)
+                .Select(ur => ur.Name)
+                .ToList();
         }
+
+        return users;
     }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error fetching users for SchoolId {SchoolId}.", schoolId);
+        return [];
+    }
+}
 
     /// <summary>
     /// Determines the role for a given user type.

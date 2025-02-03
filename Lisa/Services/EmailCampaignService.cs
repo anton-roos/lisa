@@ -22,7 +22,7 @@ public class EmailCampaignService
 
     public async Task<List<EmailCampaign>> GetBySchoolIdAsync(Guid schoolId)
     {
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
 
         return await context.EmailCampaigns
             .Where(c => c.SchoolId == schoolId)
@@ -51,7 +51,7 @@ public class EmailCampaignService
     /// </summary>
     public async Task<List<EmailCampaign>> GetAllAsync()
     {
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
         return await context.EmailCampaigns
             .AsNoTracking()
             .ToListAsync();
@@ -65,7 +65,7 @@ public class EmailCampaignService
     {
         try
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            using var context = await _contextFactory.CreateDbContextAsync();
             var campaign = await context.EmailCampaigns
                 .Include(c => c.EmailRecipients)
                 .FirstOrDefaultAsync(c => c.Id == campaignId);
@@ -100,7 +100,7 @@ public class EmailCampaignService
     {
         try
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            using var context = await _contextFactory.CreateDbContextAsync();
             var campaign = await context.EmailCampaigns
                 .Include(c => c.EmailRecipients)
                 .FirstOrDefaultAsync(c => c.Id == campaignId);
@@ -193,7 +193,7 @@ public class EmailCampaignService
         if (!TryCancelCampaign(campaignId))
             return;
 
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
         var campaign = await context.EmailCampaigns.FindAsync(campaignId);
         if (campaign != null)
         {
@@ -209,7 +209,7 @@ public class EmailCampaignService
         if (!TryCancelCampaign(campaignId))
             return;
 
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
         var campaign = await context.EmailCampaigns.FindAsync(campaignId);
         if (campaign != null)
         {
@@ -235,7 +235,7 @@ public class EmailCampaignService
 
     public async Task<EmailCampaign?> GetByIdAsync(Guid id)
     {
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
         return await context.EmailCampaigns.FindAsync(id);
     }
 
@@ -252,7 +252,7 @@ public class EmailCampaignService
         campaign.CreatedAt = DateTime.UtcNow;
         campaign.UpdatedAt = DateTime.UtcNow;
 
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
 
         context.EmailCampaigns.Add(campaign);
         await context.SaveChangesAsync();

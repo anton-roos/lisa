@@ -17,7 +17,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     /// </summary>
     public async Task<int> GetCountAsync()
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners.CountAsync();
     }
 
@@ -26,7 +26,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     /// </summary>
     public async Task<Learner?> GetByIdAsync(Guid id)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners
             .AsNoTracking()
             .Include(l => l.RegisterClass)
@@ -47,7 +47,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     /// </summary>
     public async Task<List<Learner>> GetBySubjectIdAsync(int subjectId)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.LearnerSubjects
             .Where(ls => ls.SubjectId == subjectId)
             .Select(ls => ls.Learner)
@@ -56,7 +56,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
 
     public async Task<bool> LearnerExistsByCodeAsync(string code)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners.AnyAsync(l => l.Code == code);
     }
 
@@ -67,7 +67,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
 
             var newLearnerId = Guid.NewGuid();
             var learner = new Learner
@@ -129,7 +129,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
 
             var existing = await context.Learners
                 .Include(l => l.Parents)
@@ -241,7 +241,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
 
     public async Task<Learner?> GetLearnerWithParentsAsync(Guid id)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners
             .Include(l => l.Parents)
             .FirstOrDefaultAsync(l => l.Id == id);
@@ -262,7 +262,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             LearnerId = learner.Id
         };
 
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         context.Parents.Add(newParent);
         await context.SaveChangesAsync();
 
@@ -273,7 +273,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
 
     public async Task<List<Learner>> GetLearnersBySchoolAsync(Guid schoolId)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners
             .Include(l => l.RegisterClass!)
             .ThenInclude(rc => rc.SchoolGrade!)
@@ -288,7 +288,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
 
     public async Task<List<Learner>> GetLearnersBySchoolWithParentsAsync(Guid schoolId)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners
             .Include(l => l.Parents)
             .Where(l => l.SchoolId == schoolId && l.Parents!.Any())
@@ -298,7 +298,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
 
     public async Task<List<Learner>> GetLearnersByGradeAsync(Guid gradeId)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         var learners = await context.Learners
             .Where(l => l.RegisterClass != null && l.RegisterClass.SchoolGradeId == gradeId)
             .Include(l => l.RegisterClass!)
@@ -312,7 +312,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
 
     public async Task<List<Learner>> GetLearnersWithTheirSubjectsByGradeAsync(Guid gradeId)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners
             .Where(l => l.RegisterClass != null && l.RegisterClass.SchoolGradeId == gradeId)
             .Include(l => l.LearnerSubjects!)
@@ -376,7 +376,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             var learner = await context.Learners.FindAsync(learnerId);
 
             if (learner == null)

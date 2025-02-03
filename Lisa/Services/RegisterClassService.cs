@@ -19,7 +19,7 @@ public class RegisterClassService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.RegisterClasses
                 .AsNoTracking()
                 .Include(rc => rc.SchoolGrade!)
@@ -42,7 +42,7 @@ public class RegisterClassService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.RegisterClasses
                 .Where(rc => rc.SchoolGrade != null && rc.SchoolGrade.SchoolId == schoolId)
                 .Include(rc => rc.SchoolGrade!)
@@ -62,7 +62,7 @@ public class RegisterClassService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.RegisterClasses
                 .AsNoTracking()
                 .Include(rc => rc.SchoolGrade!)
@@ -88,7 +88,7 @@ public class RegisterClassService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             await context.RegisterClasses.AddAsync(registerClass);
             await context.SaveChangesAsync();
             _logger.LogInformation("Created new RegisterClass: {RegisterClassId}", registerClass.Id);
@@ -108,7 +108,7 @@ public class RegisterClassService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             var existing = await context.RegisterClasses.FindAsync(registerClass.Id);
 
             if (existing == null)
@@ -142,7 +142,7 @@ public class RegisterClassService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             var registerClass = await context.RegisterClasses.FindAsync(registerClassId);
 
             if (registerClass == null)
@@ -171,7 +171,7 @@ public class RegisterClassService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             var existingCombination = await context.Combinations
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.SchoolGradeId == combination.SchoolGradeId && c.Name == combination.Name);

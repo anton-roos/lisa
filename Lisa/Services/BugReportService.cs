@@ -25,7 +25,7 @@ public class BugReportService(
     /// </summary>
     public async Task<List<BugReport>> GetAllAsync()
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.BugReports
             .AsNoTracking() // Optimization for read-only queries
             .ToListAsync();
@@ -48,7 +48,7 @@ public class BugReportService(
         bugReport.PageUrl = _navigationManager.Uri;
         bugReport.Version = _versionService.GetVersion();
 
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         await context.BugReports.AddAsync(bugReport);
         await context.SaveChangesAsync();
 
@@ -67,7 +67,7 @@ public class BugReportService(
     /// </summary>
     public async Task UpdateStatusAsync(Guid id, BugReportStatus status)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         var bugReport = await context.BugReports.FindAsync(id);
         if (bugReport == null)
         {
@@ -94,7 +94,7 @@ public class BugReportService(
     /// </summary>
     public async Task<int> GetCountAsync()
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.BugReports.CountAsync();
     }
 
@@ -103,7 +103,7 @@ public class BugReportService(
     /// </summary>
     public async Task DeleteBugAsync(Guid id)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         var bugReport = await context.BugReports.FindAsync(id);
         if (bugReport == null)
         {
@@ -120,7 +120,7 @@ public class BugReportService(
     /// </summary>
     public async Task<BugReport?> GetAsync(Guid id)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.BugReports
             .AsNoTracking()
             .FirstOrDefaultAsync(b => b.Id == id);

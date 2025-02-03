@@ -16,7 +16,7 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Subjects
                 .OrderBy(s => s.Order)
                 .AsNoTracking()
@@ -29,11 +29,32 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         }
     }
 
+    /// <summary>
+    /// Retrieves all combination subjects.
+    /// </summary>
+    public async Task<List<Subject>> GetAllCombinationSubjectsAsync()
+    {
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+            return await context.Subjects
+                .Where(s => s.SubjectType == SubjectType.Combination)
+                .OrderBy(s => s.Order)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching all subjects.");
+            return [];
+        }
+    }
+
     public async Task<Subject?> GetByCodeAsync(string code)
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Subjects
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Code == code);
@@ -52,7 +73,7 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             await context.Subjects.AddAsync(subject);
             await context.SaveChangesAsync();
             _logger.LogInformation("Created new subject: {SubjectId}", subject.Id);
@@ -72,7 +93,7 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Subjects
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Id == id);
@@ -91,7 +112,7 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             var existing = await context.Subjects.FindAsync(subject.Id);
 
             if (existing == null)
@@ -123,7 +144,7 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Subjects
                 .OrderBy(s => s.Order)
                 .AsNoTracking()
@@ -144,7 +165,7 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Subjects
                 .OrderBy(s => s.Order)
                 .AsNoTracking()
@@ -165,7 +186,7 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             var existing = await context.Subjects.FindAsync(id);
 
             if (existing == null)

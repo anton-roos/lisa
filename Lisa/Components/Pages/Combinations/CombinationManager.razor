@@ -14,82 +14,80 @@
     <Authorized>
         <h3>@(IsEdit ? "Edit Subject Combination" : "Add Subject Combination")</h3>
 
-        <EditForm Context="edit" Model="@CombinationModel" OnValidSubmit="HandleValidSubmit">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
 
-            <div class="mb-3">
-                <label class="form-label">Name</label>
-                <InputText class="form-control" @bind-Value="CombinationModel.Name" />
+        @if (SchoolGrades == null || !SchoolGrades.Any())
+        {
+            <div class="alert alert-warning">
+                No grades found that supports combinations. Please add a grade that supports combinations first before adding a combination.
             </div>
+        }
+        else
+        {
+            <EditForm Context="edit" Model="@CombinationModel" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
 
-            <div class="mb-3">
-                <label class="form-label">Grade</label>
-                <select class="form-select" @bind="CombinationModel.GradeId">
-                    <option value="">-- Select Grade --</option>
-                    @foreach (var grade in SchoolGrades)
+                <div class="mb-3">
+                    <label class="form-label">Name</label>
+                    <InputText class="form-control" @bind-Value="CombinationModel.Name" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Grade</label>
+                    <select class="form-select" @bind="CombinationModel.GradeId">
+                        <option value="">-- Select Grade --</option>
+                        @foreach (var grade in SchoolGrades)
+                        {
+                            <option value="@grade.Id">@grade.SystemGrade.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Search Subjects</label>
+                    <InputText class="form-control" @oninput="OnInputChange" @bind-Value="searchText"
+                        placeholder="Type to filter subjects..." />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Subjects</label>
+
+                    @if (FilteredSubjects.Any())
                     {
-                        <option value="@grade.Id">@grade.SystemGrade.Name</option>
-                    }
-                </select>
-            </div>
+                        @foreach (var subject in FilteredSubjects)
+                        {
+                            bool isChecked = SelectedSubjectIds.Contains(subject.Id);
+                            bool isDisabled = (CombinationModel.CombinationType == CombinationType.MathCombination)
+                            && !isChecked
+                            && (SelectedSubjectIds.Count >= 2);
 
-            <div class="mb-3">
-                <label for="RegisterClassId">Register Class</label>
-                <InputSelect id="RegisterClassId" class="form-control" @bind-Value="CombinationModel.CombinationType"
-                    TValue="CombinationType" @oninput="OnCombinationTypeChanged">
-                    <option value="">Select Register Class</option>
-                    @foreach (var type in Enum.GetValues(typeof(CombinationType)))
+                            <div>
+                                <input type="checkbox" checked="@isChecked" disabled="@isDisabled"
+                                    @onchange="@(() => ToggleSubject(subject.Id))" />
+                                <label>@subject.Name</label>
+                            </div>
+                        }
+                    }
+                    else
                     {
-                        <option value="@type">@type</option>
+                        <div>No matching subjects found.</div>
                     }
-                </InputSelect>
-            </div>
 
-            <div class="mb-3">
-                <label class="form-label">Search Subjects</label>
-                <InputText class="form-control" @oninput="OnInputChange" @bind-Value="searchText"
-                    placeholder="Type to filter subjects..." />
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Subjects</label>
-
-                @if (FilteredSubjects.Any())
-                {
-                    @foreach (var subject in FilteredSubjects)
+                    @if (CombinationModel.CombinationType == CombinationType.MathCombination && SelectedSubjectIds.Count !=
+                   2)
                     {
-                        bool isChecked = SelectedSubjectIds.Contains(subject.Id);
-                        bool isDisabled = (CombinationModel.CombinationType == CombinationType.MathCombination)
-                        && !isChecked
-                        && (SelectedSubjectIds.Count >= 2);
-
-                        <div>
-                            <input type="checkbox" checked="@isChecked" disabled="@isDisabled"
-                                @onchange="@(() => ToggleSubject(subject.Id))" />
-                            <label>@subject.Name</label>
-                        </div>
+                        <small class="text-danger">Exactly 2 subjects required for a Math Combination.</small>
                     }
-                }
-                else
-                {
-                    <div>No matching subjects found.</div>
-                }
+                    else if (CombinationModel.CombinationType == CombinationType.MathCombination)
+                    {
+                        <small class="text-success">2 subjects selected.</small>
+                    }
+                </div>
 
-                @if (CombinationModel.CombinationType == CombinationType.MathCombination && SelectedSubjectIds.Count !=
-                2)
-                {
-                    <small class="text-danger">Exactly 2 subjects required for a Math Combination.</small>
-                }
-                else if (CombinationModel.CombinationType == CombinationType.MathCombination)
-                {
-                    <small class="text-success">2 subjects selected.</small>
-                }
-            </div>
-
-            <button type="submit" class="btn btn-primary" disabled="@(!IsFormValid)">Save</button>
-            <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
-        </EditForm>
+                <button type="submit" class="btn btn-primary" disabled="@(!IsFormValid)">Save</button>
+                <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+            </EditForm>
+        }
     </Authorized>
     <NotAuthorized>
         <Unauthorized />
@@ -99,10 +97,9 @@
 @code {
     [Parameter] public Guid? Id { get; set; }
     private bool IsEdit => Id.HasValue;
-
     private CombinationViewModel CombinationModel = new();
     private List<SchoolGrade> SchoolGrades = new();
-    private List<Subject> AllSubjects = new();
+    private List<Subject> CombinationSubjects = new();
     private List<int> SelectedSubjectIds = new();
     private string searchText = string.Empty;
 
@@ -110,7 +107,7 @@
     CombinationModel.CombinationType != CombinationType.MathCombination || (SelectedSubjectIds.Count == 2);
 
     private IEnumerable<Subject> FilteredSubjects =>
-    AllSubjects.Where(s => string.IsNullOrEmpty(searchText)
+    CombinationSubjects.Where(s => string.IsNullOrEmpty(searchText)
     || (s.Name != null && s.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase)));
 
     protected override async Task OnInitializedAsync()
@@ -122,8 +119,8 @@
             return;
         }
 
-        AllSubjects = await SubjectService.GetAllAsync();
-        SchoolGrades = await SchoolGradeService.GetGradesForSchool(school.Id);
+        CombinationSubjects = await SubjectService.GetAllCombinationSubjectsAsync();
+        SchoolGrades = await SchoolGradeService.GetCombinationGradesForSchool(school.Id);
 
         // If editing, load existing combination
         if (IsEdit)
@@ -156,7 +153,7 @@
 
     private async Task HandleValidSubmit()
     {
-        var selectedSubjects = AllSubjects
+        var selectedSubjects = CombinationSubjects
         .Where(subject => SelectedSubjectIds.Contains(subject.Id))
         .ToList();
 

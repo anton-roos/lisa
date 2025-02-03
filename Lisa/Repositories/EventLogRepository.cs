@@ -24,7 +24,7 @@ public class EventLogRepository(IDbContextFactory<LisaDbContext> dbContextFactor
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
 
             var eventLog = new EventLog
             {
@@ -51,7 +51,7 @@ public class EventLogRepository(IDbContextFactory<LisaDbContext> dbContextFactor
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
 
             return await context.EventLogs
                 .AsNoTracking()

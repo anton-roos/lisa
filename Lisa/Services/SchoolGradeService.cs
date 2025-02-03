@@ -147,6 +147,20 @@ public class SchoolGradeService(IDbContextFactory<LisaDbContext> dbContextFactor
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Retrieves all combination grades for a given school.
+    /// </summary>
+    public async Task<List<SchoolGrade>> GetCombinationGradesForSchool(Guid schoolId)
+    {
+        using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.SchoolGrades
+            .AsNoTracking()
+            .Include(g => g.SystemGrade)
+            .Where(s => s.SchoolId == schoolId && s.SystemGrade.CombinationGrade)
+            .OrderBy(s => s.SystemGrade.SequenceNumber)
+            .ToListAsync();
+    }
+
     public async Task<SchoolGrade?> GetBySystemGradeAndSchoolAsync(int systemGradeId, Guid SelectedSchoolId)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();

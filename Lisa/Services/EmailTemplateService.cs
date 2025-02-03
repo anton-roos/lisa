@@ -12,7 +12,7 @@ public class EmailTemplateService(IDbContextFactory<LisaDbContext> contextFactor
 
     public async Task<EmailTemplate?> GetByIdAsync(Guid id)
     {
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
         return await context.EmailTemplates.FindAsync(id);
     }
 
@@ -21,7 +21,7 @@ public class EmailTemplateService(IDbContextFactory<LisaDbContext> contextFactor
     /// </summary>
     public async Task<List<EmailTemplate>> GetAllTemplatesAsync()
     {
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
         return await context.EmailTemplates
             .AsNoTracking()
             .OrderByDescending(t => t.UpdatedAt)
@@ -33,7 +33,7 @@ public class EmailTemplateService(IDbContextFactory<LisaDbContext> contextFactor
     /// </summary>
     public async Task<EmailTemplate?> GetTemplateByIdAsync(Guid id)
     {
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
         return await context.EmailTemplates
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == id);
@@ -44,7 +44,7 @@ public class EmailTemplateService(IDbContextFactory<LisaDbContext> contextFactor
     /// </summary>
     public async Task<bool> DeleteTemplateAsync(Guid id)
     {
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
         var template = await context.EmailTemplates.FindAsync(id);
         if (template == null)
         {
@@ -65,7 +65,7 @@ public class EmailTemplateService(IDbContextFactory<LisaDbContext> contextFactor
     {
         try
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            using var context = await _contextFactory.CreateDbContextAsync();
             var existingTemplate = await context.EmailTemplates.FirstOrDefaultAsync(t => t.Name == name);
 
             if (existingTemplate == null)
@@ -109,7 +109,7 @@ public class EmailTemplateService(IDbContextFactory<LisaDbContext> contextFactor
     /// </summary>
     public async Task<EmailTemplate?> GetTemplateAsync(string name)
     {
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
         return await context.EmailTemplates
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Name == name);
@@ -122,7 +122,7 @@ public class EmailTemplateService(IDbContextFactory<LisaDbContext> contextFactor
     {
         try
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            using var context = await _contextFactory.CreateDbContextAsync();
             var existingTemplate = await context.EmailTemplates.FindAsync(template.Id);
 
             if (existingTemplate == null)

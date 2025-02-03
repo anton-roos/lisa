@@ -274,8 +274,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
         modelBuilder.Entity<Subject>()
             .HasIndex(s => s.Name);
         modelBuilder.Entity<Subject>()
-            .HasIndex(s => s.Code)
-            .IsUnique();
+            .HasIndex(s => s.Code);
         modelBuilder.Entity<Subject>()
             .Property(s => s.Code)
             .HasMaxLength(20);

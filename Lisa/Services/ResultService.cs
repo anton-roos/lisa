@@ -16,7 +16,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             await context.Results.AddAsync(result);
             await context.SaveChangesAsync();
             _logger.LogInformation("Created Result for LearnerId: {LearnerId}, SubjectId: {SubjectId}",
@@ -36,7 +36,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
     /// </summary>
     public async Task<int> GetCountAsync()
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Results.CountAsync();
     }
 
@@ -47,7 +47,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Results
                 .AsNoTracking()
                 .Include(r => r.Learner!)
@@ -71,7 +71,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Results
                 .AsNoTracking()
                 .Include(r => r.Learner!)
@@ -92,7 +92,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Results
                 .AsNoTracking()
                 .Include(r => r.Learner!)
@@ -122,7 +122,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             var existingResult = await context.Results.FindAsync(result.Id);
             if (existingResult == null)
             {
@@ -158,7 +158,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             var result = await context.Results.FindAsync(id);
             if (result == null)
             {

@@ -10,7 +10,7 @@
 <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
     <Authorized>
         <h3>Subject Combinations</h3>
-        
+
         @if (SelectedSchool == null)
         {
             <div class="alert alert-info">
@@ -23,7 +23,6 @@
         }
         else if (SchoolGrades == null || !SchoolGrades.Any())
         {
-            <h3>Combinations</h3>
             <button class="btn btn-primary mb-3" @onclick="AddCombination">Add Combination</button>
             <div class="alert alert-warning">
                 No Grades found. Please add a grade first before adding Subject combination.
@@ -31,7 +30,6 @@
         }
         else if (!SubjectCombinations.Any())
         {
-            <h3>Combinations</h3>
             <button class="btn btn-primary mb-3" @onclick="AddCombination">Add Combination</button>
             <div class="alert alert-info">
                 No Subject Combinations found.
@@ -39,35 +37,37 @@
         }
         else
         {
-            <h3>Combinations</h3>
             <button class="btn btn-primary mb-3" @onclick="AddCombination">Add Combination</button>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Grade</th>
-                        <th>Subjects</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
+            <div>
+                <div class="row">
                     @foreach (var combination in SubjectCombinations)
                     {
-                        <tr>
-                            <td>@combination.Name</td>
-                            <td>@combination.SchoolGrade?.SystemGrade.Name</td>
-                            <td>
-                                @foreach (var subject in combination.Subjects)
-                                {
-                                    <span class="badge bg-secondary">@subject.Code</span>
-                                }
-                            </td>
-                            <ActionButtons TEntity="Combination" Entity="combination" OnView="ViewCombination"
-                                OnEdit="EditCombination" OnDelete="DeleteCombination" />
-                        </tr>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card shadow-sm mb-4">
+                                <div class="card-body">
+                                    <h5 class="card-title fw-bold">@combination.Name</h5>
+                                    <p class="mb-2"><strong>Grade:</strong>
+                                        @combination.SchoolGrade?.SystemGrade.Name</p>
+
+                                    <div class="mb-3">
+                                        <strong>Subjects:</strong>
+                                        <div class="mt-1">
+                                            @foreach (var subject in combination.Subjects)
+                                            {
+                                                <Pill Color="danger" AdditionalClasses="me-1">@subject.Code</Pill>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <ActionButtons TEntity="Combination" Entity="combination" OnView="ViewCombination"
+                                        OnEdit="EditCombination" OnDelete="DeleteCombination" />
+                                </div>
+                            </div>
+                        </div>
                     }
-                </tbody>
-            </table>
+                </div>
+            </div>
+
         }
     </Authorized>
     <NotAuthorized>

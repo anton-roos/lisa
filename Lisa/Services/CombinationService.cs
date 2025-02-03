@@ -14,7 +14,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
     /// </summary>
     public async Task<Combination> CreateAsync(Combination subjectCombination)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         await context.Combinations.AddAsync(subjectCombination);
         await context.SaveChangesAsync();
         return subjectCombination;
@@ -25,7 +25,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
     /// </summary>
     public async Task<Combination?> GetByIdAsync(Guid id)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Combinations
             .AsNoTracking()
             .Include(sc => sc.Subjects)
@@ -41,7 +41,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
     /// </summary>
     public async Task<IEnumerable<Combination>> GetAllAsync()
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Combinations
             .AsNoTracking()
             .Include(sc => sc.Subjects)
@@ -53,7 +53,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
     /// </summary>
     public async Task<List<Combination>> GetCombinationsBySchoolId(Guid schoolId)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Combinations
             .AsNoTracking()
             .Where(c => c.SchoolGrade!.SchoolId == schoolId)
@@ -68,7 +68,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
     /// </summary>
     public async Task<IEnumerable<Combination>> GetSubjectCombinationsForSchool(School school)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Combinations
             .AsNoTracking()
             .Include(sc => sc.Subjects)
@@ -85,7 +85,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
     /// </summary>
     public async Task DeleteAsync(Guid id)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         var subjectCombination = await context.Combinations.FindAsync(id);
         if (subjectCombination == null)
         {
@@ -101,7 +101,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
     /// </summary>
     public async Task AddCombinationAsync(CombinationViewModel model, IEnumerable<Subject> selectedSubjects)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
 
         var newCombination = new Combination
         {
@@ -128,7 +128,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
     /// </summary>
     public async Task UpdateCombinationAsync(CombinationViewModel model, IEnumerable<Subject> selectedSubjects)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
 
         var existingCombination = await context.Combinations
                                       .Include(c => c.Subjects)

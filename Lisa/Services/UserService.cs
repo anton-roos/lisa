@@ -18,7 +18,7 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             var query = context.Users.OfType<TUser>().AsNoTracking();
 
             if (schoolId != null)
@@ -39,7 +39,7 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             var query = context.Users.AsNoTracking();
 
             if (schoolId != null)
@@ -63,7 +63,7 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             var user = await context.Users.OfType<TUser>().FirstOrDefaultAsync(u => u.Id == id);
 
             if (user == null)
@@ -173,7 +173,7 @@ public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDb
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             var query = context.Users.AsNoTracking();
 
             if (schoolId != null)

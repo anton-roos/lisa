@@ -39,7 +39,7 @@ public class SchoolService(
                 return null;
             }
 
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             _selectedSchool = await context.Schools.FindAsync(schoolId);
 
             if (_selectedSchool == null)
@@ -83,7 +83,7 @@ public class SchoolService(
     /// </summary>
     public async Task<int> GetCountAsync()
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Schools.CountAsync();
     }
 
@@ -94,7 +94,7 @@ public class SchoolService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Schools
                 .AsNoTracking()
                 .ToListAsync();
@@ -111,7 +111,7 @@ public class SchoolService(
     /// </summary>
     public async Task<List<SchoolType>> GetSchoolTypesAsync()
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.SchoolTypes.AsNoTracking().ToListAsync();
     }
 
@@ -122,7 +122,7 @@ public class SchoolService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Schools
                 .AsNoTracking()
                 .Include(s => s.SchoolType!)
@@ -149,7 +149,7 @@ public class SchoolService(
     /// </summary>
     public async Task<List<SchoolCurriculum>> GetSchoolCurriculumsAsync()
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.SchoolCurriculums.AsNoTracking().ToListAsync();
     }
 
@@ -195,7 +195,7 @@ public class SchoolService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             await action(context);
             await context.SaveChangesAsync();
             await _uiEventService.PublishAsync(UiEvents.SchoolsUpdated, _selectedSchool);

@@ -12,7 +12,7 @@ public class SystemGradeService(IDbContextFactory<LisaDbContext> dbContextFactor
     /// </summary>
     public async Task<List<SystemGrade>> GetAllAsync()
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.SystemGrades
             .AsNoTracking()
             .OrderBy(s => s.SequenceNumber)
@@ -24,7 +24,7 @@ public class SystemGradeService(IDbContextFactory<LisaDbContext> dbContextFactor
     /// </summary>
     public async Task<SystemGrade?> GetBySequenceNumberAsync(int id)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.SystemGrades
             .AsNoTracking()
             .FirstOrDefaultAsync(grade => grade.SequenceNumber == id);

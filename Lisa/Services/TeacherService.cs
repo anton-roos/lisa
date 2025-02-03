@@ -25,7 +25,7 @@ public class TeacherService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Teachers
                 .AsNoTracking()
                 .ToListAsync();
@@ -41,7 +41,7 @@ public class TeacherService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
 
             if (await context.Teachers.AnyAsync(t => t.Email == teacher.Email))
             {
@@ -95,7 +95,7 @@ public class TeacherService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Teachers
                 .AsNoTracking()
                 .Include(t => t.School!)
@@ -121,7 +121,7 @@ public class TeacherService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             var existing = await context.Teachers
                 .Include(t => t.CareGroups)
                 .FirstOrDefaultAsync(t => t.Id == teacher.Id);
@@ -183,7 +183,7 @@ public class TeacherService(
     /// </summary>
     public async Task<bool> HasRegisterClassesAsync(Guid teacherId)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.RegisterClasses.AnyAsync(rc => rc.TeacherId == teacherId);
     }
 
@@ -194,7 +194,7 @@ public class TeacherService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             var existing = await context.Teachers.FindAsync(id);
             if (existing == null)
             {
@@ -222,7 +222,7 @@ public class TeacherService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Teachers
                 .AsNoTracking()
                 .Where(t => t.SchoolId == schoolId)
@@ -242,7 +242,7 @@ public class TeacherService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
             var teacher = await context.Teachers.FindAsync(teacherId);
             if (teacher == null) return new List<Teacher>();
 
@@ -265,7 +265,7 @@ public class TeacherService(
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await _dbContextFactory.CreateDbContextAsync();
 
             var teachers = await context.Teachers
                 .Where(t => t.Id == oldTeacherId || t.Id == newTeacherId)

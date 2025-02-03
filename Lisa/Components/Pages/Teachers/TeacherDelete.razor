@@ -1,8 +1,8 @@
 @page "/teacher/delete/{TeacherId:guid}"
 @using Lisa.Models.Entities
-@inject TeacherService TeacherService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject UserService UserService
 
 <PageTitle>Delete Teacher</PageTitle>
 <AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
@@ -70,15 +70,15 @@
         try
         {
             // Fetch the teacher and their associated classes
-            teacher = await TeacherService.GetByIdAsync(TeacherId);
+            teacher = await UserService.GetByIdAsync(TeacherId);
             if (teacher != null)
             {
-                hasRegisterClasses = await TeacherService.HasRegisterClassesAsync(TeacherId);
+                hasRegisterClasses = await UserService.HasRegisterClassesAsync(TeacherId);
 
                 // If the teacher has register classes, load other teachers
                 if (hasRegisterClasses)
                 {
-                    availableTeachers = await TeacherService.GetAvailableTeachersAsync(TeacherId);
+                    availableTeachers = await UserService.GetAvailableTeachersAsync(TeacherId);
                 }
             }
         }
@@ -98,11 +98,11 @@
         {
             if (hasRegisterClasses && !string.IsNullOrEmpty(selectedTeacherId))
             {
-                await TeacherService.TransferRegisterClassesAsync(TeacherId, Guid.Parse(selectedTeacherId));
+                await UserService.TransferRegisterClassesAsync(TeacherId, Guid.Parse(selectedTeacherId));
             }
 
             await EventBus.PublishAsync(new DeleteTeacherEvent { TeacherId = selectedTeacherId });
-            await TeacherService.DeleteAsync(TeacherId);
+            await UserService.DeleteAsync(TeacherId);
 
             Navigation.NavigateTo("/teachers");
         }

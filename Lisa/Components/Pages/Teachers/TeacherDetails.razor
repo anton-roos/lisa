@@ -1,8 +1,8 @@
 @page "/teachers/details/{Id:guid}"
 @using Lisa.Models.Entities
 @using Microsoft.AspNetCore.Components
-@inject TeacherService TeacherService
 @inject NavigationManager Navigation
+@inject UserService UserService
 
 <h3>Teacher Details</h3>
 
@@ -112,7 +112,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        teacher = await TeacherService.GetByIdAsync(Id);
+        teacher = await UserService.GetByIdAsync(Id);
     }
 
     private void GoBack()

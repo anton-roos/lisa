@@ -3,9 +3,7 @@
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand d-flex align-items-center" href="">
-            <!-- Logo Image -->
             <img src="images/logo.png" alt="DCEG Logo" width="60" height="60" class="me-2" />
-            <!-- Brand Text -->
             DCEG Portal
         </a>
     </div>
@@ -35,6 +33,11 @@
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="teachers">
                     <span class="bi teacher-icon" aria-hidden="true"></span> Teachers
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="users">
+                    <span class="bi principal-icon" aria-hidden="true"></span> Users
                 </NavLink>
             </div>
             <div class="nav-item px-3">
@@ -102,17 +105,6 @@
             </Authorized>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext"
-            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
-            <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="results">
-                        <span class="bi marks-icon" aria-hidden="true"></span> Teacher Results
-                    </NavLink>
-                </div>
-            </Authorized>
-        </AuthorizeView>
-
         <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="/email-templates">
@@ -136,25 +128,5 @@
                 </NavLink>
             </div>
         </AuthorizeView>
-
-        <AuthorizeView Context="authContext"
-            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
-
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="users">
-                        <span class="bi principal-icon" aria-hidden="true"></span> Users
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="system-administrators">
-                        <span class="bi admin-icon" aria-hidden="true"></span> System Admins
-                    </NavLink>
-                </div>
-            
-        </AuthorizeView>
     </nav>
 </div>
-
-@code {
-    
-}

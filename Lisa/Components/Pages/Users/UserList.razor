@@ -85,12 +85,8 @@
 
     private string selectedRole = string.Empty;
 
-    private List<string> AvailableRoles = new List<string>()
-{
-Roles.Principal,
-Roles.Administrator,
-Roles.SchoolManagement
-};
+    private List<string> AvailableRoles =
+        [Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdministrator];
 
     protected override async Task OnInitializedAsync()
     {
@@ -125,7 +121,7 @@ Roles.SchoolManagement
         {
             throw new InvalidOperationException("No school selected.");
         }
-        Users = await UserService.GetAllUsersBySchoolAsync(SelectedSchool.Id);
+        Users = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], SelectedSchool.Id);
     }
 
     private IEnumerable<User> FilteredUsers

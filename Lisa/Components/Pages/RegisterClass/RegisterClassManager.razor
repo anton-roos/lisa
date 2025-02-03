@@ -12,8 +12,8 @@
 @inject SchoolService SchoolService
 @inject SubjectService SubjectService
 @inject SchoolGradeService SchoolGradeService
-@inject TeacherService TeacherService
 @inject IDbContextFactory<LisaDbContext> DbContextFactory
+@inject UserService UserService
 @inherits EventAwareComponentBase
 
 <AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
@@ -84,7 +84,8 @@
             if (SelectedSchool != null)
             {
                 SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
-                Teachers = await TeacherService.GetTeachersForSchoolAsync(SelectedSchool.Id);
+                var user = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], SelectedSchool.Id);
+                Teachers = user.OfType<Teacher>().ToList();
                 AllSubjects = await SubjectService.GetAllAsync();
             }
 

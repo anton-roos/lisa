@@ -1,6 +1,7 @@
 using Lisa.Models.Entities;
 using Lisa.Enums;
 using Lisa.Models.EmailModels;
+using Lisa.Data;
 
 namespace Lisa.Services
 {
@@ -351,7 +352,8 @@ namespace Lisa.Services
                 return new List<string>();
             }
 
-            var staff = await _userService.GetAllStaffForSchoolAsync(schoolId.Value);
+            var roles = new[] { Roles.Administrator, Roles.Principal, Roles.Teacher, Roles.SchoolManagement };
+            var staff = await _userService.GetAllByRoleAndSchoolAsync(roles, schoolId.Value);
             var emails = staff
                 .Select(s => s.Email)
                 .Where(email => !string.IsNullOrWhiteSpace(email))

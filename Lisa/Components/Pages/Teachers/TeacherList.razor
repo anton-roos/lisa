@@ -60,7 +60,6 @@
                                 <th>Surname</th>
                                 <th>Abbreviation</th>
                                 <th>Name</th>
-                                <th>Email</th>
                                 <th>Care Groups</th>
                                 <th>Actions</th>
                             </tr>
@@ -72,11 +71,14 @@
                                     <td>@teacher.Surname</td>
                                     <td>@teacher.Abbreviation</td>
                                     <td>@teacher.Name</td>
-                                    <td>@teacher.Email</td>
                                     <td>
                                         @foreach (var careGroup in teacher.CareGroups ?? new List<CareGroup>())
                                         {
                                             <span class="badge bg-primary">@careGroup.Name</span>
+                                        }
+                                        @if (!teacher.CareGroups.Any())
+                                        {
+                                            <span class="badge bg-danger">None</span>
                                         }
                                     </td>
                                     <ActionButtons TEntity="Teacher" Entity="teacher" OnView="ViewTeacher" OnEdit="EditTeacher"
@@ -95,7 +97,7 @@
 </AuthorizeView>
 
 @code {
-    private List<Lisa.Models.Entities.Teacher>? Teachers;
+    private List<Teacher>? Teachers;
     private Teacher NewTeacher = new Teacher();
     private School? SelectedSchool;
     private bool IsLoading = false;
@@ -109,7 +111,8 @@
 
         if (SelectedSchool != null)
         {
-            Teachers = await UserService.GetAllByRoleAndSchoolAsync<Teacher>(SelectedSchool.Id);
+            var user = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], SelectedSchool.Id);
+            Teachers = user.OfType<Teacher>().ToList();
         }
 
         IsLoading = false;
@@ -119,7 +122,8 @@
     {
         if (SelectedSchool != null)
         {
-            Teachers = await UserService.GetAllByRoleAndSchoolAsync<Teacher>(SelectedSchool.Id);
+            var user = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], SelectedSchool.Id);
+            Teachers = user.OfType<Teacher>().ToList();
             await InvokeAsync(StateHasChanged);
         }
         else

@@ -138,6 +138,7 @@ else
         if (SelectedSchool?.Id != null)
         {
             Learners = await LearnerService.GetLearnersBySchoolAsync(SelectedSchool.Id);
+            Learners.ForEach(l => l.LearnerSubjects = l.LearnerSubjects.OrderBy(ls => ls.Subject.Order).ToList());
 
             AvailableGrades = Learners
             .Where(l => l.RegisterClass?.SchoolGrade != null)

@@ -6,217 +6,521 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class UserService(UserManager<User> userManager, IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<UserService> logger)
+public class UserService(
+    UserManager<User> userManager,
+    IDbContextFactory<LisaDbContext> dbContextFactory,
+    ILogger<UserService> logger,
+    IUiEventService uiEventService,
+    IPasswordHasher<User> passwordHasher)
 {
     private readonly UserManager<User> _userManager = userManager;
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly ILogger<UserService> _logger = logger;
+    private readonly IUiEventService _uiEventService = uiEventService;
+    private readonly IPasswordHasher<User> _passwordHasher = passwordHasher;
 
     /// <summary>
-    /// Retrieves all users of a specific role and optionally filters by school.
+    /// Retrieves all users by role and school.
     /// </summary>
-    public async Task<List<TUser>> GetAllByRoleAndSchoolAsync<TUser>(Guid? schoolId = null) where TUser : User
+    public async Task<List<User>> GetAllByRoleAndSchoolAsync(string[] roles, Guid? SchoolId = null)
     {
         try
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
-            var query = context.Users.OfType<TUser>().AsNoTracking();
 
-            if (schoolId != null)
+            var usersQuery = context.Users
+                .AsNoTracking()
+                .Where(u => SchoolId == null || u.SchoolId == SchoolId);
+
+            // Include CareGroups only for Teachers
+            if (roles.Contains(Roles.Teacher))
             {
-                query = query.Where(u => u.SchoolId == schoolId);
+                usersQuery = usersQuery.OfType<Teacher>().Include(t => t.CareGroups);
             }
 
-            return await query.ToListAsync();
+            var users = await usersQuery.ToListAsync();
+
+            var userIds = users.Select(u => u.Id).ToList();
+
+            var userRoles = await (from userRole in context.UserRoles
+                                   join role in context.Roles on userRole.RoleId equals role.Id
+                                   where userIds.Contains(userRole.UserId)
+                                   select new { userRole.UserId, role.Name })
+                                .ToListAsync();
+
+            foreach (var user in users)
+            {
+                user.Roles = [.. userRoles
+                    .Where(ur => ur.UserId == user.Id)
+                    .Select(ur => ur.Name)];
+            }
+
+            return users.Where(u => u.Roles.Intersect(roles).Any()).ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching users of type {UserType} for SchoolId {SchoolId}.", typeof(TUser).Name, schoolId);
-            return new List<TUser>();
-        }
-    }
-
-    public async Task<List<User>> GetAllStaffForSchoolAsync(Guid? schoolId = null)
-    {
-        try
-        {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
-            var query = context.Users.AsNoTracking();
-
-            if (schoolId != null)
-            {
-                query = query.Where(u => u.SchoolId == schoolId);
-            }
-
-            return await query.ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching staff for SchoolId {SchoolId}.", schoolId);
+            _logger.LogError(ex, "Error fetching users for SchoolId {SchoolId}.", SchoolId);
             return [];
         }
     }
 
     /// <summary>
-    /// Retrieves a user by ID.
-    /// </summary>s
-    public async Task<TUser?> GetByIdAsync<TUser>(Guid id) where TUser : User
+    /// Retrieves all teachers.
+    /// </summary>
+    public async Task<List<Teacher>> GetAllTeachersAsync()
     {
         try
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
-            var user = await context.Users.OfType<TUser>().FirstOrDefaultAsync(u => u.Id == id);
-
-            if (user == null)
-            {
-                _logger.LogWarning("User with ID {UserId} not found.", id);
-            }
-
-            return user;
+            return await context.Teachers.AsNoTracking().ToListAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching user with ID {UserId}.", id);
+            _logger.LogError(ex, "Error fetching all teachers.");
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Retrieves a teacher by ID with related data.
+    /// </summary>
+    public async Task<Teacher?> GetTeacherByIdAsync(Guid id)
+    {
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+            return await context.Teachers
+                .AsNoTracking()
+                .Include(t => t.School)
+                .Include(t => t.Subjects)
+                .Include(t => t.RegisterClasses)
+                    .ThenInclude(rc => rc.SchoolGrade)
+                    .ThenInclude(sg => sg.SystemGrade)
+                .Include(t => t.Periods)
+                .Include(t => t.CareGroups)
+                .FirstOrDefaultAsync(t => t.Id == id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching teacher with ID: {TeacherId}", id);
             return null;
         }
     }
 
     /// <summary>
-    /// Creates a new user with the specified role.
+    /// Creates a new teacher.
     /// </summary>
-    public async Task<IdentityResult> AddUserAsync<TUser>(TUser user, string password) where TUser : User
+    public async Task<bool> CreateTeacherAsync(TeacherViewModel teacher)
     {
         try
         {
-            IdentityResult result = await _userManager.CreateAsync(user, password);
-            if (!result.Succeeded)
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+
+            if (await context.Teachers.AnyAsync(t => t.Email == teacher.Email))
             {
-                _logger.LogError("Failed to create user {UserId}: {Errors}", user.Id, string.Join(", ", result.Errors.Select(e => e.Description)));
-                return result;
+                _logger.LogError("Duplicate email detected: {Email}", teacher.Email);
+                return false;
             }
 
-            string role = GetRoleForUser(user);
-            await _userManager.AddToRoleAsync(user, role);
-            _logger.LogInformation("Created user {UserId} with role {Role}.", user.Id, role);
+            if (string.IsNullOrWhiteSpace(teacher.Password))
+            {
+                _logger.LogError("Password is required for new teacher: {Email}", teacher.Email);
+                return false;
+            }
 
-            return IdentityResult.Success;
+            var existingCareGroups = await context.CareGroups
+                .Where(cg => teacher.SelectedCareGroupIds.Contains(cg.Id))
+                .ToListAsync();
+
+            var teacherEntity = new Teacher
+            {
+                Surname = teacher.Surname,
+                Abbreviation = teacher.Abbreviation,
+                Name = teacher.Name,
+                Email = teacher.Email,
+                PhoneNumber = teacher.PhoneNumber,
+                SchoolId = teacher.SchoolId,
+                CareGroups = existingCareGroups,
+                UserName = teacher.Email,
+            };
+
+            teacherEntity.PasswordHash = _passwordHasher.HashPassword(teacherEntity, teacher.Password);
+
+            context.Teachers.Add(teacherEntity);
+            await context.SaveChangesAsync();
+
+            await _uiEventService.PublishAsync(UiEvents.TeachersUpdated);
+            _logger.LogInformation("Created new teacher: {TeacherId}", teacherEntity.Id);
+
+            return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating user {UserId}.", user.Id);
-            return IdentityResult.Failed(new IdentityError { Description = "An error occurred while creating the user." });
+            _logger.LogError(ex, "Error creating teacher.");
+            return false;
         }
     }
 
     /// <summary>
-    /// Updates a user's password.
+    /// Updates an existing teacher.
     /// </summary>
-    public async Task<IdentityResult> UpdateUserPasswordAsync(User user, string newPassword)
+    public async Task<bool> UpdateTeacherAsync(Teacher teacher, IEnumerable<Guid> selectedCareGroupIds, string? newPassword)
     {
         try
         {
-            string resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var result = await _userManager.ResetPasswordAsync(user, resetToken, newPassword);
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+            var existing = await context.Teachers
+                .Include(t => t.CareGroups)
+                .FirstOrDefaultAsync(t => t.Id == teacher.Id);
 
-            if (!result.Succeeded)
+            if (existing == null)
             {
-                _logger.LogWarning("Failed to update password for UserId {UserId}: {Errors}", user.Id, string.Join(", ", result.Errors.Select(e => e.Description)));
-            }
-            else
-            {
-                _logger.LogInformation("Updated password for UserId {UserId}.", user.Id);
+                _logger.LogWarning("Attempted to update non-existent teacher. TeacherId: {TeacherId}", teacher.Id);
+                return false;
             }
 
-            return result;
+            if (existing.Email != teacher.Email)
+            {
+                var emailExists = await context.Teachers.AnyAsync(t => t.Email == teacher.Email && t.Id != teacher.Id);
+                if (emailExists)
+                {
+                    _logger.LogWarning("Attempted to update teacher with duplicate email: {Email}", teacher.Email);
+                    return false;
+                }
+            }
+
+            existing.Surname = teacher.Surname;
+            existing.Abbreviation = teacher.Abbreviation;
+            existing.Name = teacher.Name;
+            existing.Email = teacher.Email;
+            existing.PhoneNumber = teacher.PhoneNumber;
+            existing.SchoolId = teacher.SchoolId;
+
+            var existingCareGroups = await context.CareGroups
+                .Where(cg => selectedCareGroupIds.Contains(cg.Id))
+                .ToListAsync();
+
+            existing.CareGroups.Clear();
+            foreach (var careGroup in existingCareGroups)
+            {
+                context.CareGroups.Attach(careGroup);
+                existing.CareGroups.Add(careGroup);
+            }
+
+            if (!string.IsNullOrWhiteSpace(newPassword))
+            {
+                existing.PasswordHash = _passwordHasher.HashPassword(existing, newPassword);
+                _logger.LogInformation("Updated password for teacher: {TeacherId}", teacher.Id);
+            }
+
+            await context.SaveChangesAsync();
+            await _uiEventService.PublishAsync(UiEvents.TeachersUpdated);
+            _logger.LogInformation("Updated teacher: {TeacherId}", teacher.Id);
+            return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating password for UserId {UserId}.", user.Id);
-            return IdentityResult.Failed(new IdentityError { Description = "An error occurred while updating the password." });
+            _logger.LogError(ex, "Error updating teacher with ID: {TeacherId}", teacher.Id);
+            return false;
         }
     }
 
     /// <summary>
-    /// Deletes a user by ID.
+    /// Deletes a teacher.
     /// </summary>
-    public async Task<IdentityResult> DeleteAsync(Guid id)
+    public async Task<bool> DeleteTeacherAsync(Guid id)
     {
         try
         {
-            var user = await _userManager.FindByIdAsync(id.ToString());
-            if (user == null)
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+            var existing = await context.Teachers.FindAsync(id);
+            if (existing == null)
             {
-                _logger.LogWarning("Attempted to delete non-existent user {UserId}.", id);
-                return IdentityResult.Failed(new IdentityError { Description = "User not found." });
+                _logger.LogWarning("Attempted to delete non-existent teacher. TeacherId: {TeacherId}", id);
+                return false;
             }
 
-            var result = await _userManager.DeleteAsync(user);
-            if (!result.Succeeded)
-            {
-                _logger.LogError("Failed to delete user {UserId}: {Errors}", id, string.Join(", ", result.Errors.Select(e => e.Description)));
-            }
-            else
-            {
-                _logger.LogInformation("Deleted user {UserId}.", id);
-            }
-
-            return result;
+            context.Teachers.Remove(existing);
+            await context.SaveChangesAsync();
+            await _uiEventService.PublishAsync(UiEvents.TeachersUpdated);
+            _logger.LogInformation("Deleted teacher: {TeacherId}", id);
+            return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting user {UserId}.", id);
-            return IdentityResult.Failed(new IdentityError { Description = "An error occurred while deleting the user." });
+            _logger.LogError(ex, "Error deleting teacher with ID: {TeacherId}", id);
+            return false;
         }
     }
 
+    /// <summary>
+    /// Retrieves all teachers.
+    /// </summary>
+    public async Task<List<Teacher>> GetAllAsync()
+    {
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+            return await context.Teachers
+                .AsNoTracking()
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching all teachers.");
+            return [];
+        }
+    }
 
-    public async Task<List<User>> GetAllUsersBySchoolAsync(Guid schoolId)
-{
-    try
+    public async Task<bool> CreateAsync(TeacherViewModel teacher)
+    {
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+
+            if (await context.Teachers.AnyAsync(t => t.Email == teacher.Email))
+            {
+                _logger.LogError("Duplicate email detected: {Email}", teacher.Email);
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(teacher.Password))
+            {
+                _logger.LogError("Password is required for new teacher: {Email}", teacher.Email);
+                return false;
+            }
+
+            var existingCareGroups = await context.CareGroups
+                .Where(cg => teacher.SelectedCareGroupIds.Contains(cg.Id))
+                .ToListAsync();
+
+            var teacherEntity = new Teacher
+            {
+                Surname = teacher.Surname,
+                Abbreviation = teacher.Abbreviation,
+                Name = teacher.Name,
+                Email = teacher.Email,
+                PhoneNumber = teacher.PhoneNumber,
+                SchoolId = teacher.SchoolId,
+                CareGroups = existingCareGroups,
+                UserName = teacher.Email,
+            };
+
+            teacherEntity.PasswordHash = _passwordHasher.HashPassword(teacherEntity, teacher.Password);
+
+            context.Teachers.Add(teacherEntity);
+            await context.SaveChangesAsync();
+
+            await _uiEventService.PublishAsync(UiEvents.TeachersUpdated);
+            _logger.LogInformation("Created new teacher: {TeacherId}", teacherEntity.Id);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating teacher.");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Retrieves a teacher by ID with related data.
+    /// </summary>
+    public async Task<Teacher?> GetByIdAsync(Guid id)
+    {
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+            return await context.Teachers
+                .AsNoTracking()
+                .Include(t => t.School!)
+                .Include(t => t.Subjects!)
+                .Include(t => t.RegisterClasses!)
+                .ThenInclude(rc => rc.SchoolGrade!)
+                .ThenInclude(sg => sg.SystemGrade!)
+                .Include(t => t.Periods!)
+                .Include(t => t.CareGroups!)
+                .FirstOrDefaultAsync(t => t.Id == id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching teacher with ID: {TeacherId}", id);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Updates an existing teacher.
+    /// </summary>
+    public async Task<bool> UpdateAsync(Teacher teacher, IEnumerable<Guid> selectedCareGroupIds, string? newPassword)
+    {
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+            var existing = await context.Teachers
+                .Include(t => t.CareGroups)
+                .FirstOrDefaultAsync(t => t.Id == teacher.Id);
+
+            if (existing == null)
+            {
+                _logger.LogWarning("Attempted to update non-existent teacher. TeacherId: {TeacherId}", teacher.Id);
+                return false;
+            }
+
+            if (existing.Email != teacher.Email)
+            {
+                var emailExists = await context.Teachers.AnyAsync(t => t.Email == teacher.Email && t.Id != teacher.Id);
+                if (emailExists)
+                {
+                    _logger.LogWarning("Attempted to update teacher with duplicate email: {Email}", teacher.Email);
+                    return false;
+                }
+            }
+
+            existing.Surname = teacher.Surname;
+            existing.Abbreviation = teacher.Abbreviation;
+            existing.Name = teacher.Name;
+            existing.Email = teacher.Email;
+            existing.PhoneNumber = teacher.PhoneNumber;
+            existing.SchoolId = teacher.SchoolId;
+
+            var existingCareGroups = await context.CareGroups
+                .Where(cg => selectedCareGroupIds.Contains(cg.Id))
+                .ToListAsync();
+
+            existing.CareGroups.Clear();
+            foreach (var careGroup in existingCareGroups)
+            {
+                context.CareGroups.Attach(careGroup);
+                existing.CareGroups.Add(careGroup);
+            }
+
+            if (!string.IsNullOrWhiteSpace(newPassword))
+            {
+                existing.PasswordHash = _passwordHasher.HashPassword(existing, newPassword);
+                _logger.LogInformation("Updated password for teacher: {TeacherId}", teacher.Id);
+            }
+
+            await context.SaveChangesAsync();
+            await _uiEventService.PublishAsync(UiEvents.TeachersUpdated);
+            _logger.LogInformation("Updated teacher: {TeacherId}", teacher.Id);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating teacher with ID: {TeacherId}", teacher.Id);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Checks if a teacher has any assigned register classes.
+    /// </summary>
+    public async Task<bool> HasRegisterClassesAsync(Guid teacherId)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
-
-        var users = await context.Users
-            .Where(u => u.SchoolId == schoolId)
-            .AsNoTracking()
-            .ToListAsync();
-
-        var userIds = users.Select(u => u.Id).ToList();
-
-        // Fetch roles for all users in a single query
-        var userRoles = await (from userRole in context.UserRoles
-                               join role in context.Roles on userRole.RoleId equals role.Id
-                               where userIds.Contains(userRole.UserId)
-                               select new { userRole.UserId, role.Name })
-                               .ToListAsync();
-
-        // Assign roles to users
-        foreach (var user in users)
-        {
-            user.Roles = userRoles
-                .Where(ur => ur.UserId == user.Id)
-                .Select(ur => ur.Name)
-                .ToList();
-        }
-
-        return users;
+        return await context.RegisterClasses.AnyAsync(rc => rc.TeacherId == teacherId);
     }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "Error fetching users for SchoolId {SchoolId}.", schoolId);
-        return [];
-    }
-}
 
     /// <summary>
-    /// Determines the role for a given user type.
+    /// Deletes a teacher by ID.
     /// </summary>
-    private static string GetRoleForUser(User user) => user switch
+    public async Task<bool> DeleteAsync(Guid id)
     {
-        Principal => Roles.Principal,
-        Administrator => Roles.Administrator,
-        SchoolManagement => Roles.SchoolManagement,
-        Teacher => Roles.Teacher,
-        _ => Roles.SystemAdministrator
-    };
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+            var existing = await context.Teachers.FindAsync(id);
+            if (existing == null)
+            {
+                _logger.LogWarning("Attempted to delete non-existent teacher. TeacherId: {TeacherId}", id);
+                return false;
+            }
+
+            context.Teachers.Remove(existing);
+            await context.SaveChangesAsync();
+            await _uiEventService.PublishAsync(UiEvents.TeachersUpdated);
+            _logger.LogInformation("Deleted teacher: {TeacherId}", id);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting teacher with ID: {TeacherId}", id);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Retrieves teachers for a given school.
+    /// </summary>
+    public async Task<List<Teacher>> GetTeachersForSchoolAsync(Guid schoolId)
+    {
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+            return await context.Teachers
+                .AsNoTracking()
+                .Where(t => t.SchoolId == schoolId)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching teachers for SchoolId: {SchoolId}", schoolId);
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Retrieves available teachers except the given teacher.
+    /// </summary>
+    public async Task<List<Teacher>> GetAvailableTeachersAsync(Guid teacherId)
+    {
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+            var teacher = await context.Teachers.FindAsync(teacherId);
+            if (teacher == null) return new List<Teacher>();
+
+            return await context.Teachers
+                .AsNoTracking()
+                .Where(t => t.SchoolId == teacher.SchoolId && t.Id != teacherId)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching available teachers for TeacherId: {TeacherId}", teacherId);
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Transfers register classes from one teacher to another.
+    /// </summary>
+    public async Task<bool> TransferRegisterClassesAsync(Guid oldTeacherId, Guid newTeacherId)
+    {
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+
+            var teachers = await context.Teachers
+                .Where(t => t.Id == oldTeacherId || t.Id == newTeacherId)
+                .ToListAsync();
+
+            if (teachers.Count < 2) return false;
+
+            var registerClasses = context.RegisterClasses.Where(rc => rc.TeacherId == oldTeacherId);
+            await registerClasses.ForEachAsync(rc => rc.TeacherId = newTeacherId);
+
+            await context.SaveChangesAsync();
+            _logger.LogInformation(
+                "Transferred register classes from TeacherId {OldTeacherId} to TeacherId {NewTeacherId}", oldTeacherId,
+                newTeacherId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error transferring register classes.");
+            return false;
+        }
+    }
 }

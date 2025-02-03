@@ -54,7 +54,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        SystemAdministrators = await UserService.GetAllByRoleAndSchoolAsync<User>();
+        SystemAdministrators = await UserService.GetAllByRoleAndSchoolAsync([Roles.SystemAdministrator]);
     }
 
     private void AddSystemAdministrator()

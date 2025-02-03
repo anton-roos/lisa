@@ -89,7 +89,7 @@ Roles.SystemAdministrator
 
         if (IsEdit)
         {
-            var existingUser = await UserService.GetByIdAsync<User>(UserId.Value);
+            var existingUser = await UserService.GetByIdAsync(UserId.Value);
             if (existingUser != null)
             {
                 var currentRoles = await UserManagerService.GetRolesAsync(existingUser);

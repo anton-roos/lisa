@@ -17,7 +17,7 @@
 
         <hr />
 
-        @if (subjects == null)
+        @if (Subjects == null)
         {
             <p>Loading subjects...</p>
         }
@@ -30,9 +30,18 @@
             <div class="list-group">
                 @foreach (var subject in FilteredSubjects)
                 {
-
-                    <div class="row subject-row" @ondragover="OnDragOver" @ondragover:preventDefault="true"
-                        @ondrop="(e) => OnDrop(e, subject)" @ondrop:preventDefault="true">
+                    <div class="list-group-item d-flex justify-content-start align-items-center subject-row"
+                        @ondragover="OnDragOver" @ondragover:preventDefault="true" @ondrop="(e) => OnDrop(e, subject)"
+                        @ondrop:preventDefault="true">
+                        <div>
+                            @if (string.IsNullOrWhiteSpace(searchText))
+                            {
+                                <button class="btn btn-sm btn-secondary me-1 drag-handle" draggable="true"
+                                    @ondragstart="(e) => OnDragStart(e, subject)">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </button>
+                            }
+                        </div>
                         <div class="col-md-3 col-12 mb-2 mb-md-0">
                             <strong>@subject.Name</strong>
                         </div>
@@ -47,15 +56,7 @@
                                 </Pill>
                             </div>
                         </div>
-                        <div class="col-md-4 col-12 d-flex justify-content-md-end justify-content-start">
-                            @if (string.IsNullOrWhiteSpace(searchText))
-                            {
-                                <button class="btn btn-sm btn-secondary me-2 drag-handle" draggable="true"
-                                    @ondragstart="(e) => OnDragStart(e, subject)">
-                                    <i class="bi bi-grip-vertical"></i>
-                                </button>
-                            }
-
+                        <div class="col-md-4 col-12 d-flex justify-content-end">
                             <ActionButtons TEntity="Subject" Entity="subject" OnView="ViewSubject" OnEdit="EditSubject"
                                 OnDelete="DeleteSubject" />
                         </div>
@@ -70,27 +71,22 @@
 </AuthorizeView>
 
 @code {
-    private List<Subject>? subjects;
+    private List<Subject>? Subjects;
     private string searchText = string.Empty;
     private Subject? draggedSubject;
 
     protected override async Task OnInitializedAsync()
     {
-        subjects = await SubjectService.GetAllAsync();
-        subjects = subjects.OrderBy(s => s.Order).ToList();
+        Subjects = await SubjectService.GetAllAsync();
     }
 
     private IEnumerable<Subject> FilteredSubjects
-    => subjects != null
-    ? subjects
-    .Where(s =>
+    => Subjects?.Where(s =>
     string.IsNullOrWhiteSpace(searchText)
     || (s.Name ?? "").Contains(searchText, StringComparison.OrdinalIgnoreCase)
     || (s.Code ?? "").Contains(searchText, StringComparison.OrdinalIgnoreCase)
     || (s.Description ?? "").Contains(searchText, StringComparison.OrdinalIgnoreCase)
-    )
-    .OrderBy(s => s.Order)
-    : Enumerable.Empty<Subject>();
+    ) ?? Enumerable.Empty<Subject>();
 
     private void AddSubject()
     {
@@ -109,11 +105,10 @@
 
     private async Task DeleteSubject(Subject subject)
     {
-        if (subject != null)
+        if (subject is not null)
         {
             await SubjectService.DeleteAsync(subject.Id);
-            subjects = await SubjectService.GetAllAsync();
-            subjects = subjects.OrderBy(s => s.Order).ToList();
+            Subjects = await SubjectService.GetAllAsync();
         }
     }
 
@@ -122,34 +117,26 @@
         searchText = e.Value?.ToString() ?? string.Empty;
     }
 
-    private string GetPillColorForSubjectType(SubjectType subjectType)
+    private string GetPillColorForSubjectType(SubjectType subjectType) => subjectType switch
     {
-        return subjectType switch
-        {
-            SubjectType.Compulsory => "primary",
-            SubjectType.Combination => "danger",
-            SubjectType.MathCombination => "success",
-            _ => ""
-        };
-    }
+        SubjectType.Compulsory => "primary",
+        SubjectType.Combination => "danger",
+        SubjectType.MathCombination => "success",
+        _ => ""
+    };
 
-    private string GetPillTextForSubjectType(SubjectType subjectType)
+    private string GetPillTextForSubjectType(SubjectType subjectType) => subjectType switch
     {
-        return subjectType switch
-        {
-            SubjectType.Compulsory => "Compulsory",
-            SubjectType.Combination => "Combination",
-            SubjectType.MathCombination => "Math",
-            _ => ""
-        };
-    }
+        SubjectType.Compulsory => "Compulsory",
+        SubjectType.Combination => "Combination",
+        SubjectType.MathCombination => "Math",
+        _ => ""
+    };
 
     private string GetFirstAndLastGrade(Subject subject)
     {
         if (subject?.GradesApplicable == null || !subject.GradesApplicable.Any())
-        {
             return string.Empty;
-        }
 
         int firstGrade = subject.GradesApplicable.First();
         int lastGrade = subject.GradesApplicable.Last();
@@ -162,8 +149,7 @@
         : $"Gr {firstGradeName} - {lastGradeName}";
     }
 
-    private string GetGradeName(int grade) =>
-    grade switch
+    private string GetGradeName(int grade) => grade switch
     {
         -2 => "RRR",
         -1 => "RR",
@@ -171,12 +157,6 @@
         _ => grade.ToString()
     };
 
-    private void SwapOrder(int currentIndex, int newIndex)
-    {
-        (subjects[currentIndex].Order, subjects[newIndex].Order)
-        = (subjects[newIndex].Order, subjects[currentIndex].Order);
-        subjects = subjects.OrderBy(s => s.Order).ToList();
-    }
 
     private void OnDragStart(DragEventArgs e, Subject subject)
     {
@@ -196,10 +176,12 @@
             return;
         }
 
-        int draggedIndex = subjects.IndexOf(draggedSubject);
-        int targetIndex = subjects.IndexOf(targetSubject);
+        int draggedIndex = Subjects.IndexOf(draggedSubject);
+        int targetIndex = Subjects.IndexOf(targetSubject);
 
-        SwapOrder(draggedIndex, targetIndex);
+        (Subjects[draggedIndex].Order, Subjects[targetIndex].Order) =
+        (Subjects[targetIndex].Order, Subjects[draggedIndex].Order);
+
         await SaveOrderChanges();
 
         draggedSubject = null;
@@ -207,6 +189,8 @@
 
     private async Task SaveOrderChanges()
     {
-        await SubjectService.UpdateOrderAsync(subjects);
+        await SubjectService.UpdateOrderAsync(Subjects);
+        Subjects = await SubjectService.GetAllAsync();
+        await InvokeAsync(StateHasChanged);
     }
 }

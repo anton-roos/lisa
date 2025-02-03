@@ -1,13 +1,13 @@
 .drag-handle {
     cursor: grab;
-    background: repeating-linear-gradient(45deg,
-            #ddd,
-            #ddd 5px,
-            #ccc 5px,
-            #ccc 10px);
     border-radius: 4px;
+    margin: 1px;
 }
 
 .drag-handle:active {
     cursor: grabbing;
 }
+
+/* .subject-row {
+    border: 1px dashed #ccc;
+} */

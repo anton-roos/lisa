@@ -8,6 +8,7 @@
 @inject UserManager<User> UserManagerService
 @inject SchoolService SchoolService
 @inject UserService UserService
+@inject CareGroupService CareGroupService
 @inject ILogger<UserManager> Logger
 
 <AuthorizeView Context="auth" Roles="@Roles.SystemAdministrator">
@@ -59,19 +60,23 @@
                 }
             </div>
 
-            @if (IsTeacherSelected())
+            @if (ShouldShowCareGroups())
             {
                 <div class="form-group mb-3">
-                    <label for="caregroups">Care Groups</label>
-                    <select id="caregroups" class="form-control" multiple @onchange="UpdateCareGroupSelection">
-                        @foreach (var group in User.CareGroups)
+                    <label>Care Groups</label>
+                    <div class="row">
+                        @foreach (var group in AvailableCareGroups)
                         {
-                            <option value="@group.Id.ToString()">@group.Name</option>
+                            var careGroupId = group.Id;
+                            <div class="col-4 d-flex align-items-center">
+                                <label class="me-2">@group.Name</label>
+                                <Switch Value="CareGroupSelections[careGroupId]" ValueChanged="() => ToggleCareGroup(careGroupId)"
+                                    Reverse="false"></Switch>
+                            </div>
                         }
-                    </select>
+                    </div>
                 </div>
             }
-
             <button type="submit" class="btn btn-primary me-2">Save</button>
             <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
         </EditForm>
@@ -106,9 +111,11 @@
 
     private UserViewModel User { get; set; } = new();
     private School? SelectedSchool;
+    private List<CareGroup> AvailableCareGroups = new();
 
     private List<string> AvailableRoles = new() { Roles.Principal, Roles.Administrator, Roles.SchoolManagement,
 Roles.SystemAdministrator, Roles.Teacher };
+    private Dictionary<Guid, bool> CareGroupSelections = new();
 
     private bool IsEdit => UserId.HasValue;
 
@@ -119,6 +126,19 @@ Roles.SystemAdministrator, Roles.Teacher };
     protected override async Task OnInitializedAsync()
     {
         SelectedSchool = SchoolService.GetSelectedSchool();
+
+        // Initialize CareGroupSelections dictionary first
+        if (SelectedSchool != null)
+        {
+            AvailableCareGroups = await CareGroupService.GetBySchoolAsync(SelectedSchool.Id);
+
+            // Initialize all care groups with false by default
+            foreach (var careGroup in AvailableCareGroups)
+            {
+                CareGroupSelections[careGroup.Id] = false;
+            }
+        }
+
         if (IsEdit)
         {
             var existingUser = await UserService.GetByIdAsync(UserId.Value);
@@ -133,15 +153,31 @@ Roles.SystemAdministrator, Roles.Teacher };
                         Name = existingUser.Name,
                         Email = existingUser.Email,
                         SelectedRoles = currentRoles.ToList(),
-                        SchoolId = existingUser.SchoolId
+                        SchoolId = existingUser.SchoolId,
+                        SelectedCareGroupIds = existingUser is Teacher teacher
+                    ? teacher.CareGroups?.Select(cg => cg.Id).ToList() ?? new()
+                    : new()
                     };
 
-                if (existingUser is Teacher teacher)
+                // Update CareGroupSelections based on user's selected care groups
+                foreach (var careGroup in AvailableCareGroups)
                 {
-                    User.CareGroups = teacher.CareGroups?.ToList() ?? new List<CareGroup>();
-                    User.SelectedCareGroupIds = teacher.CareGroups?.Select(cg => cg.Id).ToList() ?? new();
+                    CareGroupSelections[careGroup.Id] = User.SelectedCareGroupIds.Contains(careGroup.Id);
                 }
             }
+        }
+    }
+
+    private bool GetCareGroupSelection(Guid id) =>
+    CareGroupSelections.ContainsKey(id) && CareGroupSelections[id];
+
+    private void SetCareGroupSelection(Guid id, bool value) =>
+    CareGroupSelections[id] = value;
+    private void UpdateCareGroupSelection(ChangeEventArgs e)
+    {
+        if (e.Value is string[] selectedValues)
+        {
+            User.SelectedCareGroupIds = selectedValues.Select(Guid.Parse).ToList();
         }
     }
 
@@ -165,6 +201,7 @@ Roles.SystemAdministrator, Roles.Teacher };
         {
             if (SelectedSchool == null)
                 throw new Exception("No Selected School while trying to manage a user.");
+
             if (IsEdit)
             {
                 var existingUser = await UserManagerService.FindByIdAsync(User.Id.ToString());
@@ -175,11 +212,19 @@ Roles.SystemAdministrator, Roles.Teacher };
                 existingUser.Abbreviation = User.Abbreviation;
                 existingUser.Name = User.Name;
                 existingUser.SchoolId = User.SchoolId.Value;
+
                 await UserManagerService.UpdateAsync(existingUser);
 
                 var currentRoles = await UserManagerService.GetRolesAsync(existingUser);
                 await UserManagerService.RemoveFromRolesAsync(existingUser, currentRoles);
                 await UserManagerService.AddToRolesAsync(existingUser, User.SelectedRoles);
+
+                if (existingUser is Teacher teacher)
+                {
+                    teacher.CareGroups = AvailableCareGroups
+                    .Where(cg => User.SelectedCareGroupIds.Contains(cg.Id))
+                    .ToList();
+                }
             }
             else
             {
@@ -216,30 +261,27 @@ Roles.SystemAdministrator, Roles.Teacher };
         }
     }
 
-    private void Cancel()
+    private void Cancel() => Navigation.NavigateTo("/users");
+
+    private void CloseErrorModal() => ShowErrorModal = false;
+
+    private bool ShouldShowCareGroups() => !User.SelectedRoles.Contains(Roles.SystemAdministrator);
+
+    private bool IsCareGroupSelected(Guid careGroupId)
     {
-        Navigation.NavigateTo("/users");
+        return User.SelectedCareGroupIds.Contains(careGroupId);
     }
 
-    private void CloseErrorModal()
+    private void ToggleCareGroup(Guid careGroupId)
     {
-        ShowErrorModal = false;
-    }
 
-    private bool IsTeacherSelected() => User.SelectedRoles.Contains(Roles.Teacher);
-    private string[] SelectedCareGroupIdsString
-    {
-        get => User.SelectedCareGroupIds.Select(id => id.ToString()).ToArray();
-        set => User.SelectedCareGroupIds = value.Select(Guid.Parse).ToList();
-    }
-
-    private void UpdateCareGroupSelection(ChangeEventArgs e)
-    {
-        var selectedValues = e.Value as string[];
-        if (selectedValues != null)
+        if (!User.SelectedCareGroupIds.Contains(careGroupId))
         {
-            User.SelectedCareGroupIds = selectedValues.Select(Guid.Parse).ToList();
+            User.SelectedCareGroupIds.Add(careGroupId);
+        }
+        else
+        {
+            User.SelectedCareGroupIds.Remove(careGroupId);
         }
     }
-
 }

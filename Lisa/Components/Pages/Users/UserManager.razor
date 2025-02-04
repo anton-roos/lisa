@@ -7,6 +7,7 @@
 @inject UserManager<User> UserManagerService
 @inject SchoolService SchoolService
 @inject UserService UserService
+@inject ILogger<UserManager> Logger
 
 <AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
     <Authorized>
@@ -182,7 +183,7 @@ Roles.SystemAdministrator
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            Logger.LogError("Error: {ex.Message}", ex.Message);
         }
     }
 

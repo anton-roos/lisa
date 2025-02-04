@@ -1,6 +1,7 @@
 @page "/email-campaign/{Id:guid}"
 @using Lisa.Models.Entities
 @inject EmailCampaignService EmailCampaignService
+@inject ILogger<EmailCampaignManager> Logger
 
 <PageTitle>Email Campaign</PageTitle>
 <AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
@@ -55,7 +56,6 @@
 
 @code {
     [Parameter] public Guid Id { get; set; }
-
     private EmailCampaign? Campaign { get; set; }
     private int ProgressPercent { get; set; } = 0;
     private int SentCount { get; set; } = 0;
@@ -79,7 +79,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading campaign: {ex.Message}");
+            Logger.LogError("Error loading campaign: {ex.Message}", ex.Message);
             StatusMessage = "Failed to load campaign details.";
         }
         finally
@@ -124,7 +124,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error updating campaign: {ex.Message}");
+            Logger.LogError("Error updating campaign: {ex.Message}", ex.Message);
             StatusMessage = "Error processing campaign action.";
         }
         finally

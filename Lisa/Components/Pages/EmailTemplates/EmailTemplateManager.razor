@@ -3,6 +3,7 @@
 @inject NavigationManager NavigationManager
 @using Lisa.Models.Entities
 @using Blazored.TextEditor
+@inject ILogger<EmailTemplateManager> Logger
 
 <PageTitle>@(IsEdit ? "Edit Email Template" : "Add Email Template")</PageTitle>
 <AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
@@ -164,13 +165,12 @@
             }
             catch (JSException jsEx)
             {
-                Console.WriteLine($"JavaScript error initializing editor: {jsEx.Message}");
+                Logger.LogError("JavaScript error initializing editor: {jsEx.Message}", jsEx.Message);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error initializing editor: {ex.Message}");
+                Logger.LogError("Error initializing editor: {ex.Message}", ex.Message);
             }
         }
     }
-
 }

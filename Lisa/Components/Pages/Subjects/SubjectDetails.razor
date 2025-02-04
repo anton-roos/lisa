@@ -2,6 +2,7 @@
 @using Lisa.Models.Entities
 @inject SubjectService SubjectService
 @inject NavigationManager Navigation
+@inject ILogger<SubjectDetails> Logger
 
 <h2>Subject Details</h2>
 
@@ -56,7 +57,7 @@ else
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error fetching subject details: {ex.Message}");
+            Logger.LogError("Error fetching subject details: {ex.Message}", ex.Message);
             Navigation.NavigateTo("/subjects");
         }
         finally

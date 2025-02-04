@@ -122,7 +122,7 @@ public class EmailCampaignService
                         string body = campaign.ContentHtml ?? "No Content";
 
                         BackgroundJob.Enqueue(() => SendEmailWithRetryAsync(recipient.EmailAddress, subject, body, campaign.SchoolId));
-                        Thread.Sleep(2000);
+                        await Task.Delay(2000, cancellationToken);
 
                         recipient.Status = EmailRecipientStatus.Sent;
                     }

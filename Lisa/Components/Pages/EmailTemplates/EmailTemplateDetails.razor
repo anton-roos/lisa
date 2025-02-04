@@ -3,6 +3,7 @@
 @using Lisa.Models.Entities
 @inject EmailTemplateService EmailTemplateService
 @inject NavigationManager NavigationManager
+@inject ILogger<EmailTemplateDetails> Logger
 
 <PageTitle>Email Template Details</PageTitle>
 <AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
@@ -48,8 +49,7 @@
 
         if (Template == null)
         {
-            // Handle case where the template is not found
-            Console.WriteLine($"Template with Id {Id} not found.");
+            Logger.LogError("Template with Id {Id} not found.", Id);
         }
     }
 

@@ -2,6 +2,7 @@
 @using Lisa.Models.Entities
 @inject BugReportService BugReportService
 @inject NavigationManager NavigationManager
+@inject ILogger<BugReportDetails> Logger
 
 <PageTitle>Bug Report Details</PageTitle>
 <AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
@@ -83,7 +84,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error fetching bug details: {ex.Message}");
+           Logger.LogError("Error fetching bug details: {ex.Message}", ex.Message);
             bug = null;
         }
         finally

@@ -3,6 +3,7 @@
 @inject SchoolService SchoolService
 @inject NavigationManager NavigationManager
 @inject BugReportService BugReportService
+@inject ILogger<MainLayout> Logger
 
 <div class="page">
 
@@ -117,7 +118,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error logging bug: {ex.Message}");
+            Logger.LogError("Error logging bug: {ex.Message}", ex.Message);
         }
         finally
         {

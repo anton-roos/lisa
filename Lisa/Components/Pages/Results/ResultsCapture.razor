@@ -10,7 +10,7 @@
 @inject LearnerService LearnerService
 @inject SchoolGradeService SchoolGradeService
 @inject SubjectService SubjectService
-@inject ILogger<Result> Logger
+@inject ILogger<ResultsCapture> Logger
 @inject UserService UserService
 @inject ResultService ResultService
 @inherits EventAwareComponentBase
@@ -88,8 +88,8 @@
                                     <td>@entry.LearnerName</td>
                                     <td>
                                         <InputNumber Value="entry.ResultViewModel.Score"
-                                            ValueChanged="EventCallback.Factory.Create<int?>(this, value => OnScoreChanged(value, entry))" class="form-control" min="0"
-                                            ValueExpression="@(() => entry.ResultViewModel.Score)"
+                                            ValueChanged="EventCallback.Factory.Create<int?>(this, value => OnScoreChanged(value, entry))"
+                                            class="form-control" min="0" ValueExpression="@(() => entry.ResultViewModel.Score)"
                                             max="100" step="1" />
                                     </td>
                                     <td>
@@ -165,7 +165,7 @@
 
         if (User.Identity.IsAuthenticated)
         {
-            Console.WriteLine($"{User.Identity.Name} is authenticated.");
+            Logger.LogError("{User.Identity.Name} is authenticated.", User.Identity.Name);
         }
 
         Loading = false;
@@ -274,10 +274,10 @@
 
             foreach (var learner in learners)
             {
-                if (learner.LearnerSubjects != null 
-                && subjectId != null 
+                if (learner.LearnerSubjects != null
+                && subjectId != null
                 && learner.LearnerSubjects
-                    .Any(ls => ls.SubjectId == int.Parse(subjectId)))
+                .Any(ls => ls.SubjectId == int.Parse(subjectId)))
                 {
                     LearnerResults.Add(new LearnerResult
                         {
@@ -341,6 +341,6 @@
     private void OnScoreChanged(int? value, LearnerResult entry)
     {
         entry.ResultViewModel.Score = value;
-        Console.WriteLine($"Score updated: {value}");
+        Logger.LogError("Score updated: {value}", value);
     }
 }

@@ -121,7 +121,7 @@
         {
             throw new InvalidOperationException("No school selected.");
         }
-        Users = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], SelectedSchool.Id);
+        Users = await UserService.GetAllByRoleAndSchoolAsync(AvailableRoles.ToArray(), SelectedSchool.Id);
     }
 
     private IEnumerable<User> FilteredUsers

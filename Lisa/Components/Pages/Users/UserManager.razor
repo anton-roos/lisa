@@ -2,6 +2,7 @@
 @using Lisa.Models.ViewModels
 @using Microsoft.AspNetCore.Authorization
 @using Lisa.Models.Entities
+@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Identity
 @inject NavigationManager Navigation
 @inject UserManager<User> UserManagerService
@@ -9,7 +10,7 @@
 @inject UserService UserService
 @inject ILogger<UserManager> Logger
 
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+<AuthorizeView Context="auth" Roles="@Roles.SystemAdministrator">
     <Authorized>
         <h3>@(IsEdit ? "Edit User" : "Add User")</h3>
 
@@ -74,27 +75,20 @@
     private UserViewModel User { get; set; } = new();
     private School? SelectedSchool;
 
-    private List<string> AvailableRoles = new()
-{
-Roles.Principal,
-Roles.Administrator,
-Roles.SchoolManagement,
-Roles.SystemAdministrator
-};
+    private List<string> AvailableRoles = new() { Roles.Principal, Roles.Administrator, Roles.SchoolManagement,
+Roles.SystemAdministrator, Roles.Teacher };
 
     private bool IsEdit => UserId.HasValue;
 
     protected override async Task OnInitializedAsync()
     {
         SelectedSchool = SchoolService.GetSelectedSchool();
-
         if (IsEdit)
         {
             var existingUser = await UserService.GetByIdAsync(UserId.Value);
             if (existingUser != null)
             {
                 var currentRoles = await UserManagerService.GetRolesAsync(existingUser);
-
                 User = new UserViewModel
                     {
                         Id = existingUser.Id,
@@ -128,10 +122,7 @@ Roles.SystemAdministrator
         try
         {
             if (SelectedSchool == null)
-            {
                 throw new Exception("No Selected School while trying to manage a user.");
-            }
-
             if (IsEdit)
             {
                 var existingUser = await UserManagerService.FindByIdAsync(User.Id.ToString());
@@ -142,7 +133,6 @@ Roles.SystemAdministrator
                 existingUser.Abbreviation = User.Abbreviation;
                 existingUser.Name = User.Name;
                 existingUser.SchoolId = User.SchoolId.Value;
-
                 await UserManagerService.UpdateAsync(existingUser);
 
                 var currentRoles = await UserManagerService.GetRolesAsync(existingUser);
@@ -152,10 +142,7 @@ Roles.SystemAdministrator
             else
             {
                 if (string.IsNullOrWhiteSpace(User.Password))
-                {
                     throw new Exception("Password is required for new users.");
-                }
-
                 var newUser = new User
                     {
                         Surname = User.Surname,
@@ -172,18 +159,16 @@ Roles.SystemAdministrator
                     var errorMessage = string.Join("; ", result.Errors.Select(e => e.Description));
                     throw new Exception($"Failed to create user: {errorMessage}");
                 }
-
                 if (User.SelectedRoles.Any())
                 {
                     await UserManagerService.AddToRolesAsync(newUser, User.SelectedRoles);
                 }
             }
-
             Navigation.NavigateTo("/users");
         }
         catch (Exception ex)
         {
-            Logger.LogError("Error: {ex.Message}", ex.Message);
+            Logger.LogError("Error: {Message}", ex.Message);
         }
     }
 

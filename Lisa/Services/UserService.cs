@@ -28,20 +28,46 @@ public class UserService(
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
 
+            // Start query with base users
             var usersQuery = context.Users
                 .AsNoTracking()
                 .Where(u => SchoolId == null || u.SchoolId == SchoolId);
 
-            // Include CareGroups only for Teachers
-            if (roles.Contains(Roles.Teacher))
-            {
-                usersQuery = usersQuery.OfType<Teacher>().Include(t => t.CareGroups);
-            }
-
+            // Load base properties
             var users = await usersQuery.ToListAsync();
 
-            var userIds = users.Select(u => u.Id).ToList();
+            // Load teacher-specific properties
+            var teachers = users.OfType<Teacher>().ToList();
+            if (teachers.Any())
+            {
+                var teacherIds = teachers.Select(t => t.Id).ToList();
 
+                var teacherDetails = await context.Teachers
+                    .Where(t => teacherIds.Contains(t.Id))
+                    .Include(t => t.School)
+                    .Include(t => t.CareGroups)
+                    .Include(t => t.Subjects)
+                    .Include(t => t.RegisterClasses)
+                    .Include(t => t.Periods)
+                    .ToListAsync();
+
+                // Merge teacher details into the user list
+                foreach (var teacher in teachers)
+                {
+                    var details = teacherDetails.FirstOrDefault(t => t.Id == teacher.Id);
+                    if (details != null)
+                    {
+                        teacher.School = details.School;
+                        teacher.CareGroups = details.CareGroups;
+                        teacher.Subjects = details.Subjects;
+                        teacher.RegisterClasses = details.RegisterClasses;
+                        teacher.Periods = details.Periods;
+                    }
+                }
+            }
+
+            // Fetch and attach roles
+            var userIds = users.Select(u => u.Id).ToList();
             var userRoles = await (from userRole in context.UserRoles
                                    join role in context.Roles on userRole.RoleId equals role.Id
                                    where userIds.Contains(userRole.UserId)
@@ -50,11 +76,13 @@ public class UserService(
 
             foreach (var user in users)
             {
-                user.Roles = [.. userRoles
+                user.Roles = userRoles
                     .Where(ur => ur.UserId == user.Id)
-                    .Select(ur => ur.Name)];
+                    .Select(ur => ur.Name)
+                    .ToList();
             }
 
+            // Filter users based on roles
             return users.Where(u => u.Roles.Intersect(roles).Any()).ToList();
         }
         catch (Exception ex)

@@ -5,7 +5,7 @@
 @inject UserService UserService
 @inherits EventAwareComponentBase
 
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
     <Authorized>
         <h3>Users</h3>
         <button class="btn btn-primary mb-3" @onclick="GoToAddUser" disabled="@(SelectedSchool == null)">
@@ -25,21 +25,25 @@
         else
         {
             <div class="mb-3">
-                <label for="roleFilter" class="form-label">Filter by Role</label>
-                <select id="roleFilter" class="form-select" @onchange="OnRoleFilterChanged">
-                    <option value="">All Roles</option>
-                    @foreach (var role in AvailableRoles)
-                    {
-                        <option value="@role">@role</option>
-                    }
-                </select>
+                <button class="btn @(selectedRoles.Count == 0 ? "btn-primary" : "btn-secondary") me-2"
+                    @onclick="ToggleAllRoles">
+                    All Roles
+                </button>
+
+                @foreach (var role in AvailableRoles)
+                {
+                    <button class="btn @(selectedRoles.Contains(role) ? "btn-primary" : "btn-secondary") me-2"
+                        @onclick="() => ToggleRole(role)">
+                        @role
+                    </button>
+                }
             </div>
 
             <hr />
 
             @if (!FilteredUsers.Any())
             {
-                <p>No users found for role: '@(string.IsNullOrEmpty(selectedRole) ? "All Roles" : selectedRole)'.</p>
+                <p>No users found for selected roles.</p>
             }
             else
             {
@@ -82,11 +86,10 @@
 @code {
     private School? SelectedSchool;
     private List<User>? Users;
-
-    private string selectedRole = string.Empty;
+    private HashSet<string> selectedRoles = new();
 
     private List<string> AvailableRoles =
-        [Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdministrator];
+        [Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher];
 
     protected override async Task OnInitializedAsync()
     {
@@ -118,31 +121,37 @@
     private async Task LoadUsers()
     {
         if (SelectedSchool == null)
-        {
             throw new InvalidOperationException("No school selected.");
-        }
         Users = await UserService.GetAllByRoleAndSchoolAsync(AvailableRoles.ToArray(), SelectedSchool.Id);
     }
 
-    private IEnumerable<User> FilteredUsers
+    private IEnumerable<User> FilteredUsers =>
+    Users == null ? Enumerable.Empty<User>() :
+    selectedRoles.Count == 0 ? Users :
+    Users.Where(u => u.Roles.Any(r => selectedRoles.Contains(r)));
+
+    private void ToggleRole(string role)
     {
-        get
+        if (selectedRoles.Contains(role))
         {
-            if (Users == null)
-                return Enumerable.Empty<User>();
-
-            if (string.IsNullOrWhiteSpace(selectedRole))
-            {
-                return Users.Where(u => !u.Roles.Contains(Roles.Teacher) && !u.Roles.Contains(Roles.SystemAdministrator));
-            }
-
-            return Users.Where(u => u.Roles.Contains(selectedRole));
+            selectedRoles.Remove(role);
+        }
+        else
+        {
+            selectedRoles.Add(role);
         }
     }
 
-    private void OnRoleFilterChanged(ChangeEventArgs e)
+    private void ToggleAllRoles()
     {
-        selectedRole = e.Value?.ToString() ?? string.Empty;
+        if (selectedRoles.Count > 0)
+        {
+            selectedRoles.Clear();
+        }
+        else
+        {
+            selectedRoles = AvailableRoles.ToHashSet();
+        }
     }
 
     private void GoToAddUser()

@@ -99,6 +99,13 @@ Roles.SystemAdministrator, Roles.Teacher };
                         SelectedRoles = currentRoles.ToList(),
                         SchoolId = existingUser.SchoolId
                     };
+
+                // If it's a Teacher, load extra properties
+                if (existingUser is Teacher teacher)
+                {
+                    User.CareGroups = teacher.CareGroups?.ToList() ?? new List<CareGroup>();
+                    User.SelectedCareGroupIds = teacher.CareGroups?.Select(cg => cg.Id).ToList() ?? new();
+                }
             }
         }
     }

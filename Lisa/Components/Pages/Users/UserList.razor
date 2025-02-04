@@ -24,58 +24,68 @@
         }
         else
         {
-            <div class="mb-3">
-                <button class="btn @(selectedRoles.Count == 0 ? "btn-primary" : "btn-secondary") me-2"
-                    @onclick="ToggleAllRoles">
+            <div class="mb-3 d-flex flex-wrap align-items-center">
+                <!-- Search Filter -->
+                <div class="me-3">
+                    <input type="text" class="form-control" placeholder="Search users..." @bind="searchQuery"
+                        @oninput="FilterUsers">
+                </div>
+
+                <!-- Role Filter Buttons -->
+                <button class="btn @(selectedRole == null ? "btn-primary" : "btn-secondary") me-2"
+                    @onclick="ClearRoleFilter">
                     All Roles
                 </button>
 
                 @foreach (var role in AvailableRoles)
                 {
-                    <button class="btn @(selectedRoles.Contains(role) ? "btn-primary" : "btn-secondary") me-2"
-                        @onclick="() => ToggleRole(role)">
+                    <button class="btn @(selectedRole == role ? "btn-primary" : "btn-secondary") me-2"
+                        @onclick="() => SelectRole(role)">
                         @role
                     </button>
                 }
             </div>
 
-            <hr />
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                @if (!FilteredUsers.Any())
+                {
+                    <div class="col-12">
+                        <p>No users found matching your search/filter.</p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var user in FilteredUsers)
+                    {
+                        <div class="col">
+                            <div class="card shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        @if (!string.IsNullOrWhiteSpace(user.Abbreviation))
+                                        {
+                                            <span class="badge bg-secondary me-2">@user.Abbreviation</span>
+                                        }
+                                        @user.Surname @user.Name
+                                    </h5>
+                                    <h6 class="card-subtitle mb-2 text-muted">@user.Email</h6>
 
-            @if (!FilteredUsers.Any())
-            {
-                <p>No users found for selected roles.</p>
-            }
-            else
-            {
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Surname</th>
-                            <th>Abbreviation</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Roles</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var user in FilteredUsers)
-                        {
-                            <tr>
-                                <td>@user.Surname</td>
-                                <td>@user.Abbreviation</td>
-                                <td>@user.Name</td>
-                                <td>@user.Email</td>
-                                <td>@string.Join(", ", user.Roles)</td>
-                                <td>
-                                    <button class="btn btn-secondary btn-sm" @onclick="() => EditUser(user.Id)">Edit</button>
-                                    <button class="btn btn-danger btn-sm" @onclick="() => DeleteUser(user)">Delete</button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
+                                    <div class="mb-2">
+                                        @foreach (var role in user.Roles)
+                                        {
+                                            <span class="badge bg-primary me-1">@role</span>
+                                        }
+                                    </div>
+
+                                    <div class="d-flex justify-content-between">
+                                        <button class="btn btn-sm btn-secondary" @onclick="() => EditUser(user.Id)">Edit</button>
+                                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteUser(user)">Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
         }
     </Authorized>
     <NotAuthorized>
@@ -86,7 +96,8 @@
 @code {
     private School? SelectedSchool;
     private List<User>? Users;
-    private HashSet<string> selectedRoles = new();
+    private string? selectedRole = null; // Now only one role can be selected at a time
+    private string searchQuery = string.Empty;
 
     private List<string> AvailableRoles =
         [Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher];
@@ -127,31 +138,35 @@
 
     private IEnumerable<User> FilteredUsers =>
     Users == null ? Enumerable.Empty<User>() :
-    selectedRoles.Count == 0 ? Users :
-    Users.Where(u => u.Roles.Any(r => selectedRoles.Contains(r)));
+    Users
+    .Where(u =>
+    (selectedRole == null || u.Roles.Contains(selectedRole)) &&
+    (string.IsNullOrWhiteSpace(searchQuery) ||
+    u.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+    u.Surname.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+    (u.Abbreviation?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false)
+    ));
 
-    private void ToggleRole(string role)
+    private void FilterUsers(ChangeEventArgs e)
     {
-        if (selectedRoles.Contains(role))
+        searchQuery = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private void SelectRole(string role)
+    {
+        if (selectedRole == role)
         {
-            selectedRoles.Remove(role);
+            selectedRole = null; // Deselect if already selected
         }
         else
         {
-            selectedRoles.Add(role);
+            selectedRole = role; // Select the clicked role
         }
     }
 
-    private void ToggleAllRoles()
+    private void ClearRoleFilter()
     {
-        if (selectedRoles.Count > 0)
-        {
-            selectedRoles.Clear();
-        }
-        else
-        {
-            selectedRoles = AvailableRoles.ToHashSet();
-        }
+        selectedRole = null; // Show all users
     }
 
     private void GoToAddUser()

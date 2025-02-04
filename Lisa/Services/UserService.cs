@@ -93,47 +93,55 @@ public class UserService(
     }
 
     /// <summary>
-    /// Retrieves all teachers.
-    /// </summary>
-    public async Task<List<Teacher>> GetAllTeachersAsync()
-    {
-        try
-        {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
-            return await context.Teachers.AsNoTracking().ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching all teachers.");
-            return [];
-        }
-    }
-
-    /// <summary>
     /// Retrieves a teacher by ID with related data.
     /// </summary>
-    public async Task<Teacher?> GetTeacherByIdAsync(Guid id)
+    public async Task<User?> GetByIdAsync(Guid id)
     {
         try
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
-            return await context.Teachers
+
+            // Fetch user WITHOUT includes first
+            var user = await context.Users
                 .AsNoTracking()
-                .Include(t => t.School)
-                .Include(t => t.Subjects)
-                .Include(t => t.RegisterClasses)
-                    .ThenInclude(rc => rc.SchoolGrade)
-                    .ThenInclude(sg => sg.SystemGrade)
-                .Include(t => t.Periods)
-                .Include(t => t.CareGroups)
-                .FirstOrDefaultAsync(t => t.Id == id);
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+                return null;
+
+            // If the user is a Teacher, retrieve additional details separately
+            if (user is Teacher)
+            {
+                var teacher = await context.Teachers
+                    .AsNoTracking()
+                    .Include(t => t.School)
+                    .Include(t => t.Subjects)
+                    .Include(t => t.RegisterClasses)
+                        .ThenInclude(rc => rc.SchoolGrade)
+                        .ThenInclude(sg => sg.SystemGrade)
+                    .Include(t => t.Periods)
+                    .Include(t => t.CareGroups)
+                    .FirstOrDefaultAsync(t => t.Id == id);
+
+                return teacher ?? user; // If the teacher lookup fails, return the base user
+            }
+
+            // Fetch user roles
+            var userRoles = await (from userRole in context.UserRoles
+                                   join role in context.Roles on userRole.RoleId equals role.Id
+                                   where userRole.UserId == id
+                                   select role.Name).ToListAsync();
+            user.Roles = userRoles;
+
+            return user;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching teacher with ID: {TeacherId}", id);
+            _logger.LogError(ex, "Error fetching user with ID: {UserId}", id);
             return null;
         }
     }
+
 
     /// <summary>
     /// Creates a new teacher.
@@ -348,32 +356,6 @@ public class UserService(
         {
             _logger.LogError(ex, "Error creating teacher.");
             return false;
-        }
-    }
-
-    /// <summary>
-    /// Retrieves a teacher by ID with related data.
-    /// </summary>
-    public async Task<Teacher?> GetByIdAsync(Guid id)
-    {
-        try
-        {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
-            return await context.Teachers
-                .AsNoTracking()
-                .Include(t => t.School!)
-                .Include(t => t.Subjects!)
-                .Include(t => t.RegisterClasses!)
-                .ThenInclude(rc => rc.SchoolGrade!)
-                .ThenInclude(sg => sg.SystemGrade!)
-                .Include(t => t.Periods!)
-                .Include(t => t.CareGroups!)
-                .FirstOrDefaultAsync(t => t.Id == id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching teacher with ID: {TeacherId}", id);
-            return null;
         }
     }
 

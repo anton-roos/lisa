@@ -484,9 +484,6 @@ namespace Lisa.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<bool>("MathSelectionEnabled")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Name")
                         .HasColumnType("text");
 

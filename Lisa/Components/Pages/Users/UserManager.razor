@@ -63,8 +63,7 @@
             {
                 <div class="form-group mb-3">
                     <label for="caregroups">Care Groups</label>
-                    <select id="caregroups" class="form-control" multiple
-                        @onchange="UpdateCareGroupSelection">
+                    <select id="caregroups" class="form-control" multiple @onchange="UpdateCareGroupSelection">
                         @foreach (var group in User.CareGroups)
                         {
                             <option value="@group.Id.ToString()">@group.Name</option>
@@ -76,6 +75,25 @@
             <button type="submit" class="btn btn-primary me-2">Save</button>
             <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
         </EditForm>
+
+        <!-- Error Modal -->
+        <div class="modal fade @(ShowErrorModal ? "show d-block" : "d-none")" tabindex="-1"
+            style="background-color: rgba(0,0,0,0.5);" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Error</h5>
+                        <button type="button" class="btn-close" aria-label="Close" @onclick="CloseErrorModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>@ErrorMessage</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" @onclick="CloseErrorModal">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </Authorized>
     <NotAuthorized>
         <h3>You are not authorized to access this page.</h3>
@@ -93,6 +111,10 @@
 Roles.SystemAdministrator, Roles.Teacher };
 
     private bool IsEdit => UserId.HasValue;
+
+    // Error Modal Variables
+    private bool ShowErrorModal { get; set; } = false;
+    private string ErrorMessage { get; set; } = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -114,7 +136,6 @@ Roles.SystemAdministrator, Roles.Teacher };
                         SchoolId = existingUser.SchoolId
                     };
 
-                // If it's a Teacher, load extra properties
                 if (existingUser is Teacher teacher)
                 {
                     User.CareGroups = teacher.CareGroups?.ToList() ?? new List<CareGroup>();
@@ -190,6 +211,8 @@ Roles.SystemAdministrator, Roles.Teacher };
         catch (Exception ex)
         {
             Logger.LogError("Error: {Message}", ex.Message);
+            ErrorMessage = ex.Message;
+            ShowErrorModal = true;
         }
     }
 
@@ -198,11 +221,12 @@ Roles.SystemAdministrator, Roles.Teacher };
         Navigation.NavigateTo("/users");
     }
 
-    private bool IsTeacherSelected()
+    private void CloseErrorModal()
     {
-        return User.SelectedRoles.Contains(Roles.Teacher);
+        ShowErrorModal = false;
     }
 
+    private bool IsTeacherSelected() => User.SelectedRoles.Contains(Roles.Teacher);
     private string[] SelectedCareGroupIdsString
     {
         get => User.SelectedCareGroupIds.Select(id => id.ToString()).ToArray();

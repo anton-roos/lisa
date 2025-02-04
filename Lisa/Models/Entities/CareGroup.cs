@@ -7,6 +7,5 @@ public class CareGroup
     public Guid SchoolId { get; set; }
     public School? School { get; set; }
     public ICollection<Learner>? CareGroupMembers { get; set; }
-    public Guid? TeacherId { get; set; }
-    public Teacher? Teacher { get; set; }
+    public ICollection<User>? Users { get; set; }
 }

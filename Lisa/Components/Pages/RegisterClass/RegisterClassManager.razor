@@ -39,7 +39,7 @@
         }
         else
         {
-            <RegisterClassForm RegisterClass="@RegisterClassModel" SchoolGrades="@SchoolGrades" Teachers="@Teachers"
+            <RegisterClassForm RegisterClass="@RegisterClassModel" SchoolGrades="@SchoolGrades" Users="@Teachers"
                 FilteredSubjects="@FilteredSubjects" SearchText="@SearchText" OnInputChange="@OnInputChange"
                 ToggleSubject="@ToggleSubject" OnCancel="@Cancel" OnValidSubmit="@HandleValidSubmit"
                 AllSubjects="@AllSubjects" />
@@ -59,7 +59,7 @@
     private RegisterClassViewModel RegisterClassModel { get; set; } = new();
     private School? SelectedSchool;
     private List<SchoolGrade>? SchoolGrades;
-    private List<Teacher>? Teachers;
+    private List<User>? Teachers;
     private List<Subject> AllSubjects = new();
     private string SearchText = string.Empty;
     private string? AlertMessage { get; set; }
@@ -83,7 +83,6 @@
             {
                 SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
                 var user = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], SelectedSchool.Id);
-                Teachers = user.OfType<Teacher>().ToList();
                 AllSubjects = await SubjectService.GetAllAsync();
             }
 
@@ -103,10 +102,9 @@
                     {
                         Name = registerClassEntity.Name,
                         GradeId = registerClassEntity.SchoolGradeId,
-                        TeacherId = registerClassEntity.TeacherId,
+                        TeacherId = registerClassEntity.UserId,
                         SubjectIds = registerClassEntity.CompulsorySubjects.Select(s => s.Id).ToList(),
                     };
-
             }
             else
             {

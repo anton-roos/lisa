@@ -16,10 +16,7 @@ public class School
     public SchoolCurriculum? Curriculum { get; set; }
     public ICollection<SchoolGrade>? SchoolGrades { get; set; }
     public ICollection<RegisterClass>? RegisterClasses { get; set; }
-    public ICollection<Teacher>? Teachers { get; set; }
-    public ICollection<Principal>? Principals { get; set; }
-    public ICollection<Administrator>? Administrators { get; set; }
-    public ICollection<SchoolManagement>? SchoolManagements { get; set; }
+    public ICollection<User>? Staff { get; set; }
     public ICollection<Learner>? Learners { get; set; }
     public ICollection<CareGroup>? CareGroups { get; set; }
     public ICollection<Period>? Periods { get; set; }

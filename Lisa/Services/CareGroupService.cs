@@ -28,28 +28,7 @@ public class CareGroupService(IDbContextFactory<LisaDbContext> dbContextFactory)
         return await context.CareGroups
             .AsNoTracking()
             .Include(c => c.CareGroupMembers)
-            .Include(c => c.Teacher)
-            .ToListAsync();
-    }
-
-    public async Task<IEnumerable<CareGroup>> GetUnassignedCareGroupsAsync(Guid schoolId)
-    {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
-
-        return await context.CareGroups
-            .Where(c => c.SchoolId == schoolId && c.TeacherId == null)
-            .AsNoTracking()
-            .ToListAsync();
-    }
-
-    public async Task<List<CareGroup>> GetByIdsAsync(IEnumerable<Guid> careGroupIds)
-    {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.CareGroups
-            .AsNoTracking()
-            .Where(c => careGroupIds.Contains(c.Id))
-            .Include(c => c.CareGroupMembers)
-            .Include(c => c.Teacher)
+            .Include(c => c.Users)
             .ToListAsync();
     }
 
@@ -72,7 +51,7 @@ public class CareGroupService(IDbContextFactory<LisaDbContext> dbContextFactory)
         return await context.CareGroups
             .AsNoTracking()
             .Include(c => c.CareGroupMembers)
-            .Include(c => c.Teacher)
+            .Include(c => c.Users)
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 

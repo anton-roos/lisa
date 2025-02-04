@@ -4,6 +4,7 @@ using Lisa.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Lisa.Middleware;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Lisa.Models.Entities;
@@ -12,6 +13,9 @@ using Serilog;
 using Lisa.Repositories;
 using Lisa.Events;
 using Hangfire.Dashboard;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Lisa.Components.Pages;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,6 +51,44 @@ builder.Services.AddRazorComponents(options =>
 // ✅ 3️⃣ Configure Database Context Factory
 builder.Services.AddDbContextFactory<LisaDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Lisa")));
+
+// Register JWT authentication.
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+    };
+
+    // For SignalR, allow the JWT to be passed as a query string parameter.
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+
+            // If the request is for our SignalR hub, get the token from the query string.
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hub"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
+});
+
 
 // ✅ 4️⃣ Configure Identity & Security Policies
 builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
@@ -122,10 +164,11 @@ builder.Services.AddScoped<CommunicationService>();
 builder.Services.AddSingleton<ILoginStore, InMemoryLoginStore>();
 builder.Services.AddSingleton<HangfireAuthorizationFilter>();
 builder.Services.AddScoped<SystemGradeService>();
-builder.Services.AddScoped<IPasswordHasher<Teacher>, PasswordHasher<Teacher>>();
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();
+builder.Services.AddControllers();
 
 var app = builder.Build();
 
@@ -177,9 +220,9 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
         return isProduction; // 🔥 Restrict modifications in production
     }
 });
-
 app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+app.MapControllers();
 
 // ✅ 9️⃣ Handle Application Startup Event Logging
 try

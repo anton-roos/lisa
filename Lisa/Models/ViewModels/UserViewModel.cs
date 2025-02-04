@@ -25,4 +25,5 @@ public class UserViewModel
     public List<string> SelectedRoles { get; set; } = new();
     public List<CareGroup> CareGroups { get; set; } = new();
     public List<Guid> SelectedCareGroupIds { get; set; } = new();
+    public string? PhoneNumber { get; set; }
 }

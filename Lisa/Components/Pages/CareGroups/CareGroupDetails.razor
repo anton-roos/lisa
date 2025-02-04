@@ -16,16 +16,20 @@
                 <dt class="col-sm-2">Name</dt>
                 <dd class="col-sm-10">@CareGroup.Name</dd>
             </dl>
-            @if (CareGroup.Teacher != null)
+            @if (CareGroup.Users != null)
             {
-                <dl class="row">
-                    <dt class="col-sm-2">Teacher</dt>
-                    <dd class="col-sm-10">@CareGroup.Teacher.Abbreviation</dd>
-                    <dd class="col-sm-10">@CareGroup.Teacher.Surname</dd>
-                    <dd class="col-sm-10">@CareGroup.Teacher.Name</dd>
-                </dl>
+                foreach (var user in CareGroup.Users)
+                {
+                    if (user.Roles.Contains(Roles.Teacher))
+                    {
+                        <dl class="row">
+                            <dt class="col-sm-2">Teacher</dt>
+                            <dd class="col-sm-10">@user.Abbreviation</dd>
+                            <dd class="col-sm-10">@($"{user.Surname} {user.Name}")</dd>
+                        </dl>
+                    }
+                }
             }
-            
         }
     </Authorized>
     <NotAuthorized>

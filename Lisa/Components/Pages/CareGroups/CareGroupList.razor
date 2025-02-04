@@ -45,12 +45,18 @@
                         <tr>
                             <td>@careGroup.Name</td>
                             <td>
-                                @if (@careGroup.Teacher != null)
+                                @if (@careGroup.Users != null)
                                 {
-                                    <Pill Color="primary" AdditionalClasses="me-2">
-                                        @careGroup.Teacher.Abbreviation
-                                    </Pill>
-                                    @($"{careGroup.Teacher.Surname} {careGroup.Teacher.Name}")
+                                    foreach (var user in careGroup.Users)
+                                    {
+                                        if (user.Roles.Contains(Roles.Teacher))
+                                        {
+                                            <Pill Color="primary" AdditionalClasses="me-2">
+                                                @user.Abbreviation
+                                            </Pill>
+                                            @($"{user.Surname} {user.Name}")
+                                        }
+                                    }
                                 }
                                 else
                                 {

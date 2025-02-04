@@ -29,9 +29,9 @@
         <label class="form-label">Teacher</label>
         <select class="form-select" @bind="RegisterClass.TeacherId">
             <option value="">-- Select Teacher --</option>
-            @if (Teachers != null)
+            @if (Users != null)
             {
-                @foreach (var teacher in Teachers)
+                @foreach (var teacher in Users)
                 {
                     <option value="@teacher.Id">@($"{teacher.Surname} {teacher.Name}")</option>
                 }
@@ -69,7 +69,7 @@
 @code {
     [Parameter] public RegisterClassViewModel RegisterClass { get; set; } = new();
     [Parameter] public List<SchoolGrade>? SchoolGrades { get; set; }
-    [Parameter] public List<Teacher>? Teachers { get; set; }
+    [Parameter] public List<User>? Users { get; set; }
     [Parameter] public IEnumerable<Subject>? FilteredSubjects { get; set; }
     [Parameter] public string SearchText { get; set; } = string.Empty;
     [Parameter] public EventCallback<ChangeEventArgs> OnInputChange { get; set; }

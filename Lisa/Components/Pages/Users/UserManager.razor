@@ -69,14 +69,19 @@
                         {
                             var careGroupId = group.Id;
                             <div class="col-4 d-flex align-items-center">
-                                <label class="me-2">@group.Name</label>
-                                <Switch Value="CareGroupSelections[careGroupId]" ValueChanged="() => ToggleCareGroup(careGroupId)"
-                                    Reverse="false"></Switch>
+                                <div class="form-check">
+                                    <!-- Checkbox for each care group -->
+                                    <input class="form-check-input" type="checkbox" id="@($"careGroup_{careGroupId}")"
+                                        checked="@CareGroupSelections[careGroupId]"
+                                        @onchange="(e) => OnCareGroupChanged(careGroupId, (bool)e.Value)" />
+                                    <label class="form-check-label" for="@($"careGroup_{careGroupId}")">@group.Name</label>
+                                </div>
                             </div>
                         }
                     </div>
                 </div>
             }
+
             <button type="submit" class="btn btn-primary me-2">Save</button>
             <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
         </EditForm>
@@ -113,32 +118,39 @@
     private School? SelectedSchool;
     private List<CareGroup> AvailableCareGroups = new();
 
-    private List<string> AvailableRoles = new() { Roles.Principal, Roles.Administrator, Roles.SchoolManagement,
-Roles.SystemAdministrator, Roles.Teacher };
+    private List<string> AvailableRoles = new() {
+Roles.Principal,
+Roles.Administrator,
+Roles.SchoolManagement,
+Roles.SystemAdministrator,
+Roles.Teacher
+};
+
     private Dictionary<Guid, bool> CareGroupSelections = new();
 
     private bool IsEdit => UserId.HasValue;
 
     // Error Modal Variables
-    private bool ShowErrorModal { get; set; } = false;
+    private bool ShowErrorModal { get; set; }
     private string ErrorMessage { get; set; } = "";
 
     protected override async Task OnInitializedAsync()
     {
         SelectedSchool = SchoolService.GetSelectedSchool();
 
-        // Initialize CareGroupSelections dictionary first
+        // If we have a selected school, load care groups
         if (SelectedSchool != null)
         {
             AvailableCareGroups = await CareGroupService.GetBySchoolAsync(SelectedSchool.Id);
 
-            // Initialize all care groups with false by default
+            // Initialize dictionary to false for all
             foreach (var careGroup in AvailableCareGroups)
             {
                 CareGroupSelections[careGroup.Id] = false;
             }
         }
 
+        // If editing, load existing user and map data
         if (IsEdit)
         {
             var existingUser = await UserService.GetByIdAsync(UserId.Value);
@@ -154,44 +166,15 @@ Roles.SystemAdministrator, Roles.Teacher };
                         Email = existingUser.Email,
                         SelectedRoles = currentRoles.ToList(),
                         SchoolId = existingUser.SchoolId,
-                        SelectedCareGroupIds = existingUser is Teacher teacher
-                    ? teacher.CareGroups?.Select(cg => cg.Id).ToList() ?? new()
-                    : new()
+                        SelectedCareGroupIds = existingUser.CareGroups?.Select(cg => cg.Id).ToList() ?? new()
                     };
 
-                // Update CareGroupSelections based on user's selected care groups
+                // Update dictionary based on user’s selected care groups
                 foreach (var careGroup in AvailableCareGroups)
                 {
                     CareGroupSelections[careGroup.Id] = User.SelectedCareGroupIds.Contains(careGroup.Id);
                 }
             }
-        }
-    }
-
-    private bool GetCareGroupSelection(Guid id) =>
-    CareGroupSelections.ContainsKey(id) && CareGroupSelections[id];
-
-    private void SetCareGroupSelection(Guid id, bool value) =>
-    CareGroupSelections[id] = value;
-    private void UpdateCareGroupSelection(ChangeEventArgs e)
-    {
-        if (e.Value is string[] selectedValues)
-        {
-            User.SelectedCareGroupIds = selectedValues.Select(Guid.Parse).ToList();
-        }
-    }
-
-    private void ToggleRole(string role, bool isChecked)
-    {
-        if (isChecked)
-        {
-            if (!User.SelectedRoles.Contains(role))
-                User.SelectedRoles.Add(role);
-        }
-        else
-        {
-            if (User.SelectedRoles.Contains(role))
-                User.SelectedRoles.Remove(role);
         }
     }
 
@@ -211,25 +194,23 @@ Roles.SystemAdministrator, Roles.Teacher };
                 existingUser.Surname = User.Surname;
                 existingUser.Abbreviation = User.Abbreviation;
                 existingUser.Name = User.Name;
-                existingUser.SchoolId = User.SchoolId.Value;
+                existingUser.SchoolId = User.SchoolId ?? SelectedSchool.Id;
+                existingUser.CareGroups = AvailableCareGroups
+                .Where(cg => User.SelectedCareGroupIds.Contains(cg.Id))
+                .ToList();
 
                 await UserManagerService.UpdateAsync(existingUser);
 
                 var currentRoles = await UserManagerService.GetRolesAsync(existingUser);
                 await UserManagerService.RemoveFromRolesAsync(existingUser, currentRoles);
                 await UserManagerService.AddToRolesAsync(existingUser, User.SelectedRoles);
-
-                if (existingUser is Teacher teacher)
-                {
-                    teacher.CareGroups = AvailableCareGroups
-                    .Where(cg => User.SelectedCareGroupIds.Contains(cg.Id))
-                    .ToList();
-                }
             }
             else
             {
+                // Creating a new user
                 if (string.IsNullOrWhiteSpace(User.Password))
                     throw new Exception("Password is required for new users.");
+
                 var newUser = new User
                     {
                         Surname = User.Surname,
@@ -246,11 +227,14 @@ Roles.SystemAdministrator, Roles.Teacher };
                     var errorMessage = string.Join("; ", result.Errors.Select(e => e.Description));
                     throw new Exception($"Failed to create user: {errorMessage}");
                 }
+
                 if (User.SelectedRoles.Any())
                 {
                     await UserManagerService.AddToRolesAsync(newUser, User.SelectedRoles);
                 }
             }
+
+            // Navigate back to the user list
             Navigation.NavigateTo("/users");
         }
         catch (Exception ex)
@@ -265,23 +249,40 @@ Roles.SystemAdministrator, Roles.Teacher };
 
     private void CloseErrorModal() => ShowErrorModal = false;
 
+    /// <summary>
+    /// Only show care groups if the user is NOT a System Administrator.
+    /// </summary>
     private bool ShouldShowCareGroups() => !User.SelectedRoles.Contains(Roles.SystemAdministrator);
 
-    private bool IsCareGroupSelected(Guid careGroupId)
+    /// <summary>
+    /// Fires when a care group checkbox is toggled.
+    /// Updates both the dictionary and the user's SelectedCareGroupIds list.
+    /// </summary>
+    private void OnCareGroupChanged(Guid careGroupId, bool isChecked)
     {
-        return User.SelectedCareGroupIds.Contains(careGroupId);
-    }
+        CareGroupSelections[careGroupId] = isChecked;
 
-    private void ToggleCareGroup(Guid careGroupId)
-    {
-
-        if (!User.SelectedCareGroupIds.Contains(careGroupId))
+        if (isChecked)
         {
-            User.SelectedCareGroupIds.Add(careGroupId);
+            if (!User.SelectedCareGroupIds.Contains(careGroupId))
+                User.SelectedCareGroupIds.Add(careGroupId);
         }
         else
         {
             User.SelectedCareGroupIds.Remove(careGroupId);
+        }
+    }
+
+    private void ToggleRole(string role, bool isChecked)
+    {
+        if (isChecked)
+        {
+            if (!User.SelectedRoles.Contains(role))
+                User.SelectedRoles.Add(role);
+        }
+        else
+        {
+            User.SelectedRoles.Remove(role);
         }
     }
 }

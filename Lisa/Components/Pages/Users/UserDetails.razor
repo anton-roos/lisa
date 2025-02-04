@@ -7,7 +7,7 @@
 
 <h3>User Details</h3>
 
-@if (user == null)
+@if (User == null)
 {
     <p>Loading user...</p>
 }
@@ -15,82 +15,75 @@ else
 {
     <dl class="row">
         <dt class="col-sm-2">Surname</dt>
-        <dd class="col-sm-10">@user.Surname</dd>
+        <dd class="col-sm-10">@User.Surname</dd>
 
         <dt class="col-sm-2">Abbreviation</dt>
-        <dd class="col-sm-10">@user.Abbreviation</dd>
+        <dd class="col-sm-10">@User.Abbreviation</dd>
 
         <dt class="col-sm-2">Name</dt>
-        <dd class="col-sm-10">@user.Name</dd>
+        <dd class="col-sm-10">@User.Name</dd>
 
         <dt class="col-sm-2">Email</dt>
-        <dd class="col-sm-10">@user.Email</dd>
+        <dd class="col-sm-10">@User.Email</dd>
 
         <dt class="col-sm-2">Roles</dt>
-        <dd class="col-sm-10">@string.Join(", ", user.Roles)</dd>
+        <dd class="col-sm-10">@string.Join(", ", User.Roles)</dd>
     </dl>
 
-    @if (user.Roles.Contains(Roles.Teacher))
+    @if (User.Roles.Contains(Roles.Teacher))
     {
         <h4>Teacher Details</h4>
         <dl class="row">
             <dt class="col-sm-2">Care Groups</dt>
             <dd class="col-sm-10">
                 <ul>
-                    @if (user is Teacher teacherUser)
+                    @if (User.CareGroups == null || !User.CareGroups.Any())
                     {
-                        if (teacherUser.CareGroups == null || !teacherUser.CareGroups.Any())
+                        <li>No care groups assigned.</li>
+                    }
+                    else
+                    {
+                        @foreach (var cg in User.CareGroups)
                         {
-                            <li>No care groups assigned.</li>
-                        }
-                        else
-                        {
-                            @foreach (var cg in teacherUser.CareGroups)
-                            {
-                                <li>@cg.Name</li>
-                            }
+                            <li>@cg.Name</li>
                         }
                     }
+
                 </ul>
             </dd>
 
             <dt class="col-sm-2">Register Classes</dt>
             <dd class="col-sm-10">
-                @if (user is Teacher teacherUser2)
+                @if (User.RegisterClasses == null || !User.RegisterClasses.Any())
                 {
-                    if (teacherUser2.RegisterClasses == null || !teacherUser2.RegisterClasses.Any())
-                    {
-                        <p>No register classes.</p>
-                    }
-                    else
-                    {
-                        <ul>
-                            @foreach (var rc in teacherUser2.RegisterClasses)
-                            {
-                                <li>@rc.Name (Grade: @rc.SchoolGrade?.SystemGrade.Name)</li>
-                            }
-                        </ul>
-                    }
+                    <p>No register classes.</p>
+                }
+                else
+                {
+                    <ul>
+                        @foreach (var rc in User.RegisterClasses)
+                        {
+                            <li>@rc.Name (Grade: @rc.SchoolGrade?.SystemGrade.Name)</li>
+                        }
+                    </ul>
                 }
             </dd>
 
             <dt class="col-sm-2">Periods</dt>
             <dd class="col-sm-10">
-                @if (user is Teacher teacherUser3)
+
+                @if (User.Periods == null || !User.Periods.Any())
                 {
-                    if (teacherUser3.Periods == null || !teacherUser3.Periods.Any())
-                    {
-                        <p>No periods assigned.</p>
-                    }
-                    else
-                    {
-                        <ul>
-                            @foreach (var period in teacherUser3.Periods)
-                            {
-                                <li>@($"{period.StartTime} - {period.EndTime}")</li>
-                            }
-                        </ul>
-                    }
+                    <p>No periods assigned.</p>
+                }
+                else
+                {
+                    <ul>
+                        @foreach (var period in User.Periods)
+                        {
+                            <li>@($"{period.StartTime} - {period.EndTime}")</li>
+                        }
+                    </ul>
                 }
             </dd>
         </dl>
@@ -103,11 +96,11 @@ else
     [Parameter]
     public Guid UserId { get; set; }
 
-    private User? user;
+    private User? User;
 
     protected override async Task OnInitializedAsync()
     {
-        user = await UserService.GetByIdAsync(UserId);
+        User = await UserService.GetByIdAsync(UserId);
     }
 
     private void GoBack()

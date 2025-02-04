@@ -25,7 +25,7 @@ public class RegisterClassService(
             return await context.RegisterClasses
                 .AsNoTracking()
                 .Include(rc => rc.SchoolGrade!)
-                .Include(rc => rc.Teacher!)
+                .Include(rc => rc.User!)
                 .Include(rc => rc.CompulsorySubjects!)
                 .Include(rc => rc.Learners!)
                 .FirstOrDefaultAsync(rc => rc.Id == registerClassId);
@@ -72,7 +72,7 @@ public class RegisterClassService(
                 .ThenInclude(g => g.School!)
                 .Include(rc => rc.SchoolGrade!)
                 .ThenInclude(g => g.SystemGrade!)
-                .Include(rc => rc.Teacher!)
+                .Include(rc => rc.User!)
                 .Include(rc => rc.CompulsorySubjects!)
                 .Include(rc => rc.Learners!)
                 .ToListAsync();
@@ -122,7 +122,7 @@ public class RegisterClassService(
             }
 
             existing.Name = registerClass.Name;
-            existing.TeacherId = registerClass.TeacherId;
+            existing.UserId = registerClass.UserId;
             existing.SchoolGradeId = registerClass.SchoolGradeId;
             existing.CompulsorySubjects = registerClass.CompulsorySubjects;
 
@@ -234,7 +234,7 @@ public class RegisterClassService(
 
                 registerClass.Name = model.Name;
                 registerClass.SchoolGradeId = model.GradeId;
-                registerClass.TeacherId = model.TeacherId;
+                registerClass.UserId = model.TeacherId;
 
                 registerClass.CompulsorySubjects.Clear();
                 registerClass.CompulsorySubjects.AddRange(selectedSubjects);
@@ -247,7 +247,7 @@ public class RegisterClassService(
                     Name = model.Name,
                     SchoolGradeId = model.GradeId,
                     CompulsorySubjects = selectedSubjects,
-                    TeacherId = model.TeacherId,
+                    UserId = model.TeacherId,
                 };
 
                 await context.RegisterClasses.AddAsync(registerClass);

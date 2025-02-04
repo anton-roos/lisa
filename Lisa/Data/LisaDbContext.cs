@@ -10,10 +10,6 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
     : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options)
 {
     private readonly ILogger<LisaDbContext> _logger = logger;
-    public DbSet<Principal> Principals { get; set; } = null!;
-    public DbSet<SchoolManagement> SchoolManagements { get; set; } = null!;
-    public DbSet<Administrator> Administrators { get; set; } = null!;
-    public DbSet<Teacher> Teachers { get; set; } = null!;
     public DbSet<School> Schools { get; set; } = null!;
     public DbSet<SchoolType> SchoolTypes { get; set; } = null!;
     public DbSet<SchoolCurriculum> SchoolCurriculums { get; set; } = null!;
@@ -38,54 +34,20 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
     {
         base.OnModelCreating(modelBuilder);
 
-        // Users and Roles
         modelBuilder.Entity<User>().ToTable("AspNetUsers");
         modelBuilder.Entity<User>()
-            .HasDiscriminator<string>("UserType")
-            .HasValue<User>("User")
-            .HasValue<Principal>("Principal")
-            .HasValue<SchoolManagement>("SchoolManagement")
-            .HasValue<Administrator>("Administrator")
-            .HasValue<Teacher>("Teacher");
-
-        modelBuilder.Entity<Principal>()
-            .HasBaseType<User>();
-        modelBuilder.Entity<Principal>()
-            .HasOne(p => p.School)
-            .WithMany(s => s.Principals)
-            .HasForeignKey(p => p.SchoolId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder.Entity<Administrator>()
-            .HasBaseType<User>();
-        modelBuilder.Entity<Administrator>()
-            .HasOne(a => a.School)
-            .WithMany(s => s.Administrators)
-            .HasForeignKey(a => a.SchoolId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder.Entity<SchoolManagement>()
-            .HasBaseType<User>();
-        modelBuilder.Entity<SchoolManagement>()
-            .HasOne(sm => sm.School)
-            .WithMany(s => s.SchoolManagements)
-            .HasForeignKey(sm => sm.SchoolId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder.Entity<Teacher>()
-            .HasBaseType<User>();
-        modelBuilder.Entity<Teacher>()
+        .HasIndex(u => u.Abbreviation);
+        modelBuilder.Entity<User>()
             .Property(t => t.Surname)
             .HasMaxLength(50);
-        modelBuilder.Entity<Teacher>()
+        modelBuilder.Entity<User>()
+            .Property(t => t.Abbreviation)
+            .HasMaxLength(4);
+        modelBuilder.Entity<User>()
             .HasOne(t => t.School)
-            .WithMany(s => s.Teachers)
+            .WithMany(s => s.Staff)
             .HasForeignKey(t => t.SchoolId)
             .OnDelete(DeleteBehavior.Cascade);
-        modelBuilder.Entity<Teacher>()
-            .HasMany(t => t.CareGroups)
-            .WithOne(s => s.Teacher)
-            .OnDelete(DeleteBehavior.Restrict);
 
         // Schools and Associated Entities
         modelBuilder.Entity<School>()
@@ -118,6 +80,20 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .HasMany(cg => cg.CareGroupMembers)
             .WithOne()
             .HasForeignKey(l => l.CareGroupId);
+        modelBuilder.Entity<CareGroup>()
+            .HasMany(c => c.Users)
+            .WithMany(u => u.CareGroups)
+            .UsingEntity<Dictionary<string, object>>(
+                "CareGroupUser",
+                j => j
+                    .HasOne<User>()
+                    .WithMany()
+                    .HasForeignKey("UserId"),
+                j => j
+                    .HasOne<CareGroup>()
+                    .WithMany()
+                    .HasForeignKey("CareGroupId")
+            );
 
         modelBuilder.Entity<SystemGrade>()
             .HasKey(sg => sg.Id);
@@ -208,11 +184,6 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .WithMany(l => l.LearnerSubjects)
             .HasForeignKey(ls => ls.LearnerId)
             .OnDelete(DeleteBehavior.Cascade);
-        // modelBuilder.Entity<LearnerSubject>()
-        //     .HasOne(ls => ls.Subject)
-        //     .WithMany(s => s.LearnerSubjects)
-        //     .HasForeignKey(ls => ls.SubjectId)
-        //     .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<RegisterClass>()
             .HasKey(rc => rc.Id);
@@ -224,9 +195,9 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .HasForeignKey(rc => rc.SchoolGradeId)
             .OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<RegisterClass>()
-            .HasOne(rc => rc.Teacher)
+            .HasOne(rc => rc.User)
             .WithMany(t => t.RegisterClasses)
-            .HasForeignKey(rc => rc.TeacherId)
+            .HasForeignKey(rc => rc.UserId)
             .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<RegisterClass>()
             .HasIndex(rc => rc.Name);
@@ -253,7 +224,6 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<Combination>()
             .HasMany(c => c.Subjects)
-            //.WithMany(s => s.Combinations)
             .WithMany()
             .UsingEntity<Dictionary<string, object>>(
                 "CombinationSubject",

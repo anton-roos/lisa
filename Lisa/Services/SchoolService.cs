@@ -130,10 +130,7 @@ public class SchoolService(
                 .Include(s => s.SchoolGrades!)
                 .ThenInclude(sg => sg.SystemGrade)
                 .Include(s => s.RegisterClasses!)
-                .Include(s => s.Teachers!)
-                .Include(s => s.Principals!)
-                .Include(s => s.Administrators!)
-                .Include(s => s.SchoolManagements!)
+                .Include(s => s.Staff!)
                 .Include(s => s.Learners!)
                 .FirstOrDefaultAsync(x => x.Id == id);
         }

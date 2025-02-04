@@ -25,7 +25,7 @@ else
             @($"{RegisterClass.Teacher?.Surname} {RegisterClass.Teacher?.Name}")
         </dd>
         <dt class="col-sm-2">Math/Math Lit Selection Enabled?</dt>
-        <dd>@(RegisterClass.MathSelectionEnabled ? "Yes" : "No")</dd>
+        <dd>@(RegisterClass.SchoolGrade.SystemGrade.MathGrade ? "Yes" : "No")</dd>
         <dt>Compulsory Subjects</dt>
         <dd>
             <ul>

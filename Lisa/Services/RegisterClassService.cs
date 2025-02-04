@@ -1,7 +1,9 @@
 using Lisa.Data;
 using Lisa.Models.Entities;
+using Lisa.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using NuGet.Packaging;
 
 namespace Lisa.Services;
 
@@ -46,6 +48,7 @@ public class RegisterClassService(
             return await context.RegisterClasses
                 .Where(rc => rc.SchoolGrade != null && rc.SchoolGrade.SchoolId == schoolId)
                 .Include(rc => rc.SchoolGrade!)
+                .ThenInclude(sg => sg.SystemGrade)
                 .ToListAsync();
         }
         catch (Exception ex)
@@ -201,6 +204,63 @@ public class RegisterClassService(
         {
             _logger.LogError(ex, "Error registering Combination {CombinationName}.", combination.Name);
             return null;
+        }
+    }
+
+    public async Task<bool> SaveRegisterClassAsync(RegisterClassViewModel model, Guid? registerClassId)
+    {
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+
+            var selectedSubjects = await context.Subjects
+                .Where(s => model.SubjectIds.Contains(s.Id))
+                .ToListAsync();
+
+            RegisterClass registerClass;
+
+            if (registerClassId.HasValue)
+            {
+                // EDIT Mode
+                registerClass = await context.RegisterClasses
+                    .Include(rc => rc.CompulsorySubjects)
+                    .FirstOrDefaultAsync(rc => rc.Id == registerClassId.Value);
+
+                if (registerClass == null)
+                {
+                    _logger.LogWarning("Attempted to update non-existent RegisterClass {RegisterClassId}.", registerClassId.Value);
+                    return false;
+                }
+
+                registerClass.Name = model.Name;
+                registerClass.SchoolGradeId = model.GradeId;
+                registerClass.TeacherId = model.TeacherId;
+
+                registerClass.CompulsorySubjects.Clear();
+                registerClass.CompulsorySubjects.AddRange(selectedSubjects);
+            }
+            else
+            {
+                // ADD Mode
+                registerClass = new RegisterClass
+                {
+                    Name = model.Name,
+                    SchoolGradeId = model.GradeId,
+                    CompulsorySubjects = selectedSubjects,
+                    TeacherId = model.TeacherId,
+                };
+
+                await context.RegisterClasses.AddAsync(registerClass);
+            }
+
+            await context.SaveChangesAsync();
+            _logger.LogInformation("Register Class {Action} successfully: {RegisterClassId}", registerClassId.HasValue ? "updated" : "created", registerClass.Id);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving RegisterClass.");
+            return false;
         }
     }
 }

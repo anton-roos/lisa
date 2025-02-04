@@ -10,5 +10,4 @@ public class RegisterClass
     public Teacher? Teacher { get; set; }
     public ICollection<Learner>? Learners { get; set; }
     public ICollection<Subject>? CompulsorySubjects { get; set; }
-    public bool MathSelectionEnabled { get; set; }
 }

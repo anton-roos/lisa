@@ -12,7 +12,6 @@
 @inject SchoolService SchoolService
 @inject SubjectService SubjectService
 @inject SchoolGradeService SchoolGradeService
-@inject IDbContextFactory<LisaDbContext> DbContextFactory
 @inject UserService UserService
 @inherits EventAwareComponentBase
 
@@ -43,7 +42,7 @@
             <RegisterClassForm RegisterClass="@RegisterClassModel" SchoolGrades="@SchoolGrades" Teachers="@Teachers"
                 FilteredSubjects="@FilteredSubjects" SearchText="@SearchText" OnInputChange="@OnInputChange"
                 ToggleSubject="@ToggleSubject" OnCancel="@Cancel" OnValidSubmit="@HandleValidSubmit"
-                AllSubjects="@AllSubjects" MathSelected="@MathSelected" ToggleMathSelected="ToggleMathSelected" />
+                AllSubjects="@AllSubjects" />
         }
     </Authorized>
     <NotAuthorized>
@@ -63,7 +62,6 @@
     private List<Teacher>? Teachers;
     private List<Subject> AllSubjects = new();
     private string SearchText = string.Empty;
-    private bool MathSelected { get; set; }
     private string? AlertMessage { get; set; }
     private string AlertType { get; set; } = "success";
 
@@ -109,13 +107,11 @@
                         SubjectIds = registerClassEntity.CompulsorySubjects.Select(s => s.Id).ToList(),
                     };
 
-                MathSelected = registerClassEntity.MathSelectionEnabled;
             }
             else
             {
                 // Initialize for Add mode
                 RegisterClassModel = new RegisterClassViewModel();
-                MathSelected = false;
             }
         }
         catch (Exception ex)
@@ -158,67 +154,18 @@
                 return;
             }
 
-            using var _context = DbContextFactory.CreateDbContext();
 
-            var selectedSubjects = await SubjectService.GetSubjectsByIdsAsync(RegisterClassModel.SubjectIds);
+            var success = await RegisterClassService.SaveRegisterClassAsync(RegisterClassModel, RegisterClassId);
 
-            foreach (var subject in selectedSubjects)
+            if (success)
             {
-                _context.Subjects.Attach(subject);
-            }
-
-            if (IsEdit)
-            {
-                // EDIT Mode
-                var existingEntity = await _context.RegisterClasses
-                .Include(rc => rc.CompulsorySubjects)
-                .FirstOrDefaultAsync(rc => rc.Id == RegisterClassId.Value);
-
-                if (existingEntity == null)
-                {
-                    SetAlert("danger", "Register Class not found.");
-                    Navigation.NavigateTo("/register-class");
-                    return;
-                }
-
-                // Update scalar properties
-                existingEntity.Name = RegisterClassModel.Name;
-                existingEntity.SchoolGradeId = RegisterClassModel.GradeId;
-                existingEntity.TeacherId = RegisterClassModel.TeacherId;
-                existingEntity.MathSelectionEnabled = MathSelected;
-
-                // Update CompulsorySubjects
-                existingEntity.CompulsorySubjects.Clear();
-                foreach (var subject in selectedSubjects)
-                {
-                    existingEntity.CompulsorySubjects.Add(subject);
-                }
-
-                await _context.SaveChangesAsync();
-
-                SetAlert("success", "Register Class updated successfully.");
+                SetAlert("success", IsEdit ? "Register Class updated successfully." : "Register Class added successfully.");
+                Navigation.NavigateTo("/register-class");
             }
             else
             {
-                // ADD Mode
-                var entity = new RegisterClass
-                    {
-                        Name = RegisterClassModel.Name,
-                        SchoolGradeId = RegisterClassModel.GradeId,
-                        CompulsorySubjects = selectedSubjects,
-                        TeacherId = RegisterClassModel.TeacherId,
-                        MathSelectionEnabled = MathSelected
-                    };
-
-                _context.RegisterClasses.Add(entity);
-                await _context.SaveChangesAsync();
-
-                SetAlert("success", "Register Class added successfully.");
-                Thread.Sleep(500);
-
+                SetAlert("danger", "Error saving Register Class.");
             }
-
-            Navigation.NavigateTo("/register-class");
         }
         catch (Exception ex)
         {
@@ -247,11 +194,6 @@
         {
             RegisterClassModel.SubjectIds.Add(subjectId);
         }
-    }
-
-    private void ToggleMathSelected()
-    {
-        MathSelected = !MathSelected;
     }
 
     private void SetAlert(string type, string message)

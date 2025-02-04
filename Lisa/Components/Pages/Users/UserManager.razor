@@ -59,6 +59,20 @@
                 }
             </div>
 
+            @if (IsTeacherSelected())
+            {
+                <div class="form-group mb-3">
+                    <label for="caregroups">Care Groups</label>
+                    <select id="caregroups" class="form-control" multiple
+                        @onchange="UpdateCareGroupSelection">
+                        @foreach (var group in User.CareGroups)
+                        {
+                            <option value="@group.Id.ToString()">@group.Name</option>
+                        }
+                    </select>
+                </div>
+            }
+
             <button type="submit" class="btn btn-primary me-2">Save</button>
             <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
         </EditForm>
@@ -183,4 +197,25 @@ Roles.SystemAdministrator, Roles.Teacher };
     {
         Navigation.NavigateTo("/users");
     }
+
+    private bool IsTeacherSelected()
+    {
+        return User.SelectedRoles.Contains(Roles.Teacher);
+    }
+
+    private string[] SelectedCareGroupIdsString
+    {
+        get => User.SelectedCareGroupIds.Select(id => id.ToString()).ToArray();
+        set => User.SelectedCareGroupIds = value.Select(Guid.Parse).ToList();
+    }
+
+    private void UpdateCareGroupSelection(ChangeEventArgs e)
+    {
+        var selectedValues = e.Value as string[];
+        if (selectedValues != null)
+        {
+            User.SelectedCareGroupIds = selectedValues.Select(Guid.Parse).ToList();
+        }
+    }
+
 }

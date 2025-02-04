@@ -28,12 +28,17 @@ public class UserService(
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
 
-            // Start query with base users
-            var usersQuery = context.Users
-                .AsNoTracking()
-                .Where(u => SchoolId == null || u.SchoolId == SchoolId);
+            // Retrieve users who either belong to the school OR are System Administrators
+            var usersQuery = context.Users.AsNoTracking();
 
-            // Load base properties
+            if (SchoolId != null)
+            {
+                usersQuery = usersQuery.Where(u => u.SchoolId == SchoolId || context.UserRoles
+                    .Where(ur => ur.UserId == u.Id)
+                    .Join(context.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name)
+                    .Contains(Roles.SystemAdministrator));
+            }
+
             var users = await usersQuery.ToListAsync();
 
             // Load teacher-specific properties
@@ -91,6 +96,7 @@ public class UserService(
             return [];
         }
     }
+
 
     /// <summary>
     /// Retrieves a teacher by ID with related data.

@@ -365,8 +365,7 @@
             SelectedRegisterClassId = LearnerModel.RegisterClassId.Value.ToString();
             CurrentRegisterClass = await RegisterClassService.GetByIdAsync(LearnerModel.RegisterClassId.Value);
             CombinationsToChoseFrom = AllCombinations?
-            .Where(c => c.SchoolGradeId == CurrentRegisterClass.SchoolGradeId &&
-            c.CombinationType == CombinationType.SubjectCombination);
+            .Where(c => c.SchoolGradeId == CurrentRegisterClass.SchoolGradeId);
 
             if (CombinationsToChoseFrom != null)
             {
@@ -412,8 +411,7 @@
             }
 
             CombinationsToChoseFrom = AllCombinations?.Where(
-            c => c.SchoolGradeId == CurrentRegisterClass.SchoolGradeId &&
-            c.CombinationType == CombinationType.SubjectCombination);
+            c => c.SchoolGradeId == CurrentRegisterClass.SchoolGradeId);
         }
         else
         {

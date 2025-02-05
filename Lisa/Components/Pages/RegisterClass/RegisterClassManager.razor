@@ -132,6 +132,7 @@
     private School? SelectedSchool;
     private List<SchoolGrade>? SchoolGrades;
     private List<User>? Users;
+    private List<Subject> AllSubjectsMaster = new();
     private List<Subject> AllSubjects = new();
     private string SearchText = string.Empty;
     private string? AlertMessage { get; set; }
@@ -152,8 +153,14 @@
             {
                 SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
                 Users = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], SelectedSchool.Id);
-                AllSubjects = await SubjectService.GetAllAsync();
-                AllSubjects = AllSubjects.Where(s => s.SubjectType == SubjectType.Compulsory).ToList();
+
+                AllSubjectsMaster = await SubjectService.GetAllAsync();
+                AllSubjectsMaster = AllSubjectsMaster.Where(s => s.SubjectType == SubjectType.Compulsory).ToList();
+
+                if (RegisterClassModel.GradeId != Guid.Empty)
+                {
+                    await OnGradeSelected(RegisterClassModel.GradeId);
+                }
             }
         }
         catch (Exception ex)
@@ -229,13 +236,14 @@
 
     public async Task OnGradeSelected(Guid selectedGradeId)
     {
-        var Grade = await SchoolGradeService.GetByIdAsync(selectedGradeId);
+        var grade = await SchoolGradeService.GetByIdAsync(selectedGradeId);
 
-        if (Grade != null)
+        if (grade != null)
         {
-            RegisterClassModel.GradeId = Grade.Id;
-            RegisterClassModel.Grade = Grade;
-            AllSubjects = AllSubjects.Where(s => s.GradesApplicable.Contains(Grade.SystemGrade.SequenceNumber)).ToList();
+            RegisterClassModel.GradeId = grade.Id;
+            RegisterClassModel.Grade = grade;
+
+            AllSubjects = AllSubjectsMaster.Where(s => s.GradesApplicable.Contains(grade.SystemGrade.SequenceNumber)).ToList();
         }
         else
         {

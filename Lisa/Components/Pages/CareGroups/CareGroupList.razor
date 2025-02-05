@@ -30,47 +30,30 @@
         else
         {
             <button class="btn btn-primary mb-3" @onclick="AddCareGroup">Add Care Group</button>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Teacher</th>
-                        <th>Learner Count</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var careGroup in CareGroups)
-                    {
-                        <tr>
-                            <td>@careGroup.Name</td>
-                            <td>
-                                @if (@careGroup.Users != null)
+            <div class="care-group-container">
+                @foreach (var careGroup in CareGroups)
+                {
+                    <div class="card mb-3 p-3 card shadow-sm">
+                        <h5 class="card-title">@careGroup.Name</h5>
+                        <div class="d-flex flex-wrap gap-2">
+                            @if (careGroup.Users != null && careGroup.Users.Any())
+                            {
+                                @foreach (var user in careGroup.Users)
                                 {
-                                    foreach (var user in careGroup.Users)
-                                    {
-                                        if (user.Roles.Contains(Roles.Teacher))
-                                        {
-                                            <Pill Color="primary" AdditionalClasses="me-2">
-                                                @user.Abbreviation
-                                            </Pill>
-                                            @($"{user.Surname} {user.Name}")
-                                        }
-                                    }
+                                    <span class="badge bg-primary">@user.Abbreviation</span>
                                 }
-                                else
-                                {
-                                    <Pill Color="danger" AdditionalClasses="me-2">No Teacher</Pill>
-                                }
-                            </td>
-                            <td>@careGroup.CareGroupMembers?.Count().ToString()
-                            </td>
-                            <ActionButtons TEntity="CareGroup" Entity="careGroup" OnView="ViewCareGroup" OnEdit="EditCareGroup"
-                                OnDelete="DeleteCareGroup" />
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">No Teacher</span>
+                            }
+                        </div>
+                        <p class="mt-2">Learner Count: @careGroup.CareGroupMembers?.Count().ToString()</p>
+                        <ActionButtons TEntity="CareGroup" Entity="careGroup" OnView="ViewCareGroup" OnEdit="EditCareGroup"
+                            OnDelete="DeleteCareGroup" />
+                    </div>
+                }
+            </div>
         }
     </Authorized>
     <NotAuthorized>

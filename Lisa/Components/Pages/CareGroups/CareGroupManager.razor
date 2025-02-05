@@ -6,6 +6,7 @@
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
 @using Microsoft.AspNetCore.Components.Forms
+@inject UserService UserService
 
 <PageTitle>@(IsEdit ? "Edit Care Group" : "Add Care Group")</PageTitle>
 <AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
@@ -33,6 +34,42 @@
                     <InputText class="form-control" @bind-Value="CareGroup.Name" />
                 </div>
 
+                <h5>Teachers in this Care Group</h5>
+                <div class="mb-3">
+                    @if (CareGroup.Users != null && CareGroup.Users.Any())
+                    {
+                        @foreach (var user in CareGroup.Users)
+                        {
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="badge bg-primary me-2">@user.Abbreviation</span>
+                                <span>@user.Surname @user.Name</span>
+                                <button class="btn btn-sm btn-danger ms-2"
+                                    @onclick="() => RemoveUserFromCareGroup(user.Id)">Remove</button>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p>No teachers assigned.</p>
+                    }
+                </div>
+
+                <h5>Add Teacher</h5>
+                <div class="mb-3">
+                    <select class="form-select mb-2" @bind="SelectedUser">
+                        <option value="">Select a user</option>
+                        @if (AvailableUsers != null)
+                        {
+                            @foreach (var user in AvailableUsers.Where(u => CareGroup.Users == null || !CareGroup.Users.Any(cu
+                           => cu.Id == u.Id)))
+                            {
+                                <option value="@user.Id">@user.Surname @user.Name (@user.Abbreviation)</option>
+                            }
+                        }
+                    </select>
+                    <button class="btn btn-sm btn-success" @onclick="AddUserToCareGroup">Add</button>
+                </div>
+
                 <button type="submit" class="btn btn-primary">Save</button>
                 <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
             </EditForm>
@@ -49,6 +86,8 @@
     private CareGroup CareGroup { get; set; } = new();
     private School? SelectedSchool;
     private bool IsEdit => Id.HasValue;
+    private IEnumerable<User>? AvailableUsers;
+    private string? SelectedUser;
 
     protected override async Task OnInitializedAsync()
     {
@@ -65,9 +104,10 @@
                 CareGroup = null;
                 return;
             }
-
             CareGroup = new CareGroup { SchoolId = SelectedSchool.Id };
         }
+
+        AvailableUsers = await UserService.GetAllAsync();
     }
 
     private async Task HandleValidSubmit()
@@ -77,7 +117,7 @@
         if (IsEdit)
         {
             await CareGroupService.UpdateAsync(CareGroup);
-            Navigation.NavigateTo($"/care-groups/details/{CareGroup.Id}");
+            Navigation.NavigateTo("/care-groups");
         }
         else
         {
@@ -89,5 +129,25 @@
     private void Cancel()
     {
         Navigation.NavigateTo("/care-groups");
+    }
+
+    private async Task AddUserToCareGroup()
+    {
+        if (!string.IsNullOrEmpty(SelectedUser))
+        {
+            var userId = Guid.Parse(SelectedUser);
+            await CareGroupService.AddUserToCareGroupAsync(CareGroup.Id, userId);
+            CareGroup = await CareGroupService.GetByIdAsync(CareGroup.Id);
+            AvailableUsers = await UserService.GetAllAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RemoveUserFromCareGroup(Guid userId)
+    {
+        await CareGroupService.RemoveUserFromCareGroupAsync(CareGroup.Id, userId);
+        CareGroup = await CareGroupService.GetByIdAsync(CareGroup.Id);
+        AvailableUsers = await UserService.GetAllAsync();
+        await InvokeAsync(StateHasChanged);
     }
 }

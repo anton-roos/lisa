@@ -272,7 +272,6 @@ public class UserService(
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Users
-                .AsNoTracking()
                 .ToListAsync();
         }
         catch (Exception ex)

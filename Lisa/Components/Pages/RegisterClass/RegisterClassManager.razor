@@ -152,10 +152,23 @@
             if (SelectedSchool != null)
             {
                 SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
-                Users = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], SelectedSchool.Id);
+                Users = await UserService.GetAllByRoleAndSchoolAsync(new[] { Roles.Teacher }, SelectedSchool.Id);
 
                 AllSubjectsMaster = await SubjectService.GetAllAsync();
                 AllSubjectsMaster = AllSubjectsMaster.Where(s => s.SubjectType == SubjectType.Compulsory).ToList();
+
+                if (IsEdit)
+                {
+                    var existingRegisterClass = await RegisterClassService.GetByIdAsync(RegisterClassId.Value);
+                    RegisterClassModel = new RegisterClassViewModel
+                        {
+                            Name = existingRegisterClass.Name,
+                            TeacherId = existingRegisterClass.UserId,
+                            GradeId = existingRegisterClass.SchoolGradeId,
+                            SubjectIds = existingRegisterClass.CompulsorySubjects.Select(s => s.Id).ToList(),
+                            Grade = existingRegisterClass.SchoolGrade
+                        };
+                }
 
                 if (RegisterClassModel.GradeId != Guid.Empty)
                 {

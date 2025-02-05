@@ -1,4 +1,4 @@
-<span class="@CssClass">
+<span class="@CssClass @Class">
     @ChildContent
 </span>
 
@@ -15,6 +15,9 @@
     /// </summary>
     [Parameter]
     public string Color { get; set; } = "primary";
+    
+    [Parameter]
+    public string Class { get; set; } = "";
 
     /// <summary>
     /// Any additional CSS classes.

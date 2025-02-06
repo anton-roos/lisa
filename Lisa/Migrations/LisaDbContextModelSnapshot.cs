@@ -385,10 +385,15 @@ namespace Lisa.Migrations
                     b.Property<int>("SubjectId")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("CombinationId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("LearnerSubjectType")
                         .HasColumnType("integer");
 
                     b.HasKey("LearnerId", "SubjectId");
+
+                    b.HasIndex("CombinationId");
 
                     b.HasIndex("SubjectId");
 
@@ -1083,6 +1088,11 @@ namespace Lisa.Migrations
 
             modelBuilder.Entity("Lisa.Models.Entities.LearnerSubject", b =>
                 {
+                    b.HasOne("Lisa.Models.Entities.Combination", "Combination")
+                        .WithMany()
+                        .HasForeignKey("CombinationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Lisa.Models.Entities.Learner", "Learner")
                         .WithMany("LearnerSubjects")
                         .HasForeignKey("LearnerId")
@@ -1094,6 +1104,8 @@ namespace Lisa.Migrations
                         .HasForeignKey("SubjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Combination");
 
                     b.Navigation("Learner");
 

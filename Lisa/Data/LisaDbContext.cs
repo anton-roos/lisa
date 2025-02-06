@@ -184,6 +184,14 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .WithMany(l => l.LearnerSubjects)
             .HasForeignKey(ls => ls.LearnerId)
             .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<LearnerSubject>()
+            .HasOne(ls => ls.Combination)
+            .WithMany()
+            .HasForeignKey(ls => ls.CombinationId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<LearnerSubject>()
+            .Property(ls => ls.LearnerSubjectType)
+            .HasConversion<int>();
 
         modelBuilder.Entity<RegisterClass>()
             .HasKey(rc => rc.Id);

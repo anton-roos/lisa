@@ -115,10 +115,10 @@
                         @foreach (var MathSubject in MathSubjects)
                         {
                             <div class="col-3">
-                                <input type="radio" id="math" name="math" value="MATH"
-                                    @onchange="@(() => OnMathRadioChanged(@MathSubject.Id))"
-                                    checked="@MathSelection.Equals(MathSubject.Id)" />
-                                <label for="math">@MathSubject.Description</label><br>
+                                <input type="radio" id="math-@MathSubject.Id" name="math" value="@MathSubject.Id"
+                                       @onchange="@(() => OnMathRadioChanged(@MathSubject.Id))"
+                                       checked="@(_mathSelection == MathSubject.Id)" />
+                                <label for="math-@MathSubject.Id">@MathSubject.Description</label><br>
                             </div>
                         }
                     </div>
@@ -135,14 +135,14 @@
                             <h5>@combination.Name</h5>
                             @foreach (var subject in combination.Subjects)
                             {
-                                bool isSelected = CombinationSelections.TryGetValue(combination.Id, out var chosenSubjId)
+                                bool isSelected = LearnerModel.CombinationSelections.TryGetValue(combination.Id, out var chosenSubjId)
                                 && chosenSubjId == subject.Id;
                                 bool isDisabled = IsSubjectDisabled(combination.Id, subject.Id);
 
                                 <div>
                                     <input type="radio" name="@combination.Id" value="@subject.Id"
-                                        @onclick="@(() => OnCombinationSubjectChanged(combination, subject))" checked="@isSelected"
-                                        disabled="@isDisabled" />
+                                        @onclick="@(() => OnCombinationSubjectChanged(combination, subject))"
+                                           checked="@isSelected" disabled="@isDisabled" />
                                     <label class="@(isDisabled ? "text-muted" : "")">@subject.Name</label>
                                 </div>
                             }
@@ -238,11 +238,15 @@
     private School? SelectedSchool;
     private string? SelectedRegisterClassId = string.Empty;
     private IEnumerable<Combination>? CombinationsToChoseFrom;
-    private Dictionary<Guid, int> CombinationSelections = new();
-    private int MathSelection;
     private string? AlertMessage;
     private string AlertType = "success";
     private EditContext? ParentEditContext;
+
+    private int _mathSelection
+    {
+        get => LearnerModel.MathSelection;
+        set => LearnerModel.MathSelection = value;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -285,6 +289,7 @@
         }
         await base.HandleEventAsync(eventName, payload);
     }
+
     private async Task LoadDropdowns()
     {
         if (SelectedSchool != null)
@@ -320,21 +325,22 @@
         }
 
         LearnerModel = new LearnerViewModel
-            {
-                Id = existingLearner.Id,
-                Active = existingLearner.Active,
-                CareGroupId = existingLearner.CareGroupId,
-                CellNumber = existingLearner.CellNumber,
-                Code = existingLearner.Code,
-                Email = existingLearner.Email,
-                Surname = existingLearner.Surname,
-                IdNumber = existingLearner.IdNumber,
-                Name = existingLearner.Name,
-                RegisterClassId = existingLearner.RegisterClassId
-            };
+        {
+            Id = existingLearner.Id,
+            Active = existingLearner.Active,
+            CareGroupId = existingLearner.CareGroupId,
+            CellNumber = existingLearner.CellNumber,
+            Code = existingLearner.Code,
+            Email = existingLearner.Email,
+            Surname = existingLearner.Surname,
+            IdNumber = existingLearner.IdNumber,
+            Name = existingLearner.Name,
+            RegisterClassId = existingLearner.RegisterClassId,
+            SubjectIds = existingLearner.LearnerSubjects.Select(s => s.SubjectId).ToList()
+        };
 
         Parents = existingLearner.Parents
-        .Select(p => new ParentViewModel
+            .Select(p => new ParentViewModel
             {
                 Id = p.Id,
                 Surname = p.Surname,
@@ -346,9 +352,7 @@
                 SecondaryCellNumber = p.SecondaryCellNumber,
                 WhatsAppNumber = p.WhatsAppNumber
             })
-        .ToList();
-
-        LearnerModel.SubjectIds = existingLearner.LearnerSubjects.Select(s => s.SubjectId).ToList();
+            .ToList();
 
         if (MathSubjects != null)
         {
@@ -356,7 +360,7 @@
             .FirstOrDefault(ms => LearnerModel.SubjectIds.Contains(ms.Id));
             if (chosenMathSubject != null)
             {
-                MathSelection = chosenMathSubject.Id;
+                _mathSelection = chosenMathSubject.Id;
             }
         }
 
@@ -365,18 +369,20 @@
             SelectedRegisterClassId = LearnerModel.RegisterClassId.Value.ToString();
             CurrentRegisterClass = await RegisterClassService.GetByIdAsync(LearnerModel.RegisterClassId.Value);
             CombinationsToChoseFrom = AllCombinations?
-            .Where(c => c.SchoolGradeId == CurrentRegisterClass.SchoolGradeId);
+                .Where(c => c.SchoolGradeId == CurrentRegisterClass.SchoolGradeId);
 
             if (CombinationsToChoseFrom != null)
             {
                 foreach (var combo in CombinationsToChoseFrom)
                 {
-                    var chosenSubject = combo.Subjects
-                    .FirstOrDefault(s => LearnerModel.SubjectIds.Contains(s.Id));
+                    var chosenSubject = existingLearner.LearnerSubjects
+                        .Where(ls => ls.CombinationId == combo.Id)
+                        .Select(ls => ls.SubjectId)
+                        .FirstOrDefault();
 
-                    if (chosenSubject != null)
+                    if (chosenSubject != 0)
                     {
-                        CombinationSelections[combo.Id] = chosenSubject.Id;
+                        LearnerModel.CombinationSelections[combo.Id] = chosenSubject;
                     }
                 }
             }
@@ -402,8 +408,8 @@
             CurrentRegisterClass = await RegisterClassService.GetByIdAsync(LearnerModel.RegisterClassId.Value);
 
             LearnerModel.SubjectIds.Clear();
-            CombinationSelections.Clear();
-            MathSelection = 0;
+            LearnerModel.CombinationSelections.Clear();
+            _mathSelection = 0;
 
             foreach (var subj in CurrentRegisterClass.CompulsorySubjects)
             {
@@ -411,7 +417,7 @@
             }
 
             CombinationsToChoseFrom = AllCombinations?.Where(
-            c => c.SchoolGradeId == CurrentRegisterClass.SchoolGradeId);
+                c => c.SchoolGradeId == CurrentRegisterClass.SchoolGradeId);
         }
         else
         {
@@ -435,28 +441,29 @@
         }
     }
 
-    private void OnMathRadioChanged(int MathSubjectId)
+    private void OnMathRadioChanged(int mathSubjectId)
     {
-        MathSelection = MathSubjectId;
+        _mathSelection = mathSubjectId;
 
-        if (LearnerModel.SubjectIds.Contains(MathSubjectId))
+        foreach (var ms in MathSubjects ?? Enumerable.Empty<Subject>())
         {
-            LearnerModel.SubjectIds.Remove(MathSubjectId);
+            LearnerModel.SubjectIds.Remove(ms.Id);
         }
-        else
+
+        if (!LearnerModel.SubjectIds.Contains(_mathSelection))
         {
-            LearnerModel.SubjectIds.Add(MathSubjectId);
+            LearnerModel.SubjectIds.Add(_mathSelection);
         }
     }
 
     private void OnCombinationSubjectChanged(Combination combo, Subject newSubject)
     {
-        if (CombinationSelections.TryGetValue(combo.Id, out var oldSubjectId))
+        if (LearnerModel.CombinationSelections.TryGetValue(combo.Id, out var oldSubjectId))
         {
             LearnerModel.SubjectIds.Remove(oldSubjectId);
         }
 
-        CombinationSelections[combo.Id] = newSubject.Id;
+        LearnerModel.CombinationSelections[combo.Id] = newSubject.Id;
 
         if (!LearnerModel.SubjectIds.Contains(newSubject.Id))
         {
@@ -466,7 +473,7 @@
 
     private bool IsSubjectDisabled(Guid currentComboId, int subjectId)
     {
-        return CombinationSelections.Any(kvp => kvp.Key != currentComboId && kvp.Value == subjectId);
+        return LearnerModel.CombinationSelections.Any(kvp => kvp.Key != currentComboId && kvp.Value == subjectId);
     }
 
     private void AddParent()
@@ -504,15 +511,12 @@
             if (IsEdit && LearnerId.HasValue)
             {
                 LearnerModel.Id = LearnerId.Value;
-
                 await LearnerService.UpdateLearnerAsync(LearnerModel, Parents);
-
                 SetAlert("success", "Learner updated successfully.");
             }
             else
             {
                 await LearnerService.AddLearnerAsync(LearnerModel, Parents, SelectedSchool.Id);
-
                 SetAlert("success", "Learner and Parents added successfully.");
             }
 

@@ -39,6 +39,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             .Include(l => l.CareGroup)
             .Include(l => l.Parents!)
             .Include(l => l.School)
+
             .FirstOrDefaultAsync(l => l.Id == id);
     }
 
@@ -70,6 +71,22 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             using var context = await _dbContextFactory.CreateDbContextAsync();
 
             var newLearnerId = Guid.NewGuid();
+
+            // Build the collection of LearnerSubjects, including CombinationId
+            var learnerSubjects = new List<LearnerSubject>();
+            foreach (var sid in model.SubjectIds)
+            {
+                // Determine if this subjectId was chosen as part of a combination
+                var combId = FindCombinationId(model.CombinationSelections, sid);
+
+                learnerSubjects.Add(new LearnerSubject
+                {
+                    LearnerId = newLearnerId,
+                    SubjectId = sid,
+                    CombinationId = combId
+                });
+            }
+
             var learner = new Learner
             {
                 Id = newLearnerId,
@@ -83,16 +100,11 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
                 Name = model.Name,
                 RegisterClassId = model.RegisterClassId,
                 SchoolId = schoolId,
-                LearnerSubjects = model.SubjectIds.Select(sid => new LearnerSubject
-                {
-                    LearnerId = newLearnerId,
-                    SubjectId = sid
-                }).ToList()
+                LearnerSubjects = learnerSubjects
             };
 
             await context.Learners.AddAsync(learner);
 
-            // Add Parents
             var parentEntities = parents.Select(pm => new Parent
             {
                 Id = Guid.NewGuid(),
@@ -108,6 +120,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             }).ToList();
 
             await context.Parents.AddRangeAsync(parentEntities);
+
             await context.SaveChangesAsync();
 
             LearnersUpdated?.Invoke();
@@ -133,6 +146,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
 
             var existing = await context.Learners
                 .Include(l => l.Parents)
+                .Include(l => l.LearnerSubjects)
                 .FirstOrDefaultAsync(l => l.Id == model.Id);
 
             if (existing == null)
@@ -141,7 +155,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
                 return false;
             }
 
-            // Update Learner properties
             existing.Active = model.Active;
             existing.CareGroupId = model.CareGroupId;
             existing.CellNumber = model.CellNumber;
@@ -152,11 +165,10 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             existing.Name = model.Name;
             existing.RegisterClassId = model.RegisterClassId;
 
-            // Handle Parent Updates
-            var existingParentIds = existing.Parents?.Select(p => p.Id).ToList() ?? [];
+            var existingParentIds = existing.Parents?.Select(p => p.Id).ToList() ?? new List<Guid>();
             var updatedParentIds = parents.Where(p => p.Id.HasValue).Select(p => p.Id!.Value).ToList();
 
-            var parentsToRemove = existing.Parents?.Where(p => !updatedParentIds.Contains(p.Id)).ToList() ?? [];
+            var parentsToRemove = existing.Parents?.Where(p => !updatedParentIds.Contains(p.Id)).ToList() ?? new List<Parent>();
             context.Parents.RemoveRange(parentsToRemove);
 
             foreach (var pm in parents)
@@ -191,12 +203,32 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
                         SecondaryCellNumber = pm.SecondaryCellNumber,
                         WhatsAppNumber = pm.WhatsAppNumber
                     };
-
                     await context.Parents.AddAsync(newParent);
                 }
             }
 
+            if (existing.LearnerSubjects != null && existing.LearnerSubjects.Any())
+            {
+                context.LearnerSubjects.RemoveRange(existing.LearnerSubjects);
+            }
+
+            var newLearnerSubjects = new List<LearnerSubject>();
+            foreach (var sid in model.SubjectIds)
+            {
+                var combId = FindCombinationId(model.CombinationSelections, sid);
+
+                newLearnerSubjects.Add(new LearnerSubject
+                {
+                    LearnerId = existing.Id,
+                    SubjectId = sid,
+                    CombinationId = combId
+                });
+            }
+
+            await context.LearnerSubjects.AddRangeAsync(newLearnerSubjects);
+
             await context.SaveChangesAsync();
+
             LearnersUpdated?.Invoke();
             _logger.LogInformation("Updated learner {LearnerId} successfully.", model.Id);
 
@@ -398,4 +430,22 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             return false;
         }
     }
+
+    private Guid? FindCombinationId(Dictionary<Guid, int> combinationSelections, int subjectId)
+    {
+        // combinationSelections is a dictionary: 
+        // Key   = CombinationId
+        // Value = SubjectId chosen for that combination.
+
+        // We look for the entry where the chosen subjectId matches
+        var match = combinationSelections
+            .FirstOrDefault(kvp => kvp.Value == subjectId);
+
+        // If no match was found, Key would be Guid.Empty
+        if (match.Key == Guid.Empty)
+            return null;
+
+        return match.Key;
+    }
+
 }

@@ -7,4 +7,6 @@ public class LearnerSubject
     public int SubjectId { get; set; }
     public Subject Subject { get; set; } = null!;
     public LearnerSubjectType LearnerSubjectType { get; set; }
+    public Guid? CombinationId { get; set; }
+    public Combination? Combination { get; set; }
 }

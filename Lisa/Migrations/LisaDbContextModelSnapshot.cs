@@ -536,28 +536,13 @@ namespace Lisa.Migrations
                     b.Property<string>("AbsentReason")
                         .HasColumnType("text");
 
-                    b.Property<string>("AssessmentTopic")
-                        .HasColumnType("text");
-
-                    b.Property<string>("AssessmentType")
-                        .HasColumnType("text");
-
-                    b.Property<string>("CapturedBy")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<Guid>("LearnerId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("ResultDate")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<Guid>("ResultSetId")
+                        .HasColumnType("uuid");
 
-                    b.Property<decimal?>("Score")
-                        .HasColumnType("decimal(5, 2)");
-
-                    b.Property<int>("SubjectId")
+                    b.Property<int?>("Score")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -567,9 +552,45 @@ namespace Lisa.Migrations
 
                     b.HasIndex("LearnerId");
 
-                    b.HasIndex("SubjectId");
+                    b.HasIndex("ResultSetId");
 
                     b.ToTable("Results");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.ResultSet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AssessmentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AssessmentTopic")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AssessmentType")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("CapturedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CapturedById");
+
+                    b.HasIndex("SubjectId");
+
+                    b.ToTable("ResultSets");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.School", b =>
@@ -698,16 +719,11 @@ namespace Lisa.Migrations
                     b.Property<int>("SubjectType")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("Id");
 
                     b.HasIndex("Code");
 
                     b.HasIndex("Name");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("Subjects");
                 });
@@ -738,6 +754,30 @@ namespace Lisa.Migrations
                         .IsUnique();
 
                     b.ToTable("SystemGrades");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.TeacherSubject", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Grade")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TeacherSubjects");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.User", b =>
@@ -1188,13 +1228,32 @@ namespace Lisa.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Lisa.Models.Entities.Subject", "Subject")
-                        .WithMany()
-                        .HasForeignKey("SubjectId")
+                    b.HasOne("Lisa.Models.Entities.ResultSet", "ResultSet")
+                        .WithMany("Results")
+                        .HasForeignKey("ResultSetId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Learner");
+
+                    b.Navigation("ResultSet");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.ResultSet", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.User", "CapturedByUser")
+                        .WithMany()
+                        .HasForeignKey("CapturedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CapturedByUser");
 
                     b.Navigation("Subject");
                 });
@@ -1237,11 +1296,23 @@ namespace Lisa.Migrations
                     b.Navigation("SystemGrade");
                 });
 
-            modelBuilder.Entity("Lisa.Models.Entities.Subject", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.TeacherSubject", b =>
                 {
-                    b.HasOne("Lisa.Models.Entities.User", null)
+                    b.HasOne("Lisa.Models.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.User", "User")
                         .WithMany("Subjects")
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Subject");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.User", b =>
@@ -1349,6 +1420,11 @@ namespace Lisa.Migrations
             modelBuilder.Entity("Lisa.Models.Entities.RegisterClass", b =>
                 {
                     b.Navigation("Learners");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.ResultSet", b =>
+                {
+                    b.Navigation("Results");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.School", b =>

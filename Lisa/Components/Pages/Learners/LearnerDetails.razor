@@ -121,7 +121,7 @@ else
                 @foreach (var result in Learner.Results)
                 {
                     <tr>
-                        <td>@result.Subject?.Name</td>
+                        <td>@result.ResultSet.Subject.Name</td>
                         <td>@result.Score</td>
                         <td>@(result.Absent ? "Yes" : "No")</td>
                     </tr>

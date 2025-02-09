@@ -29,6 +29,8 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
     public DbSet<LearnerSubject> LearnerSubjects { get; set; } = null!;
     public DbSet<EmailCampaign> EmailCampaigns { get; set; } = null!;
     public DbSet<EmailRecipient> EmailRecipients { get; set; } = null!;
+    public DbSet<TeacherSubject> TeacherSubjects { get; set; } = null!;
+    public DbSet<ResultSet> ResultSets { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -47,6 +49,14 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .HasOne(t => t.School)
             .WithMany(s => s.Staff)
             .HasForeignKey(t => t.SchoolId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<TeacherSubject>()
+            .HasKey(st => st.Id);
+        modelBuilder.Entity<TeacherSubject>()
+            .HasOne(st => st.User)
+            .WithMany(t => t.Subjects)
+            .HasForeignKey(st => st.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
         // Schools and Associated Entities
@@ -294,24 +304,33 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
         modelBuilder.Entity<Period>()
             .ToTable(t => t.HasCheckConstraint("CK_Period_StartTime_EndTime", "\"StartTime\" < \"EndTime\""));
 
-        // Results
-        modelBuilder.Entity<Result>()
-            .HasKey(r => r.Id);
-        modelBuilder.Entity<Result>()
-            .HasIndex(r => r.LearnerId);
-        modelBuilder.Entity<Result>()
-            .HasIndex(r => r.SubjectId);
-        modelBuilder.Entity<Result>()
-            .HasOne(r => r.Learner)
-            .WithMany(r => r.Results)
-            .HasForeignKey(r => r.LearnerId);
-        modelBuilder.Entity<Result>()
-            .HasOne(r => r.Subject)
-            .WithMany()
-            .HasForeignKey(r => r.SubjectId);
-        modelBuilder.Entity<Result>()
-            .Property(r => r.Score)
-            .HasColumnType("decimal(5, 2)");
+        modelBuilder.Entity<Result>(entity =>
+        {
+            entity.HasKey(r => r.Id);
+            entity.HasIndex(r => r.LearnerId);
+            entity.HasIndex(r => r.ResultSetId);
+            entity.HasOne(r => r.Learner)
+                  .WithMany(l => l.Results)
+                  .HasForeignKey(r => r.LearnerId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(r => r.ResultSet)
+                  .WithMany(rs => rs.Results)
+                  .HasForeignKey(r => r.ResultSetId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ResultSet>(entity =>
+        {
+            entity.HasKey(rs => rs.Id);
+            entity.HasOne(rs => rs.Subject)
+                  .WithMany()
+                  .HasForeignKey(rs => rs.SubjectId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(rs => rs.CapturedByUser)
+                  .WithMany()
+                  .HasForeignKey(rs => rs.CapturedById)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
 
         modelBuilder.Entity<EmailCampaign>(entity =>
         {

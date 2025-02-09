@@ -9,6 +9,4 @@ public class Subject
     public int Order { get; set; }
     public List<int>? GradesApplicable { get; set; }
     public SubjectType SubjectType { get; set; }
-    //public ICollection<Combination>? Combinations { get; set; }
-    //public ICollection<LearnerSubject>? LearnerSubjects { get; set; }
 }

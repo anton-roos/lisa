@@ -15,7 +15,7 @@ public class User : IdentityUser<Guid>
     [NotMapped]
     public List<string> Roles { get; set; } = [];
     public ICollection<CareGroup>? CareGroups { get; set; }
-    public ICollection<Subject>? Subjects { get; set; }
     public ICollection<RegisterClass>? RegisterClasses { get; set; }
     public ICollection<Period>? Periods { get; set; }
+    public ICollection<TeacherSubject>? Subjects { get; set; }
 }

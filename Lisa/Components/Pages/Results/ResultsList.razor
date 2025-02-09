@@ -7,6 +7,7 @@
 @inject SubjectService SubjectService
 @inject NavigationManager Navigation
 @inject ILogger<ResultsList> Logger
+@inject UserService UserService
 
 @inherits EventAwareComponentBase
 
@@ -28,103 +29,85 @@
         }
         else
         {
-            <div class="col mb-3 mx-3">
-                <div class="row">
-                    <label for="gradeDropdown">Grade</label>
-                    <InputSelect class="form-select" id="gradeDropdown" TValue="string" Value="@gradeId"
-                        ValueChanged="@(async (value) => await OnGradeChange(value))" ValueExpression="@(() => gradeId)">
-                        <option value="">-- Select Grade --</option>
-                        @foreach (var grade in SchoolGrades)
-                        {
-                            <option value="@grade.Id">@grade.SystemGrade.Name</option>
-                        }
-                    </InputSelect>
-                </div>
-                <div class="row">
-                    <label for="subjectDropdown">Subject</label>
-                    <InputSelect class="form-select" id="subjectDropdown" TValue="string" Value="@subjectId"
-                        ValueChanged="@(async (value) => await OnSubjectChange(value))"
-                        ValueExpression="@(() => subjectId)">
-                        <option value="">-- Select Subject --</option>
-                        @foreach (var subject in Subjects)
-                        {
-                            <option value="@subject.Id">@subject.Name</option>
-                        }
-                    </InputSelect>
+            <!-- View Results By: Toggle Mode -->
+            <div class="mb-3">
+                <label><strong>View Results by:</strong></label>
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="viewMode" id="viewByGrade" value="Grade"
+                        checked="@(ViewMode == "Grade")" @onchange="@(e => SetViewMode("Grade"))" />
+                    <label class="btn btn-outline-secondary" for="viewByGrade">Grade</label>
+
+                    <input type="radio" class="btn-check" name="viewMode" id="viewBySubject" value="Subject"
+                        checked="@(ViewMode == "Subject")" @onchange="@(e => SetViewMode("Subject"))" />
+                    <label class="btn btn-outline-secondary" for="viewBySubject">Subject</label>
+
+                    <input type="radio" class="btn-check" name="viewMode" id="viewByTeacher" value="Teacher"
+                        checked="@(ViewMode == "Teacher")" @onchange="@(e => SetViewMode("Teacher"))" />
+                    <label class="btn btn-outline-secondary" for="viewByTeacher">Teacher</label>
                 </div>
             </div>
 
-            @if (!string.IsNullOrWhiteSpace(gradeId) && !string.IsNullOrWhiteSpace(subjectId))
+            @switch (ViewMode)
             {
-                @if (Results.Any())
-                {
-                    <div class="rounded overflow-hidden shadow-sm mb-3">
-                        <Grid TItem="Result" Class="table table-hover table-bordered table-striped rounded shadow-sm"
-                            DataProvider="LoadResults" AllowFiltering="true" AllowPaging="true" PageSize="10" AllowSorting="true"
-                            Responsive="true">
-
-                            <GridColumns>
-                                <GridColumn TItem="Result" HeaderText="Surname" PropertyName="Surname">
-                                    @context.Learner?.Surname
-                                </GridColumn>
-                                
-                                <GridColumn TItem="Result" HeaderText="Name" PropertyName="Name">
-                                     @context.Learner?.Name
-                                </GridColumn>
-
-                                <GridColumn TItem="Result" HeaderText="Score" PropertyName="Score" FilterTextboxWidth="50">
-                                    @if (context.Absent)
-                                    {
-                                        <div>Absent</div>
-                                    }
-                                    else
-                                    {
-                                        <div>@context.Score</div>
-                                    }
-                                </GridColumn>
-
-                                <GridColumn TItem="Result" HeaderText="Date" PropertyName="ResultDate">
-                                    @context.ResultDate.ToString("yyyy-MM-dd")
-                                </GridColumn>
-
-                                <GridColumn TItem="Result" HeaderText="Assessment Type" PropertyName="AssessmentType">
-                                    @context.AssessmentType
-                                </GridColumn>
-
-                                <GridColumn TItem="Result" HeaderText="Topic" PropertyName="AssessmentTopic">
-                                    @context.AssessmentTopic
-                                </GridColumn>
-
-                                <GridColumn TItem="Result" HeaderText="Created On" PropertyName="CreatedAt">
-                                    @context.CreatedAt
-                                </GridColumn>
-
-                                <GridColumn TItem="Result" HeaderText="Absent Reason" PropertyName="AbsentReason">
-                                    @context.AbsentReason
-                                </GridColumn>
-
-                                <GridColumn TItem="Result" HeaderText="Actions" FilterTextboxWidth="50">
-                                    <button class="btn btn-sm btn-primary" @onclick="() => EditResult(context.Id)">
-                                        <Icon Name="IconName.Pencil" />Edit
-                                    </button>
-                                </GridColumn>
-                            </GridColumns>
-                        </Grid>
+                case "Grade":
+                    <div class="col mb-3 mx-3">
+                        <div class="row">
+                            <label for="gradeDropdown">Grade</label>
+                            <InputSelect class="form-select" id="gradeDropdown" TValue="string" Value="@gradeId"
+                                ValueChanged="@(async (value) => await OnGradeChange(value))" ValueExpression="@(() => gradeId)">
+                                <option value="">-- Select Grade --</option>
+                                @foreach (var grade in SchoolGrades)
+                                {
+                                    <option value="@grade.Id">@grade.SystemGrade.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
                     </div>
-                }
-                else
-                {
-                    <div class="alert alert-info">
-                        No results found for the selected filters.
+                    break;
+                case "Subject":
+                    <div class="col mb-3 mx-3">
+                        <div class="row">
+                            <label for="subjectDropdown">Subject</label>
+                            <InputSelect class="form-select" id="subjectDropdown" TValue="string" Value="@subjectId"
+                                ValueChanged="@(async (value) => await OnSubjectChange(value))"
+                                ValueExpression="@(() => subjectId)">
+                                <option value="">-- Select Subject --</option>
+                                @foreach (var subject in Subjects)
+                                {
+                                    <option value="@subject.Id">@subject.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
                     </div>
-                }
+                    break;
+                case "Teacher":
+                    <div class="col mb-3 mx-3">
+                        <div class="row">
+                            <label for="teacherDropdown">Teacher</label>
+                            <InputSelect class="form-select" id="teacherDropdown" TValue="string" Value="@teacherId"
+                                ValueChanged="@(async (value) => await OnTeacherChange(value))"
+                                ValueExpression="@(() => teacherId)">
+                                <option value="">-- Select Teacher --</option>
+                                @foreach (var teacher in Teachers)
+                                {
+                                    <option value="@teacher.Id">@teacher.Abbreviation @teacher.Surname</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+                    break;
             }
-            else
+
+            @if (!string.IsNullOrWhiteSpace(gradeId))
             {
-                <div class="alert alert-info">
-                    Please select a grade and subject to view results.
-                </div>
+
             }
+
+            @if (!string.IsNullOrWhiteSpace(subjectId))
+            {
+
+            }
+
         }
     </Authorized>
     <NotAuthorized>
@@ -143,9 +126,14 @@
     [SupplyParameterFromQuery(Name = "s")]
     public string? subjectId { get; set; }
 
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "t")]
+    public string? teacherId { get; set; }
+    private string ViewMode { get; set; } = "Grade";
     private List<Result> Results = new();
     private List<SchoolGrade> SchoolGrades = new();
     private List<Subject> Subjects = new();
+    private List<User> Teachers = new();
     private bool Loading = true;
 
     protected override async Task OnInitializedAsync()
@@ -187,6 +175,12 @@
         await base.HandleEventAsync(eventName, payload);
     }
 
+    private void SetViewMode(string mode)
+    {
+        ViewMode = mode;
+        StateHasChanged();
+    }
+
     private async Task LoadFilters()
     {
         try
@@ -194,6 +188,7 @@
             if (SelectedSchool != null)
             {
                 SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
+                Teachers = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], SelectedSchool.Id);
             }
             else
             {
@@ -219,10 +214,10 @@
                 {
                     Logger.LogWarning("SelectedSchool is null. Cannot load results.");
                     return new GridDataProviderResult<Result>
-                        {
-                            Data = new List<Result>(),
-                            TotalCount = 0
-                        };
+                    {
+                        Data = new List<Result>(),
+                        TotalCount = 0
+                    };
                 }
 
                 if (Guid.TryParse(gradeId, out var parsedGradeId) &&
@@ -244,10 +239,10 @@
             if (request == null)
             {
                 return new GridDataProviderResult<Result>
-                    {
-                        Data = Results,
-                        TotalCount = Results.Count
-                    };
+                {
+                    Data = Results,
+                    TotalCount = Results.Count
+                };
             }
 
             return request.ApplyTo(Results);
@@ -256,10 +251,10 @@
         {
             Logger.LogError(ex, "Failed to load results.");
             return new GridDataProviderResult<Result>
-                {
-                    Data = new List<Result>(),
-                    TotalCount = 0
-                };
+            {
+                Data = new List<Result>(),
+                TotalCount = 0
+            };
         }
         finally
         {
@@ -279,14 +274,21 @@
         await UpdateQueryParameters();
     }
 
+    private async Task OnTeacherChange(string value)
+    {
+        teacherId = value;
+        await UpdateQueryParameters();
+    }
+
     private async Task UpdateQueryParameters()
     {
         var uri = new Uri(Navigation.Uri);
         var queryParams = new Dictionary<string, string?>
-            {
-                ["g"] = gradeId,
-                ["s"] = subjectId
-            };
+        {
+            ["g"] = gradeId,
+            ["s"] = subjectId,
+            ["t"] = teacherId
+        };
 
         var newUri = QueryHelpers.AddQueryString(uri.AbsolutePath, queryParams);
         Navigation.NavigateTo(newUri);

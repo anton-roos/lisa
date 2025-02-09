@@ -66,10 +66,14 @@
                         <InputDate @bind-Value="SelectedResultDate" class="form-control" id="resultDate" />
                     </div>
 
-                    <label>Assessment Topic</label>
-                    <InputText class="form-control" @bind-Value="AssessmentTopic"></InputText>
-                    <label>Assessment Type</label>
-                    <InputText class="form-control" @bind-Value="AssessmentType"></InputText>
+                    <div class="mt-2">
+                        <label>Assessment Topic</label>
+                        <InputText class="form-control" @bind-Value="AssessmentTopic" />
+                    </div>
+                    <div class="mt-2">
+                        <label>Assessment Type</label>
+                        <InputText class="form-control" @bind-Value="AssessmentType" />
+                    </div>
 
                     <hr />
                     <table class="table table-striped">
@@ -89,8 +93,8 @@
                                     <td>
                                         <InputNumber Value="entry.ResultViewModel.Score"
                                             ValueChanged="EventCallback.Factory.Create<int?>(this, value => OnScoreChanged(value, entry))"
-                                            class="form-control" min="0" ValueExpression="@(() => entry.ResultViewModel.Score)"
-                                            max="100" step="1" />
+                                            class="form-control" min="0" max="100" step="1"
+                                            ValueExpression="@(() => entry.ResultViewModel.Score)" />
                                     </td>
                                     <td>
                                         <InputCheckbox @bind-Value="entry.ResultViewModel.Absent" />
@@ -102,8 +106,7 @@
                                         }
                                         else
                                         {
-                                            <InputText style="display:none;" @bind-Value="entry.ResultViewModel.AbsentReason"
-                                                class="form-control" />
+                                            <InputText style="display:none;" @bind-Value="entry.ResultViewModel.AbsentReason" class="form-control" />
                                         }
                                     </td>
                                 </tr>
@@ -139,12 +142,12 @@
     private School? SelectedSchool;
     private List<LearnerResult> LearnerResults = new();
     private DateTime SelectedResultDate { get; set; }
-    private ClaimsPrincipal User { get; set; }
+    private ClaimsPrincipal User { get; set; } = new();
     private string? AssessmentTopic { get; set; }
     private string? AssessmentType { get; set; }
     private bool Loading = true;
 
-    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; } = default!;
 
     [Parameter]
     [SupplyParameterFromQuery(Name = "g")]
@@ -163,9 +166,9 @@
         var authState = await authenticationStateTask;
         User = authState.User;
 
-        if (User.Identity.IsAuthenticated)
+        if (User.Identity?.IsAuthenticated == true)
         {
-            Logger.LogError("{User.Identity.Name} is authenticated.", User.Identity.Name);
+            Logger.LogInformation("{User.Identity.Name} is authenticated.", User.Identity.Name);
         }
 
         Loading = false;
@@ -261,7 +264,7 @@
 
     private async Task LoadLearners()
     {
-        if (string.IsNullOrEmpty(gradeId) || string.IsNullOrEmpty(gradeId))
+        if (string.IsNullOrEmpty(gradeId) || string.IsNullOrEmpty(subjectId))
             return;
 
         Loading = true;
@@ -274,19 +277,16 @@
 
             foreach (var learner in learners)
             {
-                if (learner.LearnerSubjects != null
-                && subjectId != null
-                && learner.LearnerSubjects
-                .Any(ls => ls.SubjectId == int.Parse(subjectId)))
+                if (learner.LearnerSubjects != null &&
+                    learner.LearnerSubjects.Any(ls => ls.SubjectId == int.Parse(subjectId)))
                 {
                     LearnerResults.Add(new LearnerResult
-                        {
-                            LearnerId = learner.Id,
-                            LearnerName = $"{learner.Surname} {learner.Name}",
-                            ResultViewModel = new ResultViewModel()
-                        });
+                    {
+                        LearnerId = learner.Id,
+                        LearnerName = $"{learner.Surname} {learner.Name}",
+                        ResultViewModel = new ResultViewModel()
+                    });
                 }
-
             }
 
             if (!LearnerResults.Any())
@@ -306,27 +306,50 @@
 
     private async Task SaveResults()
     {
+        // Retrieve the current user's Id from the ClaimsPrincipal.
+        // (Assumes the NameIdentifier claim holds the user's GUID.)
+        var capturedByClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrWhiteSpace(capturedByClaim))
+        {
+            Logger.LogError("Unable to determine the current user's id.");
+            return;
+        }
+        var capturedById = Guid.Parse(capturedByClaim);
+
+        // Create a new ResultSet with the assessment details.
+        var resultSet = new ResultSet
+        {
+            Id = Guid.NewGuid(),
+            AssessmentDate = DateTime.SpecifyKind(SelectedResultDate, DateTimeKind.Utc),
+            AssessmentType = AssessmentType,
+            AssessmentTopic = AssessmentTopic,
+            SubjectId = int.Parse(subjectId!),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            CapturedById = capturedById,
+            Results = new List<Result>() // initialize an empty list to hold each learner's result
+        };
+
+        // Create a Result record for each learner and add it to the ResultSet.
         foreach (var entry in LearnerResults)
         {
             var result = new Result
-                {
-                    Id = Guid.NewGuid(),
-                    LearnerId = entry.LearnerId,
-                    SubjectId = int.Parse(subjectId),
-                    Score = entry.ResultViewModel.Score,
-                    AssessmentType = AssessmentType,
-                    AssessmentTopic = AssessmentTopic,
-                    Absent = entry.ResultViewModel.Absent,
-                    AbsentReason = entry.ResultViewModel.AbsentReason,
-                    ResultDate = DateTime.SpecifyKind(SelectedResultDate, DateTimeKind.Utc),
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                };
-            await ResultService.CreateAsync(result);
+            {
+                Id = Guid.NewGuid(),
+                LearnerId = entry.LearnerId,
+                Score = entry.ResultViewModel.Score,
+                Absent = entry.ResultViewModel.Absent,
+                AbsentReason = entry.ResultViewModel.AbsentReason,
+                ResultSetId = resultSet.Id
+            };
 
-            Logger.LogInformation($"Result for {entry.LearnerName} saved successfully.");
-
+            (resultSet.Results as List<Result>)!.Add(result);
+            Logger.LogInformation("Prepared result for {LearnerName}.", entry.LearnerName);
         }
+
+        // Save the entire result set (and its related results) via the service.
+        await ResultService.CreateResultSetAsync(resultSet);
+        Logger.LogInformation("ResultSet with all learner results saved successfully.");
 
         Navigation.NavigateTo($"/results?g={gradeId}&s={subjectId}");
     }
@@ -341,6 +364,6 @@
     private void OnScoreChanged(int? value, LearnerResult entry)
     {
         entry.ResultViewModel.Score = value;
-        Logger.LogError("Score updated: {value}", value);
+        Logger.LogInformation("Score updated: {value} for {LearnerName}", value, entry.LearnerName);
     }
 }

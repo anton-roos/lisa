@@ -26,4 +26,5 @@ public class UserViewModel
     public List<CareGroup> CareGroups { get; set; } = new();
     public List<Guid> SelectedCareGroupIds { get; set; } = new();
     public string? PhoneNumber { get; set; }
+    public List<TeacherSubject>? Subjects { get; set; }
 }

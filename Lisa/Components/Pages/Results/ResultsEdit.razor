@@ -17,49 +17,58 @@ else
         <DataAnnotationsValidator />
         <ValidationSummary />
 
+        <!-- Display Learner Name -->
         <div class="form-group">
-            <label for="LearnerId">Learner</label>
+            <label>Learner</label>
             <div>@Result.Learner?.Surname @Result.Learner?.Name</div>
         </div>
 
+        <!-- Display Subject from the ResultSet -->
         <div class="form-group">
-            <label for="SubjectId">Subject</label>
-            <div>@Result.Subject?.Name</div>
+            <label>Subject</label>
+            <div>@Result.ResultSet?.Subject?.Name</div>
         </div>
 
+        <!-- Input for Score (only if the learner is not absent) -->
         @if (!Result.Absent)
         {
-            <label>Score</label>
-            <InputNumber @bind-Value="@Result.Score" class="form-control" min="0" max="100" step="1" />
+            <div class="form-group">
+                <label>Score</label>
+                <InputNumber @bind-Value="Result.Score" class="form-control" min="0" max="100" step="1" />
+            </div>
         }
 
+        <!-- Input for Assessment Type stored on ResultSet -->
         <div class="form-group">
             <label>Assessment Type</label>
-            <InputText @bind-Value="Result.AssessmentType" />
+            <InputText @bind-Value="Result.ResultSet.AssessmentType" class="form-control" />
         </div>
 
+        <!-- Input for Assessment Topic stored on ResultSet -->
         <div class="form-group">
             <label>Assessment Topic</label>
-            <InputText @bind-Value="Result.AssessmentTopic" />
+            <InputText @bind-Value="Result.ResultSet.AssessmentTopic" class="form-control" />
         </div>
 
+        <!-- Checkbox for Absent -->
         <div class="form-group">
             <label for="Absent">Absent</label>
             <InputCheckbox id="Absent" @bind-Value="Result.Absent" @onchange="HandleEvent" />
         </div>
 
+        <!-- If absent, allow entering an absent reason -->
         @if (Result.Absent)
         {
             <div class="form-group">
                 <label for="AbsentReason">Absent Reason</label>
-                <InputText id="AbsentReason" @bind-Value="Result.AbsentReason" />
+                <InputText id="AbsentReason" @bind-Value="Result.AbsentReason" class="form-control" />
             </div>
         }
         else
         {
             <div style="display:none">
                 <label for="AbsentReason">Absent Reason</label>
-                <InputText id="AbsentReason" @bind-Value="Result.AbsentReason" />
+                <InputText id="AbsentReason" @bind-Value="Result.AbsentReason" class="form-control" />
             </div>
         }
 
@@ -83,6 +92,7 @@ else
         try
         {
             IsLoading = true;
+            // Ensure the ResultService loads the ResultSet and related Subject data
             Result = await ResultService.GetByIdAsync(ResultId);
             SelectedSchool = SchoolService.GetSelectedSchool();
         }
@@ -100,9 +110,10 @@ else
     {
         await ResultService.UpdateAsync(Result);
         await InvokeAsync(StateHasChanged);
-        NavigationManager.NavigateTo($"/results/list/{SelectedSchool?.Id}/{Result.Learner?.RegisterClass?.SchoolGradeId}/{Result.SubjectId}");
+        NavigationManager.NavigateTo($"/results/{Result.Id}");
     }
 
+    // When the Absent checkbox changes, set Score to 0 if Absent is true.
     private void HandleEvent()
     {
         if (Result.Absent)

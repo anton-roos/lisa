@@ -4,10 +4,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<ResultService> logger)
+public class ResultService
 {
-    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-    private readonly ILogger<ResultService> _logger = logger;
+    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory;
+    private readonly ILogger<ResultService> _logger;
+
+    public ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<ResultService> logger)
+    {
+        _dbContextFactory = dbContextFactory;
+        _logger = logger;
+    }
 
     /// <summary>
     /// Creates a new result entry.
@@ -19,14 +25,37 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             using var context = await _dbContextFactory.CreateDbContextAsync();
             await context.Results.AddAsync(result);
             await context.SaveChangesAsync();
-            _logger.LogInformation("Created Result for LearnerId: {LearnerId}, SubjectId: {SubjectId}",
-                result.LearnerId, result.SubjectId);
+            _logger.LogInformation("Created Result for LearnerId: {LearnerId}, ResultSetId: {ResultSetId}",
+                result.LearnerId, result.ResultSetId);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating result for LearnerId: {LearnerId}, SubjectId: {SubjectId}",
-                result.LearnerId, result.SubjectId);
+            _logger.LogError(ex, "Error creating result for LearnerId: {LearnerId}, ResultSetId: {ResultSetId}",
+                result.LearnerId, result.ResultSetId);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Creates a new ResultSet entry along with its associated Results.
+    /// </summary>
+    public async Task<bool> CreateResultSetAsync(ResultSet resultSet)
+    {
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+            // Adding the ResultSet will also add the child Results (if any) via cascading.
+            await context.ResultSets.AddAsync(resultSet);
+            await context.SaveChangesAsync();
+            _logger.LogInformation("Created ResultSet for SubjectId: {SubjectId}, CapturedById: {CapturedById} with {ResultCount} results",
+                resultSet.SubjectId, resultSet.CapturedById, resultSet.Results?.Count ?? 0);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating ResultSet for SubjectId: {SubjectId}, CapturedById: {CapturedById}",
+                resultSet.SubjectId, resultSet.CapturedById);
             return false;
         }
     }
@@ -50,11 +79,12 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Results
                 .AsNoTracking()
-                .Include(r => r.Learner!)
-                .ThenInclude(l => l.RegisterClass!)
-                .ThenInclude(rc => rc.SchoolGrade!)
-                .ThenInclude(sg => sg.SystemGrade)
-                .Include(r => r.Subject!)
+                .Include(r => r.Learner)
+                    .ThenInclude(l => l.RegisterClass)
+                        .ThenInclude(rc => rc.SchoolGrade)
+                            .ThenInclude(sg => sg.SystemGrade)
+                .Include(r => r.ResultSet)
+                    .ThenInclude(rs => rs.Subject)
                 .FirstOrDefaultAsync(r => r.Id == id);
         }
         catch (Exception ex)
@@ -74,8 +104,9 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Results
                 .AsNoTracking()
-                .Include(r => r.Learner!)
-                .Include(r => r.Subject!)
+                .Include(r => r.Learner)
+                .Include(r => r.ResultSet)
+                    .ThenInclude(rs => rs.Subject)
                 .ToListAsync();
         }
         catch (Exception ex)
@@ -95,12 +126,13 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Results
                 .AsNoTracking()
-                .Include(r => r.Learner!)
-                .ThenInclude(l => l.RegisterClass!)
-                .ThenInclude(rc => rc.SchoolGrade!)
-                .ThenInclude(sg => sg.SystemGrade!)
-                .Include(r => r.Subject!)
-                .Where(r => r.SubjectId == subjectId &&
+                .Include(r => r.Learner)
+                    .ThenInclude(l => l.RegisterClass)
+                        .ThenInclude(rc => rc.SchoolGrade)
+                            .ThenInclude(sg => sg.SystemGrade)
+                .Include(r => r.ResultSet)
+                    .ThenInclude(rs => rs.Subject)
+                .Where(r => r.ResultSet.SubjectId == subjectId &&
                             r.Learner!.RegisterClass != null &&
                             r.Learner.RegisterClass.SchoolGradeId == gradeId &&
                             r.Learner.RegisterClass.SchoolGrade!.SchoolId == schoolId)
@@ -109,8 +141,8 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
         catch (Exception ex)
         {
             _logger.LogError(ex,
-                "Error fetching results for SchoolId: {SchoolId}, GradeId: {GradeId}, SubjectId: {SubjectId}", schoolId,
-                gradeId, subjectId);
+                "Error fetching results for SchoolId: {SchoolId}, GradeId: {GradeId}, SubjectId: {SubjectId}",
+                schoolId, gradeId, subjectId);
             return new List<Result>();
         }
     }
@@ -130,23 +162,22 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
                 return false;
             }
 
+            // Update only the fields that are stored on the Result entity.
             existingResult.Score = result.Score;
             existingResult.Absent = result.Absent;
             existingResult.AbsentReason = result.AbsentReason;
             existingResult.UpdatedAt = DateTime.UtcNow;
-            existingResult.AssessmentTopic = result.AssessmentTopic;
-            existingResult.AssessmentType = result.AssessmentType;
 
             context.Entry(existingResult).State = EntityState.Modified;
             await context.SaveChangesAsync();
-            _logger.LogInformation("Updated Result for LearnerId: {LearnerId}, SubjectId: {SubjectId}",
-                result.LearnerId, result.SubjectId);
+            _logger.LogInformation("Updated Result for LearnerId: {LearnerId}, ResultSetId: {ResultSetId}",
+                result.LearnerId, result.ResultSetId);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating result for LearnerId: {LearnerId}, SubjectId: {SubjectId}",
-                result.LearnerId, result.SubjectId);
+            _logger.LogError(ex, "Error updating result for LearnerId: {LearnerId}, ResultSetId: {ResultSetId}",
+                result.LearnerId, result.ResultSetId);
             return false;
         }
     }

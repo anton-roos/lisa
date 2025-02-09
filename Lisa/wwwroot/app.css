@@ -10,6 +10,9 @@ a, .btn-link {
     color: #fff;
     background-color: #4E246C;
     border-color: #4E246C;
+    --bs-btn-disabled-bg: #6c757d;
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-border-color: #6c757d;
 }
 
 .card {

@@ -164,11 +164,23 @@
     private string SubmitError = "";
     [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
 
-    protected override async Task OnInitializedAsync()
+   protected override async Task OnInitializedAsync()
     {
         if (IsEdit)
         {
             await LoadExistingResultSet();
+
+            if (SelectedSchool == null)
+            {
+                SelectedSchool = SchoolService.GetSelectedSchool();
+            }
+
+            await LoadDropdowns();
+
+            if (!string.IsNullOrEmpty(ViewModel.SubjectId))
+            {
+                await OnSubjectChange(ViewModel.SubjectId);
+            }
         }
         else
         {
@@ -177,7 +189,7 @@
             await LoadDropdowns();
         }
     }
-    
+
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
         switch (eventName)
@@ -205,33 +217,30 @@
     {
         ViewModel.SubjectId = value;
 
-        // Get the teacher assigned to this grade & subject
         ViewModel.Teacher = await UserService.GetTeacherForGradeAndSubjectAsync(
             Guid.Parse(ViewModel.GradeId), int.Parse(ViewModel.SubjectId));
 
-        // Get all learners in the selected grade
-        var learners = await LearnerService.GetLearnersWithTheirSubjectsByGradeAsync(
-            Guid.Parse(ViewModel.GradeId));
+        if (!IsEdit)
+        {
+            var learners = await LearnerService.GetLearnersWithTheirSubjectsByGradeAsync(
+                Guid.Parse(ViewModel.GradeId));
 
-        // Filter only learners who have the selected subject
-        ViewModel.LearnerResults = learners
-            .Where(learner => learner.LearnerSubjects != null &&
-                              learner.LearnerSubjects.Any(subject => subject.SubjectId == int.Parse(ViewModel.SubjectId)))
-            .Select(learner => new LearnerResultViewModel
-            {
-                LearnerId = learner.Id,
-                LearnerName = $"{learner.Surname}, {learner.Name}",
-                ResultViewModel = new ResultViewModel()
-            })
-            .ToList();
+            ViewModel.LearnerResults = learners
+                .Where(learner => learner.LearnerSubjects != null &&
+                                learner.LearnerSubjects.Any(subject => subject.SubjectId == int.Parse(ViewModel.SubjectId)))
+                .Select(learner => new LearnerResultViewModel
+                {
+                    LearnerId = learner.Id,
+                    LearnerName = $"{learner.Surname}, {learner.Name}",
+                    ResultViewModel = new ResultViewModel()
+                })
+                .ToList();
+        }
     }
 
     private async Task LoadDropdowns()
     {
-        if (!IsEdit)
-        {
-            SelectedSchool = SchoolService.GetSelectedSchool();
-        }
+        SelectedSchool = SchoolService.GetSelectedSchool();
 
         if (SelectedSchool != null)
         {
@@ -295,7 +304,6 @@
 
     private async Task SaveResults()
     {
-        // Validate assessment fields
         if (ViewModel.AssessmentDate == null)
         {
             SubmitError = "Assessment date is required.";
@@ -312,7 +320,6 @@
             return;
         }
 
-        // Validate each learner's score unless marked as absent
         foreach (var entry in ViewModel.LearnerResults)
         {
             if (!entry.ResultViewModel.Absent)

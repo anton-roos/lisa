@@ -194,15 +194,16 @@ public class UserService(
     }
 
     /// <summary>
-    /// Updates an existing teacher.
+    /// Updates an existing user.
     /// </summary>
-    public async Task<bool> UpdateAsync(User user, IEnumerable<Guid> selectedCareGroupIds, string? newPassword)
+    public async Task<bool> UpdateAsync(UserViewModel user, string? newPassword)
     {
         try
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
             var existing = await context.Users
                 .Include(t => t.CareGroups)
+                .Include(t => t.Subjects)
                 .FirstOrDefaultAsync(t => t.Id == user.Id);
 
             if (existing == null)
@@ -227,16 +228,29 @@ public class UserService(
             existing.Email = user.Email;
             existing.PhoneNumber = user.PhoneNumber;
             existing.SchoolId = user.SchoolId;
-
-            var existingCareGroups = await context.CareGroups
-                .Where(cg => selectedCareGroupIds.Contains(cg.Id))
-                .ToListAsync();
-
             existing.CareGroups.Clear();
-            foreach (var careGroup in existingCareGroups)
+            existing.CareGroups = user.CareGroups;
+
+            // var existingCareGroups = await context.CareGroups
+            //     .Where(cg => selectedCareGroupIds.Contains(cg.Id))
+            //     .ToListAsync();
+
+            // existing.CareGroups.Clear();
+            // foreach (var careGroup in existingCareGroups)
+            // {
+            //     context.CareGroups.Attach(careGroup);
+            //     existing.CareGroups.Add(careGroup);
+            // }
+
+            existing.Subjects.Clear();
+
+            if (user.Subjects != null && user.Subjects.Any())
             {
-                context.CareGroups.Attach(careGroup);
-                existing.CareGroups.Add(careGroup);
+                foreach (var teacherSubject in user.Subjects)
+                {
+                    // Optionally, you can perform further validation here.
+                    existing.Subjects.Add(teacherSubject);
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(newPassword))

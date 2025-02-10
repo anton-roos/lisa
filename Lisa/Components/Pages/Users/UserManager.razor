@@ -307,7 +307,10 @@
         }
     }
 
-    private async Task HandleValidSubmit()
+    /// <summary>
+    /// Updates an existing user or creates a new user, based on the view model.
+    /// </summary>
+    public async Task<bool> HandleValidSubmit()
     {
         try
         {
@@ -316,46 +319,95 @@
 
             if (IsEdit)
             {
+                // ********** EDIT EXISTING USER **********
                 var existingUser = await UserService.GetByIdAsync(UserId.Value);
-                if (existingUser != null)
-                {
-                    var currentRoles = await UserManagerService.GetRolesAsync(existingUser);
-                    // Update the view model from the existing user
-                    User = new UserViewModel
-                    {
-                        Id = existingUser.Id,
-                        Surname = existingUser.Surname,
-                        Abbreviation = existingUser.Abbreviation,
-                        Name = existingUser.Name,
-                        Email = existingUser.Email,
-                        SelectedRoles = currentRoles.ToList(),
-                        SchoolId = existingUser.SchoolId,
-                        Subjects = existingUser.Subjects.ToList(),
-                        SelectedCareGroupIds = existingUser.CareGroups?.Select(cg => cg.Id).ToList() ?? new()
-                    };
+                if (existingUser == null)
+                    throw new Exception("User not found.");
 
-                    // Repopulate the SelectedSubjectGrades dictionary
-                    if (User.Subjects != null)
+                // Update the view model from the existing user.
+                var currentRoles = await UserManagerService.GetRolesAsync(existingUser);
+                User = new UserViewModel
+                {
+                    Id = existingUser.Id,
+                    Surname = existingUser.Surname,
+                    Abbreviation = existingUser.Abbreviation,
+                    Name = existingUser.Name,
+                    Email = existingUser.Email,
+                    SelectedRoles = currentRoles.ToList(),
+                    SchoolId = existingUser.SchoolId,
+                    Subjects = existingUser.Subjects.ToList(),
+                    // Care groups should already be in the view model (e.g., SelectedCareGroupIds)
+                    SelectedCareGroupIds = existingUser.CareGroups?.Select(cg => cg.Id).ToList() ?? new List<Guid>()
+                };
+
+                // Rebuild the SelectedSubjectGrades dictionary from the existing subjects.
+                SelectedSubjectGrades.Clear();
+                if (User.Subjects != null)
+                {
+                    foreach (var teacherSubject in User.Subjects)
                     {
-                        foreach (var teacherSubject in User.Subjects)
-                        {
-                            if (SelectedSubjectGrades.ContainsKey(teacherSubject.SubjectId))
-                            {
-                                SelectedSubjectGrades[teacherSubject.SubjectId].Add(teacherSubject.Grade);
-                            }
-                            else
-                            {
-                                SelectedSubjectGrades[teacherSubject.SubjectId] = new HashSet<int> { teacherSubject.Grade };
-                            }
-                        }
+                        if (!SelectedSubjectGrades.ContainsKey(teacherSubject.SubjectId))
+                            SelectedSubjectGrades[teacherSubject.SubjectId] = new HashSet<int>();
+
+                        SelectedSubjectGrades[teacherSubject.SubjectId].Add(teacherSubject.Grade);
                     }
                 }
+
+                // Rebuild the User.Subjects collection from SelectedSubjectGrades.
+                User.Subjects.Clear();
+                foreach (var kvp in SelectedSubjectGrades)
+                {
+                    int subjectId = kvp.Key;
+                    foreach (var grade in kvp.Value)
+                    {
+                        User.Subjects.Add(new TeacherSubject
+                        {
+                            SubjectId = subjectId,
+                            Grade = grade
+                        });
+                    }
+                }
+
+                // Update the user using the view model (which already contains care groups).
+                await UserService.UpdateAsync(User, newPassword: null);
             }
             else
             {
+                // ********** CREATE NEW USER **********
                 if (string.IsNullOrWhiteSpace(User.Password))
                     throw new Exception("Password is required for new users.");
 
+                // Build the teacher subjects from the SelectedSubjectGrades dictionary.
+                var teacherSubjects = new List<TeacherSubject>();
+                foreach (var kvp in SelectedSubjectGrades)
+                {
+                    int subjectId = kvp.Key;
+                    var selectedGrades = kvp.Value;
+
+                    // Fallback to default available grades if none are explicitly selected.
+                    if (!selectedGrades.Any())
+                    {
+                        var subject = AvailableSubjects.FirstOrDefault(s => s.Id == subjectId);
+                        if (subject?.GradesApplicable != null)
+                        {
+                            selectedGrades = new HashSet<int>(
+                                subject.GradesApplicable.Where(g => SchoolApplicableGrades.Contains(g))
+                            );
+                        }
+                    }
+
+                    foreach (var grade in selectedGrades)
+                    {
+                        teacherSubjects.Add(new TeacherSubject
+                        {
+                            SubjectId = subjectId,
+                            Grade = grade
+                        });
+                    }
+                }
+                User.Subjects = teacherSubjects;
+
+                // Create the new user using the view model's data.
                 var newUser = new User
                 {
                     Surname = User.Surname,
@@ -364,7 +416,8 @@
                     Email = User.Email,
                     UserName = User.Email,
                     Subjects = User.Subjects,
-                    SchoolId = SelectedSchool.Id
+                    SchoolId = SelectedSchool.Id,
+                    // Assume that care groups are already set on the view model (e.g., in SelectedCareGroupIds)
                 };
 
                 var result = await UserManagerService.CreateAsync(newUser, User.Password);
@@ -380,53 +433,18 @@
                 }
             }
 
-            // Merge the teacher subjects from the SelectedSubjectGrades dictionary into the User.Subjects collection.
-            var teacherSubjects = new List<TeacherSubject>();
-            foreach (var kvp in SelectedSubjectGrades)
-            {
-                int subjectId = kvp.Key;
-                var selectedGrades = kvp.Value;
-
-                if (!selectedGrades.Any())
-                {
-                    var subject = AvailableSubjects.FirstOrDefault(s => s.Id == subjectId);
-                    if (subject?.GradesApplicable != null)
-                    {
-                        selectedGrades = new HashSet<int>(subject.GradesApplicable.Where(g => SchoolApplicableGrades.Contains(g)));
-                    }
-                }
-
-                foreach (var grade in selectedGrades)
-                {
-                    // Only add if not already present
-                    if (User.Subjects == null)
-                        User.Subjects = new List<TeacherSubject>();
-
-                    if (!User.Subjects.Any(ts => ts.SubjectId == subjectId && ts.Grade == grade))
-                    {
-                        teacherSubjects.Add(new TeacherSubject
-                        {
-                            SubjectId = subjectId,
-                            Grade = grade
-                        });
-                    }
-                }
-            }
-            // Add new teacher subjects to the user.
-            User.Subjects.AddRange(teacherSubjects);
-
-            // Call your update service (or however you save the user)
-            await UserService.UpdateAsync(User);
-
             Navigation.NavigateTo("/users");
+            return true;
         }
         catch (Exception ex)
         {
             Logger.LogError("Error: {Message}", ex.Message);
             ErrorMessage = ex.Message;
             ShowErrorModal = true;
+            return false;
         }
     }
+
 
     private void Cancel() => Navigation.NavigateTo("/users");
     private void CloseErrorModal() => ShowErrorModal = false;

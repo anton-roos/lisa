@@ -446,7 +446,7 @@ Roles.Teacher
     {
         ShowSubjectSelectionModal = true;
         SubjectSearchTerm = "";
-        FilterSubjects();
+        FilterSubjects(new ChangeEventArgs { Value = "" });
     }
 
     private void CloseSubjectSelectModal()
@@ -454,8 +454,10 @@ Roles.Teacher
         ShowSubjectSelectionModal = false;
     }
 
-    private void FilterSubjects()
+    private void FilterSubjects(ChangeEventArgs e)
     {
+        SubjectSearchTerm = e.Value?.ToString() ?? "";
+
         if (string.IsNullOrWhiteSpace(SubjectSearchTerm))
         {
             FilteredSubjects = AvailableSubjects;
@@ -463,10 +465,13 @@ Roles.Teacher
         else
         {
             FilteredSubjects = AvailableSubjects
-            .Where(s => s.Name.Contains(SubjectSearchTerm, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+                .Where(s => s.Name.Contains(SubjectSearchTerm, StringComparison.OrdinalIgnoreCase))
+                .ToList();
         }
+
+        StateHasChanged();
     }
+
 
     private void ToggleSubjectSelection(int subjectId, bool isChecked)
     {

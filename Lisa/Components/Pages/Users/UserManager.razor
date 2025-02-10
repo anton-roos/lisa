@@ -25,22 +25,18 @@
                 <label for="surname">Surname</label>
                 <InputText id="surname" class="form-control" @bind-Value="User.Surname" />
             </div>
-
             <div class="form-group mb-3">
                 <label for="abbreviation">Abbreviation</label>
                 <InputText id="abbreviation" class="form-control" @bind-Value="User.Abbreviation" />
             </div>
-
             <div class="form-group mb-3">
                 <label for="name">Name</label>
                 <InputText id="name" class="form-control" @bind-Value="User.Name" />
             </div>
-
             <div class="form-group mb-3">
                 <label for="email">Email</label>
                 <InputText id="email" class="form-control" @bind-Value="User.Email" disabled="@(IsEdit)" />
             </div>
-
             <div class="form-group mb-3">
                 <label for="password">Password</label>
                 <small class="text-muted">Leave blank to keep the current password.</small>
@@ -67,14 +63,12 @@
                     <div class="row">
                         @foreach (var group in AvailableCareGroups)
                         {
-                            var careGroupId = group.Id;
                             <div class="col-4 d-flex align-items-center">
                                 <div class="form-check">
-                                    <!-- Checkbox for each care group -->
-                                    <input class="form-check-input" type="checkbox" id="@($"careGroup_{careGroupId}")"
-                                        checked="@CareGroupSelections[careGroupId]"
-                                        @onchange="(e) => OnCareGroupChanged(careGroupId, (bool)e.Value)" />
-                                    <label class="form-check-label" for="@($"careGroup_{careGroupId}")">@group.Name</label>
+                                    <input class="form-check-input" type="checkbox" id="@($"careGroup_{group.Id}")"
+                                        checked="@User.SelectedCareGroupIds.Contains(group.Id)"
+                                        @onchange="(e) => ToggleCareGroup(group.Id, (bool)e.Value)" />
+                                    <label class="form-check-label" for="@($"careGroup_{group.Id}")">@group.Name</label>
                                 </div>
                             </div>
                         }
@@ -85,7 +79,8 @@
             @if (ShouldShowSubjects())
             {
                 <label>Subjects</label>
-                <button type="button" class="btn btn-primary me-2" @onclick="OpenSubjectSelectModal">Add Subjects</button>
+                <button type="button" class="btn btn-primary me-2" @onclick="OpenSubjectSelectModal">Add / Edit
+                    Subjects</button>
                 @if (User.Subjects != null && User.Subjects.Any())
                 {
                     <div class="mb-3">
@@ -98,13 +93,10 @@
                                     <strong class="me-2">@subject.Name</strong>
                                     @foreach (var teacherSubject in subjectGroup)
                                     {
-                                        <span class="badge bg-primary me-1">
-                                            Grade @teacherSubject.Grade
-                                        </span>
+                                        <span class="badge bg-primary me-1">Grade @teacherSubject.Grade</span>
                                     }
                                     <button type="button" class="btn btn-sm btn-outline-danger ms-2"
-                                        @onclick="@(() => RemoveSubject(subject.Id))"
-                                        @onclick:stopPropagation>
+                                        @onclick="@(() => RemoveSubject(subject.Id))" @onclick:stopPropagation>
                                         Remove
                                     </button>
                                 </div>
@@ -122,7 +114,6 @@
             <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
         </EditForm>
 
-        <!-- Error Modal -->
         <div class="modal fade @(ShowErrorModal ? "show d-block" : "d-none")" tabindex="-1"
             style="background-color: rgba(0,0,0,0.5);" role="dialog">
             <div class="modal-dialog" role="document">
@@ -141,7 +132,6 @@
             </div>
         </div>
 
-        <!-- Subjects Selection Modal -->
         <div class="modal fade @(ShowSubjectSelectionModal ? "show d-block" : "d-none")" tabindex="-1"
             style="background-color: rgba(0,0,0,0.5);" role="dialog">
             <div class="modal-dialog" role="document">
@@ -152,52 +142,44 @@
                             @onclick="CloseSubjectSelectModal"></button>
                     </div>
                     <div class="modal-body">
-                        <!-- Search Bar -->
                         <InputText @bind-Value="SubjectSearchTerm" class="form-control mb-3"
-                            placeholder="Search subjects..." @oninput="FilterSubjects" />
-
-                        <!-- Scrollable List of Subjects -->
+                            placeholder="Search subjects..." />
                         <div style="max-height: 300px; overflow-y: auto;">
                             @foreach (var subject in FilteredSubjects)
                             {
                                 <div class="mb-3 border-bottom pb-2">
-                                    <!-- Subject Checkbox with Available Grades Next to It -->
                                     <div class="d-flex align-items-center">
                                         <input class="form-check-input me-1" type="checkbox" id="@($"subject_{subject.Id}")"
-                                            checked="@SelectedSubjectGrades.ContainsKey(subject.Id)"
-                                            @onchange="(e) => ToggleSubjectSelection(subject.Id, (bool)e.Value)" />
+                                            checked="@IsSubjectSelected(subject.Id)"
+                                            @onchange="(e) => ToggleSubject(subject.Id, (bool)e.Value)" />
                                         <label class="form-check-label fw-bold me-2" for="@($"subject_{subject.Id}")">
                                             @subject.Name
                                         </label>
-                                        <!-- Show the available grades range -->
-                                        <span class="badge bg-primary">
-                                            @(FormatGradeRange(subject.GradesApplicable))
-                                        </span>
+                                        <span class="badge bg-primary">@(FormatGradeRange(subject.GradesApplicable))</span>
                                     </div>
-
-                                    <!-- If the subject is selected, show its grade checkboxes -->
-                                   <!-- If the subject is selected, show its grade checkboxes -->
-                                        @if (SelectedSubjectGrades.ContainsKey(subject.Id))
-                                        {
-                                            <div class="ms-4 mt-2">
-                                                @foreach (var grade in subject.GradesApplicable?.Where(g => SchoolApplicableGrades.Contains(g)) ?? Enumerable.Empty<int>())
-                                                {
-                                                    <div class="d-flex align-items-center mb-1">
-                                                        <input class="form-check-input me-1" type="checkbox"
-                                                            id="@($"subject_{subject.Id}_grade_{grade}")"
-                                                            checked="@(SelectedSubjectGrades[subject.Id].Contains(grade))"
-                                                            @onchange="(e) => ToggleGradeSelectionForSubject(subject.Id, grade, (bool)e.Value)" />
-                                                        <label class="form-check-label me-2" for="@($"subject_{subject.Id}_grade_{grade}")">
-                                                            Grade @FormatGrade(grade)
-                                                        </label>
-                                                        <!-- Pill Indicator -->
-                                                        <span class="badge @(SelectedSubjectGrades[subject.Id].Contains(grade) ? "bg-primary" : "bg-secondary")">
-                                                            @(SelectedSubjectGrades[subject.Id].Contains(grade) ? "Selected" : "Available")
-                                                        </span>
-                                                    </div>
-                                                }
-                                            </div>
-                                        }
+                                    @if (IsSubjectSelected(subject.Id))
+                                    {
+                                        <div class="ms-4 mt-2">
+                                            @foreach (var grade in subject.GradesApplicable?.Where(g =>
+                                                                                SchoolApplicableGrades.Contains(g)) ?? Enumerable.Empty<int>())
+                                            {
+                                                <div class="d-flex align-items-center mb-1">
+                                                    <input class="form-check-input me-1" type="checkbox"
+                                                        id="@($"subject_{subject.Id}_grade_{grade}")"
+                                                        checked="@IsGradeSelected(subject.Id, grade)"
+                                                        @onchange="(e) => ToggleGrade(subject.Id, grade, (bool)e.Value)" />
+                                                    <label class="form-check-label me-2"
+                                                        for="@($"subject_{subject.Id}_grade_{grade}")">
+                                                        Grade @FormatGrade(grade)
+                                                    </label>
+                                                    <span
+                                                        class="badge @(IsGradeSelected(subject.Id, grade) ? "bg-primary" : "bg-secondary")">
+                                                        @(IsGradeSelected(subject.Id, grade) ? "Selected" : "Available")
+                                                    </span>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
                                 </div>
                             }
                         </div>
@@ -205,11 +187,12 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary"
                             @onclick="CloseSubjectSelectModal">Cancel</button>
-                        <button type="button" class="btn btn-primary" @onclick="ConfirmSubjectSelection">Save</button>
+                        <button type="button" class="btn btn-primary" @onclick="CloseSubjectSelectModal">Save</button>
                     </div>
                 </div>
             </div>
         </div>
+
     </Authorized>
     <NotAuthorized>
         <h3>You are not authorized to access this page.</h3>
@@ -217,34 +200,23 @@
 </AuthorizeView>
 
 @code {
-    [Parameter]
-    public Guid? UserId { get; set; }
-    private Dictionary<int, HashSet<int>> SelectedSubjectGrades { get; set; } = new();
+    [Parameter] public Guid? UserId { get; set; }
     private UserViewModel User { get; set; } = new();
     private School? SelectedSchool;
-    private List<CareGroup> AvailableCareGroups = new();
-    private List<Subject> AvailableSubjects = new();
+    private List<CareGroup> AvailableCareGroups { get; set; } = new();
+    private List<Subject> AvailableSubjects { get; set; } = new();
     private List<int> SchoolApplicableGrades { get; set; } = new();
-    private List<string> AvailableRoles = new() {
-        Roles.Principal,
-        Roles.Administrator,
-        Roles.SchoolManagement,
-        Roles.SystemAdministrator,
-        Roles.Teacher
-    };
+    private List<string> AvailableRoles { get; set; } = new() { Roles.Principal, Roles.Administrator,
+Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher };
 
-    private Dictionary<Guid, bool> CareGroupSelections = new();
+    private string SubjectSearchTerm { get; set; } = "";
+    private List<Subject> FilteredSubjects { get; set; } = new();
 
-    private bool IsEdit => UserId.HasValue;
-
-    // Error Modal Variables
+    private bool ShowSubjectSelectionModal { get; set; }
     private bool ShowErrorModal { get; set; }
     private string ErrorMessage { get; set; } = "";
 
-    // Subject Modal Variables
-    private string SubjectSearchTerm { get; set; } = "";
-    private List<Subject> FilteredSubjects { get; set; } = new();
-    private List<TeacherSubject> SelectedSubjects { get; set; } = new();
+    private bool IsEdit => UserId.HasValue;
 
     protected override async Task OnInitializedAsync()
     {
@@ -256,14 +228,18 @@
             var gradesForSchool = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
             SchoolApplicableGrades = gradesForSchool.Select(g => g.SystemGrade.SequenceNumber).ToList();
             AvailableCareGroups = await CareGroupService.GetBySchoolAsync(SelectedSchool.Id);
-
-            foreach (var careGroup in AvailableCareGroups)
-            {
-                CareGroupSelections[careGroup.Id] = false;
-            }
         }
 
-        if (IsEdit)
+        if (!IsEdit)
+        {
+            User = new UserViewModel
+            {
+                SelectedCareGroupIds = new List<Guid>(),
+                Subjects = new List<TeacherSubject>(),
+                SelectedRoles = new List<string>()
+            };
+        }
+        else
         {
             var existingUser = await UserService.GetByIdAsync(UserId.Value);
             if (existingUser != null)
@@ -279,37 +255,117 @@
                     SelectedRoles = currentRoles.ToList(),
                     SchoolId = existingUser.SchoolId,
                     Subjects = existingUser.Subjects.ToList(),
-                    SelectedCareGroupIds = existingUser.CareGroups?.Select(cg => cg.Id).ToList() ?? new()
+                    SelectedCareGroupIds = existingUser.CareGroups?.Select(cg => cg.Id).ToList() ?? new List<Guid>()
                 };
-
-                // Update CareGroupSelections
-                foreach (var careGroup in AvailableCareGroups)
-                {
-                    CareGroupSelections[careGroup.Id] = User.SelectedCareGroupIds.Contains(careGroup.Id);
-                }
-
-                // **Populate SelectedSubjectGrades from the existing teacher subjects**
-                if (User.Subjects != null)
-                {
-                    foreach (var teacherSubject in User.Subjects)
-                    {
-                        if (SelectedSubjectGrades.ContainsKey(teacherSubject.SubjectId))
-                        {
-                            SelectedSubjectGrades[teacherSubject.SubjectId].Add(teacherSubject.Grade);
-                        }
-                        else
-                        {
-                            SelectedSubjectGrades[teacherSubject.SubjectId] = new HashSet<int> { teacherSubject.Grade };
-                        }
-                    }
-                }
             }
+        }
+
+        FilteredSubjects = AvailableSubjects;
+    }
+
+    private void ToggleCareGroup(Guid careGroupId, bool isSelected)
+    {
+        if (isSelected)
+        {
+            if (!User.SelectedCareGroupIds.Contains(careGroupId))
+                User.SelectedCareGroupIds.Add(careGroupId);
+        }
+        else
+        {
+            User.SelectedCareGroupIds.Remove(careGroupId);
         }
     }
 
-    /// <summary>
-    /// Updates an existing user or creates a new user, based on the view model.
-    /// </summary>
+    private bool IsSubjectSelected(int subjectId)
+    {
+        return User.Subjects?.Any(ts => ts.SubjectId == subjectId) ?? false;
+    }
+
+    private bool IsGradeSelected(int subjectId, int grade)
+    {
+        return User.Subjects?.Any(ts => ts.SubjectId == subjectId && ts.Grade == grade) ?? false;
+    }
+
+    private void ToggleSubject(int subjectId, bool isSelected)
+    {
+        if (isSelected)
+        {
+            if (!IsSubjectSelected(subjectId))
+            {
+                var subject = AvailableSubjects.FirstOrDefault(s => s.Id == subjectId);
+                if (subject != null && subject.GradesApplicable != null && subject.GradesApplicable.Any())
+                {
+                    User.Subjects.Add(new TeacherSubject { SubjectId = subjectId, Grade = subject.GradesApplicable.First() });
+                }
+            }
+        }
+        else
+        {
+            User.Subjects.RemoveAll(ts => ts.SubjectId == subjectId);
+        }
+    }
+
+    private void ToggleGrade(int subjectId, int grade, bool isSelected)
+    {
+        if (isSelected)
+        {
+            if (!IsGradeSelected(subjectId, grade))
+            {
+                User.Subjects.Add(new TeacherSubject { SubjectId = subjectId, Grade = grade });
+            }
+        }
+        else
+        {
+            User.Subjects.RemoveAll(ts => ts.SubjectId == subjectId && ts.Grade == grade);
+        }
+    }
+
+    private void OpenSubjectSelectModal()
+    {
+        ShowSubjectSelectionModal = true;
+        SubjectSearchTerm = "";
+        FilterSubjects();
+    }
+
+    private void CloseSubjectSelectModal() => ShowSubjectSelectionModal = false;
+
+    private void FilterSubjects()
+    {
+        if (string.IsNullOrWhiteSpace(SubjectSearchTerm))
+        {
+            FilteredSubjects = AvailableSubjects;
+        }
+        else
+        {
+            FilteredSubjects = AvailableSubjects
+            .Where(s => s.Name.Contains(SubjectSearchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        }
+    }
+
+    private void ConfirmSubjectSelection()
+    {
+        CloseSubjectSelectModal();
+    }
+
+    private void RemoveSubject(int subjectId)
+    {
+        User.Subjects.RemoveAll(ts => ts.SubjectId == subjectId);
+    }
+
+    private void ToggleRole(string role, bool isSelected)
+    {
+        if (isSelected)
+        {
+            if (!User.SelectedRoles.Contains(role))
+                User.SelectedRoles.Add(role);
+        }
+        else
+        {
+            User.SelectedRoles.Remove(role);
+        }
+    }
+
     public async Task<bool> HandleValidSubmit()
     {
         try
@@ -319,95 +375,13 @@
 
             if (IsEdit)
             {
-                // ********** EDIT EXISTING USER **********
-                var existingUser = await UserService.GetByIdAsync(UserId.Value);
-                if (existingUser == null)
-                    throw new Exception("User not found.");
-
-                // Update the view model from the existing user.
-                var currentRoles = await UserManagerService.GetRolesAsync(existingUser);
-                User = new UserViewModel
-                {
-                    Id = existingUser.Id,
-                    Surname = existingUser.Surname,
-                    Abbreviation = existingUser.Abbreviation,
-                    Name = existingUser.Name,
-                    Email = existingUser.Email,
-                    SelectedRoles = currentRoles.ToList(),
-                    SchoolId = existingUser.SchoolId,
-                    Subjects = existingUser.Subjects.ToList(),
-                    // Care groups should already be in the view model (e.g., SelectedCareGroupIds)
-                    SelectedCareGroupIds = existingUser.CareGroups?.Select(cg => cg.Id).ToList() ?? new List<Guid>()
-                };
-
-                // Rebuild the SelectedSubjectGrades dictionary from the existing subjects.
-                SelectedSubjectGrades.Clear();
-                if (User.Subjects != null)
-                {
-                    foreach (var teacherSubject in User.Subjects)
-                    {
-                        if (!SelectedSubjectGrades.ContainsKey(teacherSubject.SubjectId))
-                            SelectedSubjectGrades[teacherSubject.SubjectId] = new HashSet<int>();
-
-                        SelectedSubjectGrades[teacherSubject.SubjectId].Add(teacherSubject.Grade);
-                    }
-                }
-
-                // Rebuild the User.Subjects collection from SelectedSubjectGrades.
-                User.Subjects.Clear();
-                foreach (var kvp in SelectedSubjectGrades)
-                {
-                    int subjectId = kvp.Key;
-                    foreach (var grade in kvp.Value)
-                    {
-                        User.Subjects.Add(new TeacherSubject
-                        {
-                            SubjectId = subjectId,
-                            Grade = grade
-                        });
-                    }
-                }
-
-                // Update the user using the view model (which already contains care groups).
                 await UserService.UpdateAsync(User, newPassword: null);
             }
             else
             {
-                // ********** CREATE NEW USER **********
                 if (string.IsNullOrWhiteSpace(User.Password))
                     throw new Exception("Password is required for new users.");
 
-                // Build the teacher subjects from the SelectedSubjectGrades dictionary.
-                var teacherSubjects = new List<TeacherSubject>();
-                foreach (var kvp in SelectedSubjectGrades)
-                {
-                    int subjectId = kvp.Key;
-                    var selectedGrades = kvp.Value;
-
-                    // Fallback to default available grades if none are explicitly selected.
-                    if (!selectedGrades.Any())
-                    {
-                        var subject = AvailableSubjects.FirstOrDefault(s => s.Id == subjectId);
-                        if (subject?.GradesApplicable != null)
-                        {
-                            selectedGrades = new HashSet<int>(
-                                subject.GradesApplicable.Where(g => SchoolApplicableGrades.Contains(g))
-                            );
-                        }
-                    }
-
-                    foreach (var grade in selectedGrades)
-                    {
-                        teacherSubjects.Add(new TeacherSubject
-                        {
-                            SubjectId = subjectId,
-                            Grade = grade
-                        });
-                    }
-                }
-                User.Subjects = teacherSubjects;
-
-                // Create the new user using the view model's data.
                 var newUser = new User
                 {
                     Surname = User.Surname,
@@ -416,8 +390,7 @@
                     Email = User.Email,
                     UserName = User.Email,
                     Subjects = User.Subjects,
-                    SchoolId = SelectedSchool.Id,
-                    // Assume that care groups are already set on the view model (e.g., in SelectedCareGroupIds)
+                    SchoolId = SelectedSchool.Id
                 };
 
                 var result = await UserManagerService.CreateAsync(newUser, User.Password);
@@ -445,7 +418,6 @@
         }
     }
 
-
     private void Cancel() => Navigation.NavigateTo("/users");
     private void CloseErrorModal() => ShowErrorModal = false;
 
@@ -453,142 +425,14 @@
     private bool ShouldShowSubjects() => !User.SelectedRoles.Contains(Roles.SystemAdministrator)
     && User.SelectedRoles.Contains(Roles.Teacher);
 
-    private void OnCareGroupChanged(Guid careGroupId, bool isChecked)
-    {
-        CareGroupSelections[careGroupId] = isChecked;
-        if (isChecked)
-        {
-            if (!User.SelectedCareGroupIds.Contains(careGroupId))
-                User.SelectedCareGroupIds.Add(careGroupId);
-        }
-        else
-        {
-            User.SelectedCareGroupIds.Remove(careGroupId);
-        }
-    }
-
-    private void ToggleRole(string role, bool isChecked)
-    {
-        if (isChecked)
-        {
-            if (!User.SelectedRoles.Contains(role))
-                User.SelectedRoles.Add(role);
-        }
-        else
-        {
-            User.SelectedRoles.Remove(role);
-        }
-    }
-
-    private bool ShowSubjectSelectionModal { get; set; }
-    private void OpenSubjectSelectModal()
-    {
-        ShowSubjectSelectionModal = true;
-        SubjectSearchTerm = "";
-        FilterSubjects(new ChangeEventArgs { Value = "" });
-    }
-    private void CloseSubjectSelectModal() => ShowSubjectSelectionModal = false;
-
-    private void FilterSubjects(ChangeEventArgs e)
-    {
-        SubjectSearchTerm = e.Value?.ToString() ?? "";
-        if (string.IsNullOrWhiteSpace(SubjectSearchTerm))
-        {
-            FilteredSubjects = AvailableSubjects;
-        }
-        else
-        {
-            FilteredSubjects = AvailableSubjects
-                .Where(s => s.Name.Contains(SubjectSearchTerm, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        }
-        StateHasChanged();
-    }
-
-    private void ToggleSubjectSelection(int subjectId, bool isChecked)
-    {
-        if (isChecked)
-        {
-            if (!SelectedSubjectGrades.ContainsKey(subjectId))
-            {
-                SelectedSubjectGrades[subjectId] = new HashSet<int>();
-            }
-        }
-        else
-        {
-            SelectedSubjectGrades.Remove(subjectId);
-        }
-    }
-
-    private void ToggleGradeSelectionForSubject(int subjectId, int grade, bool isChecked)
-    {
-        if (!SelectedSubjectGrades.ContainsKey(subjectId))
-        {
-            SelectedSubjectGrades[subjectId] = new HashSet<int>();
-        }
-        if (isChecked)
-        {
-            SelectedSubjectGrades[subjectId].Add(grade);
-        }
-        else
-        {
-            SelectedSubjectGrades[subjectId].Remove(grade);
-        }
-    }
-
-    private void ConfirmSubjectSelection()
-    {
-        // Build TeacherSubject objects from the SelectedSubjectGrades dictionary.
-        var teacherSubjects = new List<TeacherSubject>();
-        foreach (var kvp in SelectedSubjectGrades)
-        {
-            int subjectId = kvp.Key;
-            var selectedGrades = kvp.Value;
-            if (!selectedGrades.Any())
-            {
-                var subject = AvailableSubjects.FirstOrDefault(s => s.Id == subjectId);
-                if (subject?.GradesApplicable != null)
-                {
-                    selectedGrades = new HashSet<int>(subject.GradesApplicable.Where(g => SchoolApplicableGrades.Contains(g)));
-                }
-            }
-            foreach (var grade in selectedGrades)
-            {
-                if (User.Subjects == null)
-                    User.Subjects = new List<TeacherSubject>();
-
-                if (!User.Subjects.Any(ts => ts.SubjectId == subjectId && ts.Grade == grade))
-                {
-                    teacherSubjects.Add(new TeacherSubject
-                    {
-                        SubjectId = subjectId,
-                        Grade = grade
-                    });
-                }
-            }
-        }
-        User.Subjects.AddRange(teacherSubjects);
-        CloseSubjectSelectModal();
-    }
-
-    private void RemoveSubject(int subjectId)
-    {
-        User.Subjects.RemoveAll(ts => ts.SubjectId == subjectId);
-        if (SelectedSubjectGrades.ContainsKey(subjectId))
-        {
-            SelectedSubjectGrades.Remove(subjectId);
-        }
-        StateHasChanged();
-    }
-
     private string FormatGrade(int grade) =>
-        grade switch
-        {
-            -2 => "Gr RRR",
-            -1 => "Gr RR",
-            0 => "Gr R",
-            _  => $"Gr {grade}"
-        };
+    grade switch
+    {
+        -2 => "Gr RRR",
+        -1 => "Gr RR",
+        0 => "Gr R",
+        _ => $"Gr {grade}"
+    };
 
     private string FormatGradeRange(List<int>? grades)
     {

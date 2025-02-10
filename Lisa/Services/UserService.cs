@@ -228,19 +228,16 @@ public class UserService(
             existing.Email = user.Email;
             existing.PhoneNumber = user.PhoneNumber;
             existing.SchoolId = user.SchoolId;
+
             existing.CareGroups.Clear();
-            existing.CareGroups = user.CareGroups;
 
-            // var existingCareGroups = await context.CareGroups
-            //     .Where(cg => selectedCareGroupIds.Contains(cg.Id))
-            //     .ToListAsync();
-
-            // existing.CareGroups.Clear();
-            // foreach (var careGroup in existingCareGroups)
-            // {
-            //     context.CareGroups.Attach(careGroup);
-            //     existing.CareGroups.Add(careGroup);
-            // }
+            if (user.CareGroups != null && user.CareGroups.Any())
+            {
+                foreach (var careGroup in user.CareGroups)
+                {
+                    existing.CareGroups.Add(careGroup);
+                }
+            }
 
             existing.Subjects.Clear();
 

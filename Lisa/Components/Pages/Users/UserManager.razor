@@ -142,7 +142,7 @@
                             @onclick="CloseSubjectSelectModal"></button>
                     </div>
                     <div class="modal-body">
-                        <InputText @bind-Value="SubjectSearchTerm" class="form-control mb-3"
+                        <InputText @bind-Value="SubjectSearchTerm" @oninput="FilterSubjects" class="form-control mb-3"
                             placeholder="Search subjects..." />
                         <div style="max-height: 300px; overflow-y: auto;">
                             @foreach (var subject in FilteredSubjects)
@@ -323,14 +323,14 @@ Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher };
     private void OpenSubjectSelectModal()
     {
         ShowSubjectSelectionModal = true;
-        SubjectSearchTerm = "";
-        FilterSubjects();
     }
 
     private void CloseSubjectSelectModal() => ShowSubjectSelectionModal = false;
 
-    private void FilterSubjects()
+    private void FilterSubjects(ChangeEventArgs e)
     {
+        SubjectSearchTerm = e.Value?.ToString() ?? "";
+
         if (string.IsNullOrWhiteSpace(SubjectSearchTerm))
         {
             FilteredSubjects = AvailableSubjects;

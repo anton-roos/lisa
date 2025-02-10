@@ -4,8 +4,8 @@
 
 <div class="mb-3">
     <label for="learnerSearch">Search by Name:</label>
-    <input id="learnerSearch" type="text" class="form-control" placeholder="Enter learner name..."
-        @oninput="DebounceSearch" />
+    <input id="learnerSearch" type="text" class="form-control" placeholder="Enter learner name..." @bind="SearchTerm"
+        @bind:event="oninput" />
 </div>
 
 @if (IsLoading)
@@ -50,8 +50,20 @@ else
     /// <summary>
     /// The current search term entered by the user.
     /// </summary>
+    private string? _searchTerm;
     [Parameter]
-    public string? SearchTerm { get; set; }
+    public string? SearchTerm
+    {
+        get => _searchTerm;
+        set
+        {
+            if (_searchTerm != value)
+            {
+                _searchTerm = value;
+                PerformSearch();
+            }
+        }
+    }
 
     /// <summary>
     /// Event callback triggered when the search term changes.
@@ -73,30 +85,15 @@ else
 
     private bool IsLoading { get; set; } = false;
     private bool IsSending { get; set; } = false;
-    private System.Timers.Timer? searchDebounceTimer;
 
     /// <summary>
-    /// Debounce function to delay API calls while the user is typing.
+    /// Triggers the search immediately when the user types.
     /// </summary>
-    private void DebounceSearch(ChangeEventArgs e)
+    private async Task PerformSearch()
     {
-        if (searchDebounceTimer != null)
-        {
-            searchDebounceTimer.Stop();
-            searchDebounceTimer.Dispose();
-        }
-
-        searchDebounceTimer = new System.Timers.Timer(500) { AutoReset = false };
-        searchDebounceTimer.Elapsed += async (sender, args) =>
-        {
-            await InvokeAsync(async () =>
-    {
-    IsLoading = true;
-    await OnSearchTermChanged.InvokeAsync(SearchTerm);
-    IsLoading = false;
-            });
-        };
-        searchDebounceTimer.Start();
+        IsLoading = true;
+        await OnSearchTermChanged.InvokeAsync(SearchTerm);
+        IsLoading = false;
     }
 
     /// <summary>

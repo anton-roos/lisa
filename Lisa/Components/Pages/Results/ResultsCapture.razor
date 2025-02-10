@@ -50,7 +50,7 @@
                         ValueChanged="@(async (value) => await OnSubjectChange(value))"
                         ValueExpression="@(() => subjectId)">
                         <option value="">-- Select Subject --</option>
-                        @foreach (var subject in Subjects)
+                        @foreach (var subject in FilteredSubjects)
                         {
                             <option value="@subject.Id">@subject.Name</option>
                         }
@@ -73,6 +73,18 @@
                     <div class="mt-2">
                         <label>Assessment Type</label>
                         <InputText class="form-control" @bind-Value="AssessmentType" />
+                    </div>
+                    <div class="mt-2">
+                        <label>Teacher</label>
+                        @if (Teacher == null)
+                        {
+                        <div>No teacher not found for this subject and grade.</div>
+                        }
+                        else 
+                        {
+
+                        <div>@Teacher.Abbreviation @Teacher.Surname @Teacher.Name</div>
+                        }
                     </div>
 
                     <hr />
@@ -139,6 +151,7 @@
 @code {
     private List<SchoolGrade> SchoolGrades = new();
     private List<Subject> Subjects = new();
+    private List<Subject> FilteredSubjects = new(); 
     private School? SelectedSchool;
     private List<LearnerResult> LearnerResults = new();
     private DateTime SelectedResultDate { get; set; }
@@ -146,6 +159,7 @@
     private string? AssessmentTopic { get; set; }
     private string? AssessmentType { get; set; }
     private bool Loading = true;
+    private User Teacher {get;set;}
 
     [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; } = default!;
 
@@ -197,12 +211,28 @@
     private async Task OnGradeChange(string value)
     {
         gradeId = value;
+        subjectId = null; 
         await UpdateQueryParameters();
+    }
+
+    private async Task LoadSubjectsForGrade()
+    {
+        if (string.IsNullOrEmpty(gradeId))
+        {
+            FilteredSubjects = new List<Subject>();
+            return;
+        }
+
+        var gradeSubjects = await SubjectService.GetSubjectsForGradeAsync(Guid.Parse(gradeId));
+        FilteredSubjects = gradeSubjects.ToList();
+        
+        StateHasChanged();
     }
 
     private async Task OnSubjectChange(string value)
     {
         subjectId = value;
+        Teacher = await UserService.GetTeacherForGradeAndSubjectAsync(Guid.Parse(gradeId), int.Parse(subjectId));
         await UpdateQueryParameters();
     }
 
@@ -254,11 +284,16 @@
         {
             Subjects = await SubjectService.GetAllAsync();
             SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
+
+            if (!string.IsNullOrEmpty(gradeId))
+            {
+                await LoadSubjectsForGrade();
+            }
         }
         else
         {
             Subjects = new List<Subject>();
-            Logger.LogError("SelectedSchool was null when trying to load subjects on combination page.");
+            Logger.LogError("SelectedSchool was null when trying to load subjects.");
         }
     }
 

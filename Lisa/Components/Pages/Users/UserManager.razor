@@ -88,26 +88,20 @@
                 <button type="button" class="btn btn-primary me-2" @onclick="OpenSubjectSelectModal">Add Subjects</button>
                 @if (User.Subjects != null && User.Subjects.Any())
                 {
-
                     <div class="mb-3">
-
                         @foreach (var subjectGroup in User.Subjects.GroupBy(ts => ts.SubjectId))
                         {
-                            // Get the subject details (name) from AvailableSubjects.
                             var subject = AvailableSubjects.FirstOrDefault(s => s.Id == subjectGroup.Key);
                             if (subject != null)
                             {
                                 <div class="d-flex align-items-center mb-2">
-                                    <!-- Display subject name -->
                                     <strong class="me-2">@subject.Name</strong>
-                                    <!-- For each selected grade for this subject, display a pill -->
                                     @foreach (var teacherSubject in subjectGroup)
                                     {
                                         <span class="badge bg-primary me-1">
                                             Grade @teacherSubject.Grade
                                         </span>
                                     }
-                                    <!-- Optional: a remove button for this subject -->
                                     <button type="button" class="btn btn-sm btn-outline-danger ms-2"
                                         @onclick="@(() => RemoveSubject(subject.Id))"
                                         @onclick:stopPropagation>
@@ -232,12 +226,12 @@
     private List<Subject> AvailableSubjects = new();
     private List<int> SchoolApplicableGrades { get; set; } = new();
     private List<string> AvailableRoles = new() {
-Roles.Principal,
-Roles.Administrator,
-Roles.SchoolManagement,
-Roles.SystemAdministrator,
-Roles.Teacher
-};
+        Roles.Principal,
+        Roles.Administrator,
+        Roles.SchoolManagement,
+        Roles.SystemAdministrator,
+        Roles.Teacher
+    };
 
     private Dictionary<Guid, bool> CareGroupSelections = new();
 
@@ -247,30 +241,28 @@ Roles.Teacher
     private bool ShowErrorModal { get; set; }
     private string ErrorMessage { get; set; } = "";
 
-    // Error Modal Variables
-    private Dictionary<int, int> SubjectSelections { get; set; } = new();
+    // Subject Modal Variables
+    private string SubjectSearchTerm { get; set; } = "";
+    private List<Subject> FilteredSubjects { get; set; } = new();
+    private List<TeacherSubject> SelectedSubjects { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
     {
         SelectedSchool = SchoolService.GetSelectedSchool();
         AvailableSubjects = await SubjectService.GetAllAsync();
 
-
-        // If we have a selected school, load care groups
         if (SelectedSchool != null)
         {
             var gradesForSchool = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
             SchoolApplicableGrades = gradesForSchool.Select(g => g.SystemGrade.SequenceNumber).ToList();
             AvailableCareGroups = await CareGroupService.GetBySchoolAsync(SelectedSchool.Id);
 
-            // Initialize dictionary to false for all
             foreach (var careGroup in AvailableCareGroups)
             {
                 CareGroupSelections[careGroup.Id] = false;
             }
         }
 
-        // If editing, load existing user and map data
         if (IsEdit)
         {
             var existingUser = await UserService.GetByIdAsync(UserId.Value);
@@ -290,10 +282,26 @@ Roles.Teacher
                     SelectedCareGroupIds = existingUser.CareGroups?.Select(cg => cg.Id).ToList() ?? new()
                 };
 
-                // Update dictionary based on user’s selected care groups
+                // Update CareGroupSelections
                 foreach (var careGroup in AvailableCareGroups)
                 {
                     CareGroupSelections[careGroup.Id] = User.SelectedCareGroupIds.Contains(careGroup.Id);
+                }
+
+                // **Populate SelectedSubjectGrades from the existing teacher subjects**
+                if (User.Subjects != null)
+                {
+                    foreach (var teacherSubject in User.Subjects)
+                    {
+                        if (SelectedSubjectGrades.ContainsKey(teacherSubject.SubjectId))
+                        {
+                            SelectedSubjectGrades[teacherSubject.SubjectId].Add(teacherSubject.Grade);
+                        }
+                        else
+                        {
+                            SelectedSubjectGrades[teacherSubject.SubjectId] = new HashSet<int> { teacherSubject.Grade };
+                        }
+                    }
                 }
             }
         }
@@ -312,6 +320,7 @@ Roles.Teacher
                 if (existingUser != null)
                 {
                     var currentRoles = await UserManagerService.GetRolesAsync(existingUser);
+                    // Update the view model from the existing user
                     User = new UserViewModel
                     {
                         Id = existingUser.Id,
@@ -325,7 +334,7 @@ Roles.Teacher
                         SelectedCareGroupIds = existingUser.CareGroups?.Select(cg => cg.Id).ToList() ?? new()
                     };
 
-                    // Populate the SelectedSubjectGrades dictionary based on existing subjects.
+                    // Repopulate the SelectedSubjectGrades dictionary
                     if (User.Subjects != null)
                     {
                         foreach (var teacherSubject in User.Subjects)
@@ -340,17 +349,10 @@ Roles.Teacher
                             }
                         }
                     }
-
-                    // Update dictionary based on user’s selected care groups (if not already done).
-                    foreach (var careGroup in AvailableCareGroups)
-                    {
-                        CareGroupSelections[careGroup.Id] = User.SelectedCareGroupIds.Contains(careGroup.Id);
-                    }
                 }
             }
             else
             {
-                // Creating a new user
                 if (string.IsNullOrWhiteSpace(User.Password))
                     throw new Exception("Password is required for new users.");
 
@@ -378,7 +380,44 @@ Roles.Teacher
                 }
             }
 
-            // Navigate back to the user list
+            // Merge the teacher subjects from the SelectedSubjectGrades dictionary into the User.Subjects collection.
+            var teacherSubjects = new List<TeacherSubject>();
+            foreach (var kvp in SelectedSubjectGrades)
+            {
+                int subjectId = kvp.Key;
+                var selectedGrades = kvp.Value;
+
+                if (!selectedGrades.Any())
+                {
+                    var subject = AvailableSubjects.FirstOrDefault(s => s.Id == subjectId);
+                    if (subject?.GradesApplicable != null)
+                    {
+                        selectedGrades = new HashSet<int>(subject.GradesApplicable.Where(g => SchoolApplicableGrades.Contains(g)));
+                    }
+                }
+
+                foreach (var grade in selectedGrades)
+                {
+                    // Only add if not already present
+                    if (User.Subjects == null)
+                        User.Subjects = new List<TeacherSubject>();
+
+                    if (!User.Subjects.Any(ts => ts.SubjectId == subjectId && ts.Grade == grade))
+                    {
+                        teacherSubjects.Add(new TeacherSubject
+                        {
+                            SubjectId = subjectId,
+                            Grade = grade
+                        });
+                    }
+                }
+            }
+            // Add new teacher subjects to the user.
+            User.Subjects.AddRange(teacherSubjects);
+
+            // Call your update service (or however you save the user)
+            await UserService.UpdateAsync(User);
+
             Navigation.NavigateTo("/users");
         }
         catch (Exception ex)
@@ -390,28 +429,15 @@ Roles.Teacher
     }
 
     private void Cancel() => Navigation.NavigateTo("/users");
-
     private void CloseErrorModal() => ShowErrorModal = false;
 
-    /// <summary>
-    /// Only show care groups if the user is NOT a System Administrator.
-    /// </summary>
     private bool ShouldShowCareGroups() => !User.SelectedRoles.Contains(Roles.SystemAdministrator);
-
-    /// <summary>
-    /// Only show subjects if the user is NOT a System Administrator and user has the teacher role.
-    /// </summary>
     private bool ShouldShowSubjects() => !User.SelectedRoles.Contains(Roles.SystemAdministrator)
     && User.SelectedRoles.Contains(Roles.Teacher);
 
-    /// <summary>
-    /// Fires when a care group checkbox is toggled.
-    /// Updates both the dictionary and the user's SelectedCareGroupIds list.
-    /// </summary>
     private void OnCareGroupChanged(Guid careGroupId, bool isChecked)
     {
         CareGroupSelections[careGroupId] = isChecked;
-
         if (isChecked)
         {
             if (!User.SelectedCareGroupIds.Contains(careGroupId))
@@ -437,27 +463,17 @@ Roles.Teacher
     }
 
     private bool ShowSubjectSelectionModal { get; set; }
-    private string SubjectSearchTerm { get; set; } = "";
-
-    private List<Subject> FilteredSubjects { get; set; } = new();
-    private List<TeacherSubject> SelectedSubjects { get; set; } = new();
-
     private void OpenSubjectSelectModal()
     {
         ShowSubjectSelectionModal = true;
         SubjectSearchTerm = "";
         FilterSubjects(new ChangeEventArgs { Value = "" });
     }
-
-    private void CloseSubjectSelectModal()
-    {
-        ShowSubjectSelectionModal = false;
-    }
+    private void CloseSubjectSelectModal() => ShowSubjectSelectionModal = false;
 
     private void FilterSubjects(ChangeEventArgs e)
     {
         SubjectSearchTerm = e.Value?.ToString() ?? "";
-
         if (string.IsNullOrWhiteSpace(SubjectSearchTerm))
         {
             FilteredSubjects = AvailableSubjects;
@@ -468,10 +484,8 @@ Roles.Teacher
                 .Where(s => s.Name.Contains(SubjectSearchTerm, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
-
         StateHasChanged();
     }
-
 
     private void ToggleSubjectSelection(int subjectId, bool isChecked)
     {
@@ -479,13 +493,6 @@ Roles.Teacher
         {
             if (!SelectedSubjectGrades.ContainsKey(subjectId))
             {
-                // Optionally, you might choose to preselect all applicable grades:
-                // var subject = AvailableSubjects.FirstOrDefault(s => s.Id == subjectId);
-                // SelectedSubjectGrades[subjectId] = subject?.GradesApplicable != null
-                // ? new HashSet<int>(subject.GradesApplicable)
-                // : new HashSet<int>();
-
-                // Or start with an empty selection so the teacher can pick:
                 SelectedSubjectGrades[subjectId] = new HashSet<int>();
             }
         }
@@ -497,7 +504,6 @@ Roles.Teacher
 
     private void ToggleGradeSelectionForSubject(int subjectId, int grade, bool isChecked)
     {
-        // Ensure the subject entry exists (it should if the subject checkbox is checked)
         if (!SelectedSubjectGrades.ContainsKey(subjectId))
         {
             SelectedSubjectGrades[subjectId] = new HashSet<int>();
@@ -514,14 +520,12 @@ Roles.Teacher
 
     private void ConfirmSubjectSelection()
     {
-        // Build TeacherSubject objects from the dictionary.
+        // Build TeacherSubject objects from the SelectedSubjectGrades dictionary.
         var teacherSubjects = new List<TeacherSubject>();
-
         foreach (var kvp in SelectedSubjectGrades)
         {
             int subjectId = kvp.Key;
             var selectedGrades = kvp.Value;
-
             if (!selectedGrades.Any())
             {
                 var subject = AvailableSubjects.FirstOrDefault(s => s.Id == subjectId);
@@ -530,15 +534,11 @@ Roles.Teacher
                     selectedGrades = new HashSet<int>(subject.GradesApplicable.Where(g => SchoolApplicableGrades.Contains(g)));
                 }
             }
-
-            // Create a TeacherSubject only if it does not already exist
             foreach (var grade in selectedGrades)
             {
-                if(User.Subjects == null)
-                {
+                if (User.Subjects == null)
                     User.Subjects = new List<TeacherSubject>();
-                }
-                
+
                 if (!User.Subjects.Any(ts => ts.SubjectId == subjectId && ts.Grade == grade))
                 {
                     teacherSubjects.Add(new TeacherSubject
@@ -549,7 +549,6 @@ Roles.Teacher
                 }
             }
         }
-
         User.Subjects.AddRange(teacherSubjects);
         CloseSubjectSelectModal();
     }
@@ -557,26 +556,21 @@ Roles.Teacher
     private void RemoveSubject(int subjectId)
     {
         User.Subjects.RemoveAll(ts => ts.SubjectId == subjectId);
-
         if (SelectedSubjectGrades.ContainsKey(subjectId))
         {
             SelectedSubjectGrades.Remove(subjectId);
         }
-
-        // Force re-render to reflect changes in UI
         StateHasChanged();
     }
 
-    private string FormatGrade(int grade)
-    {
-        return grade switch
+    private string FormatGrade(int grade) =>
+        grade switch
         {
             -2 => "Gr RRR",
             -1 => "Gr RR",
             0 => "Gr R",
-            _ => $"Gr {grade}"
+            _  => $"Gr {grade}"
         };
-    }
 
     private string FormatGradeRange(List<int>? grades)
     {
@@ -584,13 +578,11 @@ Roles.Teacher
             return "No Grades";
 
         var applicableGrades = grades.Where(g => SchoolApplicableGrades.Contains(g)).ToList();
-
         if (!applicableGrades.Any())
             return "No Grades";
 
         int minGrade = applicableGrades.Min();
         int maxGrade = applicableGrades.Max();
-
         return $"{FormatGrade(minGrade)} - {FormatGrade(maxGrade)}";
     }
 }

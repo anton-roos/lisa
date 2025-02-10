@@ -117,6 +117,28 @@ public class UserService(
         }
     }
 
+    public async Task<User?> GetTeacherForGradeAndSubjectAsync(Guid gradeId, int subjectId)
+    {
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+
+            var grade = await context.SchoolGrades.FindAsync(gradeId);
+
+            var user = await context.Users
+                .Include(u => u.Subjects) // Ensure subjects are loaded
+                .FirstOrDefaultAsync(u => u.Subjects.Any(ts => ts.Grade == grade.SystemGrade.SequenceNumber && ts.SubjectId == subjectId));
+
+            return user;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching teacher for grade: {GradeId} and subject: {SubjectId}", gradeId, subjectId);
+            return null;
+        }
+    }
+
+
     /// <summary>
     /// Creates a new teacher.
     /// </summary>

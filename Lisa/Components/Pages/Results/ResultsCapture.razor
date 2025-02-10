@@ -21,7 +21,7 @@
         <PageTitle>@(IsEdit ? "Edit Result Set" : "Capture Results")</PageTitle>
         <h3>@(IsEdit ? "Edit Result Set" : "Capture Results")</h3>
 
-        @if (SelectedSchool == null)
+        @if (SelectedSchool == null && !IsEdit)
         {
             <div class="alert alert-info" role="alert">
                 Please select a school to capture results.
@@ -228,7 +228,10 @@
 
     private async Task LoadDropdowns()
     {
-        SelectedSchool = SchoolService.GetSelectedSchool();
+        if (!IsEdit)
+        {
+            SelectedSchool = SchoolService.GetSelectedSchool();
+        }
 
         if (SelectedSchool != null)
         {

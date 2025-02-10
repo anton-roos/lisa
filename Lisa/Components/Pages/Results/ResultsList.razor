@@ -103,12 +103,7 @@
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                                <th>Grade</th>
-                                <th>Subject</th>
-                                <th>Teacher</th>
                                 <th>Assessment Date</th>
-                                <th>Assessment Type</th>
-                                <th>Assessment Topic</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -138,8 +133,6 @@
 </AuthorizeView>
 
 @code {
-    School? SelectedSchool { get; set; }
-
     [Parameter]
     [SupplyParameterFromQuery(Name = "g")]
     public string? gradeId { get; set; }
@@ -160,6 +153,7 @@
     private List<User> Teachers = new();
 
     private bool Loading = true;
+    private School? SelectedSchool { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -172,7 +166,7 @@
 
             if (IsFilterSelected())
             {
-                await LoadResults(null!);
+                Results = await LoadResults(null!);
             }
             else
             {
@@ -197,7 +191,7 @@
 
         if (IsFilterSelected())
         {
-            await LoadResults(null!);
+            Results = await LoadResults(null!);
         }
         else
         {
@@ -232,7 +226,7 @@
     {
         ViewMode = mode;
         gradeId = subjectId = teacherId = null;
-        Navigation.NavigateTo(Navigation.Uri.Split('?')[0]); // remove query string
+        Navigation.NavigateTo(Navigation.Uri.Split('?')[0]);
         StateHasChanged();
     }
 
@@ -243,7 +237,7 @@
             if (SelectedSchool != null)
             {
                 SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
-                Teachers = await UserService.GetAllByRoleAndSchoolAsync([ Roles.Teacher ], SelectedSchool.Id);
+                Teachers = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], SelectedSchool.Id);
             }
             else
             {
@@ -273,47 +267,47 @@
             {
                 if (Guid.TryParse(gradeId, out var parsedGradeId))
                 {
-                   return await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, parsedGradeId, null, null);
+                    return await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, parsedGradeId, null, null);
                 }
                 else
                 {
                     Logger.LogWarning("Invalid gradeId.");
-                   return new List<ResultSet>();
+                    return new List<ResultSet>();
                 }
             }
             else if (ViewMode == "Subject" && !string.IsNullOrWhiteSpace(subjectId))
             {
                 if (int.TryParse(subjectId, out var parsedSubjectId))
                 {
-                   return await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, null, parsedSubjectId,null);
+                    return await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, null, parsedSubjectId, null);
                 }
                 else
                 {
                     Logger.LogWarning("Invalid subjectId.");
-                   return new List<ResultSet>();
+                    return new List<ResultSet>();
                 }
             }
             else if (ViewMode == "Teacher" && !string.IsNullOrWhiteSpace(teacherId))
             {
                 if (Guid.TryParse(teacherId, out var parsedTeacherId))
                 {
-                   return await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, null,null, parsedTeacherId);
+                    return await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, null, null, parsedTeacherId);
                 }
                 else
                 {
                     Logger.LogWarning("Invalid teacherId.");
-                   return new List<ResultSet>();
+                    return new List<ResultSet>();
                 }
             }
             else
             {
-               return new List<ResultSet>();
+                return new List<ResultSet>();
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to load results.");
-            return  new List<ResultSet>();
+            return new List<ResultSet>();
         }
         finally
         {
@@ -352,7 +346,7 @@
         var newUri = QueryHelpers.AddQueryString(uri.AbsolutePath, queryParams);
         Navigation.NavigateTo(newUri, forceLoad: false);
 
-        await LoadResults(null!);
+        Results = await LoadResults(null!);
         StateHasChanged();
     }
 

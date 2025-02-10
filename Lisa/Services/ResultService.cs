@@ -157,7 +157,7 @@ public class ResultService
             return null;
         }
     }
-    
+
     /// <summary>
     /// Retrieves results based on filters.
     /// </summary>

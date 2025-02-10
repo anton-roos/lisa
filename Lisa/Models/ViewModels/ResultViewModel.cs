@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
+using Lisa.Models.Entities;
 
 namespace Lisa.Models.ViewModels;
 
@@ -7,15 +9,49 @@ public class ResultViewModel
     [Required(ErrorMessage = "Please enter a mark.")]
     [Range(0, 100, ErrorMessage = "Score must be between 0 and 100.")]
     public int? Score { get; set; }
+
     public bool Absent { get; set; } = false;
     public string? AbsentReason { get; set; }
 
     [Required(ErrorMessage = "Please enter an Assessment Type.")]
     public string? AssessmentType { get; set; }
 
-    [Required(ErrorMessage = "Please enter a Assessment Topic.")]
+    [Required(ErrorMessage = "Please enter an Assessment Topic.")]
     public string? AssessmentTopic { get; set; }
 
     [Required(ErrorMessage = "Assessment date is required.")]
-    public DateTime? AsessmentDate { get; set; }
+    public DateTime? AssessmentDate { get; set; }
+}
+
+public class ResultsCaptureViewModel
+{
+    public List<SchoolGrade> SchoolGrades { get; set; } = new();
+    public List<Subject> Subjects { get; set; } = new();
+    public List<Subject> FilteredSubjects { get; set; } = new();
+    public List<LearnerResultViewModel> LearnerResults { get; set; } = new();
+
+    public ClaimsPrincipal? User { get; set; }
+    public bool Loading { get; set; } = true;
+    public User? Teacher { get; set; }
+
+    // Query parameters
+    public string? GradeId { get; set; }
+    public string? SubjectId { get; set; }
+
+    // Assessment fields
+    [Required(ErrorMessage = "Assessment topic is required.")]
+    public string? AssessmentTopic { get; set; }
+
+    [Required(ErrorMessage = "Assessment type is required.")]
+    public string? AssessmentType { get; set; }
+
+    [Required(ErrorMessage = "Assessment date is required.")]
+    public DateTime? AssessmentDate { get; set; }
+}
+
+public class LearnerResultViewModel
+{
+    public Guid LearnerId { get; set; }
+    public string LearnerName { get; set; } = string.Empty;
+    public ResultViewModel ResultViewModel { get; set; } = new();
 }

@@ -563,7 +563,7 @@ namespace Lisa.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("AssessmentDate")
+                    b.Property<DateTime?>("AssessmentDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("AssessmentTopic")

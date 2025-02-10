@@ -93,7 +93,7 @@
                                     <strong class="me-2">@subject.Name</strong>
                                     @foreach (var teacherSubject in subjectGroup)
                                     {
-                                        <span class="badge bg-primary me-1">Grade @teacherSubject.Grade</span>
+                                        <span class="badge bg-primary me-1">@FormatGrade(teacherSubject.Grade)</span>
                                     }
                                     <button type="button" class="btn btn-sm btn-outline-danger ms-2"
                                         @onclick="@(() => RemoveSubject(subject.Id))" @onclick:stopPropagation>

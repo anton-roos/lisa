@@ -1,0 +1,80 @@
+@page "/results/{ResultSetId:guid}"
+@using Lisa.Models.Entities
+@using Lisa.Models.ViewModels
+@using Lisa.Services
+@inject NavigationManager Navigation
+@inject ResultService ResultService
+@inject ILogger<ResultSetDetails> Logger
+
+<PageTitle>Result Set Details</PageTitle>
+
+<h3>Result Set Details</h3>
+
+@if (Loading)
+{
+    <p>Loading...</p>
+}
+else if (ResultSet == null)
+{
+    <div class="alert alert-danger">
+        Result Set not found.
+    </div>
+}
+else
+{
+    <div class="card p-3">
+        <h4>Assessment Details</h4>
+        <p><strong>Assessment Topic:</strong> @ResultSet.AssessmentTopic</p>
+        <p><strong>Assessment Type:</strong> @ResultSet.AssessmentType</p>
+        <p><strong>Date:</strong> @ResultSet.AssessmentDate?.ToString("yyyy-MM-dd")</p>
+
+        <h4>Results</h4>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Score</th>
+                    <th>Absent?</th>
+                    <th>Reason</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var result in ResultSet.Results)
+                {
+                    <tr>
+                        <td>@result.Learner?.Surname, @result.Learner?.Name</td>
+                        <td>@(result.Absent ? "-" : result.Score?.ToString())</td>
+                        <td>@(result.Absent ? "Yes" : "No")</td>
+                        <td>@result.AbsentReason</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <button class="btn btn-secondary" @onclick="GoBack">Back to Results</button>
+        <button class="btn btn-success" @onclick="Edit">Edit</button>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid ResultSetId { get; set; }
+    private ResultSet? ResultSet;
+    private bool Loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            ResultSet = await ResultService.GetByIdAsync(ResultSetId);
+            Loading = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load result set with ID: {ResultSetId}", ResultSetId);
+            Loading = false;
+        }
+    }
+
+    private void GoBack() => Navigation.NavigateTo("/results");
+    private void Edit() => Navigation.NavigateTo($"/results/manager/{ResultSetId}");
+}

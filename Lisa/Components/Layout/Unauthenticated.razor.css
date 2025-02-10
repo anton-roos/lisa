@@ -1,4 +1,5 @@
-.not-found-container {
+/* Container for centering the login card */
+.login-container {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -7,7 +8,8 @@
     font-family: Arial, sans-serif;
 }
 
-.not-found-content {
+/* The card-like content area */
+.login-content {
     max-width: 500px;
     padding: 20px;
     background: #ffffff;
@@ -15,26 +17,30 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.not-found-title {
+/* Styling for the icon (similar to the 404 title) */
+.login-icon {
     font-size: 72px;
     font-weight: bold;
     color: #007bff;
     margin-bottom: 0;
 }
 
-.not-found-subtitle {
+/* Title styling (similar to your 404 subtitle) */
+.login-title {
     font-size: 24px;
     font-weight: 600;
     color: #333333;
     margin-bottom: 20px;
 }
 
-.not-found-message {
+/* Message styling (similar to your 404 message) */
+.login-message {
     font-size: 16px;
     color: #555555;
     margin-bottom: 20px;
 }
 
+/* Primary button styling (if you wish to override or ensure consistency) */
 .btn-primary {
     padding: 10px 20px;
     font-size: 16px;

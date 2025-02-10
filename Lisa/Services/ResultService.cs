@@ -1,5 +1,6 @@
 using Lisa.Data;
 using Lisa.Models.Entities;
+using Lisa.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
@@ -16,50 +17,49 @@ public class ResultService
     }
 
     /// <summary>
-    /// Creates a new result entry.
-    /// </summary>
-    public async Task<bool> CreateAsync(Result result)
-    {
-        try
-        {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
-            await context.Results.AddAsync(result);
-            await context.SaveChangesAsync();
-            _logger.LogInformation("Created Result for LearnerId: {LearnerId}, ResultSetId: {ResultSetId}",
-                result.LearnerId, result.ResultSetId);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error creating result for LearnerId: {LearnerId}, ResultSetId: {ResultSetId}",
-                result.LearnerId, result.ResultSetId);
-            return false;
-        }
-    }
-
-    /// <summary>
     /// Creates a new ResultSet entry along with its associated Results.
     /// </summary>
-    public async Task<bool> CreateResultSetAsync(ResultSet resultSet)
+    public async Task<ResultSet> CreateAsync(ResultsCaptureViewModel viewModel, Guid capturedById)
     {
         try
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
-            // Adding the ResultSet will also add the child Results (if any) via cascading.
+
+            var resultSet = new ResultSet
+            {
+                Id = Guid.NewGuid(),
+                AssessmentDate = DateTime.SpecifyKind(viewModel.AssessmentDate!.Value, DateTimeKind.Utc),
+                AssessmentType = viewModel.AssessmentType,
+                AssessmentTopic = viewModel.AssessmentTopic,
+                SubjectId = int.Parse(viewModel.SubjectId!),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CapturedById = capturedById,
+                Results = viewModel.LearnerResults.Select(entry => new Result
+                {
+                    Id = Guid.NewGuid(),
+                    LearnerId = entry.LearnerId,
+                    Score = entry.ResultViewModel.Score,
+                    Absent = entry.ResultViewModel.Absent,
+                    AbsentReason = entry.ResultViewModel.AbsentReason
+                }).ToList()
+            };
+
             await context.ResultSets.AddAsync(resultSet);
             await context.SaveChangesAsync();
+
             _logger.LogInformation("Created ResultSet for SubjectId: {SubjectId}, CapturedById: {CapturedById} with {ResultCount} results",
                 resultSet.SubjectId, resultSet.CapturedById, resultSet.Results?.Count ?? 0);
-            return true;
+
+            return resultSet;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating ResultSet for SubjectId: {SubjectId}, CapturedById: {CapturedById}",
-                resultSet.SubjectId, resultSet.CapturedById);
-            return false;
+                viewModel.SubjectId, capturedById);
+            throw;
         }
     }
-
     /// <summary>
     /// Gets the total count of results.
     /// </summary>
@@ -70,52 +70,93 @@ public class ResultService
     }
 
     /// <summary>
-    /// Retrieves a result by ID, including related data.
+    /// Updates an existing ResultSet and its associated results.
     /// </summary>
-    public async Task<Result?> GetByIdAsync(Guid id)
+    public async Task<bool> UpdateAsync(Guid resultSetId, ResultsCaptureViewModel viewModel)
     {
         try
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
-            return await context.Results
-                .AsNoTracking()
-                .Include(r => r.Learner)
-                    .ThenInclude(l => l.RegisterClass)
-                        .ThenInclude(rc => rc.SchoolGrade)
-                            .ThenInclude(sg => sg.SystemGrade)
-                .Include(r => r.ResultSet)
-                    .ThenInclude(rs => rs.Subject)
-                .FirstOrDefaultAsync(r => r.Id == id);
+            var existingResultSet = await context.ResultSets
+                .Include(rs => rs.Results)
+                .FirstOrDefaultAsync(rs => rs.Id == resultSetId);
+
+            if (existingResultSet == null)
+            {
+                _logger.LogWarning("ResultSet with ID {ResultSetId} not found.", resultSetId);
+                return false;
+            }
+
+            // Update the result set details
+            existingResultSet.AssessmentDate = DateTime.SpecifyKind(viewModel.AssessmentDate!.Value, DateTimeKind.Utc);
+            existingResultSet.AssessmentType = viewModel.AssessmentType;
+            existingResultSet.AssessmentTopic = viewModel.AssessmentTopic;
+            existingResultSet.UpdatedAt = DateTime.UtcNow;
+
+            // Update existing results and add new ones if necessary
+            var existingResults = existingResultSet.Results.ToDictionary(r => r.LearnerId);
+
+            foreach (var entry in viewModel.LearnerResults)
+            {
+                if (existingResults.TryGetValue(entry.LearnerId, out var result))
+                {
+                    // Update existing result
+                    result.Score = entry.ResultViewModel.Score;
+                    result.Absent = entry.ResultViewModel.Absent;
+                    result.AbsentReason = entry.ResultViewModel.AbsentReason;
+                    result.UpdatedAt = DateTime.UtcNow;
+                }
+                else
+                {
+                    // Add new result if learner didn't have one before
+                    var newResult = new Result
+                    {
+                        Id = Guid.NewGuid(),
+                        LearnerId = entry.LearnerId,
+                        Score = entry.ResultViewModel.Score,
+                        Absent = entry.ResultViewModel.Absent,
+                        AbsentReason = entry.ResultViewModel.AbsentReason,
+                        ResultSetId = resultSetId
+                    };
+                    context.Results.Add(newResult);
+                }
+            }
+
+            await context.SaveChangesAsync();
+            _logger.LogInformation("Updated ResultSet {ResultSetId} with {ResultCount} results.", resultSetId, viewModel.LearnerResults.Count);
+            return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching Result with ID: {ResultId}", id);
-            return null;
+            _logger.LogError(ex, "Error updating ResultSet with ID: {ResultSetId}", resultSetId);
+            return false;
         }
     }
 
     /// <summary>
-    /// Retrieves all results.
+    /// Retrieves a result set by ID, including related data.
     /// </summary>
-    public async Task<List<Result>> GetAllAsync()
+    public async Task<ResultSet?> GetByIdAsync(Guid id)
     {
         try
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
-            return await context.Results
+            return await context.ResultSets
                 .AsNoTracking()
-                .Include(r => r.Learner)
-                .Include(r => r.ResultSet)
-                    .ThenInclude(rs => rs.Subject)
-                .ToListAsync();
+                .Include(rs => rs.Results)
+                    .ThenInclude(r => r.Learner)
+                        .ThenInclude(l => l.RegisterClass)
+                            .ThenInclude(rc => rc.SchoolGrade)
+                                .ThenInclude(sg => sg.SystemGrade)
+                .Include(rs => rs.Subject)
+                .FirstOrDefaultAsync(rs => rs.Id == id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching all results.");
-            return new List<Result>();
+            _logger.LogError(ex, "Error fetching ResultSet with ID: {ResultSetId}", id);
+            return null;
         }
     }
-
     /// <summary>
     /// Retrieves results based on filters.
     /// </summary>
@@ -148,63 +189,33 @@ public class ResultService
     }
 
     /// <summary>
-    /// Updates an existing result.
+    /// Deletes a ResultSet and all associated results.
     /// </summary>
-    public async Task<bool> UpdateAsync(Result result)
+    public async Task<bool> DeleteAsync(Guid resultSetId)
     {
         try
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
-            var existingResult = await context.Results.FindAsync(result.Id);
-            if (existingResult == null)
+            var resultSet = await context.ResultSets
+                .Include(rs => rs.Results)
+                .FirstOrDefaultAsync(rs => rs.Id == resultSetId);
+
+            if (resultSet == null)
             {
-                _logger.LogWarning("Result with ID {ResultId} not found.", result.Id);
+                _logger.LogWarning("ResultSet with ID {ResultSetId} not found.", resultSetId);
                 return false;
             }
 
-            // Update only the fields that are stored on the Result entity.
-            existingResult.Score = result.Score;
-            existingResult.Absent = result.Absent;
-            existingResult.AbsentReason = result.AbsentReason;
-            existingResult.UpdatedAt = DateTime.UtcNow;
-
-            context.Entry(existingResult).State = EntityState.Modified;
+            context.Results.RemoveRange(resultSet.Results);
+            context.ResultSets.Remove(resultSet);
             await context.SaveChangesAsync();
-            _logger.LogInformation("Updated Result for LearnerId: {LearnerId}, ResultSetId: {ResultSetId}",
-                result.LearnerId, result.ResultSetId);
+
+            _logger.LogInformation("Deleted ResultSet with ID {ResultSetId} and its associated results.", resultSetId);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating result for LearnerId: {LearnerId}, ResultSetId: {ResultSetId}",
-                result.LearnerId, result.ResultSetId);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Deletes a result.
-    /// </summary>
-    public async Task<bool> DeleteAsync(Guid id)
-    {
-        try
-        {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
-            var result = await context.Results.FindAsync(id);
-            if (result == null)
-            {
-                _logger.LogWarning("Result with ID {ResultId} not found.", id);
-                return false;
-            }
-
-            context.Results.Remove(result);
-            await context.SaveChangesAsync();
-            _logger.LogInformation("Deleted Result with ID {ResultId}", id);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting Result with ID: {ResultId}", id);
+            _logger.LogError(ex, "Error deleting ResultSet with ID: {ResultSetId}", resultSetId);
             return false;
         }
     }

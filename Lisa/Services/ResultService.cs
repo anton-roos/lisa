@@ -157,34 +157,68 @@ public class ResultService
             return null;
         }
     }
+    
     /// <summary>
     /// Retrieves results based on filters.
     /// </summary>
-    public async Task<List<Result>> GetResultsByFiltersAsync(Guid schoolId, Guid gradeId, int subjectId)
+    public async Task<List<ResultSet>> GetResultsByFiltersAsync(
+    Guid schoolId,
+    Guid? gradeId,
+    int? subjectId,
+    Guid? teacherId)
     {
         try
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
-            return await context.Results
+
+            // Start with the base query filtering by school.
+            // Since ResultSet does not directly contain a Learner,
+            // we ensure that at least one result in the set has a Learner whose class's school grade belongs to the specified school.
+            var query = context.ResultSets
                 .AsNoTracking()
-                .Include(r => r.Learner)
-                    .ThenInclude(l => l.RegisterClass)
-                        .ThenInclude(rc => rc.SchoolGrade)
-                            .ThenInclude(sg => sg.SystemGrade)
-                .Include(r => r.ResultSet)
-                    .ThenInclude(rs => rs.Subject)
-                .Where(r => r.ResultSet.SubjectId == subjectId &&
-                            r.Learner!.RegisterClass != null &&
-                            r.Learner.RegisterClass.SchoolGradeId == gradeId &&
-                            r.Learner.RegisterClass.SchoolGrade!.SchoolId == schoolId)
-                .ToListAsync();
+                .Include(rs => rs.Results)
+                    .ThenInclude(r => r.Learner)
+                        .ThenInclude(l => l.RegisterClass)
+                            .ThenInclude(rc => rc.SchoolGrade)
+                                .ThenInclude(sg => sg.SystemGrade)
+                .Include(rs => rs.Subject)
+                .Where(rs => rs.Results.Any(r =>
+                    r.Learner != null &&
+                    r.Learner.RegisterClass != null &&
+                    r.Learner.RegisterClass.SchoolGrade != null &&
+                    r.Learner.RegisterClass.SchoolGrade.SchoolId == schoolId));
+
+            // Apply the grade filter if provided.
+            // This assumes that all results within a result set belong to the same grade.
+            if (gradeId.HasValue)
+            {
+                query = query.Where(rs => rs.Results.Any(r =>
+                    r.Learner.RegisterClass.SchoolGradeId == gradeId.Value));
+            }
+
+            // Apply the subject filter if provided.
+            // Here we assume the ResultSet entity has a SubjectId property.
+            if (subjectId.HasValue)
+            {
+                query = query.Where(rs => rs.SubjectId == subjectId.Value);
+            }
+
+            // Apply the teacher filter if provided.
+            // This example assumes that the ResultSet entity records the teacher who captured the results 
+            // via a property such as CapturedById.
+            if (teacherId.HasValue)
+            {
+                query = query.Where(rs => rs.CapturedById == teacherId.Value);
+            }
+
+            return await query.ToListAsync();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex,
-                "Error fetching results for SchoolId: {SchoolId}, GradeId: {GradeId}, SubjectId: {SubjectId}",
-                schoolId, gradeId, subjectId);
-            return new List<Result>();
+                "Error fetching result sets for SchoolId: {SchoolId}, GradeId: {GradeId}, SubjectId: {SubjectId}, TeacherId: {TeacherId}",
+                schoolId, gradeId, subjectId, teacherId);
+            return [];
         }
     }
 

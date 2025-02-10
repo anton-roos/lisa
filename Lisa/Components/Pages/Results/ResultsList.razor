@@ -11,12 +11,12 @@
 
 @inherits EventAwareComponentBase
 
-
 <AuthorizeView Context="AuthContext"
     Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
     <Authorized>
         <PageTitle>Results</PageTitle>
         <h3>Results</h3>
+
         @if (SelectedSchool == null)
         {
             <div class="alert alert-info">
@@ -29,7 +29,6 @@
         }
         else
         {
-            <!-- View Results By: Toggle Mode -->
             <div class="mb-3">
                 <label><strong>View Results by:</strong></label>
                 <div class="btn-group" role="group">
@@ -98,16 +97,39 @@
                     break;
             }
 
-            @if (!string.IsNullOrWhiteSpace(gradeId))
-            {
-
-            }
-
-            @if (!string.IsNullOrWhiteSpace(subjectId))
-            {
-
-            }
-
+            <div class="mt-3">
+                @if (Results != null && Results.Any())
+                {
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Grade</th>
+                                <th>Subject</th>
+                                <th>Teacher</th>
+                                <th>Assessment Date</th>
+                                <th>Assessment Type</th>
+                                <th>Assessment Topic</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var result in Results)
+                            {
+                                <tr>
+                                    <td>@result.AssessmentDate</td>
+                                    <td>
+                                        <button class="btn btn-primary" @onclick="() => EditResult(result.Id)">Edit</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p>No results found.</p>
+                }
+            </div>
         }
     </Authorized>
     <NotAuthorized>
@@ -129,11 +151,14 @@
     [Parameter]
     [SupplyParameterFromQuery(Name = "t")]
     public string? teacherId { get; set; }
+
     private string ViewMode { get; set; } = "Grade";
-    private List<Result> Results = new();
+
+    private List<ResultSet> Results = new();
     private List<SchoolGrade> SchoolGrades = new();
     private List<Subject> Subjects = new();
     private List<User> Teachers = new();
+
     private bool Loading = true;
 
     protected override async Task OnInitializedAsync()
@@ -145,7 +170,7 @@
         {
             await LoadFilters();
 
-            if (!string.IsNullOrWhiteSpace(gradeId) && !string.IsNullOrWhiteSpace(subjectId))
+            if (IsFilterSelected())
             {
                 await LoadResults(null!);
             }
@@ -160,24 +185,54 @@
         }
     }
 
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SelectedSchool == null)
+        {
+            Loading = false;
+            return;
+        }
+
+        await LoadFilters();
+
+        if (IsFilterSelected())
+        {
+            await LoadResults(null!);
+        }
+        else
+        {
+            Loading = false;
+        }
+    }
+
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        if (eventName == UiEvents.SchoolSelected)
+        if (eventName == UiEvents.SchoolSelected && payload is School school)
         {
-            if (payload is School school)
-            {
-                SelectedSchool = school;
-                await LoadFilters();
-                await InvokeAsync(StateHasChanged);
-            }
+            SelectedSchool = school;
+            await LoadFilters();
+            await InvokeAsync(StateHasChanged);
         }
 
         await base.HandleEventAsync(eventName, payload);
     }
 
+    private bool IsFilterSelected()
+    {
+        return ViewMode switch
+        {
+            "Grade" => !string.IsNullOrWhiteSpace(gradeId),
+            "Subject" => !string.IsNullOrWhiteSpace(subjectId),
+            "Teacher" => !string.IsNullOrWhiteSpace(teacherId),
+            _ => false,
+        };
+    }
+
     private void SetViewMode(string mode)
     {
         ViewMode = mode;
+        gradeId = subjectId = teacherId = null;
+        Navigation.NavigateTo(Navigation.Uri.Split('?')[0]); // remove query string
         StateHasChanged();
     }
 
@@ -188,11 +243,11 @@
             if (SelectedSchool != null)
             {
                 SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
-                Teachers = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], SelectedSchool.Id);
+                Teachers = await UserService.GetAllByRoleAndSchoolAsync([ Roles.Teacher ], SelectedSchool.Id);
             }
             else
             {
-                Logger.LogWarning("Selected School was null when trying to load grades.");
+                Logger.LogWarning("SelectedSchool is null when trying to load filters.");
             }
             Subjects = await SubjectService.GetAllAsync();
         }
@@ -202,59 +257,63 @@
         }
     }
 
-    private async Task<GridDataProviderResult<Result>> LoadResults(GridDataProviderRequest<Result> request)
+    private async Task<List<ResultSet>> LoadResults(GridDataProviderRequest<Result> request)
     {
         try
         {
             Loading = true;
 
-            if (Results is null || !Results.Any())
+            if (SelectedSchool == null)
             {
-                if (SelectedSchool == null)
-                {
-                    Logger.LogWarning("SelectedSchool is null. Cannot load results.");
-                    return new GridDataProviderResult<Result>
-                    {
-                        Data = new List<Result>(),
-                        TotalCount = 0
-                    };
-                }
+                Logger.LogWarning("SelectedSchool is null. Cannot load results.");
+                return new List<ResultSet>();
+            }
 
-                if (Guid.TryParse(gradeId, out var parsedGradeId) &&
-                int.TryParse(subjectId, out var parsedSubjectId))
+            if (ViewMode == "Grade" && !string.IsNullOrWhiteSpace(gradeId))
+            {
+                if (Guid.TryParse(gradeId, out var parsedGradeId))
                 {
-                    Results = await ResultService.GetResultsByFiltersAsync(
-                    SelectedSchool.Id,
-                    parsedGradeId,
-                    parsedSubjectId
-                    );
+                   return await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, parsedGradeId, null, null);
                 }
                 else
                 {
-                    Logger.LogWarning("Invalid gradeId or subjectId. Cannot load results.");
-                    Results = new List<Result>();
+                    Logger.LogWarning("Invalid gradeId.");
+                   return new List<ResultSet>();
                 }
             }
-
-            if (request == null)
+            else if (ViewMode == "Subject" && !string.IsNullOrWhiteSpace(subjectId))
             {
-                return new GridDataProviderResult<Result>
+                if (int.TryParse(subjectId, out var parsedSubjectId))
                 {
-                    Data = Results,
-                    TotalCount = Results.Count
-                };
+                   return await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, null, parsedSubjectId,null);
+                }
+                else
+                {
+                    Logger.LogWarning("Invalid subjectId.");
+                   return new List<ResultSet>();
+                }
             }
-
-            return request.ApplyTo(Results);
+            else if (ViewMode == "Teacher" && !string.IsNullOrWhiteSpace(teacherId))
+            {
+                if (Guid.TryParse(teacherId, out var parsedTeacherId))
+                {
+                   return await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, null,null, parsedTeacherId);
+                }
+                else
+                {
+                    Logger.LogWarning("Invalid teacherId.");
+                   return new List<ResultSet>();
+                }
+            }
+            else
+            {
+               return new List<ResultSet>();
+            }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to load results.");
-            return new GridDataProviderResult<Result>
-            {
-                Data = new List<Result>(),
-                TotalCount = 0
-            };
+            return  new List<ResultSet>();
         }
         finally
         {
@@ -291,31 +350,10 @@
         };
 
         var newUri = QueryHelpers.AddQueryString(uri.AbsolutePath, queryParams);
-        Navigation.NavigateTo(newUri);
+        Navigation.NavigateTo(newUri, forceLoad: false);
 
-        // Force the grid to reload data
-        // If your library has a built-in method to refresh the data, call that.
         await LoadResults(null!);
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (SelectedSchool == null)
-        {
-            Loading = false;
-            return;
-        }
-
-        await LoadFilters();
-
-        if (!string.IsNullOrWhiteSpace(gradeId) && !string.IsNullOrWhiteSpace(subjectId))
-        {
-            await LoadResults(null!);
-        }
-        else
-        {
-            Loading = false;
-        }
+        StateHasChanged();
     }
 
     private void EditResult(Guid resultId)

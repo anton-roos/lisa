@@ -212,16 +212,7 @@ public class UserService(
                 return false;
             }
 
-            if (existing.Email != user.Email)
-            {
-                var emailExists = await context.Users.AnyAsync(t => t.Email == user.Email && t.Id != user.Id);
-                if (emailExists)
-                {
-                    _logger.LogWarning("Attempted to update teacher with duplicate email: {Email}", user.Email);
-                    return false;
-                }
-            }
-
+            // Update basic properties
             existing.Surname = user.Surname;
             existing.Abbreviation = user.Abbreviation;
             existing.Name = user.Name;
@@ -230,22 +221,22 @@ public class UserService(
             existing.SchoolId = user.SchoolId;
 
             existing.CareGroups.Clear();
-
-            if (user.CareGroups != null && user.CareGroups.Any())
+            if (user.SelectedCareGroupIds != null && user.SelectedCareGroupIds.Any())
             {
-                foreach (var careGroup in user.CareGroups)
+                var newCareGroups = await context.CareGroups
+                    .Where(cg => user.SelectedCareGroupIds.Contains(cg.Id))
+                    .ToListAsync();
+                foreach (var careGroup in newCareGroups)
                 {
                     existing.CareGroups.Add(careGroup);
                 }
             }
 
             existing.Subjects.Clear();
-
             if (user.Subjects != null && user.Subjects.Any())
             {
                 foreach (var teacherSubject in user.Subjects)
                 {
-                    // Optionally, you can perform further validation here.
                     existing.Subjects.Add(teacherSubject);
                 }
             }
@@ -257,6 +248,34 @@ public class UserService(
             }
 
             await context.SaveChangesAsync();
+
+            var currentRoles = await _userManager.GetRolesAsync(existing);
+
+            var rolesToAdd = user.SelectedRoles.Except(currentRoles).ToArray();
+            var rolesToRemove = currentRoles.Except(user.SelectedRoles).ToArray();
+
+            if (rolesToRemove.Any())
+            {
+                var removeResult = await _userManager.RemoveFromRolesAsync(existing, rolesToRemove);
+                if (!removeResult.Succeeded)
+                {
+                    var errorMessage = string.Join(", ", removeResult.Errors.Select(e => e.Description));
+                    _logger.LogError("Failed to remove roles: {ErrorMessage}", errorMessage);
+                    return false;
+                }
+            }
+
+            if (rolesToAdd.Any())
+            {
+                var addResult = await _userManager.AddToRolesAsync(existing, rolesToAdd);
+                if (!addResult.Succeeded)
+                {
+                    var errorMessage = string.Join(", ", addResult.Errors.Select(e => e.Description));
+                    _logger.LogError("Failed to add roles: {ErrorMessage}", errorMessage);
+                    return false;
+                }
+            }
+
             await _uiEventService.PublishAsync(UiEvents.UsersUpdated);
             _logger.LogInformation("Updated teacher: {TeacherId}", user.Id);
             return true;

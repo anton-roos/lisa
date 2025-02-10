@@ -375,7 +375,8 @@ Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher };
 
             if (IsEdit)
             {
-                await UserService.UpdateAsync(User, newPassword: null);
+                var newPassword = string.IsNullOrWhiteSpace(User.Password) ? null : User.Password;
+                await UserService.UpdateAsync(User, newPassword);
             }
             else
             {

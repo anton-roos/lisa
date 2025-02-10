@@ -47,12 +47,19 @@
             <!-- Grade View -->
             @if (ViewMode == "Grade")
             {
-                @foreach (var subjectGroup in ResultsSet)
-                {
-                    <div class="mt-3">
-                        <span class="pill :pe" @onclick="() => EditResult(subjectGroup.Id)">@subjectGroup.AssessmentDate</span>
-                    </div>
-                }
+                <div class="d-flex">
+                    @foreach (var set in ResultsSet)
+                    {
+                        <div class="mt-3">
+                            <button type="button" class="badge bg-success" @onclick="() => EditResult(set.Id)">
+                                @if (set.AssessmentDate.HasValue)
+                                {
+                                    @set.AssessmentDate.Value.ToString("MMM-dd")
+                                }
+                            </button>
+                        </div>
+                    }
+                </div>
             }
 
             <!-- Subject View -->
@@ -60,7 +67,8 @@
             {
                 <div class="mb-3">
                     <label><strong>Select Subject:</strong></label>
-                    <InputSelect class="form-select" TValue="int?" Value="@SubjectId" ValueChanged="OnSubjectChange">
+                    <InputSelect class="form-select" TValue="int?" Value="@SubjectId" ValueChanged="OnSubjectChange"
+                        ValueExpression="() => SubjectId">
                         <option value="">-- Select Subject --</option>
                         @foreach (var subject in Subjects)
                         {
@@ -85,14 +93,19 @@
                     </div>
                 }
 
-                @foreach (var set in ResultsSet)
-                {
-                    <div class="mt-3">
-                        <span class="badge bg-success" @onclick="() => EditResult(set.Id)">
-                            @set.AssessmentDate
-                        </span>
-                    </div>
-                }
+                <div class="d-flex">
+                    @foreach (var set in ResultsSet)
+                    {
+                        <div class="mt-3">
+                            <button type="button" class="badge bg-success" @onclick="() => EditResult(set.Id)">
+                                @if (set.AssessmentDate.HasValue)
+                                {
+                                    @set.AssessmentDate.Value.ToString("MMM-dd")
+                                }
+                            </button>
+                        </div>
+                    }
+                </div>
             }
 
             <!-- Teacher View -->
@@ -100,7 +113,8 @@
             {
                 <div class="mb-3">
                     <label><strong>Select Teacher:</strong></label>
-                    <InputSelect class="form-select" TValue="Guid ?" Value="@TeacherId" ValueChanged="OnTeacherChange">
+                    <InputSelect class="form-select" TValue="Guid ?" Value="@TeacherId" ValueChanged="OnTeacherChange"
+                        ValueExpression="() => TeacherId">
                         <option value="">-- Select Teacher --</option>
                         @foreach (var teacher in Teachers)
                         {
@@ -109,56 +123,119 @@
                     </InputSelect>
                 </div>
 
-                @foreach (var set in ResultsSet)
-                {
-                    <div class="mt-3">
-                        <span class="badge bg-success" @onclick="() => EditResult(set.Id)">
-                            @set.AssessmentDate
-                        </span>
-                    </div>
-                }
+                <div class="d-flex">
+                    @foreach (var set in ResultsSet)
+                    {
+                        <div class="mt-3">
+                            <button type="button" class="badge bg-success" @onclick="() => EditResult(set.Id)">
+                                @if (set.AssessmentDate.HasValue)
+                                {
+                                    @set.AssessmentDate.Value.ToString("MMM-dd")
+                                }
+                            </button>
+                        </div>
+                    }
+                </div>
             }
         }
     </Authorized>
 </AuthorizeView>
 
 @code {
+    // Current view mode
     private string ViewMode { get; set; } = "Grade";
+    // Holds the filtered result sets.
     private List<ResultSet> ResultsSet = new();
+    // Filters & related data.
     private List<SchoolGrade> SchoolGrades = new();
     private List<Subject> Subjects = new();
     private List<User> Teachers = new();
     private List<int> AvailableGradesForSubject = new();
+    // For multiple grade selections (in Subject view).
     private HashSet<int> SelectedGrades = new();
     private bool Loading = true;
     private School? SelectedSchool;
+    // Note: Use a consistent data type for grade filtering. If SchoolGrade.Id is an int,
+    // then GradeId here might also be an int? (or Guid? if that’s what your model uses).
     private Guid? GradeId, TeacherId;
     private int? SubjectId;
 
     protected override async Task OnInitializedAsync()
     {
-        SelectedSchool = SchoolService.GetSelectedSchool();
         SubscribeToEvent(UiEvents.SchoolSelected);
+        SelectedSchool = SchoolService.GetSelectedSchool();
         await LoadFilters();
         await LoadResults();
     }
 
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        switch (eventName)
+        {
+            case UiEvents.SchoolSelected:
+                if (payload is School school)
+                {
+                    SelectedSchool = school;
+                    await LoadFilters();
+                    await LoadResults();
+                }
+                break;
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    /// <summary>
+    /// Changes the view mode and clears out selections/results.
+    /// </summary>
     private void SetViewMode(string mode)
     {
         ViewMode = mode;
         SelectedGrades.Clear();
         ResultsSet.Clear();
         StateHasChanged();
+        _ = LoadResults();
     }
 
+    /// <summary>
+    /// Loads result sets from the service based on the current filters.
+    /// Uses a different overload for Subject view (with multi-grade filtering).
+    /// </summary>
     private async Task LoadResults()
     {
         Loading = true;
-        ResultsSet = await ResultService.GetResultsByFiltersAsync(ViewMode, SelectedSchool.Id, GradeId, SubjectId, TeacherId,
-        SelectedGrades);
-        Loading = false;
-    }
 
+        if (SelectedSchool is null)
+        {
+            Loading = false;
+            return;
+        }
+
+        if (ViewMode == "Subject")
+        {
+            ResultsSet = (await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, null, SubjectId, null))
+            .OrderBy(r => r.AssessmentDate)
+            .ToList();
+        }
+        else if (ViewMode == "Grade")
+        {
+            ResultsSet = (await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, GradeId, null, null))
+            .OrderBy(r => r.AssessmentDate)
+            .ToList();
+        }
+        else if (ViewMode == "Teacher")
+        {
+            ResultsSet = (await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, null, null, TeacherId))
+            .OrderBy(r => r.AssessmentDate)
+            .ToList();
+        }
+
+        Loading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+    /// <summary>
+    /// Loads filter options such as grades, subjects, and teachers.
+    /// </summary>
     private async Task LoadFilters()
     {
         if (SelectedSchool != null)
@@ -169,6 +246,9 @@
         }
     }
 
+    /// <summary>
+    /// Toggles the selected grade for multi-grade filtering.
+    /// </summary>
     private async Task ToggleGradeSelection(int gradeId)
     {
         if (SelectedGrades.Contains(gradeId))
@@ -179,25 +259,45 @@
         await LoadResults();
     }
 
+    /// <summary>
+    /// Handles subject changes, ensuring the selected subject is stored and its available grades loaded.
+    /// </summary>
     private async Task OnSubjectChange(int? value)
     {
-        var subject = await SubjectService.GetByIdAsync(value.Value);
-        AvailableGradesForSubject = subject.GradesApplicable;
+        SubjectId = value;
+        if (value.HasValue)
+        {
+            var subject = await SubjectService.GetByIdAsync(value.Value);
+            AvailableGradesForSubject = subject.GradesApplicable;
+        }
+        else
+        {
+            AvailableGradesForSubject.Clear();
+        }
         SelectedGrades.Clear();
         await LoadResults();
     }
 
+    /// <summary>
+    /// Handles teacher selection changes.
+    /// </summary>
     private async Task OnTeacherChange(Guid? value)
     {
         TeacherId = value;
         await LoadResults();
     }
 
+    /// <summary>
+    /// Navigates to the edit page for the given result set.
+    /// </summary>
     private void EditResult(Guid resultSetId)
     {
-        Navigation.NavigateTo($"results/edit/{resultSetId}");
+        Navigation.NavigateTo($"results/manager/{resultSetId}");
     }
 
+    /// <summary>
+    /// Formats the grade value for display.
+    /// </summary>
     private string FormatGrade(int grade) =>
     grade switch
     {
@@ -207,4 +307,11 @@
         _ => $"Gr {grade}"
     };
 
+    // Optionally, if your base class (EventAwareComponentBase) requires an override for school selection changes:
+    @* protected override async Task OnSchoolSelectedAsync()
+    {
+        SelectedSchool = SchoolService.GetSelectedSchool();
+        await LoadFilters();
+        await LoadResults();
+    } *@
 }

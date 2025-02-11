@@ -1,5 +1,6 @@
 @page "/users"
 @using Lisa.Models.Entities
+@using Microsoft.AspNetCore.Components.Authorization
 @inject NavigationManager Navigation
 @inject SchoolService SchoolService
 @inject UserService UserService
@@ -95,16 +96,36 @@
 </AuthorizeView>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
     private School? SelectedSchool;
     private List<User>? Users;
     private string? selectedRole = null; // Now only one role can be selected at a time
     private string searchQuery = string.Empty;
 
-    private List<string> AvailableRoles =
-        [Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher];
+    private List<string> AvailableRoles = new List<string>
+{
+Roles.Principal,
+Roles.Administrator,
+Roles.SchoolManagement,
+Roles.SystemAdministrator,
+Roles.Teacher
+};
+
+    private bool isCurrentUserSystemAdmin;
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateTask;
+        var user = authState.User;
+        isCurrentUserSystemAdmin = user.IsInRole(Roles.SystemAdministrator);
+
+        if (!isCurrentUserSystemAdmin)
+        {
+            AvailableRoles.Remove(Roles.SystemAdministrator);
+        }
+
         SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
         SubscribeToEvent(UiEvents.SchoolSelected);
 
@@ -134,13 +155,18 @@
     {
         if (SelectedSchool == null)
             throw new InvalidOperationException("No school selected.");
+
         Users = await UserService.GetAllByRoleAndSchoolAsync(AvailableRoles.ToArray(), SelectedSchool.Id);
+
+        if (!isCurrentUserSystemAdmin && Users != null)
+        {
+            Users = Users.Where(u => !u.Roles.Contains(Roles.SystemAdministrator)).ToList();
+        }
     }
 
     private IEnumerable<User> FilteredUsers =>
     Users == null ? Enumerable.Empty<User>() :
-    Users
-    .Where(u =>
+    Users.Where(u =>
     (selectedRole == null || u.Roles.Contains(selectedRole)) &&
     (string.IsNullOrWhiteSpace(searchQuery) ||
     u.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||

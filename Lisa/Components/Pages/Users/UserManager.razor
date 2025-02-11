@@ -49,8 +49,8 @@
                 {
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="@($"role_{role}")"
-                            checked="@User.SelectedRoles.Contains(role)"
-                            @onchange="(e) => ToggleRole(role, (bool)e.Value)" />
+                            checked="@User.SelectedRoles.Contains(role)" @onchange="(e) => ToggleRole(role, (bool)e.Value)"
+                            disabled="@(role == Roles.SystemAdministrator && !IsCurrentUserSystemAdmin)" />
                         <label class="form-check-label" for="@($"role_{role}")">@role</label>
                     </div>
                 }
@@ -206,8 +206,14 @@
     private List<CareGroup> AvailableCareGroups { get; set; } = new();
     private List<Subject> AvailableSubjects { get; set; } = new();
     private List<int> SchoolApplicableGrades { get; set; } = new();
-    private List<string> AvailableRoles { get; set; } = new() { Roles.Principal, Roles.Administrator,
-Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher };
+    private List<string> AvailableRoles { get; set; } = new()
+{
+Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher
+};
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+    private bool IsCurrentUserSystemAdmin { get; set; } = false;
 
     private string SubjectSearchTerm { get; set; } = "";
     private List<Subject> FilteredSubjects { get; set; } = new();
@@ -220,6 +226,10 @@ Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher };
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateTask;
+        var currentUser = authState.User;
+        IsCurrentUserSystemAdmin = currentUser.IsInRole(Roles.SystemAdministrator);
+
         SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
         AvailableSubjects = await SubjectService.GetAllAsync();
 
@@ -355,6 +365,11 @@ Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher };
 
     private void ToggleRole(string role, bool isSelected)
     {
+        if (role == Roles.SystemAdministrator && !IsCurrentUserSystemAdmin)
+        {
+            return;
+        }
+
         if (isSelected)
         {
             if (!User.SelectedRoles.Contains(role))

@@ -29,6 +29,7 @@ public class ResultsCaptureViewModel
     public List<Subject> Subjects { get; set; } = new();
     public List<Subject> FilteredSubjects { get; set; } = new();
     public List<LearnerResultViewModel> LearnerResults { get; set; } = new();
+    public SchoolGrade SchoolGrade { get; set; } = new();
 
     public ClaimsPrincipal? User { get; set; }
     public bool Loading { get; set; } = true;

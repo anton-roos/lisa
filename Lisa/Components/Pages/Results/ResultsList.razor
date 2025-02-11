@@ -60,16 +60,32 @@
                 </div>
 
                 <div class="d-flex">
-                    @foreach (var set in ResultsSet)
+                    @if (GroupedResults.Any())
                     {
-                        <div class="mt-3">
-                            <div type="button" class="badge @GetResultSetStatusColor(set)" @onclick="() => EditResult(set.Id)">
-                                @if (set.AssessmentDate.HasValue)
-                                {
-                                    @set.AssessmentDate.Value.ToString("MMM-dd")
-                                }
+                        @foreach (var group in GroupedResults)
+                        {
+                            <div class="mb-2">
+                                <h5>@group.Key</h5>
+                                <div class="d-flex flex-wrap">
+                                    @foreach (var set in group.Value)
+                                    {
+                                        <div class="mt-3">
+                                            <div type="button" class="badge @GetResultSetStatusColor(set)"
+                                                @onclick="() => EditResult(set.Id)">
+                                                @if (set.AssessmentDate.HasValue)
+                                                {
+                                                    @set.AssessmentDate.Value.ToString("dd MMM")
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
                             </div>
-                        </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-secondary">No Results</div>
                     }
                 </div>
             }
@@ -106,16 +122,32 @@
                 }
 
                 <div class="d-flex">
-                    @foreach (var set in ResultsSet)
+                    @if (GroupedResults.Any())
                     {
-                        <div class="mt-3">
-                            <div class="badge @GetResultSetStatusColor(set)" @onclick="() => EditResult(set.Id)">
-                                @if (set.AssessmentDate.HasValue)
-                                {
-                                    @set.AssessmentDate.Value.ToString("MMM-dd")
-                                }
+                        @foreach (var group in GroupedResults)
+                        {
+                            <div class="mb-2">
+                                <h5>@group.Key</h5>
+                                <div class="d-flex flex-wrap">
+                                    @foreach (var set in group.Value)
+                                    {
+                                        <div class="mt-3">
+                                            <div type="button" class="badge @GetResultSetStatusColor(set)"
+                                                @onclick="() => EditResult(set.Id)">
+                                                @if (set.AssessmentDate.HasValue)
+                                                {
+                                                    @set.AssessmentDate.Value.ToString("dd MMM")
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
                             </div>
-                        </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-secondary">No Results</div>
                     }
                 </div>
             }
@@ -136,16 +168,32 @@
                 </div>
 
                 <div class="d-flex">
-                    @foreach (var set in ResultsSet)
+                    @if (GroupedResults.Any())
                     {
-                        <div class="mt-3">
-                            <div type="button" class="badge @GetResultSetStatusColor(set)" @onclick="() => EditResult(set.Id)">
-                                @if (set.AssessmentDate.HasValue)
-                                {
-                                    @set.AssessmentDate.Value.ToString("MMM-dd")
-                                }
+                        @foreach (var group in GroupedResults)
+                        {
+                            <div class="mb-2">
+                                <h5>@group.Key</h5>
+                                <div class="d-flex flex-wrap">
+                                    @foreach (var set in group.Value)
+                                    {
+                                        <div class="mt-3">
+                                            <div type="button" class="badge @GetResultSetStatusColor(set)"
+                                                @onclick="() => EditResult(set.Id)">
+                                                @if (set.AssessmentDate.HasValue)
+                                                {
+                                                    @set.AssessmentDate.Value.ToString("dd MMM")
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
                             </div>
-                        </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-secondary">No Results</div>
                     }
                 </div>
             }
@@ -156,6 +204,7 @@
 @code {
     private string ViewMode { get; set; } = "Grade";
     private List<ResultSet> ResultsSet = new();
+    private Dictionary<string, List<ResultSet>> GroupedResults { get; set; } = new();
     private List<SchoolGrade> SchoolGrades = new();
     private List<Subject> Subjects = new();
     private List<User> Teachers = new();
@@ -207,6 +256,7 @@
     private async Task LoadResults()
     {
         Loading = true;
+        ResultsSet.Clear();
 
         if (SelectedSchool is null)
         {
@@ -214,23 +264,37 @@
             return;
         }
 
+        List<ResultSet> results = new();
+
         if (ViewMode == "Subject")
         {
-            ResultsSet = (await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, null, SubjectId, null))
+            results = (await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, null, SubjectId, null))
             .OrderBy(r => r.AssessmentDate)
             .ToList();
+
+            GroupedResults = results
+            .GroupBy(r => $"{r.Subject.Name} - {r.SchoolGrade.SystemGrade.Name}")
+            .ToDictionary(g => $"{g.Key}", g => g.ToList());
         }
         else if (ViewMode == "Grade")
         {
-            ResultsSet = (await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, GradeId, null, null))
+            results = (await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, GradeId, null, null))
             .OrderBy(r => r.AssessmentDate)
             .ToList();
+
+            GroupedResults = results
+            .GroupBy(r => r.Subject.Name)
+            .ToDictionary(g => g.Key, g => g.ToList());
         }
         else if (ViewMode == "Teacher")
         {
-            ResultsSet = (await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, null, null, TeacherId))
+            results = (await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, null, null, TeacherId))
             .OrderBy(r => r.AssessmentDate)
             .ToList();
+
+            GroupedResults = results
+            .GroupBy(r => new { r.Teacher.Abbreviation, r.Subject.Name })
+            .ToDictionary(g => $"{g.Key.Abbreviation} - {g.Key.Name}", g => g.ToList());
         }
 
         Loading = false;

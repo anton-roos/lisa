@@ -16,6 +16,8 @@ public class ResultSet
     public int SubjectId { get; set; }
     public Subject? Subject { get; set; }
     public ResultSetStatus Status { get; set; }
+    public Guid? SchoolGradeId { get; set; }
+    public SchoolGrade? SchoolGrade { get; set; }
 }
 
 public enum ResultSetStatus

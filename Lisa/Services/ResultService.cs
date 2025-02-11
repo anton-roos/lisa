@@ -35,6 +35,7 @@ public class ResultService
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 CapturedById = capturedById,
+                Status = ResultSetStatus.Submitted,
                 Results = [.. viewModel.LearnerResults.Select(entry => new Result
                 {
                     Id = Guid.NewGuid(),
@@ -48,6 +49,11 @@ public class ResultService
             if (viewModel.Teacher is not null)
             {
                 resultSet.TeacherId = viewModel.Teacher.Id;
+            }
+
+            if (viewModel.SchoolGrade is not null)
+            {
+                resultSet.SchoolGradeId = viewModel.SchoolGrade.Id;
             }
 
             await context.ResultSets.AddAsync(resultSet);
@@ -155,6 +161,7 @@ public class ResultService
                             .ThenInclude(rc => rc.SchoolGrade)
                                 .ThenInclude(sg => sg.SystemGrade)
                 .Include(rs => rs.Subject)
+                .Include(rs => rs.SchoolGrade)
                 .FirstOrDefaultAsync(rs => rs.Id == id);
         }
         catch (Exception ex)
@@ -188,6 +195,8 @@ public class ResultService
                             .ThenInclude(rc => rc.SchoolGrade)
                                 .ThenInclude(sg => sg.SystemGrade)
                 .Include(rs => rs.Subject)
+                .Include(rs => rs.SchoolGrade)
+                .Include(rs => rs.Teacher)
                 .Where(rs => rs.Results.Any(r =>
                     r.Learner != null &&
                     r.Learner.RegisterClass != null &&
@@ -198,8 +207,7 @@ public class ResultService
             // This assumes that all results within a result set belong to the same grade.
             if (gradeId.HasValue)
             {
-                query = query.Where(rs => rs.Results.Any(r =>
-                    r.Learner.RegisterClass.SchoolGradeId == gradeId.Value));
+                query = query.Where(rs => rs.SchoolGradeId == gradeId);
             }
 
             // Apply the subject filter if provided.

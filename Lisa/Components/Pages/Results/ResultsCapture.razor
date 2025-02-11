@@ -209,6 +209,7 @@
     private async Task OnGradeChange(string value)
     {
         ViewModel.GradeId = value;
+        ViewModel.SchoolGrade = ViewModel.SchoolGrades.FirstOrDefault(g => g.Id == Guid.Parse(value));
         ViewModel.SubjectId = null;
         await LoadSubjectsForGrade();
     }

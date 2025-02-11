@@ -578,6 +578,9 @@ namespace Lisa.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("SchoolGradeId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
@@ -593,6 +596,8 @@ namespace Lisa.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CapturedById");
+
+                    b.HasIndex("SchoolGradeId");
 
                     b.HasIndex("SubjectId");
 
@@ -1255,6 +1260,10 @@ namespace Lisa.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Lisa.Models.Entities.SchoolGrade", "SchoolGrade")
+                        .WithMany()
+                        .HasForeignKey("SchoolGradeId");
+
                     b.HasOne("Lisa.Models.Entities.Subject", "Subject")
                         .WithMany()
                         .HasForeignKey("SubjectId")
@@ -1267,6 +1276,8 @@ namespace Lisa.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("CapturedByUser");
+
+                    b.Navigation("SchoolGrade");
 
                     b.Navigation("Subject");
 

@@ -91,7 +91,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        SelectedSchool = SchoolService.GetSelectedSchool();
+        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
 
         if (IsEdit)
         {

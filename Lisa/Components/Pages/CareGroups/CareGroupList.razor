@@ -68,7 +68,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        SelectedSchool = SchoolService.GetSelectedSchool();
+        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
         CareGroupsToFilter = await CareGroupService.GetAllAsync();
         CareGroups = CareGroupsToFilter.Where(c => c.SchoolId == SelectedSchool?.Id);
         SubscribeToEvent(UiEvents.SchoolSelected);

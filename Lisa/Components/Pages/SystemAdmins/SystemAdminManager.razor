@@ -87,7 +87,7 @@
         {
             SubscribeToEvent(UiEvents.SchoolSelected);
 
-            SelectedSchool = SchoolService.GetSelectedSchool();
+            SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
 
             if (IsEdit && Id.HasValue)
             {

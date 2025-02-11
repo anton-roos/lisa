@@ -11,6 +11,7 @@ public class SchoolService(
     IDbContextFactory<LisaDbContext> dbContextFactory,
     IUiEventService uiEventService,
     UserManager<User> userManager,
+    UserService userService,
     IHttpContextAccessor httpContextAccessor,
     ProtectedSessionStorage sessionStorage,
     ILogger<SchoolService> logger
@@ -22,6 +23,7 @@ public class SchoolService(
     private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
     private readonly ProtectedSessionStorage _sessionStorage = sessionStorage;
     private readonly ILogger<SchoolService> _logger = logger;
+    private readonly UserService _userService = userService;
     private School? _selectedSchool;
 
     /// <summary>
@@ -76,7 +78,31 @@ public class SchoolService(
         }
     }
 
-    public School? GetSelectedSchool() => _selectedSchool;
+    public async Task<School?> GetSelectedSchoolAsync()
+    {
+        // If a school is already selected, return it.
+        if (_selectedSchool != null)
+        {
+            return _selectedSchool;
+        }
+
+        // Attempt to retrieve the current logged-in user.
+        var currentUser = await GetCurrentUserAsync();
+        if (currentUser != null)
+        {
+            var user = await _userService.GetByIdAsync(currentUser.Id);
+            // Check if the user is not in the "System Administrator" role.
+            if (!await _userManager.IsInRoleAsync(user, "System Administrator"))
+            {
+
+                using var context = await _dbContextFactory.CreateDbContextAsync();
+                _selectedSchool = await context.Schools.FindAsync(user.SchoolId);
+
+            }
+        }
+
+        return _selectedSchool;
+    }
 
     /// <summary>
     /// Gets the total count of schools.

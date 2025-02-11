@@ -112,7 +112,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var school = SchoolService.GetSelectedSchool();
+        var school = await SchoolService.GetSelectedSchoolAsync();
         if (school == null)
         {
             // handle no selected school

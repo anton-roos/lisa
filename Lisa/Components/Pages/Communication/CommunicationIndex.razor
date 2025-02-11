@@ -93,7 +93,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        SelectedSchool = SchoolService.GetSelectedSchool();
+        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
         SubscribeToEvent(UiEvents.SchoolSelected);
         await LoadData();
         await base.OnInitializedAsync();

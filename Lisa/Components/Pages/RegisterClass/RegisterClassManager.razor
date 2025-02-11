@@ -148,7 +148,7 @@
         try
         {
             SubscribeToEvent(UiEvents.SchoolSelected);
-            SelectedSchool = SchoolService.GetSelectedSchool();
+            SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
 
             if (SelectedSchool != null)
             {

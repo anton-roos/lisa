@@ -25,11 +25,15 @@
                     <span class="bi bi-mortarboard-nav-menu" aria-hidden="true"></span> Schools
                 </NavLink>
             </div>
+        </AuthorizeView>
+        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="care-groups">
                     <span class="bi care-groups-icon" aria-hidden="true"></span> Care Groups
                 </NavLink>
             </div>
+        </AuthorizeView>
+        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="users">
                     <span class="bi principal-icon" aria-hidden="true"></span> Staff

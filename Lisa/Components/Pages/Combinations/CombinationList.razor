@@ -88,7 +88,7 @@
 
     public async Task LoadCombinations()
     {
-        SelectedSchool = SchoolService.GetSelectedSchool();
+        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
         if (SelectedSchool != null)
         {
             SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);

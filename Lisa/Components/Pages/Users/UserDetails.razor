@@ -4,93 +4,100 @@
 @inject UserService UserService
 
 <PageTitle>User Details</PageTitle>
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+    <Authorized>
+        <h3>User Details</h3>
 
-<h3>User Details</h3>
+        @if (User == null)
+        {
+            <p>Loading user...</p>
+        }
+        else
+        {
+            <dl class="row">
+                <dt class="col-sm-2">Surname</dt>
+                <dd class="col-sm-10">@User.Surname</dd>
 
-@if (User == null)
-{
-    <p>Loading user...</p>
-}
-else
-{
-    <dl class="row">
-        <dt class="col-sm-2">Surname</dt>
-        <dd class="col-sm-10">@User.Surname</dd>
+                <dt class="col-sm-2">Abbreviation</dt>
+                <dd class="col-sm-10">@User.Abbreviation</dd>
 
-        <dt class="col-sm-2">Abbreviation</dt>
-        <dd class="col-sm-10">@User.Abbreviation</dd>
+                <dt class="col-sm-2">Name</dt>
+                <dd class="col-sm-10">@User.Name</dd>
 
-        <dt class="col-sm-2">Name</dt>
-        <dd class="col-sm-10">@User.Name</dd>
+                <dt class="col-sm-2">Email</dt>
+                <dd class="col-sm-10">@User.Email</dd>
 
-        <dt class="col-sm-2">Email</dt>
-        <dd class="col-sm-10">@User.Email</dd>
+                <dt class="col-sm-2">Roles</dt>
+                <dd class="col-sm-10">@string.Join(", ", User.Roles)</dd>
+            </dl>
 
-        <dt class="col-sm-2">Roles</dt>
-        <dd class="col-sm-10">@string.Join(", ", User.Roles)</dd>
-    </dl>
+            @if (User.Roles.Contains(Roles.Teacher))
+            {
+                <h4>Teacher Details</h4>
+                <dl class="row">
+                    <dt class="col-sm-2">Care Groups</dt>
+                    <dd class="col-sm-10">
+                        <ul>
+                            @if (User.CareGroups == null || !User.CareGroups.Any())
+                            {
+                                <li>No care groups assigned.</li>
+                            }
+                            else
+                            {
+                                @foreach (var cg in User.CareGroups)
+                                {
+                                    <li>@cg.Name</li>
+                                }
+                            }
 
-    @if (User.Roles.Contains(Roles.Teacher))
-    {
-        <h4>Teacher Details</h4>
-        <dl class="row">
-            <dt class="col-sm-2">Care Groups</dt>
-            <dd class="col-sm-10">
-                <ul>
-                    @if (User.CareGroups == null || !User.CareGroups.Any())
-                    {
-                        <li>No care groups assigned.</li>
-                    }
-                    else
-                    {
-                        @foreach (var cg in User.CareGroups)
+                        </ul>
+                    </dd>
+
+                    <dt class="col-sm-2">Register Classes</dt>
+                    <dd class="col-sm-10">
+                        @if (User.RegisterClasses == null || !User.RegisterClasses.Any())
                         {
-                            <li>@cg.Name</li>
+                            <p>No register classes.</p>
                         }
-                    }
-
-                </ul>
-            </dd>
-
-            <dt class="col-sm-2">Register Classes</dt>
-            <dd class="col-sm-10">
-                @if (User.RegisterClasses == null || !User.RegisterClasses.Any())
-                {
-                    <p>No register classes.</p>
-                }
-                else
-                {
-                    <ul>
-                        @foreach (var rc in User.RegisterClasses)
+                        else
                         {
-                            <li>@rc.Name (Grade: @rc.SchoolGrade?.SystemGrade.Name)</li>
+                            <ul>
+                                @foreach (var rc in User.RegisterClasses)
+                                {
+                                    <li>@rc.Name (Grade: @rc.SchoolGrade?.SystemGrade.Name)</li>
+                                }
+                            </ul>
                         }
-                    </ul>
-                }
-            </dd>
+                    </dd>
 
-            <dt class="col-sm-2">Periods</dt>
-            <dd class="col-sm-10">
+                    <dt class="col-sm-2">Periods</dt>
+                    <dd class="col-sm-10">
 
-                @if (User.Periods == null || !User.Periods.Any())
-                {
-                    <p>No periods assigned.</p>
-                }
-                else
-                {
-                    <ul>
-                        @foreach (var period in User.Periods)
+                        @if (User.Periods == null || !User.Periods.Any())
                         {
-                            <li>@($"{period.StartTime} - {period.EndTime}")</li>
+                            <p>No periods assigned.</p>
                         }
-                    </ul>
-                }
-            </dd>
-        </dl>
-    }
+                        else
+                        {
+                            <ul>
+                                @foreach (var period in User.Periods)
+                                {
+                                    <li>@($"{period.StartTime} - {period.EndTime}")</li>
+                                }
+                            </ul>
+                        }
+                    </dd>
+                </dl>
+            }
 
-    <button class="btn btn-secondary" @onclick="GoBack">Back</button>
-}
+            <button class="btn btn-secondary" @onclick="GoBack">Back</button>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
 
 @code {
     [Parameter]

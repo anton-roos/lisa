@@ -77,6 +77,12 @@
                 <p>You are a Teacher</p>
             </Authorized>
         </AuthorizeView>
+        
+        <AuthorizeView Roles="@($"{Roles.Principal}")">
+            <Authorized>
+                <p>Hi Principal</p>
+            </Authorized>
+        </AuthorizeView>
     </Authorized>
 
     <NotAuthorized>

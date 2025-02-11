@@ -5,8 +5,7 @@
 @inject UserService UserService
 
 <PageTitle>Delete User</PageTitle>
-
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>Delete User</h3>
         @if (isLoading)

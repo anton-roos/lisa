@@ -14,7 +14,7 @@
 @inherits EventAwareComponentBase
 
 <PageTitle>Care Groups</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
     <Authorized>
         @if (SelectedSchool == null)
         {

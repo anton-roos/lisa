@@ -4,7 +4,7 @@
 @inject ILogger<EmailCampaignManager> Logger
 
 <PageTitle>Email Campaign</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
     <Authorized>
         @if (isLoading)
         {

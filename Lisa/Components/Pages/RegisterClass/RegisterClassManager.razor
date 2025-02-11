@@ -15,7 +15,8 @@
 @inherits EventAwareComponentBase
 @inject ILogger<RegisterClassManager> Logger
 
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+<PageTitle>Care Group Manager</PageTitle>
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>@(IsEdit ? "Edit Register Class" : "Add Register Class")</h3>
 

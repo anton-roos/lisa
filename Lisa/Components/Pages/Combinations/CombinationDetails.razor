@@ -3,8 +3,8 @@
 @inject CombinationService CombinationService
 @inject NavigationManager Navigation
 
-<PageTitle>Care Groups</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+<PageTitle>Combination Details</PageTitle>
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>Subject Combination Details</h3>
 

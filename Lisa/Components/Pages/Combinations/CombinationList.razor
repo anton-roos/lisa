@@ -7,7 +7,7 @@
 @inject SchoolService SchoolService
 
 <PageTitle>Subject Combinations</PageTitle>
-<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>Subject Combinations</h3>
 

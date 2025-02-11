@@ -9,7 +9,7 @@
 @inject ILogger<EmailCampaign> Logger
 
 <PageTitle>Email Campaigns</PageTitle>
-<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+<AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
     <Authorized>
         @if (SelectedSchool == null)
         {

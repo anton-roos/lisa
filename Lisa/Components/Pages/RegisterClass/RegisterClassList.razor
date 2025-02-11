@@ -6,74 +6,82 @@
 @inherits EventAwareComponentBase
 @inject ILogger<RegisterClassList> Logger
 
-@if (SelectedSchool == null)
-{
-    <div class="alert alert-info">
-        Please select a school to view register classes.
-    </div>
-}
-else if (!RegisterClasses.Any())
-{
-    <div>
-        <h3>Register Classes</h3>
-        <button class="btn btn-primary mb-3" @onclick="AddRegisterClass">Add Register Class</button>
-        <div class="alert alert-info">
-            No register classes found for <strong>@SelectedSchool.ShortName</strong>.
-        </div>
-    </div>
-}
-else
-{
-    <h3>Register Classes</h3>
-    <button class="btn btn-primary mb-3" @onclick="AddRegisterClass">Add Register Class</button>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Grade</th>
-                <th>Learner Count</th>
-                <th>Teacher</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var registerClass in RegisterClasses)
-            {
-                <tr>
-                    <td>@registerClass.Name</td>
-                    @if (registerClass.SchoolGrade != null)
+<PageTitle>Care Group Details</PageTitle>
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+    <Authorized>
+        @if (SelectedSchool == null)
+        {
+            <div class="alert alert-info">
+                Please select a school to view register classes.
+            </div>
+        }
+        else if (!RegisterClasses.Any())
+        {
+            <div>
+                <h3>Register Classes</h3>
+                <button class="btn btn-primary mb-3" @onclick="AddRegisterClass">Add Register Class</button>
+                <div class="alert alert-info">
+                    No register classes found for <strong>@SelectedSchool.ShortName</strong>.
+                </div>
+            </div>
+        }
+        else
+        {
+            <h3>Register Classes</h3>
+            <button class="btn btn-primary mb-3" @onclick="AddRegisterClass">Add Register Class</button>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Grade</th>
+                        <th>Learner Count</th>
+                        <th>Teacher</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var registerClass in RegisterClasses)
                     {
-                        <td>@registerClass.SchoolGrade.SystemGrade.Name</td>
+                        <tr>
+                            <td>@registerClass.Name</td>
+                            @if (registerClass.SchoolGrade != null)
+                            {
+                                <td>@registerClass.SchoolGrade.SystemGrade.Name</td>
+                            }
+                            else
+                            {
+                                <td>Grade not found</td>
+                            }
+                            @if (registerClass.Learners != null)
+                            {
+                                <td>@registerClass.Learners.Count.ToString()</td>
+                            }
+                            else
+                            {
+                                <td>Learners not found</td>
+                            }
+                            @if (registerClass.User != null)
+                            {
+                                <td>@registerClass.User.Surname @registerClass.User.Name</td>
+                            }
+                            else
+                            {
+                                <td>Teacher not found</td>
+                            }
+                            <ActionButtons TEntity="RegisterClass" Entity="registerClass" OnView="ViewRegisterClass"
+                                OnEdit="EditRegisterClass" OnDelete="ShowConfirmationAsync" />
+                        </tr>
                     }
-                    else
-                    {
-                        <td>Grade not found</td>
-                    }
-                    @if (registerClass.Learners != null)
-                    {
-                        <td>@registerClass.Learners.Count.ToString()</td>
-                    }
-                    else
-                    {
-                        <td>Learners not found</td>
-                    }
-                    @if (registerClass.User != null)
-                    {
-                        <td>@registerClass.User.Surname @registerClass.User.Name</td>
-                    }
-                    else
-                    {
-                        <td>Teacher not found</td>
-                    }
-                    <ActionButtons TEntity="RegisterClass" Entity="registerClass" OnView="ViewRegisterClass"
-                        OnEdit="EditRegisterClass" OnDelete="ShowConfirmationAsync" />
-                </tr>
-            }
-        </tbody>
-    </table>
+                </tbody>
+            </table>
 
-    <ConfirmDialog @ref="dialog" />
-}
+            <ConfirmDialog @ref="dialog" />
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     private School? SelectedSchool;
@@ -139,7 +147,7 @@ else
             {
                 await RegisterClassService.DeleteAsync(registerClass.Id);
                 await LoadRegisterClasses();
-            await InvokeAsync(StateHasChanged);
+                await InvokeAsync(StateHasChanged);
             }
         }
         else

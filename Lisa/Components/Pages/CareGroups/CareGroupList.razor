@@ -6,7 +6,7 @@
 @inherits EventAwareComponentBase
 
 <PageTitle>Care Groups</PageTitle>
-<AuthorizeView Roles="@Roles.SystemAdministrator">
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>Care Groups</h3>
 

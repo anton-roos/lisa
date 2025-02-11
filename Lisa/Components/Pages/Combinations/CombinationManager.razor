@@ -10,7 +10,7 @@
 @inject SchoolGradeService SchoolGradeService
 
 <PageTitle>@(IsEdit ? "Edit Subject Combination" : "Add Subject Combination")</PageTitle>
-<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>@(IsEdit ? "Edit Subject Combination" : "Add Subject Combination")</h3>
 

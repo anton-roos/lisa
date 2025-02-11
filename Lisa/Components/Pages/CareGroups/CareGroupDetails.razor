@@ -4,7 +4,7 @@
 @inject NavigationManager Navigation
 
 <PageTitle>Care Group Details</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>Care Group Details</h3>
         @if (CareGroup == null)

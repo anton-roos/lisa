@@ -5,103 +5,111 @@
 @inject NavigationManager NavigationManager
 @inherits EventAwareComponentBase
 
-@if (SelectedSchool != null)
-{
-    <h3>Learners for @SelectedSchool.ShortName</h3>
-    <div class="row mb-3">
-        <div class="col-12 col-md-4 mb-2">
-            <label for="gradeFilter" class="form-label">Filter by Grade</label>
-            <select id="gradeFilter" class="form-select" @bind="SelectedGradeId">
-                <option value="">All Grades</option>
-                @if (AvailableGrades != null)
-                {
-                    @foreach (var grade in AvailableGrades)
-                    {
-                        <option value="@grade.Id">@grade.SystemGrade.Name</option>
-                    }
-                }
-            </select>
-        </div>
-        <div class="col-12 col-md-4 mb-2">
-            <!-- Name Search -->
-            <label for="nameSearch" class="form-label">Search by Name</label>
-            <input id="nameSearch" type="text" class="form-control" @oninput="OnSearchTermChanged" @bind="SearchTerm"
-                placeholder="Type name..." />
-        </div>
-        <div class="col-12 col-md-4 mb-2 d-flex align-items-end">
-            <button class="btn btn-primary mb-3" @onclick="AddLearner">Add Learner</button>
-        </div>
-    </div>
-
-    @if (FilteredLearners.Any())
-    {
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Code</th>
-                    <th>Surname</th>
-                    <th>Name</th>
-                    <th>Grade</th>
-                    <th>Subjects Count</th>
-                    <th>Subjects Selected</th>
-                    <th>Parents</th>
-                    <th>Care Group</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var learner in FilteredLearners)
-                {
-                    <tr>
-                        <td>@learner.Code</td>
-                        <td>@learner.Surname</td>
-                        <td>@learner.Name</td>
-                        <td>@(learner.RegisterClass?.SchoolGrade?.SystemGrade.Name ?? "Unassigned")</td>
-                        <td>@learner.LearnerSubjects.Count()</td>
-                        <td>
-
-                            @foreach (var subject in learner.LearnerSubjects)
+<PageTitle>Learner Details</PageTitle>
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+    <Authorized>
+        @if (SelectedSchool != null)
+        {
+            <h3>Learners for @SelectedSchool.ShortName</h3>
+            <div class="row mb-3">
+                <div class="col-12 col-md-4 mb-2">
+                    <label for="gradeFilter" class="form-label">Filter by Grade</label>
+                    <select id="gradeFilter" class="form-select" @bind="SelectedGradeId">
+                        <option value="">All Grades</option>
+                        @if (AvailableGrades != null)
+                        {
+                            @foreach (var grade in AvailableGrades)
                             {
-                                switch (subject.Subject.SubjectType)
-                                {
-                                    case SubjectType.Compulsory:
-                                        <span class="badge bg-primary mx-1">@subject.Subject.Code</span>
-                                        break;
-                                    case SubjectType.MathCombination:
-                                        <span class="badge bg-success mx-1">@subject.Subject.Code</span>
-                                        break;
-                                    case SubjectType.Combination:
-
-                                        <span class="badge bg-danger mx-1">@subject.Subject.Code</span>
-                                        break;
-                                    default:
-                                        <span class="badge bg-light mx-1s">@subject.Subject.Code</span>
-                                        break;
-                                }
+                                <option value="@grade.Id">@grade.SystemGrade.Name</option>
                             }
-                        </td>
-                        <td>@learner.Parents.Count()</td>
-                        <td>@learner.CareGroup.Name</td>
-                        <ActionButtons TEntity="Learner" Entity="learner" OnView="ViewLearner" OnEdit="EditLearner"
-                            OnDelete="DeleteLearner" />
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
-    else
-    {
-        <div class="alert alert-info">
-            No learners found for @SelectedSchool.ShortName with the current filters.
-        </div>
-    }
-}
-else
-{
-    <div class="alert alert-info">
-        Please select a school to view learners.
-    </div>
-}
+                        }
+                    </select>
+                </div>
+                <div class="col-12 col-md-4 mb-2">
+                    <!-- Name Search -->
+                    <label for="nameSearch" class="form-label">Search by Name</label>
+                    <input id="nameSearch" type="text" class="form-control" @oninput="OnSearchTermChanged"
+                        @bind="SearchTerm" placeholder="Type name..." />
+                </div>
+                <div class="col-12 col-md-4 mb-2 d-flex align-items-end">
+                    <button class="btn btn-primary mb-3" @onclick="AddLearner">Add Learner</button>
+                </div>
+            </div>
+
+            @if (FilteredLearners.Any())
+            {
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Surname</th>
+                            <th>Name</th>
+                            <th>Grade</th>
+                            <th>Subjects Count</th>
+                            <th>Subjects Selected</th>
+                            <th>Parents</th>
+                            <th>Care Group</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var learner in FilteredLearners)
+                        {
+                            <tr>
+                                <td>@learner.Code</td>
+                                <td>@learner.Surname</td>
+                                <td>@learner.Name</td>
+                                <td>@(learner.RegisterClass?.SchoolGrade?.SystemGrade.Name ?? "Unassigned")</td>
+                                <td>@learner.LearnerSubjects.Count()</td>
+                                <td>
+
+                                    @foreach (var subject in learner.LearnerSubjects)
+                                    {
+                                        switch (subject.Subject.SubjectType)
+                                        {
+                                            case SubjectType.Compulsory:
+                                                <span class="badge bg-primary mx-1">@subject.Subject.Code</span>
+                                                break;
+                                            case SubjectType.MathCombination:
+                                                <span class="badge bg-success mx-1">@subject.Subject.Code</span>
+                                                break;
+                                            case SubjectType.Combination:
+
+                                                <span class="badge bg-danger mx-1">@subject.Subject.Code</span>
+                                                break;
+                                            default:
+                                                <span class="badge bg-light mx-1s">@subject.Subject.Code</span>
+                                                break;
+                                        }
+                                    }
+                                </td>
+                                <td>@learner.Parents.Count()</td>
+                                <td>@learner.CareGroup.Name</td>
+                                <ActionButtons TEntity="Learner" Entity="learner" OnView="ViewLearner" OnEdit="EditLearner"
+                                    OnDelete="DeleteLearner" />
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    No learners found for @SelectedSchool.ShortName with the current filters.
+                </div>
+            }
+        }
+        else
+        {
+            <div class="alert alert-info">
+                Please select a school to view learners.
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     private List<Learner> Learners = new();

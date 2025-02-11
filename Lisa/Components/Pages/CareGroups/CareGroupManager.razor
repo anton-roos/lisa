@@ -9,7 +9,7 @@
 @inject UserService UserService
 
 <PageTitle>@(IsEdit ? "Edit Care Group" : "Add Care Group")</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>@(IsEdit ? "Edit Care Group" : $"Add Care Group for {SelectedSchool?.ShortName}")</h3>
 

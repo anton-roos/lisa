@@ -330,6 +330,10 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
                   .WithMany()
                   .HasForeignKey(rs => rs.CapturedById)
                   .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(rs => rs.Teacher)
+                  .WithMany()
+                  .HasForeignKey(rs => rs.TeacherId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<EmailCampaign>(entity =>

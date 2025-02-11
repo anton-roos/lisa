@@ -47,16 +47,28 @@
             <!-- Grade View -->
             @if (ViewMode == "Grade")
             {
+                <div class="mb-3">
+                    <label><strong>Select Grade:</strong></label>
+                    <InputSelect class="form-select" TValue="Guid ?" Value="@GradeId" ValueChanged="OnGradeChange"
+                        ValueExpression="() => GradeId">
+                        <option value="">-- Select Grade --</option>
+                        @foreach (var grade in SchoolGrades)
+                        {
+                            <option value="@grade.Id">@grade.SystemGrade.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+
                 <div class="d-flex">
                     @foreach (var set in ResultsSet)
                     {
                         <div class="mt-3">
-                            <button type="button" class="badge bg-success" @onclick="() => EditResult(set.Id)">
+                            <div type="button" class="badge @GetResultSetStatusColor(set)" @onclick="() => EditResult(set.Id)">
                                 @if (set.AssessmentDate.HasValue)
                                 {
                                     @set.AssessmentDate.Value.ToString("MMM-dd")
                                 }
-                            </button>
+                            </div>
                         </div>
                     }
                 </div>
@@ -97,12 +109,12 @@
                     @foreach (var set in ResultsSet)
                     {
                         <div class="mt-3">
-                            <button type="button" class="badge bg-success" @onclick="() => EditResult(set.Id)">
+                            <div class="badge @GetResultSetStatusColor(set)" @onclick="() => EditResult(set.Id)">
                                 @if (set.AssessmentDate.HasValue)
                                 {
                                     @set.AssessmentDate.Value.ToString("MMM-dd")
                                 }
-                            </button>
+                            </div>
                         </div>
                     }
                 </div>
@@ -127,12 +139,12 @@
                     @foreach (var set in ResultsSet)
                     {
                         <div class="mt-3">
-                            <button type="button" class="badge bg-success" @onclick="() => EditResult(set.Id)">
+                            <div type="button" class="badge @GetResultSetStatusColor(set)" @onclick="() => EditResult(set.Id)">
                                 @if (set.AssessmentDate.HasValue)
                                 {
                                     @set.AssessmentDate.Value.ToString("MMM-dd")
                                 }
-                            </button>
+                            </div>
                         </div>
                     }
                 </div>
@@ -142,21 +154,15 @@
 </AuthorizeView>
 
 @code {
-    // Current view mode
     private string ViewMode { get; set; } = "Grade";
-    // Holds the filtered result sets.
     private List<ResultSet> ResultsSet = new();
-    // Filters & related data.
     private List<SchoolGrade> SchoolGrades = new();
     private List<Subject> Subjects = new();
     private List<User> Teachers = new();
     private List<int> AvailableGradesForSubject = new();
-    // For multiple grade selections (in Subject view).
     private HashSet<int> SelectedGrades = new();
-    private bool Loading = true;
+    private bool Loading = false;
     private School? SelectedSchool;
-    // Note: Use a consistent data type for grade filtering. If SchoolGrade.Id is an int,
-    // then GradeId here might also be an int? (or Guid? if that’s what your model uses).
     private Guid? GradeId, TeacherId;
     private int? SubjectId;
 
@@ -165,7 +171,6 @@
         SubscribeToEvent(UiEvents.SchoolSelected);
         SelectedSchool = SchoolService.GetSelectedSchool();
         await LoadFilters();
-        await LoadResults();
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
@@ -177,7 +182,6 @@
                 {
                     SelectedSchool = school;
                     await LoadFilters();
-                    await LoadResults();
                 }
                 break;
         }
@@ -194,7 +198,6 @@
         SelectedGrades.Clear();
         ResultsSet.Clear();
         StateHasChanged();
-        _ = LoadResults();
     }
 
     /// <summary>
@@ -278,6 +281,12 @@
         await LoadResults();
     }
 
+    private async Task OnGradeChange(Guid? value)
+    {
+        GradeId = value;
+        await LoadResults();
+    }
+
     /// <summary>
     /// Handles teacher selection changes.
     /// </summary>
@@ -307,11 +316,19 @@
         _ => $"Gr {grade}"
     };
 
-    // Optionally, if your base class (EventAwareComponentBase) requires an override for school selection changes:
-    @* protected override async Task OnSchoolSelectedAsync()
+    private static string GetResultSetStatusColor(ResultSet set)
     {
-        SelectedSchool = SchoolService.GetSelectedSchool();
-        await LoadFilters();
-        await LoadResults();
-    } *@
+        if (set.Status == ResultSetStatus.Draft)
+        {
+            return "bg-danger";
+        }
+        else if (set.Status == ResultSetStatus.Submitted)
+        {
+            return "bg-success";
+        }
+        else
+        {
+            return "bg-secondary";
+        }
+    }
 }

@@ -35,15 +35,20 @@ public class ResultService
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 CapturedById = capturedById,
-                Results = viewModel.LearnerResults.Select(entry => new Result
+                Results = [.. viewModel.LearnerResults.Select(entry => new Result
                 {
                     Id = Guid.NewGuid(),
                     LearnerId = entry.LearnerId,
                     Score = entry.ResultViewModel.Score,
                     Absent = entry.ResultViewModel.Absent,
                     AbsentReason = entry.ResultViewModel.AbsentReason
-                }).ToList()
+                })]
             };
+
+            if (viewModel.Teacher is not null)
+            {
+                resultSet.TeacherId = viewModel.Teacher.Id;
+            }
 
             await context.ResultSets.AddAsync(resultSet);
             await context.SaveChangesAsync();
@@ -143,6 +148,7 @@ public class ResultService
             using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.ResultSets
                 .AsNoTracking()
+                .Include(rs => rs.Teacher)
                 .Include(rs => rs.Results)
                     .ThenInclude(r => r.Learner)
                         .ThenInclude(l => l.RegisterClass)
@@ -208,7 +214,7 @@ public class ResultService
             // via a property such as CapturedById.
             if (teacherId.HasValue)
             {
-                query = query.Where(rs => rs.CapturedById == teacherId.Value);
+                query = query.Where(rs => rs.TeacherId == teacherId.Value);
             }
 
             return await query.ToListAsync();

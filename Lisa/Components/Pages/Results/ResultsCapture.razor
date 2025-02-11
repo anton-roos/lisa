@@ -274,6 +274,7 @@
         ViewModel.AssessmentTopic = resultSet.AssessmentTopic;
         ViewModel.SubjectId = resultSet.SubjectId.ToString();
         ViewModel.GradeId = resultSet.Results.FirstOrDefault()?.Learner?.RegisterClass?.SchoolGrade?.Id.ToString();
+        ViewModel.Teacher = resultSet.Teacher;
 
         ViewModel.LearnerResults = resultSet.Results.Select(r => new LearnerResultViewModel
         {

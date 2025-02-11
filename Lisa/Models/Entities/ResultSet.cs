@@ -10,7 +10,16 @@ public class ResultSet
     public DateTime UpdatedAt { get; set; }
     public Guid CapturedById { get; set; }
     public User? CapturedByUser { get; set; }
+    public Guid? TeacherId { get; set; }
+    public User? Teacher { get; set; }
     public ICollection<Result>? Results { get; set; }
     public int SubjectId { get; set; }
     public Subject? Subject { get; set; }
+    public ResultSetStatus Status { get; set; }
+}
+
+public enum ResultSetStatus
+{
+    Draft,
+    Submitted
 }

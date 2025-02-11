@@ -7,7 +7,7 @@
 @inject ILogger<Grades> Logger
 @inherits EventAwareComponentBase
 
-<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>Manage Grades for @SelectedSchool?.ShortName</h3>
         @if (SelectedSchool == null)

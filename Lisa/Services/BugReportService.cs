@@ -27,7 +27,7 @@ public class BugReportService(
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.BugReports
-            .AsNoTracking() // Optimization for read-only queries
+            .AsNoTracking()
             .ToListAsync();
     }
 
@@ -58,7 +58,7 @@ public class BugReportService(
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Failed to send bug report email: {ex.Message}");
+            _logger.LogError("Failed to send bug report email: {exceptionMessage}", ex.Message);
         }
     }
 
@@ -71,7 +71,7 @@ public class BugReportService(
         var bugReport = await context.BugReports.FindAsync(id);
         if (bugReport == null)
         {
-            _logger.LogWarning($"Bug report with ID {id} not found.");
+            _logger.LogWarning("Bug report with ID {id} not found.", id);
             return;
         }
 
@@ -96,23 +96,6 @@ public class BugReportService(
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.BugReports.CountAsync();
-    }
-
-    /// <summary>
-    /// Delete a bug report by ID.
-    /// </summary>
-    public async Task DeleteBugAsync(Guid id)
-    {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
-        var bugReport = await context.BugReports.FindAsync(id);
-        if (bugReport == null)
-        {
-            _logger.LogWarning($"Bug report with ID {id} not found.");
-            return;
-        }
-
-        context.BugReports.Remove(bugReport);
-        await context.SaveChangesAsync();
     }
 
     /// <summary>

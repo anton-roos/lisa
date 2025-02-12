@@ -38,9 +38,9 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             .ThenInclude(rc => rc!.SchoolGrade)
             .ThenInclude(sg => sg!.SystemGrade)
             .Include(l => l.Combination)
-            .ThenInclude(c => c!.Subjects)
-            .Include(l => l.LearnerSubjects!)
-            .ThenInclude(ls => ls.Subject!)
+            .ThenInclude(c => c!.Subjects ?? new List<Subject>())
+            .Include(l => l.LearnerSubjects!.Cast<LearnerSubject>())
+            .ThenInclude(ls => ls.Subject)
             .Include(l => l.CareGroup)
             .Include(l => l.Parents!)
             .Include(l => l.School)
@@ -77,11 +77,9 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
 
             var newLearnerId = Guid.NewGuid();
 
-            // Build the collection of LearnerSubjects, including CombinationId
             var learnerSubjects = new List<LearnerSubject>();
             foreach (var sid in model.SubjectIds)
             {
-                // Determine if this subjectId was chosen as part of a combination
                 var combId = FindCombinationId(model.CombinationSelections, sid);
 
                 learnerSubjects.Add(new LearnerSubject
@@ -246,77 +244,15 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         }
     }
 
-    private static Guid GetEntityId(object entity)
-    {
-        return entity switch
-        {
-            Learner learner => learner.Id,
-            Parent parent => parent.Id,
-            LearnerSubject ls => ls.LearnerId,
-            _ => Guid.Empty
-        };
-    }
-
-    public async Task UpdateLearnerSubjectsAsync(Guid learnerId, List<int> subjectIds, LisaDbContext context)
-    {
-        var existingLinks = context.LearnerSubjects
-            .Where(ls => ls.LearnerId == learnerId);
-        context.LearnerSubjects.RemoveRange(existingLinks);
-
-        foreach (var subjectId in subjectIds)
-        {
-            var link = new LearnerSubject
-            {
-                LearnerId = learnerId,
-                SubjectId = subjectId
-            };
-            context.LearnerSubjects.Add(link);
-        }
-
-        await context.SaveChangesAsync();
-    }
-
-    public async Task<Learner?> GetLearnerWithParentsAsync(Guid id)
-    {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.Learners
-            .Include(l => l.Parents)
-            .FirstOrDefaultAsync(l => l.Id == id);
-    }
-
-    public async Task AddParentToLearnerAsync(ParentViewModel parent, Learner learner)
-    {
-        var newParent = new Parent
-        {
-            Surname = parent.Surname,
-            Name = parent.Name,
-            PrimaryEmail = parent.PrimaryEmail,
-            SecondaryEmail = parent.SecondaryEmail,
-            PrimaryCellNumber = parent.PrimaryCellNumber,
-            SecondaryCellNumber = parent.SecondaryCellNumber,
-            WhatsAppNumber = parent.WhatsAppNumber,
-            Relationship = parent.Relationship,
-            LearnerId = learner.Id
-        };
-
-        using var context = await _dbContextFactory.CreateDbContextAsync();
-        context.Parents.Add(newParent);
-        await context.SaveChangesAsync();
-
-        learner.Parents ??= [];
-        learner.Parents.Add(newParent);
-        await context.SaveChangesAsync();
-    }
-
     public async Task<List<Learner>> GetLearnersBySchoolAsync(Guid schoolId)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners
             .Include(l => l.RegisterClass!)
             .ThenInclude(rc => rc.SchoolGrade!)
-            .ThenInclude(sg => sg.SystemGrade)
+            .ThenInclude(sg => sg!.SystemGrade)
             .Include(l => l.LearnerSubjects!)
-            .ThenInclude(ls => ls.Subject!)
+            .ThenInclude(ls => ls.Subject)
             .Include(l => l.CareGroup!)
             .Include(l => l.Parents!)
             .Where(l => l.SchoolId == schoolId)
@@ -339,9 +275,9 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         var learners = await context.Learners
             .Where(l => l.RegisterClass != null && l.RegisterClass.SchoolGradeId == gradeId)
             .Include(l => l.RegisterClass!)
-            .ThenInclude(r => r.SchoolGrade)
-            .ThenInclude(sg => sg.SystemGrade)
-            .Include(l => l.LearnerSubjects)
+            .ThenInclude(r => r.SchoolGrade!)
+            .ThenInclude(sg => sg!.SystemGrade)
+            .Include(l => l.LearnerSubjects!)
             .ThenInclude(ls => ls.Subject!)
             .ToListAsync();
         return learners;
@@ -358,51 +294,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             .ThenInclude(rc => rc.CompulsorySubjects!)
             .Include(l => l.Combination!)
             .ThenInclude(c => c.Subjects!)
-            .ToListAsync();
-    }
-
-    public async Task<List<int>> GetSubjectIdsForLearnerAsync(Guid learnerId)
-    {
-        using var context = _dbContextFactory.CreateDbContext();
-        return await context.LearnerSubjects
-            .Where(ls => ls.LearnerId == learnerId)
-            .Select(ls => ls.SubjectId)
-            .ToListAsync();
-    }
-
-    public async Task AssignSubjectToLearner(Guid learnerId, int subjectId)
-    {
-        using var context = _dbContextFactory.CreateDbContext();
-
-        var link = new LearnerSubject
-        {
-            LearnerId = learnerId,
-            SubjectId = subjectId
-        };
-        context.LearnerSubjects.Add(link);
-        await context.SaveChangesAsync();
-    }
-
-    public async Task RemoveSubjectFromLearner(Guid learnerId, int subjectId)
-    {
-        using var context = _dbContextFactory.CreateDbContext();
-
-        var link = await context.LearnerSubjects
-            .FirstOrDefaultAsync(ls => ls.LearnerId == learnerId && ls.SubjectId == subjectId);
-
-        if (link != null)
-        {
-            context.LearnerSubjects.Remove(link);
-            await context.SaveChangesAsync();
-        }
-    }
-
-    public async Task<List<Subject>> GetSubjectsForLearner(Guid learnerId)
-    {
-        using var context = _dbContextFactory.CreateDbContext();
-        return await context.LearnerSubjects
-            .Where(ls => ls.LearnerId == learnerId)
-            .Select(ls => ls.Subject)
             .ToListAsync();
     }
 
@@ -436,21 +327,14 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         }
     }
 
-    private Guid? FindCombinationId(Dictionary<Guid, int> combinationSelections, int subjectId)
+    private static Guid? FindCombinationId(Dictionary<Guid, int> combinationSelections, int subjectId)
     {
-        // combinationSelections is a dictionary: 
-        // Key   = CombinationId
-        // Value = SubjectId chosen for that combination.
-
-        // We look for the entry where the chosen subjectId matches
         var match = combinationSelections
             .FirstOrDefault(kvp => kvp.Value == subjectId);
 
-        // If no match was found, Key would be Guid.Empty
         if (match.Key == Guid.Empty)
             return null;
 
         return match.Key;
     }
-
 }

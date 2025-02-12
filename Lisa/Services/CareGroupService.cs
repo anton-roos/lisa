@@ -8,36 +8,24 @@ public class CareGroupService(IDbContextFactory<LisaDbContext> dbContextFactory)
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
 
-
     public async Task AddUserToCareGroupAsync(Guid careGroupId, Guid userId)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
 
         var careGroup = await context.CareGroups
             .Include(cg => cg.Users)
-            .FirstOrDefaultAsync(cg => cg.Id == careGroupId);
-
-        if (careGroup == null)
-        {
-            throw new ArgumentException("Care group not found.");
-        }
-
-        var user = await context.Users.FindAsync(userId);
-        if (user == null)
-        {
-            throw new ArgumentException("User not found.");
-        }
-
-        // Check if the user is already assigned to the care group
-        if (careGroup.Users.Any(u => u.Id == user.Id))
+            .FirstOrDefaultAsync(cg => cg.Id == careGroupId) 
+                ?? throw new ArgumentException("Care group not found.");
+        
+        var user = await context.Users.FindAsync(userId) 
+            ?? throw new ArgumentException("User not found.");
+        
+        if (careGroup.Users != null && careGroup.Users.Any(u => u.Id == user.Id))
         {
             throw new InvalidOperationException("User is already in this care group.");
         }
 
-        if (careGroup.Users == null)
-        {
-            careGroup.Users = new List<User>();
-        }
+        careGroup.Users ??= [];
 
         if (!careGroup.Users.Any(u => u.Id == user.Id))
         {
@@ -55,10 +43,10 @@ public class CareGroupService(IDbContextFactory<LisaDbContext> dbContextFactory)
             .FirstOrDefaultAsync(cg => cg.Id == careGroupId);
         if (careGroup != null)
         {
-            var user = careGroup.Users.FirstOrDefault(u => u.Id == userId);
+            var user = careGroup.Users?.FirstOrDefault(u => u.Id == userId);
             if (user != null)
             {
-                careGroup.Users.Remove(user);
+                careGroup.Users?.Remove(user);
                 await context.SaveChangesAsync();
             }
         }
@@ -114,18 +102,14 @@ public class CareGroupService(IDbContextFactory<LisaDbContext> dbContextFactory)
     /// <summary>
     /// Update an existing CareGroup
     /// </summary>
-public async Task<CareGroup> UpdateAsync(CareGroup careGroup)
+    public async Task<CareGroup> UpdateAsync(CareGroup careGroup)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
 
         var trackedCareGroup = await context.CareGroups
             .Include(c => c.Users)
-            .FirstOrDefaultAsync(c => c.Id == careGroup.Id);
-
-        if (trackedCareGroup == null)
-        {
-            throw new ArgumentException("Care group not found.");
-        }
+            .FirstOrDefaultAsync(c => c.Id == careGroup.Id)
+        ?? throw new ArgumentException("Care group not found.");
 
         trackedCareGroup.Name = careGroup.Name;
 

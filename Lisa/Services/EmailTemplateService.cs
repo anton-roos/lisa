@@ -9,13 +9,6 @@ public class EmailTemplateService(IDbContextFactory<LisaDbContext> contextFactor
     private readonly IDbContextFactory<LisaDbContext> _contextFactory = contextFactory;
     private readonly ILogger<EmailTemplateService> _logger = logger;
 
-
-    public async Task<EmailTemplate?> GetByIdAsync(Guid id)
-    {
-        using var context = await _contextFactory.CreateDbContextAsync();
-        return await context.EmailTemplates.FindAsync(id);
-    }
-
     /// <summary>
     /// Retrieves all email templates ordered by the most recent update.
     /// </summary>
@@ -102,17 +95,6 @@ public class EmailTemplateService(IDbContextFactory<LisaDbContext> contextFactor
             _logger.LogError("Error saving template '{name}': {ex.Message}", name, ex.Message);
             return false;
         }
-    }
-
-    /// <summary>
-    /// Retrieves an email template by its name.
-    /// </summary>
-    public async Task<EmailTemplate?> GetTemplateAsync(string name)
-    {
-        using var context = await _contextFactory.CreateDbContextAsync();
-        return await context.EmailTemplates
-            .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Name == name);
     }
 
     /// <summary>

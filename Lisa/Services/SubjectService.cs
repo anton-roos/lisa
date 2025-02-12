@@ -72,9 +72,9 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
             var grade = await context.SchoolGrades.FindAsync(gradeId);
-            
+
             return await context.Subjects
-                .Where(s => s.GradesApplicable.Any(g => g == grade.SystemGrade.SequenceNumber))
+                .Where(s => grade != null && s.GradesApplicable != null && s.GradesApplicable.Any(g => g == grade.SystemGrade.SequenceNumber))
                 .OrderBy(s => s.Order)
                 .AsNoTracking()
                 .ToListAsync();
@@ -154,27 +154,6 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         {
             _logger.LogError(ex, "Error updating subject with ID: {SubjectId}", subject.Id);
             return false;
-        }
-    }
-
-    /// <summary>
-    /// Retrieves subjects by a list of IDs.
-    /// </summary>
-    public async Task<List<Subject>> GetSubjectsByIdsAsync(IEnumerable<int> ids)
-    {
-        try
-        {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
-            return await context.Subjects
-                .OrderBy(s => s.Order)
-                .AsNoTracking()
-                .Where(s => ids.Contains(s.Id))
-                .ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching subjects by IDs.");
-            return [];
         }
     }
 

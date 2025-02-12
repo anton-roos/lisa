@@ -18,15 +18,4 @@ public class SystemGradeService(IDbContextFactory<LisaDbContext> dbContextFactor
             .OrderBy(s => s.SequenceNumber)
             .ToListAsync();
     }
-
-    /// <summary>
-    /// Retrieves a system grade by sequence number.
-    /// </summary>
-    public async Task<SystemGrade?> GetBySequenceNumberAsync(int id)
-    {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.SystemGrades
-            .AsNoTracking()
-            .FirstOrDefaultAsync(grade => grade.SequenceNumber == id);
-    }
 }

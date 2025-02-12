@@ -10,17 +10,6 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
 
     /// <summary>
-    /// Create a new Combination.
-    /// </summary>
-    public async Task<Combination> CreateAsync(Combination subjectCombination)
-    {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
-        await context.Combinations.AddAsync(subjectCombination);
-        await context.SaveChangesAsync();
-        return subjectCombination;
-    }
-
-    /// <summary>
     /// Retrieve a Combination by ID.
     /// </summary>
     public async Task<Combination?> GetByIdAsync(Guid id)
@@ -32,20 +21,8 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
             .Include(sc => sc.SchoolGrade)
             .ThenInclude(g => g!.School)
             .Include(sc => sc.SchoolGrade)
-            .ThenInclude(sg => sg.SystemGrade)
+            .ThenInclude(sg => sg!.SystemGrade)
             .FirstOrDefaultAsync(sc => sc.Id == id);
-    }
-
-    /// <summary>
-    /// Retrieve all Combinations.
-    /// </summary>
-    public async Task<IEnumerable<Combination>> GetAllAsync()
-    {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.Combinations
-            .AsNoTracking()
-            .Include(sc => sc.Subjects)
-            .ToListAsync();
     }
 
     /// <summary>
@@ -87,9 +64,10 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
         var subjectCombination = await context.Combinations.FindAsync(id);
+
         if (subjectCombination == null)
         {
-            return; // No need to save changes if nothing was found.
+            return;
         }
 
         context.Combinations.Remove(subjectCombination);
@@ -108,13 +86,15 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
             Name = model.Name,
             SchoolGradeId = model.GradeId,
             CombinationType = model.CombinationType,
-            Subjects = new List<Subject>()
+            Subjects = []
         };
 
         foreach (var subject in selectedSubjects)
         {
-            var trackedSubject = await context.Subjects.FindAsync(subject.Id)
-                                 ?? context.Subjects.Attach(subject).Entity;
+            var trackedSubject = await context.Subjects
+                .FindAsync(subject.Id)
+            ?? context.Subjects
+                .Attach(subject).Entity;
 
             newCombination.Subjects.Add(trackedSubject);
         }
@@ -131,9 +111,9 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
         using var context = await _dbContextFactory.CreateDbContextAsync();
 
         var existingCombination = await context.Combinations
-                                      .Include(c => c.Subjects)
-                                      .FirstOrDefaultAsync(c => c.Id == model.Id)
-                                  ?? throw new KeyNotFoundException($"Combination with ID {model.Id} not found.");
+            .Include(c => c.Subjects)
+            .FirstOrDefaultAsync(c => c.Id == model.Id)
+        ?? throw new KeyNotFoundException($"Combination with ID {model.Id} not found.");
 
         existingCombination.Name = model.Name;
         existingCombination.SchoolGradeId = model.GradeId;

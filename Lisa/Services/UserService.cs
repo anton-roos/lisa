@@ -127,7 +127,11 @@ public class UserService(
 
             var user = await context.Users
                 .Include(u => u.Subjects) // Ensure subjects are loaded
-                .FirstOrDefaultAsync(u => u.Subjects.Any(ts => ts.Grade == grade.SystemGrade.SequenceNumber && ts.SubjectId == subjectId));
+                .FirstOrDefaultAsync(u => u.Subjects != null
+                    && grade != null
+                    && u.Subjects
+                .Any(ts => ts.Grade == grade.SystemGrade.SequenceNumber
+                    && ts.SubjectId == subjectId));
 
             return user;
         }
@@ -135,61 +139,6 @@ public class UserService(
         {
             _logger.LogError(ex, "Error fetching teacher for grade: {GradeId} and subject: {SubjectId}", gradeId, subjectId);
             return null;
-        }
-    }
-
-
-    /// <summary>
-    /// Creates a new teacher.
-    /// </summary>
-    public async Task<bool> CreateAsync(UserViewModel user)
-    {
-        try
-        {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
-
-            if (await context.Users.AnyAsync(t => t.Email == user.Email))
-            {
-                _logger.LogError("Duplicate email detected: {Email}", user.Email);
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(user.Password))
-            {
-                _logger.LogError("Password is required for new teacher: {Email}", user.Email);
-                return false;
-            }
-
-            var existingCareGroups = await context.CareGroups
-                .Where(cg => user.SelectedCareGroupIds.Contains(cg.Id))
-                .ToListAsync();
-
-            var teacherEntity = new User
-            {
-                Surname = user.Surname,
-                Abbreviation = user.Abbreviation,
-                Name = user.Name,
-                Email = user.Email,
-                PhoneNumber = user.PhoneNumber,
-                SchoolId = user.SchoolId,
-                CareGroups = existingCareGroups,
-                UserName = user.Email,
-            };
-
-            teacherEntity.PasswordHash = _passwordHasher.HashPassword(teacherEntity, user.Password);
-
-            context.Users.Add(teacherEntity);
-            await context.SaveChangesAsync();
-
-            await _uiEventService.PublishAsync(UiEvents.UsersUpdated);
-            _logger.LogInformation("Created new teacher: {TeacherId}", teacherEntity.Id);
-
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error creating teacher.");
-            return false;
         }
     }
 
@@ -244,7 +193,7 @@ public class UserService(
             existing.PhoneNumber = user.PhoneNumber;
             existing.SchoolId = user.SchoolId;
 
-            existing.CareGroups.Clear();
+            existing.CareGroups?.Clear();
             if (user.SelectedCareGroupIds != null && user.SelectedCareGroupIds.Any())
             {
                 var newCareGroups = await context.CareGroups
@@ -252,33 +201,42 @@ public class UserService(
                     .ToListAsync();
                 foreach (var careGroup in newCareGroups)
                 {
-                    existing.CareGroups.Add(careGroup);
+                    existing.CareGroups?.Add(careGroup);
                 }
             }
 
-            existing.Subjects.Clear();
+            existing.Subjects?.Clear();
             if (user.Subjects != null && user.Subjects.Any())
             {
                 foreach (var teacherSubject in user.Subjects)
                 {
-                    existing.Subjects.Add(teacherSubject);
+                    existing?.Subjects?.Add(teacherSubject);
                 }
             }
 
             if (!string.IsNullOrWhiteSpace(newPassword))
             {
-                existing.PasswordHash = _passwordHasher.HashPassword(existing, newPassword);
+                if (existing is not null)
+                {
+                    existing.PasswordHash = _passwordHasher.HashPassword(existing, newPassword);
+                }
                 _logger.LogInformation("Updated password for teacher: {TeacherId}", user.Id);
             }
 
             await context.SaveChangesAsync();
+
+            if (existing is null)
+            {
+                _logger.LogWarning("Attempted to update roles for non-existent user. UserId: {UserId}", user.Id);
+                return false;
+            }
 
             var currentRoles = await _userManager.GetRolesAsync(existing);
 
             var rolesToAdd = user.SelectedRoles.Except(currentRoles).ToArray();
             var rolesToRemove = currentRoles.Except(user.SelectedRoles).ToArray();
 
-            if (rolesToRemove.Any())
+            if (rolesToRemove.Length != 0)
             {
                 var removeResult = await _userManager.RemoveFromRolesAsync(existing, rolesToRemove);
                 if (!removeResult.Succeeded)
@@ -289,7 +247,7 @@ public class UserService(
                 }
             }
 
-            if (rolesToAdd.Any())
+            if (rolesToAdd.Length != 0)
             {
                 var addResult = await _userManager.AddToRolesAsync(existing, rolesToAdd);
                 if (!addResult.Succeeded)

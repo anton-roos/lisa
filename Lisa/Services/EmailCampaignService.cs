@@ -31,33 +31,6 @@ public class EmailCampaignService
     }
 
     /// <summary>
-    /// Schedules an email campaign using Hangfire.
-    /// </summary>
-    public async Task ScheduleCampaignAsync(Guid campaignId)
-    {
-        var campaign = await GetByIdAsync(campaignId);
-        if (campaign == null || campaign.Status == EmailCampaignStatus.Sent)
-        {
-            _logger.LogWarning("Campaign {campaignId} not found or already sent.", campaignId);
-            return;
-        }
-
-        _logger.LogInformation("Scheduling email campaign {campaignId} using Hangfire.", campaignId);
-        BackgroundJob.Enqueue(() => StartCampaignAsync(campaignId));
-    }
-
-    /// <summary>
-    /// Get a list of all EmailCampaigns.
-    /// </summary>
-    public async Task<List<EmailCampaign>> GetAllAsync()
-    {
-        using var context = await _contextFactory.CreateDbContextAsync();
-        return await context.EmailCampaigns
-            .AsNoTracking()
-            .ToListAsync();
-    }
-
-    /// <summary>
     /// Starts the email campaign and processes emails asynchronously using Hangfire.
     /// </summary>
     [JobDisplayName("Email Campaign Processing")]
@@ -246,7 +219,7 @@ public class EmailCampaignService
     {
         if (campaign.Id == null || campaign.Id == Guid.Empty)
         {
-            campaign.Id = Guid.NewGuid(); // ensure there's a GUID
+            campaign.Id = Guid.NewGuid();
         }
 
         campaign.CreatedAt = DateTime.UtcNow;

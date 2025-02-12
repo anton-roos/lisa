@@ -5,10 +5,9 @@ using Lisa.Models.Entities;
 
 namespace Lisa.Services
 {
-    public class EmailService(SchoolService schoolService, LearnerService learnerService, ILogger<EmailService> logger)
+    public class EmailService(SchoolService schoolService, ILogger<EmailService> logger)
     {
         private readonly SchoolService _schoolService = schoolService;
-        private readonly LearnerService _learnerService = learnerService;
         private readonly ILogger<EmailService> _logger = logger;
         public async Task SendBugReportEmailAsync(BugReport bugReport)
         {
@@ -95,75 +94,6 @@ namespace Lisa.Services
             {
                 _logger.LogError("Failed to send email to {to}: {ex.Message}", to, ex.Message);
                 throw;
-            }
-        }
-
-        /// <summary>
-        /// Actually sends the email(s) for the learner’s parents.
-        /// The method is called by Hangfire (hence the parameter signature is serializable).
-        /// </summary>
-        [AutomaticRetry(Attempts = 5, OnAttemptsExceeded = AttemptsExceededAction.Fail)]
-        public async Task SendLearnerProgressFeedbackEmail(Guid schoolId, Guid learnerId, string subject, string body)
-        {
-            var school = await _schoolService.GetSchoolAsync(schoolId);
-            if (school == null)
-            {
-                _logger.LogError("School with ID {schoolId} not found.", schoolId);
-                throw new Exception($"School with ID {schoolId} not found.");
-            }
-
-            using var smtpClient = new SmtpClient(school.SmtpHost)
-            {
-                Port = school.SmtpPort,
-                Credentials = new NetworkCredential(school.SmtpEmail, school.SmtpPassword),
-                EnableSsl = true
-            };
-
-            var learner = await _learnerService.GetByIdAsync(learnerId);
-
-            if (learner == null)
-            {
-                _logger.LogError("Learner with ID {learnerId} not found.", learnerId);
-                throw new Exception($"Learner with ID {learnerId} not found.");
-            }
-
-            var parents = learner.Parents;
-
-            if (parents == null || parents.Count == 0)
-            {
-                _logger.LogWarning("No parents found for learner with ID {learnerId}.", learnerId);
-                return;
-            }
-
-            foreach (var parent in parents)
-            {
-                var emailsToSend = new List<string>();
-                if (!string.IsNullOrWhiteSpace(parent.PrimaryEmail))
-                    emailsToSend.Add(parent.PrimaryEmail);
-
-                if (!string.IsNullOrWhiteSpace(parent.SecondaryEmail))
-                    emailsToSend.Add(parent.SecondaryEmail);
-
-                if (emailsToSend.Count == 0)
-                    continue;
-
-                var mailMessage = new MailMessage
-                {
-                    From = new MailAddress(school.SmtpEmail!),
-                    Subject = subject,
-                    Body = body,
-                    IsBodyHtml = true
-                };
-
-                foreach (var email in emailsToSend)
-                {
-                    mailMessage.To.Add(email);
-                    // NOT Correct, needs to send individual emails to each parent
-                }
-
-                smtpClient.Send(mailMessage);
-
-                _logger.LogInformation("Email sent to parent(s) for learner {learnerId}.", learnerId);
             }
         }
     }

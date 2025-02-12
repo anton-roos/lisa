@@ -2,7 +2,6 @@ using Lisa.Data;
 using Lisa.Models.Entities;
 using Lisa.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using NuGet.Packaging;
 
 namespace Lisa.Services;
@@ -80,27 +79,7 @@ public class RegisterClassService(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching all RegisterClasses.");
-            return new List<RegisterClass>();
-        }
-    }
-
-    /// <summary>
-    /// Creates a new RegisterClass.
-    /// </summary>
-    public async Task<RegisterClass?> CreateAsync(RegisterClass registerClass)
-    {
-        try
-        {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
-            await context.RegisterClasses.AddAsync(registerClass);
-            await context.SaveChangesAsync();
-            _logger.LogInformation("Created new RegisterClass: {RegisterClassId}", registerClass.Id);
-            return registerClass;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error creating RegisterClass.");
-            return null;
+            return [];
         }
     }
 
@@ -167,46 +146,6 @@ public class RegisterClassService(
         }
     }
 
-    /// <summary>
-    /// Registers a new class combination.
-    /// </summary>
-    public async Task<Combination?> RegisterClassAsync(Combination combination)
-    {
-        try
-        {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
-            var existingCombination = await context.Combinations
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.SchoolGradeId == combination.SchoolGradeId && c.Name == combination.Name);
-
-            if (existingCombination != null)
-            {
-                _logger.LogInformation("Combination {CombinationName} already exists.", combination.Name);
-                return existingCombination;
-            }
-
-            var newCombination = new Combination
-            {
-                Id = Guid.NewGuid(),
-                Name = combination.Name,
-                SchoolGradeId = combination.SchoolGradeId,
-                SchoolGrade = combination.SchoolGrade,
-                Subjects = combination.Subjects
-            };
-
-            await context.Combinations.AddAsync(newCombination);
-            await context.SaveChangesAsync();
-            _logger.LogInformation("Created new Combination: {CombinationId}", newCombination.Id);
-
-            return newCombination;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error registering Combination {CombinationName}.", combination.Name);
-            return null;
-        }
-    }
-
     public async Task<bool> SaveRegisterClassAsync(RegisterClassViewModel model, Guid? registerClassId)
     {
         try
@@ -217,11 +156,10 @@ public class RegisterClassService(
                 .Where(s => model.SubjectIds.Contains(s.Id))
                 .ToListAsync();
 
-            RegisterClass registerClass;
+            RegisterClass? registerClass;
 
             if (registerClassId.HasValue)
             {
-                // EDIT Mode
                 registerClass = await context.RegisterClasses
                     .Include(rc => rc.CompulsorySubjects)
                     .FirstOrDefaultAsync(rc => rc.Id == registerClassId.Value);
@@ -236,12 +174,11 @@ public class RegisterClassService(
                 registerClass.SchoolGradeId = model.GradeId;
                 registerClass.UserId = model.TeacherId;
 
-                registerClass.CompulsorySubjects.Clear();
-                registerClass.CompulsorySubjects.AddRange(selectedSubjects);
+                registerClass?.CompulsorySubjects?.Clear();
+                registerClass?.CompulsorySubjects.AddRange(selectedSubjects);
             }
             else
             {
-                // ADD Mode
                 registerClass = new RegisterClass
                 {
                     Name = model.Name,
@@ -254,7 +191,10 @@ public class RegisterClassService(
             }
 
             await context.SaveChangesAsync();
-            _logger.LogInformation("Register Class {Action} successfully: {RegisterClassId}", registerClassId.HasValue ? "updated" : "created", registerClass.Id);
+            if (registerClass != null)
+            {
+                _logger.LogInformation("Register Class {Action} successfully: {RegisterClassId}", registerClassId.HasValue ? "updated" : "created", registerClass.Id);
+            }
             return true;
         }
         catch (Exception ex)

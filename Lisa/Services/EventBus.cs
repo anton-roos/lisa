@@ -35,11 +35,9 @@ public class EventBus(IServiceProvider serviceProvider) : IEventBus
             var eventLogRepository = scope.ServiceProvider.GetRequiredService<IEventLogRepository>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<EventBus>>();
 
-            // Log the event to the database
             await eventLogRepository.LogEventAsync(eventType, eventData);
             logger.LogInformation("Event published: {EventType}", eventType);
 
-            // Dispatch event to all subscribers
             if (_handlers.TryGetValue(typeof(TEvent), out var handlers))
             {
                 var tasks = handlers.Select(handler =>
@@ -71,7 +69,8 @@ public class EventBus(IServiceProvider serviceProvider) : IEventBus
     public void Subscribe<TEvent>(Func<TEvent, Task> handler) where TEvent : class
     {
         var eventType = typeof(TEvent);
-        _handlers.GetOrAdd(eventType, _ => new List<Func<object, Task>>())
-                 .Add(e => handler((TEvent)e));
+        _handlers
+            .GetOrAdd(eventType, _ => [])
+            .Add(e => handler((TEvent)e));
     }
 }

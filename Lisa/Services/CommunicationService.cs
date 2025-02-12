@@ -10,8 +10,6 @@ namespace Lisa.Services
         EmailCampaignService emailCampaignService,
         LearnerService learnerService,
         UserService userService,
-        SchoolGradeService SchoolGradeService,
-        SubjectService subjectService,
         ILogger<CommunicationService> logger,
         SchoolService schoolService,
         EmailTemplateService emailTemplateService
@@ -20,8 +18,6 @@ namespace Lisa.Services
         private readonly EmailCampaignService _emailCampaignService = emailCampaignService;
         private readonly LearnerService _learnerService = learnerService;
         private readonly UserService _userService = userService;
-        private readonly SchoolGradeService _gradeService = SchoolGradeService;
-        private readonly SubjectService _subjectService = subjectService;
         private readonly ILogger<CommunicationService> _logger = logger;
         private readonly SchoolService _schoolService = schoolService;
         private readonly EmailTemplateService _emailTemplateService = emailTemplateService;
@@ -57,8 +53,13 @@ namespace Lisa.Services
         /// <summary>
         /// Replaces placeholders in the email template with actual learner data.
         /// </summary>
-        private string GenerateEmailBody(EmailTemplate template, Learner learner, Parent parent, School school, string subject, string marksTable)
+        private static string GenerateEmailBody(EmailTemplate template, Learner learner, Parent parent, School school, string subject, string marksTable)
         {
+            if (template.Content == null)
+            {
+                throw new ArgumentNullException(nameof(template), "Email template content cannot be null.");
+            }
+
             return template.Content
                 .Replace("{Learner.Surname}", learner.Surname)
                 .Replace("{Learner.Name}", learner.Name)
@@ -81,23 +82,6 @@ namespace Lisa.Services
                 SchoolId = selectedSchool.Id,
                 Audience = Audience.Learners,
                 TemplateId = template.Id,
-                // Additional parameters as needed
-            };
-
-            return await SendCommunicationAsync(request);
-        }
-
-        /// <summary>
-        /// Sends communication to all learners in a selected school.
-        /// </summary>
-        public async Task<EmailCampaign?> SendToAllLearnersAsync(School selectedSchool, EmailTemplate template)
-        {
-            var request = new CommunicationRequest
-            {
-                SchoolId = selectedSchool.Id,
-                Audience = Audience.Learners,
-                TemplateId = template.Id,
-                // Additional parameters as needed
             };
 
             return await SendCommunicationAsync(request);
@@ -113,119 +97,6 @@ namespace Lisa.Services
                 SchoolId = selectedSchool.Id,
                 Audience = Audience.Staff,
                 TemplateId = template.Id,
-                // Additional parameters as needed
-            };
-
-            return await SendCommunicationAsync(request);
-        }
-
-        /// <summary>
-        /// Sends a progress feedback email for a learner.
-        /// </summary>
-        public async Task<EmailCampaign?> SendProgressFeedbackAsync(Guid schoolId, Guid templateId)
-        {
-            try
-            {
-                var learners = await _learnerService.GetLearnersBySchoolAsync(schoolId);
-                var parents = new List<Parent>();
-
-                var school = await _schoolService.GetSchoolAsync(schoolId);
-                if (school == null)
-                {
-                    _logger.LogError("School with ID {schoolId} not found.", schoolId);
-                    return null;
-                }
-
-                foreach (var learner in learners)
-                {
-                    foreach (var parent in learner.Parents)
-                    {
-                        parents.Add(parent);
-                    }
-                }
-
-                if (parents == null || parents.Count == 0)
-                {
-                    _logger.LogWarning("No parents found for learner with ID {learnerId}.");
-                    return null;
-                }
-
-                var emailTemplate = await _emailTemplateService.GetByIdAsync(templateId);
-                if (emailTemplate == null)
-                {
-                    _logger.LogError("Email template with ID {templateId} not found.", templateId);
-                    return null;
-                }
-
-                // Generate the marks table dynamically (this should come from actual results)
-                string marksTable = @"
-            <tr>
-                <td>27/11</td> <td>88%</td> 
-                <td>20/11</td> <td>79%</td>
-                <td>11/11</td> <td>80%</td>
-            </tr>
-            <tr>
-                <td>09/11</td> <td>70%</td>
-                <td>01/11</td> <td>70%</td>
-                <td>29/10</td> <td>70%</td>
-            </tr>";
-
-                foreach (var parent in parents)
-                {
-                    string emailBody = GenerateEmailBody(emailTemplate, new Learner(), parent, school, "Mathematics", marksTable);
-
-                    var emailCampaign = new EmailCampaign
-                    {
-                        Id = Guid.NewGuid(),
-                        Name = $"Progress Feedback for Piet Pompies",
-                        SubjectLine = emailTemplate.Subject,
-                        SenderName = "School Admin",
-                        SenderEmail = "admin@school.com",
-                        ContentHtml = emailBody,
-                        CreatedAt = DateTime.UtcNow,
-                        EmailRecipients = new List<EmailRecipient>
-                    {
-                        new EmailRecipient
-                        {
-                            Id = Guid.NewGuid(),
-                            EmailAddress = parent.PrimaryEmail,
-                            Status = EmailRecipientStatus.Pending,
-                            CreatedAt = DateTime.UtcNow
-                        }
-                    }
-                    };
-
-                    await _emailCampaignService.CreateAsync(emailCampaign);
-                    _logger.LogInformation("Progress feedback email campaign created for {learner.Name}.");
-                }
-
-                return null; // Return null if no campaign was created
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error while sending progress feedback email.");
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Sends communication to all parents in a selected school.
-        /// </summary>
-        public async Task<EmailCampaign?> SendToParentsAsync(School selectedSchool, EmailTemplate template)
-        {
-            var request = new CommunicationRequest
-            {
-                SchoolId = selectedSchool.Id,
-                Audience = Audience.Parents,
-                TemplateId = template.Id,
-                ContentHtml = template.Content,
-                ContentText = template.Content,
-                Description = template.Name,
-                SenderEmail = selectedSchool.SmtpEmail,
-                SenderName = selectedSchool.LongName,
-                GradeId = null,
-                SubjectId = 0,
-                SubjectLine = template.Subject
             };
 
             return await SendCommunicationAsync(request);
@@ -241,7 +112,6 @@ namespace Lisa.Services
                 SchoolId = selectedSchool.Id,
                 Audience = Audience.LearnersAndStaff,
                 TemplateId = template.Id,
-                // Additional parameters as needed
             };
 
             return await SendCommunicationAsync(request);
@@ -273,7 +143,6 @@ namespace Lisa.Services
                 SubjectId = subjectId,
                 Audience = Audience.Subject,
                 TemplateId = template.Id,
-                // Additional parameters as needed
             };
 
             return await SendCommunicationAsync(request);
@@ -316,7 +185,7 @@ namespace Lisa.Services
 
                 default:
                     _logger.LogWarning("Unknown audience type: {Audience}", request.Audience);
-                    return new List<string>();
+                    return [];
             }
         }
 
@@ -371,19 +240,19 @@ namespace Lisa.Services
             if (!schoolId.HasValue)
             {
                 _logger.LogWarning("School ID is null when retrieving parent emails.");
-                return new List<string>();
+                return [];
             }
 
             var learners = await _learnerService.GetLearnersBySchoolWithParentsAsync(schoolId.Value);
             var emails = learners
                 .Where(l => l.Parents != null && l.Parents.Any())
-                .SelectMany(l => l.Parents)
+                .SelectMany(l => l.Parents ?? Enumerable.Empty<Parent>())
                 .SelectMany(p => new[] { p.PrimaryEmail, p.SecondaryEmail })
                 .Where(email => !string.IsNullOrWhiteSpace(email))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            return emails;
+            return emails.Where(email => email != null).ToList()!;
         }
 
         /// <summary>
@@ -398,7 +267,7 @@ namespace Lisa.Services
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            return emails;
+            return emails.Where(email => email != null).ToList()!;
         }
 
         /// <summary>
@@ -413,7 +282,7 @@ namespace Lisa.Services
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            return emails;
+            return emails.Where(email => email != null).ToList()!;
         }
 
         /// <summary>

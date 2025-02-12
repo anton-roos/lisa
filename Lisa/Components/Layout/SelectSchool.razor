@@ -1,11 +1,9 @@
 @using Lisa.Models.Entities
-@using Lisa.Services
 @inject SchoolService SchoolService
 @inherits EventAwareComponentBase
-@inject IUiEventService UiEventService
-@inject ILogger<SelectSchool> _logger
+@inject ILogger<SelectSchool> Logger
 
-@if (IsLoading)
+@if (_isLoading)
 {
     <div class="select-school">
         <div class="select-school-text">
@@ -13,7 +11,7 @@
         </div>
         <div class="select-school-dropdown">
             <select class="form-select" id="SelectedSchoolId">
-                <option value="">-- Select School --</option>
+                <option value="@string.Empty">-- Select School --</option>
             </select>
         </div>
     </div>
@@ -25,10 +23,10 @@ else
             Select School
         </div>
         <div>
-            <InputSelect class="form-select" id="SelectedSchoolId" TValue="string" Value="@SelectedSchoolId"
-                ValueChanged="OnSchoolSelected" ValueExpression="@(() => SelectedSchoolId)">
-                <option value="">-- Select School --</option>
-                @foreach (var school in schools!)
+            <InputSelect class="form-select" id="SelectedSchoolId" TValue="string" Value="@_selectedSchoolId"
+                ValueChanged="OnSchoolSelected" ValueExpression="@(() => _selectedSchoolId ?? string.Empty)">
+                <option value="@string.Empty">-- Select School --</option>
+                @foreach (var school in _schools!)
                 {
                     <option value="@school.Id.ToString()">@school.ShortName</option>
                 }
@@ -38,9 +36,9 @@ else
 }
 
 @code {
-    private List<School>? schools;
-    private string? SelectedSchoolId;
-    private bool IsLoading = false;
+    private List<School>? _schools;
+    private string? _selectedSchoolId;
+    private bool _isLoading = false;
 
 
     protected override async Task OnInitializedAsync()
@@ -51,13 +49,13 @@ else
 
     private async Task LoadSchoolsAsync()
     {
-        IsLoading = true;
+        _isLoading = true;
         await InvokeAsync(StateHasChanged);
-        schools = await SchoolService.GetAllAsync();
-        schools = schools.OrderBy(s => s.Id).ToList();
+        _schools = await SchoolService.GetAllAsync();
+        _schools = _schools.OrderBy(s => s.Id).ToList();
         var selectedSchool = await SchoolService.GetSelectedSchoolAsync();
-        SelectedSchoolId = selectedSchool?.Id.ToString();
-        IsLoading = false;
+        _selectedSchoolId = selectedSchool?.Id.ToString();
+        _isLoading = false;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -75,20 +73,20 @@ else
 
     public async Task OnSchoolSelected(string selectedSchoolId)
     {
-        SelectedSchoolId = selectedSchoolId;
-        if (SelectedSchoolId == string.Empty)
+        _selectedSchoolId = selectedSchoolId;
+        if (_selectedSchoolId == string.Empty)
         {
             await SchoolService.SetCurrentSchoolAsync(null);
             return;
         }
-        if (SelectedSchoolId != null && SelectedSchoolId != string.Empty)
+        if (!string.IsNullOrEmpty(_selectedSchoolId))
         {
-            var SelectedSchool = await SchoolService.SetCurrentSchoolAsync(Guid.Parse(SelectedSchoolId));
-            await IUiEventService.PublishAsync(UiEvents.SchoolSelected, SelectedSchool);
+            var selectedSchool = await SchoolService.SetCurrentSchoolAsync(Guid.Parse(_selectedSchoolId));
+            await UiEventService.PublishAsync(UiEvents.SchoolSelected, selectedSchool);
         }
         else
         {
-            _logger.LogError("SelectedSchoolId is null");
+            Logger.LogError("SelectedSchoolId is null");
         }
     }
 }

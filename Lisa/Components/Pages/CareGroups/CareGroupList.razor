@@ -10,28 +10,28 @@
     <Authorized>
         <h3>Care Groups</h3>
 
-        @if (SelectedSchool == null)
+        @if (_selectedSchool == null)
         {
             <div class="alert alert-info">
                 Please select a school to view care groups.
             </div>
         }
-        else if (CareGroups == null)
+        else if (_careGroups == null)
         {
             <p>Loading...</p>
         }
-        else if (!CareGroups.Any())
+        else if (!_careGroups.Any())
         {
             <button class="btn btn-primary mb-3" @onclick="AddCareGroup">Add Care Group</button>
             <div class="alert alert-info">
-                No Care Groups for <strong>@SelectedSchool.ShortName</strong>.
+                No Care Groups for <strong>@_selectedSchool.ShortName</strong>.
             </div>
         }
         else
         {
             <button class="btn btn-primary mb-3" @onclick="AddCareGroup">Add Care Group</button>
             <div class="care-group-container">
-                @foreach (var careGroup in CareGroups)
+                @foreach (var careGroup in _careGroups)
                 {
                     <div class="card mb-3 p-3 card shadow-sm">
                         <h5 class="card-title">@careGroup.Name</h5>
@@ -49,28 +49,31 @@
                             }
                         </div>
                         <p class="mt-2">Learner Count: @careGroup.CareGroupMembers?.Count().ToString()</p>
-                        <ActionButtons TEntity="CareGroup" Entity="careGroup" OnView="ViewCareGroup" OnEdit="EditCareGroup"
-                            OnDelete="DeleteCareGroup" />
+                        <ActionButtons TEntity="CareGroup" 
+                                       Entity="careGroup"
+                                       OnView="ViewCareGroup"
+                                       OnEdit="EditCareGroup"
+                                       OnDelete="DeleteCareGroup"/>
                     </div>
                 }
             </div>
         }
     </Authorized>
     <NotAuthorized>
-        <Unauthorized />
+        <Unauthorized/>
     </NotAuthorized>
 </AuthorizeView>
 
 @code {
-    private IEnumerable<CareGroup>? CareGroupsToFilter;
-    private IEnumerable<CareGroup>? CareGroups;
-    private School? SelectedSchool;
+    private IEnumerable<CareGroup>? _careGroupsToFilter;
+    private IEnumerable<CareGroup>? _careGroups;
+    private School? _selectedSchool;
 
     protected override async Task OnInitializedAsync()
     {
-        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
-        CareGroupsToFilter = await CareGroupService.GetAllAsync();
-        CareGroups = CareGroupsToFilter.Where(c => c.SchoolId == SelectedSchool?.Id);
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        _careGroupsToFilter = await CareGroupService.GetAllAsync();
+        _careGroups = _careGroupsToFilter.Where(c => c.SchoolId == _selectedSchool?.Id);
         SubscribeToEvent(UiEvents.SchoolSelected);
     }
 
@@ -81,12 +84,13 @@
             case UiEvents.SchoolSelected:
                 if (payload is School school)
                 {
-                    SelectedSchool = school;
-                    if (CareGroupsToFilter != null)
+                    _selectedSchool = school;
+                    if (_careGroupsToFilter != null)
                     {
-                        CareGroups = CareGroupsToFilter.Where(c => c.SchoolId == SelectedSchool.Id);
+                        _careGroups = _careGroupsToFilter.Where(c => c.SchoolId == _selectedSchool.Id);
                     }
                 }
+
                 break;
         }
 
@@ -102,18 +106,21 @@
     {
         Navigation.NavigateTo($"/care-groups/manage/{careGroup.Id}");
     }
+
     private void ViewCareGroup(CareGroup careGroup)
     {
         Navigation.NavigateTo($"/care-groups/details/{careGroup.Id}");
     }
+
     private async Task DeleteCareGroup(CareGroup careGroup)
     {
-        var CareGroup = await CareGroupService.GetByIdAsync(careGroup.Id);
-        if (CareGroup != null)
+        var careGroupEntity = await CareGroupService.GetByIdAsync(careGroup.Id);
+        if (careGroupEntity != null)
         {
-            await CareGroupService.DeleteAsync(CareGroup);
-            CareGroupsToFilter = await CareGroupService.GetAllAsync();
-            CareGroups = CareGroupsToFilter.Where(c => c.SchoolId == SelectedSchool.Id);
+            await CareGroupService.DeleteAsync(careGroupEntity);
+            _careGroupsToFilter = await CareGroupService.GetAllAsync();
+            _careGroups = _careGroupsToFilter.Where(c => _selectedSchool != null 
+                                                         && c.SchoolId == _selectedSchool.Id);
             await InvokeAsync(StateHasChanged);
         }
     }

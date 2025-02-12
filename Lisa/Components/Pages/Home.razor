@@ -10,12 +10,12 @@
 
 <PageTitle>DCEG Portal</PageTitle>
 
-<AuthorizeView Context="authContext">
+<AuthorizeView Context="_">
     <Authorized>
         <!-- System Administrator View -->
         <AuthorizeView Roles="@($"{Roles.SystemAdministrator}")">
             <Authorized>
-                @if (Loading)
+                @if (_loading)
                 {
                     <div class="text-center">
                         <p>Loading...</p>
@@ -40,7 +40,7 @@
                                         <div class="card text-center">
                                             <div class="card-body bg-light">
                                                 <h4 class="card-title">Schools</h4>
-                                                <p class="card-text display-4">@SchoolCount</p>
+                                                <p class="card-text display-4">@_schoolCount</p>
                                             </div>
                                         </div>
                                     </div>
@@ -48,7 +48,7 @@
                                         <div class="card text-center">
                                             <div class="card-body bg-light">
                                                 <h4 class="card-title">Learners</h4>
-                                                <p class="card-text display-4">@LearnerCount</p>
+                                                <p class="card-text display-4">@_learnerCount</p>
                                             </div>
                                         </div>
                                     </div>
@@ -56,7 +56,7 @@
                                         <div class="card text-center">
                                             <div class="card-body bg-light">
                                                 <h4 class="card-title">Results Submitted</h4>
-                                                <p class="card-text display-4">@ResultCount</p>
+                                                <p class="card-text display-4">@_resultCount</p>
                                             </div>
                                         </div>
                                     </div>
@@ -68,7 +68,7 @@
                                         <div class="card text-center">
                                             <div class="card-body bg-light">
                                                 <h4 class="card-title">Bugs</h4>
-                                                <p class="card-text display-4">@BugCount</p>
+                                                <p class="card-text display-4">@_bugCount</p>
                                             </div>
                                         </div>
                                     </div>
@@ -83,18 +83,18 @@
         <AuthorizeView
             Roles="@($"{Roles.Teacher}, {Roles.Principal}, {Roles.SystemAdministrator}, {Roles.Administrator}")">
             <Authorized>
-                @if (Loading)
+                @if (_loading)
                 {
                     <div class="text-center">
                         <p>Loading...</p>
                     </div>
                 }
-                else if (SelectedSchool != null)
+                else if (_selectedSchool != null)
                 {
                     <div class="container mt-4">
                         <div class="text-center py-3">
                             <h3>Welcome to the Learner Information System</h3>
-                            <h3>@SelectedSchool.LongName</h3>
+                            <h3>@_selectedSchool.LongName</h3>
                         </div>
                         <div class="row mt-4">
                             <div class="col">
@@ -103,7 +103,7 @@
                                         <div class="card text-center">
                                             <div class="card-body bg-light">
                                                 <h4 class="card-title">Learners</h4>
-                                                <p class="card-text display-4">@SchoolLearnerCount</p>
+                                                <p class="card-text display-4">@_schoolLearnerCount</p>
                                             </div>
                                         </div>
                                     </div>
@@ -111,7 +111,7 @@
                                         <div class="card text-center">
                                             <div class="card-body bg-light">
                                                 <h4 class="card-title">Results Submitted</h4>
-                                                <p class="card-text display-4">@SchoolResultCount</p>
+                                                <p class="card-text display-4">@_schoolResultCount</p>
                                             </div>
                                         </div>
                                     </div>
@@ -136,43 +136,41 @@
 </AuthorizeView>
 
 @code {
-    bool Loading = false;
-    int SchoolCount;
-    int ResultCount;
-    int LearnerCount;
-    int BugCount;
+    bool _loading;
+    int _schoolCount;
+    int _resultCount;
+    int _learnerCount;
+    int _bugCount;
 
-    School? SelectedSchool;
-    int SchoolResultCount;
-    int SchoolLearnerCount;
+    School? _selectedSchool;
+    int _schoolResultCount;
+    int _schoolLearnerCount;
 
-
-    protected async override Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
         SubscribeToEvent(UiEvents.SchoolsUpdated);
-        Loading = true;
-        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
-        SchoolCount = await SchoolService.GetCountAsync();
-        ResultCount = await ResultService.GetCountAsync();
-        LearnerCount = await LearnerService.GetCountAsync();
-        BugCount = await BugService.GetCountAsync();
+        _loading = true;
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        _schoolCount = await SchoolService.GetCountAsync();
+        _resultCount = await ResultService.GetCountAsync();
+        _learnerCount = await LearnerService.GetCountAsync();
+        _bugCount = await BugService.GetCountAsync();
 
-        if (SelectedSchool != null)
+        if (_selectedSchool != null)
         {
-            SchoolResultCount = await ResultService.GetCountAsync(SelectedSchool.Id);
-            SchoolLearnerCount = await LearnerService.GetCountAsync(SelectedSchool.Id);
+            _schoolResultCount = await ResultService.GetCountAsync(_selectedSchool.Id);
+            _schoolLearnerCount = await LearnerService.GetCountAsync(_selectedSchool.Id);
         }
-        Loading = false;
+        _loading = false;
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        switch (eventName)
+        _selectedSchool = eventName switch
         {
-            case UiEvents.SchoolsUpdated:
-                SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
-                break;
-        }
+            UiEvents.SchoolsUpdated => await SchoolService.GetSelectedSchoolAsync(),
+            _ => _selectedSchool
+        };
         await base.HandleEventAsync(eventName, payload);
     }
 

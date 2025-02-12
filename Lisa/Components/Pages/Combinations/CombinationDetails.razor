@@ -4,27 +4,27 @@
 @inject NavigationManager Navigation
 
 <PageTitle>Combination Details</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>Subject Combination Details</h3>
 
-        @if (Combination != null)
+        @if (_combination != null)
         {
             <dl>
                 <dt>Name</dt>
-                <dd>@Combination.Name</dd>
+                <dd>@_combination.Name</dd>
                 <dt>Grade</dt>
-                <dd>@Combination.SchoolGrade?.SystemGrade.Name</dd>
+                <dd>@_combination.SchoolGrade?.SystemGrade.Name</dd>
                 <dt>School</dt>
-                <dd>@Combination.SchoolGrade?.School?.ShortName</dd>
+                <dd>@_combination.SchoolGrade?.School?.ShortName</dd>
                 <dt>Combination Type</dt>
-                <dd>@Combination.CombinationType.ToString() </dd>
+                <dd>@_combination.CombinationType.ToString() </dd>
                 <dt>Subjects</dt>
                 <dd>
                     <ul>
-                        @if (Combination.Subjects != null)
+                        @if (_combination.Subjects != null)
                         {
-                            @foreach (var subject in Combination.Subjects)
+                            @foreach (var subject in _combination.Subjects)
                             {
                                 <li>@subject.Name</li>
                             }
@@ -48,11 +48,11 @@
 
 @code {
     [Parameter] public Guid Id { get; set; }
-    private Combination? Combination;
+    private Combination? _combination;
 
     protected override async Task OnInitializedAsync()
     {
-        Combination = await CombinationService.GetByIdAsync(Id);
+        _combination = await CombinationService.GetByIdAsync(Id);
     }
 
     private void EditCombination()

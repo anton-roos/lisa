@@ -1,27 +1,23 @@
 @page "/results/manager/{ResultSetId:guid?}"
-@using System.ComponentModel.DataAnnotations
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
-@using Lisa.Services
 @using System.Security.Claims
-@using Microsoft.AspNetCore.WebUtilities
 @inject NavigationManager Navigation
 @inject SchoolService SchoolService
 @inject LearnerService LearnerService
 @inject SchoolGradeService SchoolGradeService
 @inject SubjectService SubjectService
-@inject ILogger<ResultsCapture> Logger
 @inject UserService UserService
 @inject ResultService ResultService
 @inherits EventAwareComponentBase
 
-<AuthorizeView Context="AuthContext"
+<AuthorizeView Context="_"
     Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
     <Authorized>
         <PageTitle>@(IsEdit ? "Edit Result Set" : "Capture Results")</PageTitle>
         <h3>@(IsEdit ? "Edit Result Set" : "Capture Results")</h3>
 
-        @if (SelectedSchool == null && !IsEdit)
+        @if (_selectedSchool == null && !IsEdit)
         {
             <div class="alert alert-info" role="alert">
                 Please select a school to capture results.
@@ -38,7 +34,7 @@
                     <label for="gradeDropdown">Grade</label>
                     <InputSelect class="form-select" id="gradeDropdown" TValue="string" Value="@ViewModel.GradeId"
                         ValueChanged="@(async (value) => await OnGradeChange(value))"
-                        ValueExpression="@(() => ViewModel.GradeId)" disabled="@IsEdit">
+                        ValueExpression="@(() => ViewModel.GradeId ?? string.Empty)" disabled="@IsEdit">
                         <option value="">-- Select Grade --</option>
                         @foreach (var grade in ViewModel.SchoolGrades)
                         {
@@ -50,7 +46,7 @@
                     <label for="subjectDropdown">Subject</label>
                     <InputSelect class="form-select" id="subjectDropdown" TValue="string" Value="@ViewModel.SubjectId"
                         ValueChanged="@(async (value) => await OnSubjectChange(value))"
-                        ValueExpression="@(() => ViewModel.SubjectId)" disabled="@IsEdit">
+                        ValueExpression="@(() => ViewModel.SubjectId ?? string.Empty)" disabled="@IsEdit">
                         <option value="">-- Select Subject --</option>
                         @foreach (var subject in ViewModel.FilteredSubjects)
                         {
@@ -95,9 +91,9 @@
 
                     <hr />
 
-                    @if (!string.IsNullOrEmpty(SubmitError))
+                    @if (!string.IsNullOrEmpty(_submitError))
                     {
-                        <div class="alert alert-danger">@SubmitError</div>
+                        <div class="alert alert-danger">@_submitError</div>
                     }
 
                     <table class="table table-striped">
@@ -116,7 +112,12 @@
                                     <td>@entry.LearnerName</td>
                                     <td>
                                         <InputNumber TValue="int?" Value="entry.ResultViewModel.Score"
-                                            ValueChanged="@(EventCallback.Factory.Create<int?>(this, value => OnScoreChanged(value, entry)))"
+                                            ValueChanged="@(EventCallback.Factory.Create<int?>(this, value => {
+                                                  if (value != null)
+                                                  {
+                                                      OnScoreChanged(value, entry);
+                                                  }
+                                              }))"
                                             class="form-control" min="0" max="100" step="1"
                                             ValueExpression="@(() => entry.ResultViewModel.Score)" />
                                     </td>
@@ -157,12 +158,12 @@
 </AuthorizeView>
 
 @code {
-    private School? SelectedSchool;
+    private School? _selectedSchool;
     [Parameter] public Guid? ResultSetId { get; set; }
     private ResultsCaptureViewModel ViewModel { get; set; } = new();
     private bool IsEdit => ResultSetId.HasValue;
-    private string SubmitError = "";
-    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+    private string _submitError = string.Empty;
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
 
    protected override async Task OnInitializedAsync()
     {
@@ -170,9 +171,9 @@
         {
             await LoadExistingResultSet();
 
-            if (SelectedSchool == null)
+            if (_selectedSchool == null)
             {
-                SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
+                _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
             }
 
             await LoadDropdowns();
@@ -185,7 +186,7 @@
         else
         {
             SubscribeToEvent(UiEvents.SchoolSelected);
-            SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
+            _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
             await LoadDropdowns();
         }
     }
@@ -197,7 +198,7 @@
             case UiEvents.SchoolSelected:
                 if (payload is School school)
                 {
-                    SelectedSchool = school;
+                    _selectedSchool = school;
                     await LoadDropdowns();
                 }
                 break;
@@ -218,35 +219,38 @@
     {
         ViewModel.SubjectId = value;
 
-        ViewModel.Teacher = await UserService.GetTeacherForGradeAndSubjectAsync(
-            Guid.Parse(ViewModel.GradeId), int.Parse(ViewModel.SubjectId));
-
-        if (!IsEdit)
+        if (ViewModel.GradeId != null)
         {
-            var learners = await LearnerService.GetLearnersWithTheirSubjectsByGradeAsync(
-                Guid.Parse(ViewModel.GradeId));
+            ViewModel.Teacher = await UserService.GetTeacherForGradeAndSubjectAsync(
+                Guid.Parse(ViewModel.GradeId), int.Parse(ViewModel.SubjectId));
 
-            ViewModel.LearnerResults = learners
-                .Where(learner => learner.LearnerSubjects != null &&
-                                learner.LearnerSubjects.Any(subject => subject.SubjectId == int.Parse(ViewModel.SubjectId)))
-                .Select(learner => new LearnerResultViewModel
-                {
-                    LearnerId = learner.Id,
-                    LearnerName = $"{learner.Surname}, {learner.Name}",
-                    ResultViewModel = new ResultViewModel()
-                })
-                .ToList();
+            if (!IsEdit)
+            {
+                var learners = await LearnerService.GetLearnersWithTheirSubjectsByGradeAsync(
+                    Guid.Parse(ViewModel.GradeId));
+
+                ViewModel.LearnerResults = learners
+                    .Where(learner => learner.LearnerSubjects != null &&
+                                      learner.LearnerSubjects.Any(subject => subject.SubjectId == int.Parse(ViewModel.SubjectId)))
+                    .Select(learner => new LearnerResultViewModel
+                    {
+                        LearnerId = learner.Id,
+                        LearnerName = $"{learner.Surname}, {learner.Name}",
+                        ResultViewModel = new ResultViewModel()
+                    })
+                    .ToList();
+            }
         }
     }
 
     private async Task LoadDropdowns()
     {
-        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
 
-        if (SelectedSchool != null)
+        if (_selectedSchool != null)
         {
             ViewModel.Subjects = await SubjectService.GetAllAsync();
-            ViewModel.SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
+            ViewModel.SchoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
 
             if (!string.IsNullOrEmpty(ViewModel.GradeId))
             {
@@ -261,33 +265,39 @@
     private async Task LoadExistingResultSet()
     {
         ViewModel.Loading = true;
-        var resultSet = await ResultService.GetByIdAsync(ResultSetId.Value);
-
-        if (resultSet == null)
+        if (ResultSetId != null)
         {
-            SubmitError = "Result Set not found.";
-            ViewModel.Loading = false;
-            return;
-        }
+            var resultSet = await ResultService.GetByIdAsync(ResultSetId.Value);
 
-        ViewModel.AssessmentDate = resultSet.AssessmentDate;
-        ViewModel.AssessmentType = resultSet.AssessmentType;
-        ViewModel.AssessmentTopic = resultSet.AssessmentTopic;
-        ViewModel.SubjectId = resultSet.SubjectId.ToString();
-        ViewModel.GradeId = resultSet.Results.FirstOrDefault()?.Learner?.RegisterClass?.SchoolGrade?.Id.ToString();
-        ViewModel.Teacher = resultSet.Teacher;
-
-        ViewModel.LearnerResults = resultSet.Results.Select(r => new LearnerResultViewModel
-        {
-            LearnerId = r.LearnerId,
-            LearnerName = $"{r.Learner.Surname}, {r.Learner.Name}",
-            ResultViewModel = new ResultViewModel
+            if (resultSet == null)
             {
-                Score = r.Score,
-                Absent = r.Absent,
-                AbsentReason = r.AbsentReason
+                _submitError = "Result Set not found.";
+                ViewModel.Loading = false;
+                return;
             }
-        }).ToList();
+
+            ViewModel.AssessmentDate = resultSet.AssessmentDate;
+            ViewModel.AssessmentType = resultSet.AssessmentType;
+            ViewModel.AssessmentTopic = resultSet.AssessmentTopic;
+            ViewModel.SubjectId = resultSet.SubjectId.ToString();
+            if (resultSet.Results != null)
+            {
+                ViewModel.GradeId = resultSet.Results.FirstOrDefault()?.Learner?.RegisterClass?.SchoolGrade?.Id.ToString();
+                ViewModel.Teacher = resultSet.Teacher;
+
+                ViewModel.LearnerResults = resultSet.Results.Select(r => new LearnerResultViewModel
+                {
+                    LearnerId = r.LearnerId,
+                    LearnerName = $"{r.Learner?.Surname}, {r.Learner?.Name}",
+                    ResultViewModel = new ResultViewModel
+                    {
+                        Score = r.Score,
+                        Absent = r.Absent,
+                        AbsentReason = r.AbsentReason
+                    }
+                }).ToList();
+            }
+        }
 
         ViewModel.Loading = false;
     }
@@ -308,17 +318,17 @@
     {
         if (ViewModel.AssessmentDate == null)
         {
-            SubmitError = "Assessment date is required.";
+            _submitError = "Assessment date is required.";
             return;
         }
         if (string.IsNullOrWhiteSpace(ViewModel.AssessmentType))
         {
-            SubmitError = "Assessment type is required.";
+            _submitError = "Assessment type is required.";
             return;
         }
         if (string.IsNullOrWhiteSpace(ViewModel.AssessmentTopic))
         {
-            SubmitError = "Assessment topic is required.";
+            _submitError = "Assessment topic is required.";
             return;
         }
 
@@ -328,36 +338,42 @@
             {
                 if (entry.ResultViewModel.Score == null)
                 {
-                    SubmitError = $"Score is required for {entry.LearnerName} (if not absent).";
+                    _submitError = $"Score is required for {entry.LearnerName} (if not absent).";
                     return;
                 }
                 if (entry.ResultViewModel.Score > 100)
                 {
-                    SubmitError = $"Score for {entry.LearnerName} cannot exceed 100.";
+                    _submitError = $"Score for {entry.LearnerName} cannot exceed 100.";
                     return;
                 }
                 if (entry.ResultViewModel.Score < 0)
                 {
-                    SubmitError = $"Score for {entry.LearnerName} cannot be less than 0.";
+                    _submitError = $"Score for {entry.LearnerName} cannot be less than 0.";
                     return;
                 }
             }
         }
 
-        SubmitError = "";
+        _submitError = "";
 
         if (IsEdit)
         {
-            await ResultService.UpdateAsync(ResultSetId.Value, ViewModel);
-            Navigation.NavigateTo($"/results/{ResultSetId}");
+            if (ResultSetId != null)
+            {
+                await ResultService.UpdateAsync(ResultSetId.Value, ViewModel);
+                Navigation.NavigateTo($"/results/{ResultSetId}");
+            }
         }
         else
         {
             var user = (await AuthenticationStateTask).User;
             var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var userIdGuid = Guid.Parse(userId);
-            var newResultSet = await ResultService.CreateAsync(ViewModel, userIdGuid);
-            Navigation.NavigateTo($"/results/{newResultSet.Id}");
+            if (userId != null)
+            {
+                var userIdGuid = Guid.Parse(userId);
+                var newResultSet = await ResultService.CreateAsync(ViewModel, userIdGuid);
+                Navigation.NavigateTo($"/results/{newResultSet.Id}");
+            }
         }
     }
     

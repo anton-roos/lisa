@@ -1,6 +1,5 @@
 ﻿@using Lisa.Models.Entities
 @inherits LayoutComponentBase
-@inject SchoolService SchoolService
 @inject NavigationManager NavigationManager
 @inject BugReportService BugReportService
 @inject ILogger<MainLayout> Logger
@@ -14,7 +13,7 @@
     <main class="flex-grow-1">
         <div id="header" class="d-flex justify-content-between align-items-center bg-light px-4 shadow-sm">
             <div>
-                <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+                <AuthorizeView Context="_" Roles="@Roles.SystemAdministrator">
                     <SelectSchool></SelectSchool>
                 </AuthorizeView>
             </div>
@@ -24,7 +23,7 @@
                     <i class="bi bi-bug-fill me-1"></i> Report Bug
                 </button>
 
-                <AuthorizeView Context="authContext">
+                <AuthorizeView Context="_">
                     <Authorized>
                         <button @onclick="Logout" class="btn btn-outline-danger btn-sm">
                             <i class="bi bi-box-arrow-right me-1"></i> Logout
@@ -40,7 +39,7 @@
         </div>
 
 
-        <CustomErrorBoundary @ref="errorBoundary">
+        <CustomErrorBoundary>
             <ChildContent>
                 <article class="content px-4">
                     @Body
@@ -51,8 +50,8 @@
     </main>
 </div>
 
-<div class="modal-backdrop fade show" style="display: @(IsBugReportModalVisible ? "block" : "none");"></div>
-<div class="modal" tabindex="-1" role="dialog" style="display: @(IsBugReportModalVisible ? "block" : "none");">
+<div class="modal-backdrop fade show" style="display: @(_isBugReportModalVisible ? "block" : "none");"></div>
+<div class="modal" tabindex="-1" role="dialog" style="display: @(_isBugReportModalVisible ? "block" : "none");">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -62,11 +61,11 @@
             <div class="modal-body">
                 <div class="mb-3">
                     <label for="BugWhatTried" class="form-label">What did you try to do?</label>
-                    <textarea id="BugWhatTried" class="form-control" rows="3" @bind="WhatTried"></textarea>
+                    <textarea id="BugWhatTried" class="form-control" rows="3" @bind="_whatTried"></textarea>
                 </div>
                 <div class="mb-3">
                     <label for="BugWhatHappened" class="form-label">What happened when you tried to do it?</label>
-                    <textarea id="BugWhatHappened" class="form-control" rows="3" @bind="WhatHappened"></textarea>
+                    <textarea id="BugWhatHappened" class="form-control" rows="3" @bind="_whatHappened"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -78,28 +77,20 @@
 </div>
 
 @code {
-    private bool IsBugReportModalVisible = false;
-    private string WhatTried = string.Empty;
-    private string WhatHappened = string.Empty;
-    private ErrorBoundary? errorBoundary;
-
-    private void Recover()
-    {
-        errorBoundary?.Recover();
-        NavigationManager.NavigateTo("/");
-        StateHasChanged();
-    }
-
+    private bool _isBugReportModalVisible;
+    private string _whatTried = string.Empty;
+    private string _whatHappened = string.Empty;
+    
     private void OpenBugReportModal()
     {
-        IsBugReportModalVisible = true;
-        WhatTried = string.Empty;
-        WhatHappened = string.Empty;
+        _isBugReportModalVisible = true;
+        _whatTried = string.Empty;
+        _whatHappened = string.Empty;
     }
 
     private void CloseBugReportModal()
     {
-        IsBugReportModalVisible = false;
+        _isBugReportModalVisible = false;
     }
 
     private async Task SubmitBugReportAsync()
@@ -110,8 +101,8 @@
         {
             var bugreport = new BugReport
                 {
-                    WhatTried = WhatTried,
-                    WhatHappened = WhatHappened
+                    WhatTried = _whatTried,
+                    WhatHappened = _whatHappened
                 };
 
             await BugReportService.LogBugAsync(bugreport);
@@ -122,8 +113,8 @@
         }
         finally
         {
-            WhatTried = string.Empty;
-            WhatHappened = string.Empty;
+            _whatTried = string.Empty;
+            _whatHappened = string.Empty;
         }
     }
 

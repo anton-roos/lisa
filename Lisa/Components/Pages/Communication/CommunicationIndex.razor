@@ -1,8 +1,6 @@
 @page "/communication"
 @using Lisa.Enums
-@using Lisa.Models.EmailModels
 @using Lisa.Models.Entities
-@using Lisa.Services
 @using Lisa.Components.Layout.Communciation
 @inject SchoolService SchoolService
 @inject SchoolGradeService SchoolGradeService
@@ -14,7 +12,7 @@
 @inherits EventAwareComponentBase
 
 <PageTitle>Care Groups</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
     <Authorized>
         @if (SelectedSchool == null)
         {
@@ -35,12 +33,12 @@
                     break;
 
                 case CommunicationTarget.SchoolGrade:
-                    <GradeSelection SchoolGrades="SchoolGrades" SelectedGradeId="@SelectedGradeId"
+                    <GradeSelection SchoolGrades="_schoolGrades" SelectedGradeId="@SelectedGradeId"
                         OnGradeSelected="OnGradeSelected" />
                     break;
 
                 case CommunicationTarget.Subject:
-                    <SubjectSelection Subjects="Subjects" SelectedSubjectId="@SelectedSubjectId"
+                    <SubjectSelection Subjects="_subjects" SelectedSubjectId="@SelectedSubjectId"
                         OnSubjectSelected="OnSubjectSelected" />
                     break;
 
@@ -78,17 +76,17 @@
 @code {
     private CommunicationTarget SelectedTarget { get; set; } = CommunicationTarget.School;
     private string? SearchTerm { get; set; }
-    private List<Learner> Learners = new();
+    private List<Learner> _learners = [];
     private IEnumerable<Learner> FilteredLearners => ApplyFilters();
     private School? SelectedSchool { get; set; }
     private Guid? SelectedGradeId { get; set; }
     private string? SelectedSchoolAudienceId { get; set; }
-    private IEnumerable<SchoolGrade> SchoolGrades = new List<SchoolGrade>();
-    private IEnumerable<Subject> Subjects = new List<Subject>();
+    private List<SchoolGrade> _schoolGrades = [];
+    private List<Subject> _subjects = [];
     private int SelectedSubjectId { get; set; }
     private EmailTemplate? SelectedTemplate { get; set; }
     private bool IsSendDisabled => SelectedTemplate == null;
-    private bool IsSending { get; set; } = false;
+    private bool IsSending { get; set; }
     private string? StatusMessage { get; set; }
 
     protected override async Task OnInitializedAsync()
@@ -103,7 +101,7 @@
     {
         if (eventName == UiEvents.SchoolSelected && payload is School school)
         {
-            if (SelectedSchool?.Id != school.Id) // Only load if school changes
+            if (SelectedSchool?.Id != school.Id)
             {
                 SelectedSchool = school;
                 await LoadData();
@@ -117,17 +115,17 @@
     {
         if (SelectedSchool == null) return;
 
-        Learners = await LearnerService.GetLearnersBySchoolAsync(SelectedSchool.Id);
-        SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
-        Subjects = await SubjectService.GetAllAsync();
+        _learners = await LearnerService.GetLearnersBySchoolAsync(SelectedSchool.Id);
+        _schoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
+        _subjects = await SubjectService.GetAllAsync();
     }
 
-    private async Task OnGradeSelected(Guid? selectedGradeId)
+    private void OnGradeSelected(Guid? selectedGradeId)
     {
         SelectedGradeId = selectedGradeId;
     }
 
-    private async Task OnSubjectSelected(int selectedSubjectId)
+    private void OnSubjectSelected(int selectedSubjectId)
     {
         SelectedSubjectId = selectedSubjectId;
     }
@@ -144,14 +142,14 @@
 
     private IEnumerable<Learner> ApplyFilters()
     {
-        if (Learners is null || !Learners.Any()) return Enumerable.Empty<Learner>();
+        if (!_learners.Any()) return [];
 
-        var query = Learners.AsEnumerable();
+        var query = _learners.AsEnumerable();
 
         if (SelectedGradeId.HasValue)
             query = query.Where(l => l.RegisterClass?.SchoolGrade?.Id == SelectedGradeId);
 
-        if (!string.IsNullOrEmpty(SearchTerm))
+        if (string.IsNullOrEmpty(SearchTerm)) return query;
         {
             var term = SearchTerm.Trim().ToLower();
             query = query.Where(l => $"{l.Surname} {l.Name}".ToLower().Contains(term));
@@ -171,10 +169,9 @@
         IsSending = true;
         StatusMessage = "Sending communication...";
 
-        EmailCampaign? result = null;
-
         try
         {
+            EmailCampaign? result;
             switch (SelectedTarget)
             {
                 case CommunicationTarget.School:
@@ -204,12 +201,14 @@
                     result = await CommunicationService.SendToSubjectAsync(SelectedSubjectId, SelectedTemplate);
                     break;
 
+                case CommunicationTarget.Learner:
+                case CommunicationTarget.Parent:
                 default:
                     StatusMessage = "Invalid communication target!";
                     return;
             }
 
-            if (result != null && result.Id.HasValue)
+            if (result is { Id: not null })
             {
                 StatusMessage = "Communication sent successfully!";
                 {
@@ -231,13 +230,13 @@
 
     private async Task<EmailCampaign?> SendToSchoolAudience()
     {
-        return SelectedSchoolAudienceId switch
-        {
-            //"Parents" => await CommunicationService.SendProgressFeedbackAsync(SelectedSchool, SelectedTemplate),
-            "Staff" => await CommunicationService.SendToStaffAsync(SelectedSchool, SelectedTemplate),
-            "LearnersAndStaff" => await CommunicationService.SendToLearnersAndStaffAsync(SelectedSchool, SelectedTemplate),
-            _ => null
-        };
+            return SelectedSchoolAudienceId switch
+            {
+                //"Parents" => await CommunicationService.SendProgressFeedbackAsync(SelectedSchool, SelectedTemplate),
+                "Staff" => await CommunicationService.SendToStaffAsync(SelectedSchool, SelectedTemplate),
+                "LearnersAndStaff" => await CommunicationService.SendToLearnersAndStaffAsync(SelectedSchool, SelectedTemplate),
+                _ => null
+            };
     }
 
     private async Task SendCommunicationForLearner(Learner learner)
@@ -253,8 +252,11 @@
 
         try
         {
-            var result = await CommunicationService.SendToLearnerAsync(SelectedSchool, SelectedTemplate, learner);
-            StatusMessage = result != null ? "Communication sent successfully!" : "Error sending communication!";
+            if (SelectedSchool != null)
+            {
+                var result = await CommunicationService.SendToLearnerAsync(SelectedSchool, SelectedTemplate, learner);
+                StatusMessage = result != null ? "Communication sent successfully!" : "Error sending communication!";
+            }
         }
         catch (Exception ex)
         {

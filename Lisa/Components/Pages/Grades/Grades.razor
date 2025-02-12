@@ -3,23 +3,21 @@
 @inject SchoolService SchoolService
 @inject SchoolGradeService SchoolGradeService
 @inject SystemGradeService SystemGradeService
-@inject NavigationManager Navigation
-@inject ILogger<Grades> Logger
 @inherits EventAwareComponentBase
 
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
-        <h3>Manage Grades for @SelectedSchool?.ShortName</h3>
-        @if (SelectedSchool == null)
+        <h3>Manage Grades for @_selectedSchool?.ShortName</h3>
+        @if (_selectedSchool == null)
         {
             <div class="alert alert-warning">
                 No school selected. Please select a school first.
             </div>
         }
-        else if (Loading)
+        else if (_loading)
         {
             <div class="list-group">
-                @for (int i = 0; i < SystemGrades.Count(); i++)
+                @for (int i = 0; i < _systemGrades.Count(); i++)
                 {
                     <div class="list-group-item d-flex justify-content-start align-items-center flex-wrap">
                         <div class="col-1">
@@ -38,9 +36,9 @@
         else
         {
             <div class="list-group">
-                @foreach (var systemGrade in SystemGrades)
+                @foreach (var systemGrade in _systemGrades)
                 {
-                    bool isChecked = SchoolGrades.Any(sg => sg.SystemGradeId == systemGrade.Id);
+                    bool isChecked = _schoolGrades.Any(sg => sg.SystemGradeId == systemGrade.Id);
                     <div class="list-group-item d-flex justify-content-start align-items-center flex-wrap">
                         <div class="col-1">
                             <Switch Value="isChecked" Reverse="false" ValueChanged="async (bool newValue) =>
@@ -72,27 +70,27 @@
         <Unauthorized />
     </NotAuthorized>
 </AuthorizeView>
-@if (ShowModal)
+@if (_showModal)
 {
-    <LisaModal Show="@ShowModal" Title="@ModalTitle" Message="@ModalMessage" OnConfirm="CloseModal" OnCancel="CloseModal" />
+    <LisaModal Show="@_showModal" Title="@_modalTitle" Message="@_modalMessage" OnConfirm="CloseModal" OnCancel="CloseModal" />
 }
 
 
 @code {
-    private School? SelectedSchool;
-    private bool Loading = false;
-    private List<SystemGrade> SystemGrades = new();
-    private List<SchoolGrade> SchoolGrades = new();
-    private bool ShowModal = false;
-    private string ModalTitle = "";
-    private string ModalMessage = "";
+    private School? _selectedSchool;
+    private bool _loading;
+    private List<SystemGrade> _systemGrades = [];
+    private List<SchoolGrade> _schoolGrades = [];
+    private bool _showModal;
+    private string _modalTitle = "";
+    private string _modalMessage = "";
 
     protected override async Task OnInitializedAsync()
     {
-        SystemGrades = await SystemGradeService.GetAllAsync();
+        _systemGrades = await SystemGradeService.GetAllAsync();
         SubscribeToEvent(UiEvents.SchoolSelected);
-        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
-        if (SelectedSchool == null) return;
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        if (_selectedSchool == null) return;
         await LoadGrades();
     }
 
@@ -103,7 +101,7 @@
             case UiEvents.SchoolSelected:
                 if (payload is School school)
                 {
-                    SelectedSchool = school;
+                    _selectedSchool = school;
                     await LoadGrades();
                 }
                 break;
@@ -114,15 +112,15 @@
 
     private async Task ToggleSchoolGrade(int systemGradeId, bool isChecked)
     {
-        if (SelectedSchool == null)
+        if (_selectedSchool == null)
         {
             return;
         }
 
-        Loading = true;
+        _loading = true;
         await InvokeAsync(StateHasChanged);
         await Task.Delay(1000);
-        var existingSchoolGrade = await SchoolGradeService.GetBySystemGradeAndSchoolAsync(systemGradeId, SelectedSchool.Id);
+        var existingSchoolGrade = await SchoolGradeService.GetBySystemGradeAndSchoolAsync(systemGradeId, _selectedSchool.Id);
 
         if (isChecked)
         {
@@ -131,13 +129,13 @@
                 var newSchoolGrade = new SchoolGrade
                     {
                         Id = Guid.NewGuid(),
-                        SchoolId = SelectedSchool.Id,
+                        SchoolId = _selectedSchool.Id,
                         SystemGradeId = systemGradeId
                     };
 
                 await SchoolGradeService.CreateAsync(newSchoolGrade);
                 await LoadGrades();
-                Loading = false;
+                _loading = false;
                 await InvokeAsync(StateHasChanged);
             }
         }
@@ -162,7 +160,7 @@
 
                 await SchoolGradeService.DeleteAsync(existingSchoolGrade.Id);
                 await LoadGrades();
-                Loading = false;
+                _loading = false;
                 await InvokeAsync(StateHasChanged);
             }
         }
@@ -170,28 +168,28 @@
 
     private async Task LoadGrades()
     {
-        Loading = true;
+        _loading = true;
         await InvokeAsync(StateHasChanged);
-        if (SelectedSchool != null)
+        if (_selectedSchool != null)
         {
-            SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
+            _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
         }
-        Loading = false;
+        _loading = false;
         await InvokeAsync(StateHasChanged);
     }
 
     private void CloseModal()
     {
-        ShowModal = false;
-        Loading = false;
+        _showModal = false;
+        _loading = false;
         StateHasChanged();
     }
 
     private void ShowWarningModal(string title, string message)
     {
-        ModalTitle = title;
-        ModalMessage = message;
-        ShowModal = true;
+        _modalTitle = title;
+        _modalMessage = message;
+        _showModal = true;
         StateHasChanged();
     }
 }

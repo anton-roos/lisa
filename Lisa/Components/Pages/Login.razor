@@ -1,22 +1,19 @@
 @page "/login"
-@using Lisa.Events
 @using Lisa.Middleware
 @using Lisa.Models.Entities
 @using Microsoft.AspNetCore.Identity
 @using System.ComponentModel.DataAnnotations
-@using Lisa.Services
 @using System.Security.Claims
 @inject SignInManager<User> SignInManager
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<User> UserManager
 @inject ILogger<Login> Logger
-@inject IEventBus EventBus
 @inject ILoginStore LoginStore
 
 <h3>Login</h3>
 
-@if (isLoading)
+@if (_isLoading)
 {
     <div>
         <label>Email</label>
@@ -30,39 +27,39 @@
 }
 else
 {
-    <EditForm Context="editContext" Model="@loginModel" OnValidSubmit="HandleLogin" FormName="loginForm">
+    <EditForm Context="edit" Model="@_loginModel" OnValidSubmit="HandleLogin" FormName="loginForm">
         <DataAnnotationsValidator />
 
         <div>
             <label for="email">Email</label>
-            <InputText id="email" @bind-Value="loginModel.Email" class="form-control" />
-            <ValidationMessage For="@(() => loginModel.Email)" />
+            <InputText id="email" @bind-Value="_loginModel.Email" class="form-control" />
+            <ValidationMessage For="@(() => _loginModel.Email)" />
         </div>
 
         <div>
             <label for="password">Password</label>
-            <InputText id="password" @bind-Value="loginModel.Password" type="password" class="form-control" />
-            <ValidationMessage For="@(() => loginModel.Password)" />
+            <InputText id="password" @bind-Value="_loginModel.Password" type="password" class="form-control" />
+            <ValidationMessage For="@(() => _loginModel.Password)" />
         </div>
 
-        @if (!string.IsNullOrEmpty(loginError))
+        @if (!string.IsNullOrEmpty(_loginError))
         {
-            <div class="alert alert-danger alert-dismissible fade show" role="alert" @onclick="() => loginError = string.Empty">
-                @loginError
-                <button type="button" class="btn-close" aria-label="Close" @onclick="() => loginError = string.Empty"></button>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert" @onclick="() => _loginError = string.Empty">
+                @_loginError
+                <button type="button" class="btn-close" aria-label="Close" @onclick="() => _loginError = string.Empty"></button>
             </div>
         }
 
-        <button type="submit" class="btn btn-primary mt-3" disabled="@isLoading">
-            @(isLoading ? "Logging in..." : "Log in")
+        <button type="submit" class="btn btn-primary mt-3" disabled="@_isLoading">
+            @(_isLoading ? "Logging in..." : "Log in")
         </button>
     </EditForm>
 }
 
 @code {
-    private LoginModel loginModel = new();
-    private string loginError = string.Empty;
-    private bool isLoading = false;
+    private readonly LoginModel _loginModel = new();
+    private string _loginError = string.Empty;
+    private bool _isLoading;
 
     protected override async Task OnInitializedAsync()
     {
@@ -77,14 +74,14 @@ else
 
     private async Task HandleLogin()
     {
-        isLoading = true;
+        _isLoading = true;
 
         try
         {
-            var user = await UserManager.FindByEmailAsync(loginModel.Email!);
+            var user = await UserManager.FindByEmailAsync(_loginModel.Email!);
             if (user == null)
             {
-                loginError = "Invalid email or password.";
+                _loginError = "Invalid email or password.";
                 return;
             }
 
@@ -97,50 +94,43 @@ else
             bool isEmailConfirmed = await UserManager.IsEmailConfirmedAsync(user);
             Logger.LogInformation($"IsEmailConfirmed: {isEmailConfirmed}");
 
-            var identityErrors = await UserManager.GetUserAsync(new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
-            {
-            new Claim(ClaimTypes.Email, user.Email)
-                        }, "custom")));
+            var identityErrors = await UserManager.GetUserAsync(new ClaimsPrincipal(new ClaimsIdentity([
+                new Claim(ClaimTypes.Email, user.Email ?? string.Empty)
+            ], "custom")));
 
             Logger.LogInformation($"UserManager Check: {identityErrors}");
 
             if (!canSignIn)
             {
-                loginError = "Can't sign in.";
+                _loginError = "Can't sign in.";
                 return;
             }
 
             if (isLockedOut)
             {
-                loginError = "Account is locked out.";
+                _loginError = "Account is locked out.";
                 return;
             }
 
-            var result = await SignInManager.CheckPasswordSignInAsync(user, loginModel.Password!, false);
+            var result = await SignInManager.CheckPasswordSignInAsync(user, _loginModel.Password!, false);
             if (!result.Succeeded)
             {
-                loginError = "Invalid email or password.";
+                _loginError = "Invalid email or password.";
                 return;
             }
 
-            // Securely store login info and redirect
-            Guid key = LoginStore.StoreLoginInfo(loginModel.Email!, loginModel.Password!);
+            Guid key = LoginStore.StoreLoginInfo(_loginModel.Email!, _loginModel.Password!);
             NavigationManager.NavigateTo($"/login?key={key}", true);
         }
         catch (Exception ex)
         {
             Logger.LogError($"Login error: {ex.Message}");
-            loginError = "An error occurred while logging in. Please try again.";
+            _loginError = "An error occurred while logging in. Please try again.";
         }
         finally
         {
-            isLoading = false;
+            _isLoading = false;
         }
-    }
-
-    private void HandleFieldChanged(FieldChangedEventArgs args)
-    {
-        loginError = string.Empty;
     }
 
     public class LoginModel

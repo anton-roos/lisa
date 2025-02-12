@@ -1,7 +1,6 @@
 @page "/email-campaigns"
 
 @using Lisa.Models.Entities
-@using Lisa.Services
 @inject SchoolService SchoolService
 @inject EmailCampaignService CampaignService
 @inject NavigationManager NavigationManager
@@ -9,83 +8,89 @@
 @inject ILogger<EmailCampaign> Logger
 
 <PageTitle>Email Campaigns</PageTitle>
-<AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
     <Authorized>
-        @if (SelectedSchool == null)
+        @if (_selectedSchool == null)
         {
             <div class="alert alert-info">
                 Please select a school to view email campaigns.
             </div>
         }
-        else if (EmailCampaignList?.Count == 0)
+        else if (_emailCampaignList?.Count == 0)
         {
-            <h3>Email Campaigns for @SelectedSchool?.ShortName</h3>
+            <h3>Email Campaigns for @_selectedSchool?.ShortName</h3>
             <div class="alert alert-info">
                 No campaigns found for this school.
             </div>
         }
         else
         {
-            <h3>Email Campaigns for @SelectedSchool?.ShortName</h3>
+            <h3>Email Campaigns for @_selectedSchool?.ShortName</h3>
             <table class="table table-striped">
                 <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Status</th>
-                        <th>Subject Line</th>
-                        <th>Created At</th>
-                        <th>Actions</th>
-                    </tr>
+                <tr>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Subject Line</th>
+                    <th>Created At</th>
+                    <th>Actions</th>
+                </tr>
                 </thead>
                 <tbody>
-                    @if (EmailCampaignList == null)
+                @if (_emailCampaignList == null)
+                {
+                    <tr>
+                        <td colspan="5">No Email Campaigns Found</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var campaign in _emailCampaignList)
                     {
                         <tr>
-                            <td colspan="5">No Email Campaigns Found</td>
+                            <td>@campaign.Name</td>
+                            <td>@campaign.Status</td>
+                            <td>@campaign.SubjectLine</td>
+                            <td>@campaign.CreatedAt.ToLocalTime()</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" @onclick="@(() =>
+                                     {
+                                         if (campaign.Id != null)
+                                         {
+                                             ViewCampaign(campaign.Id.Value);
+                                         }
+                                     })">
+                                    View
+                                </button>
+                            </td>
                         </tr>
                     }
-                    else
-                    {
-                        @foreach (var campaign in EmailCampaignList)
-                        {
-                            <tr>
-                                <td>@campaign.Name</td>
-                                <td>@campaign.Status</td>
-                                <td>@campaign.SubjectLine</td>
-                                <td>@campaign.CreatedAt.ToLocalTime()</td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary" @onclick="@(() => ViewCampaign(campaign.Id.Value))">
-                                        View
-                                    </button>
-                                </td>
-                            </tr>
-                        }
-                    }
+                }
                 </tbody>
             </table>
         }
     </Authorized>
     <NotAuthorized>
-        <Unauthorized />
+        <Unauthorized/>
     </NotAuthorized>
 </AuthorizeView>
 
 @code {
-    private School? SelectedSchool;
-    private List<EmailCampaign>? EmailCampaignList;
+    private School? _selectedSchool;
+    private List<EmailCampaign>? _emailCampaignList;
 
     protected override async Task OnInitializedAsync()
     {
         SubscribeToEvent(UiEvents.SchoolSelected);
-        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         await LoadEmailCampaigns();
     }
 
     private async Task LoadEmailCampaigns()
     {
-        if (SelectedSchool != null)
+        if (_selectedSchool != null)
         {
-            EmailCampaignList = await CampaignService.GetBySchoolIdAsync(SelectedSchool.Id);
+            _emailCampaignList = await CampaignService.GetBySchoolIdAsync(_selectedSchool.Id);
         }
         else
         {
@@ -103,11 +108,12 @@
         switch (eventName)
         {
             case UiEvents.SchoolSelected:
-                SelectedSchool = payload as School;
+                _selectedSchool = payload as School;
                 await LoadEmailCampaigns();
                 break;
         }
 
         await base.HandleEventAsync(eventName, payload);
     }
+
 }

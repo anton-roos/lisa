@@ -3,9 +3,9 @@
 <div class="mb-3">
     <label for="audienceSelect">Select Audience</label>
     <InputSelect id="audienceSelect" class="form-select" TValue="string"
-        ValueChanged="@(async (id) => await AudienceChanged(id))" ValueExpression="(() => SelectedAudienceId)">
-        <option value="">-- Select Audience --</option>
-        @foreach (var audience in AudienceOptions)
+        ValueChanged="@(async (id) => await AudienceChanged(id))" ValueExpression="(() => SelectedAudienceId ?? string.Empty)">
+        <option value="@string.Empty">-- Select Audience --</option>
+        @foreach (var audience in _audienceOptions)
         {
             <option value="@audience.Key">@audience.Value</option>
         }
@@ -30,7 +30,7 @@
     /// <summary>
     /// Available audience options.
     /// </summary>
-    private readonly Dictionary<string, string> AudienceOptions = new()
+    private readonly Dictionary<string, string> _audienceOptions = new()
 {
 { "Parents", "Parents" },
 { "Staff", "Staff" },

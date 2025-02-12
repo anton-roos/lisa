@@ -193,6 +193,30 @@ public class UserService(
         }
     }
 
+    public async Task UpdateUserSelectedSchool(User user)
+    {
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+            var existing = await context.Users.FindAsync(user.Id);
+
+            if (existing == null)
+            {
+                _logger.LogWarning("Attempted to update non-existent teacher. TeacherId: {TeacherId}", user.Id);
+                return;
+            }
+
+            existing.SchoolId = user.SchoolId;
+
+            await context.SaveChangesAsync();
+            _logger.LogInformation("Updated teacher's school: {TeacherId}", user.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating teacher's school with ID: {TeacherId}", user.Id);
+        }
+    }
+
     /// <summary>
     /// Updates an existing user.
     /// </summary>

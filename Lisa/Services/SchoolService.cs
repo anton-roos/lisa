@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using Lisa.Data;
 using Lisa.Models.Entities;
-using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,7 +12,6 @@ public class SchoolService(
     UserManager<User> userManager,
     UserService userService,
     IHttpContextAccessor httpContextAccessor,
-    ProtectedSessionStorage sessionStorage,
     ILogger<SchoolService> logger
 )
 {
@@ -21,7 +19,6 @@ public class SchoolService(
     private readonly IUiEventService _uiEventService = uiEventService;
     private readonly UserManager<User> _userManager = userManager;
     private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
-    private readonly ProtectedSessionStorage _sessionStorage = sessionStorage;
     private readonly ILogger<SchoolService> _logger = logger;
     private readonly UserService _userService = userService;
     private School? _selectedSchool;
@@ -184,11 +181,7 @@ public class SchoolService(
             return;
         }
 
-        // Update the persistent property.
-        user.SchoolId = selectedSchoolId;
-
-        // Persist the change to the database.
-        //await _userService.(user);
+        await _userService.UpdateUserSelectedSchool(user);
     }
 
 

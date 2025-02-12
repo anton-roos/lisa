@@ -25,9 +25,6 @@ public class SchoolService(
     private School? _selectedSchool;
 
     /// <summary>
-    /// Sets the current selected school.
-    /// </summary>
-    /// <summary>
     /// Sets the current selected school and persists the selection in the user's record.
     /// For non-system administrators, the selected school must be valid.
     /// </summary>
@@ -102,7 +99,7 @@ public class SchoolService(
         }
 
         // If the user is a system administrator, it's acceptable to have no selected school.
-        if (await _userManager.IsInRoleAsync(user, "System Administrator"))
+        if (user.Roles.Contains(Roles.SystemAdministrator))
         {
             _logger.LogError("Returning null for system administrator user {UserId}.", user.Id);
             return null;
@@ -153,7 +150,7 @@ public class SchoolService(
 
         try
         {
-            return await _userManager.FindByIdAsync(userId);
+            return await _userService.GetByIdAsync(Guid.Parse(userId));
         }
         catch (Exception ex)
         {

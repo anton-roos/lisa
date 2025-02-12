@@ -183,7 +183,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
 
             var query = context.ResultSets
                 .AsNoTracking()
-                .Include(rs => (IEnumerable<Result>)rs.Results!)
+                .Include(rs => rs.Results!)
                 .ThenInclude(r => r.Learner!)
                 .ThenInclude(l => l.RegisterClass!)
                 .ThenInclude(rc => rc.SchoolGrade!)

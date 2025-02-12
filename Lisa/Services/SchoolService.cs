@@ -50,30 +50,21 @@ public class SchoolService(
                 return null;
             }
 
-            await _sessionStorage.SetAsync("selectedSchool", _selectedSchool);
+            try
+            {
+                await _sessionStorage.SetAsync("selectedSchool", _selectedSchool);
+            }
+            catch (InvalidOperationException jsEx)
+            {
+                _logger.LogWarning(jsEx, "JS interop not available, skipping session storage update.");
+            }
+
             await _uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
             return _selectedSchool;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error setting current school. SchoolId: {SchoolId}", schoolId);
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Gets the currently logged-in user.
-    /// </summary>
-    public async Task<IdentityUser<Guid>?> GetCurrentUserAsync()
-    {
-        try
-        {
-            var userId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            return userId != null ? await _userManager.FindByIdAsync(userId) : null;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving current user.");
             return null;
         }
     }
@@ -85,11 +76,18 @@ public class SchoolService(
             return _selectedSchool;
         }
 
-        var storedResult = await _sessionStorage.GetAsync<School>("selectedSchool");
-        if (storedResult.Success && storedResult.Value != null)
+        try
         {
-            _selectedSchool = storedResult.Value;
-            return _selectedSchool;
+            var storedResult = await _sessionStorage.GetAsync<School>("selectedSchool");
+            if (storedResult.Success && storedResult.Value != null)
+            {
+                _selectedSchool = storedResult.Value;
+                return _selectedSchool;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "JS interop not available for retrieving session storage data.");
         }
 
         var currentUser = await GetCurrentUserAsync();
@@ -105,6 +103,22 @@ public class SchoolService(
 
         return _selectedSchool;
     }
+
+    private async Task<IdentityUser<Guid>?> GetCurrentUserAsync()
+    {
+        try
+        {
+            var userId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return userId != null ? await _userManager.FindByIdAsync(userId) : null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving current user.");
+            return null;
+        }
+    }
+
+
 
     /// <summary>
     /// Gets the total count of schools.

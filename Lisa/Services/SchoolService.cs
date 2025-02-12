@@ -106,6 +106,7 @@ public class SchoolService(
         // If the user is a system administrator, it's acceptable to have no selected school.
         if (await _userManager.IsInRoleAsync(user, "System Administrator"))
         {
+            _logger.LogError("Returning null for system administrator user {UserId}.", user.Id);
             return null;
         }
 
@@ -127,6 +128,7 @@ public class SchoolService(
             throw new InvalidOperationException("Non-system administrator user must have a valid associated school.");
         }
 
+        _logger.LogError("Main return returned school as {school} ", _selectedSchool.Learners);
         return _selectedSchool;
     }
 

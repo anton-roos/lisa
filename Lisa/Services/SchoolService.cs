@@ -80,24 +80,26 @@ public class SchoolService(
 
     public async Task<School?> GetSelectedSchoolAsync()
     {
-        // If a school is already selected, return it.
         if (_selectedSchool != null)
         {
             return _selectedSchool;
         }
 
-        // Attempt to retrieve the current logged-in user.
+        var storedResult = await _sessionStorage.GetAsync<School>("selectedSchool");
+        if (storedResult.Success && storedResult.Value != null)
+        {
+            _selectedSchool = storedResult.Value;
+            return _selectedSchool;
+        }
+
         var currentUser = await GetCurrentUserAsync();
         if (currentUser != null)
         {
             var user = await _userService.GetByIdAsync(currentUser.Id);
-            // Check if the user is not in the "System Administrator" role.
             if (!await _userManager.IsInRoleAsync(user, "System Administrator"))
             {
-
                 using var context = await _dbContextFactory.CreateDbContextAsync();
                 _selectedSchool = await context.Schools.FindAsync(user.SchoolId);
-
             }
         }
 

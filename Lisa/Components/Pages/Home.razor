@@ -150,11 +150,11 @@
     protected async override Task OnInitializedAsync()
     {
         Loading = true;
+        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
         SchoolCount = await SchoolService.GetCountAsync();
         ResultCount = await ResultService.GetCountAsync();
         LearnerCount = await LearnerService.GetCountAsync();
         BugCount = await BugService.GetCountAsync();
-        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
 
         if (SelectedSchool != null)
         {

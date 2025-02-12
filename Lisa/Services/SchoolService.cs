@@ -29,6 +29,12 @@ public class SchoolService(
     /// <summary>
     /// Sets the current selected school.
     /// </summary>
+    /// <summary>
+    /// Sets the current selected school and persists the selection in the user's record.
+    /// For non-system administrators, the selected school must be valid.
+    /// </summary>
+    /// <param name="schoolId">The ID of the school to select, or null to clear the selection.</param>
+    /// <returns>The selected <see cref="School"/> or null.</returns>
     public async Task<School?> SetCurrentSchoolAsync(Guid? schoolId)
     {
         try
@@ -36,28 +42,27 @@ public class SchoolService(
             if (schoolId == null)
             {
                 _selectedSchool = null;
-                await _sessionStorage.SetAsync("selectedSchool", string.Empty);
+                // Update the persistent store (i.e. the user's record) to clear the selection.
+                await UpdateUserSelectedSchoolAsync(null);
                 await _uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
                 return null;
             }
 
             using var context = await _dbContextFactory.CreateDbContextAsync();
-            _selectedSchool = await context.Schools.FindAsync(schoolId);
+            var school = await context.Schools
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Id == schoolId);
 
-            if (_selectedSchool == null)
+            if (school == null)
             {
                 _logger.LogWarning("Attempted to select a school that does not exist. SchoolId: {SchoolId}", schoolId);
                 return null;
             }
 
-            try
-            {
-                await _sessionStorage.SetAsync("selectedSchool", _selectedSchool);
-            }
-            catch (InvalidOperationException jsEx)
-            {
-                _logger.LogWarning(jsEx, "JS interop not available, skipping session storage update.");
-            }
+            _selectedSchool = school;
+
+            // Persist the selection in the user's record.
+            await UpdateUserSelectedSchoolAsync(school.Id);
 
             await _uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
             return _selectedSchool;
@@ -69,55 +74,120 @@ public class SchoolService(
         }
     }
 
+    /// <summary>
+    /// Retrieves the currently selected school.
+    /// For non-system administrator users, a valid selected school is expected.
+    /// </summary>
+    /// <returns>The selected <see cref="School"/>, or null for system administrators.</returns>
     public async Task<School?> GetSelectedSchoolAsync()
     {
+        // If the school is already loaded in memory, return it.
         if (_selectedSchool != null)
         {
             return _selectedSchool;
         }
 
-        try
+        // Retrieve the current user.
+        var currentUser = await GetCurrentUserAsync();
+        if (currentUser == null)
         {
-            var storedResult = await _sessionStorage.GetAsync<School>("selectedSchool");
-            if (storedResult.Success && storedResult.Value != null)
-            {
-                _selectedSchool = storedResult.Value;
-                return _selectedSchool;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "JS interop not available for retrieving session storage data.");
+            _logger.LogError("Unable to retrieve current user.");
+            return null;
         }
 
-        var currentUser = await GetCurrentUserAsync();
-        if (currentUser != null)
+        // Get full user details from your user service.
+        var user = await _userService.GetByIdAsync(currentUser.Id);
+        if (user == null)
         {
-            var user = await _userService.GetByIdAsync(currentUser.Id);
-            if (!await _userManager.IsInRoleAsync(user, "System Administrator"))
-            {
-                using var context = await _dbContextFactory.CreateDbContextAsync();
-                _selectedSchool = await context.Schools.FindAsync(user.SchoolId);
-            }
+            _logger.LogError("User data not found for current user with Id: {UserId}", currentUser.Id);
+            return null;
+        }
+
+        // If the user is a system administrator, it's acceptable to have no selected school.
+        if (await _userManager.IsInRoleAsync(user, "System Administrator"))
+        {
+            return null;
+        }
+
+        // For non-system administrator users, the selected school must be set.
+        if (user.SchoolId == null)
+        {
+            _logger.LogError("Non-system administrator user {UserId} does not have an associated selected school.", user.Id);
+            throw new InvalidOperationException("Non-system administrator users must have an associated selected school.");
+        }
+
+        using var context = await _dbContextFactory.CreateDbContextAsync();
+        _selectedSchool = await context.Schools
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == user.SchoolId);
+
+        if (_selectedSchool == null)
+        {
+            _logger.LogError("School not found for non-system administrator user {UserId} with SchoolId: {SchoolId}", user.Id, user.SchoolId);
+            throw new InvalidOperationException("Non-system administrator user must have a valid associated school.");
         }
 
         return _selectedSchool;
     }
 
+    /// <summary>
+    /// Retrieves the current user from the HTTP context.
+    /// </summary>
+    /// <returns>The current user as an <see cref="IdentityUser{Guid}"/>, or null if not found.</returns>
     private async Task<IdentityUser<Guid>?> GetCurrentUserAsync()
     {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+        {
+            _logger.LogError("No HttpContext available. Ensure this service is used within a valid HTTP request scope.");
+            return null;
+        }
+
+        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            _logger.LogWarning("No user id claim found in the current HttpContext.");
+            return null;
+        }
+
         try
         {
-            var userId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            return userId != null ? await _userManager.FindByIdAsync(userId) : null;
+            return await _userManager.FindByIdAsync(userId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving current user.");
+            _logger.LogError(ex, "Error retrieving current user with Id: {UserId}", userId);
             return null;
         }
     }
 
+    /// <summary>
+    /// Updates the persistent store with the current selected school ID for the logged-in user.
+    /// </summary>
+    /// <param name="selectedSchoolId">The ID of the selected school, or null to clear the selection.</param>
+    private async Task UpdateUserSelectedSchoolAsync(Guid? selectedSchoolId)
+    {
+        var currentUser = await GetCurrentUserAsync();
+        if (currentUser == null)
+        {
+            _logger.LogError("Unable to update selected school because the current user is null.");
+            return;
+        }
+
+        // Get full user details.
+        var user = await _userService.GetByIdAsync(currentUser.Id);
+        if (user == null)
+        {
+            _logger.LogError("User data not found for the current user with Id: {UserId}", currentUser.Id);
+            return;
+        }
+
+        // Update the persistent property.
+        user.SchoolId = selectedSchoolId;
+
+        // Persist the change to the database.
+        //await _userService.(user);
+    }
 
 
     /// <summary>

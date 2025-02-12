@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Lisa.Data;
 using Lisa.Models.Entities;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,16 +12,16 @@ public class SchoolService(
     IUiEventService uiEventService,
     UserManager<User> userManager,
     UserService userService,
-    IHttpContextAccessor httpContextAccessor,
+    AuthenticationStateProvider authenticationStateProvider,
     ILogger<SchoolService> logger
 )
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly IUiEventService _uiEventService = uiEventService;
     private readonly UserManager<User> _userManager = userManager;
-    private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
     private readonly ILogger<SchoolService> _logger = logger;
     private readonly UserService _userService = userService;
+    private readonly AuthenticationStateProvider _authenticationStateProvider = authenticationStateProvider;
     private School? _selectedSchool;
 
     /// <summary>
@@ -130,22 +131,23 @@ public class SchoolService(
     }
 
     /// <summary>
-    /// Retrieves the current user from the HTTP context.
+    /// Retrieves the current user using the AuthenticationStateProvider.
     /// </summary>
-    /// <returns>The current user as an <see cref="IdentityUser{Guid}"/>, or null if not found.</returns>
     private async Task<IdentityUser<Guid>?> GetCurrentUserAsync()
     {
-        var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext == null)
+        var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+        var userPrincipal = authState.User;
+
+        if (userPrincipal == null || userPrincipal.Identity is null || !userPrincipal.Identity.IsAuthenticated)
         {
-            _logger.LogError("No HttpContext available. Ensure this service is used within a valid HTTP request scope.");
+            _logger.LogError("User is not authenticated.");
             return null;
         }
 
-        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = userPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId))
         {
-            _logger.LogWarning("No user id claim found in the current HttpContext.");
+            _logger.LogWarning("No user id claim found in the current authentication state.");
             return null;
         }
 

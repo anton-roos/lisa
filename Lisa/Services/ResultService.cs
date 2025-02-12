@@ -79,6 +79,11 @@ public class ResultService
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Results.CountAsync();
     }
+    public async Task<int> GetCountAsync(Guid schoolId)
+    {
+        using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Results.Where(x => x.ResultSet.SchoolGrade.SchoolId == schoolId).CountAsync();
+    }
 
     /// <summary>
     /// Updates an existing ResultSet and its associated results.

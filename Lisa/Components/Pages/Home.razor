@@ -72,19 +72,50 @@
         </AuthorizeView>
 
         <!-- Teacher View -->
-        <AuthorizeView Roles="@($"{Roles.Teacher}")">
+        <AuthorizeView
+            Roles="@($"{Roles.Teacher}, {Roles.Principal}, {Roles.SystemAdministrator}, {Roles.Administrator}")">
             <Authorized>
-                <p>You are a Teacher</p>
+                @if (SelectedSchool != null)
+                {
+                    <div class="container mt-4">
+                        <div class="text-center py-3">
+                            <h3>Welcome to the Learner Information System</h3>
+                            <h3>@SelectedSchool.LongName</h3>
+                        </div>
+                        <div class="row mt-4">
+                            <div class="col">
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <div class="card text-center">
+                                            <div class="card-body bg-light">
+                                                <h4 class="card-title">Learners</h4>
+                                                <p class="card-text display-4">@SchoolLearnerCount</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card text-center">
+                                            <div class="card-body bg-light">
+                                                <h4 class="card-title">Results Submitted</h4>
+                                                <p class="card-text display-4">@SchoolResultCount</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-danger">
+                        The System could not find the school that you are assigned to. Please log a bug.
+                    </div>
+                }
             </Authorized>
         </AuthorizeView>
-        
-        <AuthorizeView Roles="@($"{Roles.Principal}")">
-            <Authorized>
-                <p>Hi Principal</p>
-            </Authorized>
-        </AuthorizeView>
-    </Authorized>
 
+    </Authorized>
     <NotAuthorized>
         <Unauthenticated />
     </NotAuthorized>
@@ -92,9 +123,14 @@
 
 @code {
     int SchoolCount;
-    int LearnerCount;
     int ResultCount;
+    int LearnerCount;
     int BugCount;
+
+    School? SelectedSchool;
+    int SchoolResultCount;
+    int SchoolLearnerCount;
+
 
     protected async override Task OnInitializedAsync()
     {
@@ -102,6 +138,13 @@
         ResultCount = await ResultService.GetCountAsync();
         LearnerCount = await LearnerService.GetCountAsync();
         BugCount = await BugService.GetCountAsync();
+        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
+
+        if (SelectedSchool != null)
+        {
+            SchoolResultCount = await ResultService.GetCountAsync(SelectedSchool.Id);
+            SchoolLearnerCount = await LearnerService.GetCountAsync(SelectedSchool.Id);
+        }
     }
 
     private void NavigateToBugReports()

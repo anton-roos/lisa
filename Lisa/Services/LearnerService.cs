@@ -20,6 +20,11 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners.CountAsync();
     }
+    public async Task<int> GetCountAsync(Guid SchoolId)
+    {
+        using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Learners.Where(x => x.SchoolId == SchoolId).CountAsync();
+    }
 
     /// <summary>
     /// Retrieves a learner by ID, including related data.

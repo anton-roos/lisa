@@ -1,12 +1,12 @@
 ﻿@page "/"
 @rendermode InteractiveServer
 @using Lisa.Models.Entities
-@inherits LayoutComponentBase
 @inject SchoolService SchoolService
 @inject LearnerService LearnerService
 @inject ResultService ResultService
 @inject BugReportService BugService
 @inject NavigationManager NavigationManager
+@inherits EventAwareComponentBase
 
 <PageTitle>DCEG Portal</PageTitle>
 
@@ -149,6 +149,7 @@
 
     protected async override Task OnInitializedAsync()
     {
+        SubscribeToEvent(UiEvents.SchoolsUpdated);
         Loading = true;
         SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
         SchoolCount = await SchoolService.GetCountAsync();
@@ -162,6 +163,17 @@
             SchoolLearnerCount = await LearnerService.GetCountAsync(SelectedSchool.Id);
         }
         Loading = false;
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        switch (eventName)
+        {
+            case UiEvents.SchoolsUpdated:
+                SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
+                break;
+        }
+        await base.HandleEventAsync(eventName, payload);
     }
 
     private void NavigateToBugReports()

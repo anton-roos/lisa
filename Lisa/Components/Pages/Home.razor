@@ -15,67 +15,81 @@
         <!-- System Administrator View -->
         <AuthorizeView Roles="@($"{Roles.SystemAdministrator}")">
             <Authorized>
-                <div class="container mt-4">
-                    <div class="text-center py-3">
-                        <h3>Learner Information System Dashboard</h3>
+                @if (Loading)
+                {
+                    <div class="text-center">
+                        <p>Loading...</p>
                     </div>
-                    <div class="row mt-4">
-                        <div class="col">
-                            <div class="card mb-4">
-                                <div class="card-body">
-                                    <h3 class="card-title">Welcome System Administrator</h3>
-                                    <p class="card-text">An overview of all schools.</p>
+                }
+                else
+                {
+                    <div class="container mt-4">
+                        <div class="text-center py-3">
+                            <h3>Learner Information System Dashboard</h3>
+                        </div>
+                        <div class="row mt-4">
+                            <div class="col">
+                                <div class="card mb-4">
+                                    <div class="card-body">
+                                        <h3 class="card-title">Welcome System Administrator</h3>
+                                        <p class="card-text">An overview of all schools.</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="row mb-4">
-                                <div class="col-md-4">
-                                    <div class="card text-center">
-                                        <div class="card-body bg-light">
-                                            <h4 class="card-title">Schools</h4>
-                                            <p class="card-text display-4">@SchoolCount</p>
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <div class="card text-center">
+                                            <div class="card-body bg-light">
+                                                <h4 class="card-title">Schools</h4>
+                                                <p class="card-text display-4">@SchoolCount</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card text-center">
+                                            <div class="card-body bg-light">
+                                                <h4 class="card-title">Learners</h4>
+                                                <p class="card-text display-4">@LearnerCount</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card text-center">
+                                            <div class="card-body bg-light">
+                                                <h4 class="card-title">Results Submitted</h4>
+                                                <p class="card-text display-4">@ResultCount</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <div class="card text-center">
-                                        <div class="card-body bg-light">
-                                            <h4 class="card-title">Learners</h4>
-                                            <p class="card-text display-4">@LearnerCount</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="card text-center">
-                                        <div class="card-body bg-light">
-                                            <h4 class="card-title">Results Submitted</h4>
-                                            <p class="card-text display-4">@ResultCount</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mb-4">
-                                <div class="col-md-4" @onclick="NavigateToBugReports" style="cursor: pointer;"
-                                    onmouseover="this.style.backgroundColor='#f0f0f0';"
-                                    onmouseout="this.style.backgroundColor='';">
-                                    <div class="card text-center">
-                                        <div class="card-body bg-light">
-                                            <h4 class="card-title">Bugs</h4>
-                                            <p class="card-text display-4">@BugCount</p>
+                                <div class="row mb-4">
+                                    <div class="col-md-4" @onclick="NavigateToBugReports" style="cursor: pointer;"
+                                        onmouseover="this.style.backgroundColor='#f0f0f0';"
+                                        onmouseout="this.style.backgroundColor='';">
+                                        <div class="card text-center">
+                                            <div class="card-body bg-light">
+                                                <h4 class="card-title">Bugs</h4>
+                                                <p class="card-text display-4">@BugCount</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                }
             </Authorized>
         </AuthorizeView>
-
         <!-- Teacher View -->
         <AuthorizeView
             Roles="@($"{Roles.Teacher}, {Roles.Principal}, {Roles.SystemAdministrator}, {Roles.Administrator}")">
             <Authorized>
-                @if (SelectedSchool != null)
+                @if (Loading)
+                {
+                    <div class="text-center">
+                        <p>Loading...</p>
+                    </div>
+                }
+                else if (SelectedSchool != null)
                 {
                     <div class="container mt-4">
                         <div class="text-center py-3">
@@ -122,6 +136,7 @@
 </AuthorizeView>
 
 @code {
+    bool Loading = false;
     int SchoolCount;
     int ResultCount;
     int LearnerCount;
@@ -134,6 +149,7 @@
 
     protected async override Task OnInitializedAsync()
     {
+        Loading = true;
         SchoolCount = await SchoolService.GetCountAsync();
         ResultCount = await ResultService.GetCountAsync();
         LearnerCount = await LearnerService.GetCountAsync();
@@ -145,6 +161,7 @@
             SchoolResultCount = await ResultService.GetCountAsync(SelectedSchool.Id);
             SchoolLearnerCount = await LearnerService.GetCountAsync(SelectedSchool.Id);
         }
+        Loading = false;
     }
 
     private void NavigateToBugReports()

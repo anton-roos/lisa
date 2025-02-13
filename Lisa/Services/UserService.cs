@@ -34,35 +34,34 @@ public class UserService(
             if (SchoolId != null)
             {
                 usersQuery = usersQuery.Where(u => u.SchoolId == SchoolId || context.UserRoles
-                    .Where(ur => ur.UserId == u.Id)
-                    .Join(context.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name)
-                    .Contains(Roles.SystemAdministrator));
+                .Where(ur => ur.UserId == u.Id)
+                .Join(context.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name)
+                .Contains(Roles.SystemAdministrator));
             }
 
             var users = await usersQuery
             .Include(t => t.School)
-                    .Include(t => t.CareGroups)
-                    .Include(t => t.Subjects)
-                    .Include(t => t.RegisterClasses)
-                    .Include(t => t.Periods)
+            .Include(t => t.CareGroups)
+            .Include(t => t.Subjects)
+            .Include(t => t.RegisterClasses)
+            .Include(t => t.Periods)
             .ToListAsync();
 
             var userIds = users.Select(u => u.Id).ToList();
             var userRoles = await (from userRole in context.UserRoles
-                                   join role in context.Roles on userRole.RoleId equals role.Id
-                                   where userIds.Contains(userRole.UserId)
-                                   select new { userRole.UserId, role.Name })
-                                .ToListAsync();
+                join role in context.Roles on userRole.RoleId equals role.Id
+                where userIds.Contains(userRole.UserId)
+                select new { userRole.UserId, role.Name })
+            .ToListAsync();
 
             foreach (var user in users)
             {
-                user.Roles = userRoles
+                user.Roles = [.. userRoles
                     .Where(ur => ur.UserId == user.Id)
-                    .Select(ur => ur.Name)
-                    .ToList();
+                    .Select(ur => ur.Name)];
             }
 
-            return users.Where(u => u.Roles.Intersect(roles).Any()).ToList();
+            return [.. users.Where(u => u.Roles.Intersect(roles).Any())];
         }
         catch (Exception ex)
         {
@@ -83,22 +82,20 @@ public class UserService(
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
 
-            // Load user with all the relevant navigations
             var user = await context.Users
                 .AsNoTracking()
                 .Include(u => u.School)
                 .Include(u => u.CareGroups)
                 .Include(u => u.Subjects)
                 .Include(u => u.RegisterClasses)!
-                    .ThenInclude(rc => rc.SchoolGrade)
-                    .ThenInclude(sg => sg!.SystemGrade)
+                .ThenInclude(rc => rc.SchoolGrade)
+                .ThenInclude(sg => sg!.SystemGrade)
                 .Include(u => u.Periods)
                 .FirstOrDefaultAsync(u => u.Id == id);
 
             if (user == null)
                 return null;
 
-            // Fetch user roles from the identity tables
             var userRoles = await
                 (from userRole in context.UserRoles
                  join role in context.Roles on userRole.RoleId equals role.Id
@@ -126,7 +123,7 @@ public class UserService(
             var grade = await context.SchoolGrades.FindAsync(gradeId);
 
             var user = await context.Users
-                .Include(u => u.Subjects) // Ensure subjects are loaded
+                .Include(u => u.Subjects)
                 .FirstOrDefaultAsync(u => u.Subjects != null
                     && grade != null
                     && u.Subjects
@@ -185,7 +182,6 @@ public class UserService(
                 return false;
             }
 
-            // Update basic properties
             existing.Surname = user.Surname;
             existing.Abbreviation = user.Abbreviation;
             existing.Name = user.Name;
@@ -194,7 +190,7 @@ public class UserService(
             existing.SchoolId = user.SchoolId;
 
             existing.CareGroups?.Clear();
-            if (user.SelectedCareGroupIds != null && user.SelectedCareGroupIds.Any())
+            if (user.SelectedCareGroupIds != null && user.SelectedCareGroupIds.Count != 0)
             {
                 var newCareGroups = await context.CareGroups
                     .Where(cg => user.SelectedCareGroupIds.Contains(cg.Id))
@@ -333,7 +329,7 @@ public class UserService(
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
             var teacher = await context.Users.FindAsync(userId);
-            if (teacher == null) return new List<User>();
+            if (teacher == null) return [];
 
             return await context.Users
                 .AsNoTracking()

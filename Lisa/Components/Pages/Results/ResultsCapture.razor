@@ -16,7 +16,7 @@
 @inherits EventAwareComponentBase
 
 <AuthorizeView Context="AuthContext"
-    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
     <Authorized>
         <PageTitle>@(IsEdit ? "Edit Result Set" : "Capture Results")</PageTitle>
         <h3>@(IsEdit ? "Edit Result Set" : "Capture Results")</h3>

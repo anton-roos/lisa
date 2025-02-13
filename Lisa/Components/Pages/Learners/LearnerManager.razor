@@ -15,7 +15,7 @@
 @inherits EventAwareComponentBase
 
 <PageTitle>Learner Manager</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
     <Authorized>
         <h3>@(IsEdit ? "Edit Learner" : "Add Learner")</h3>
 

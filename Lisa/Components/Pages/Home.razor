@@ -81,7 +81,7 @@
         </AuthorizeView>
         <!-- Teacher View -->
         <AuthorizeView
-            Roles="@($"{Roles.Teacher}, {Roles.Principal}, {Roles.SystemAdministrator}, {Roles.Administrator}")">
+            Roles="@($"{Roles.Teacher}, {Roles.Principal}, {Roles.Administrator}")">
             <Authorized>
                 @if (_loading)
                 {

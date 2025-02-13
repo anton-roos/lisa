@@ -11,8 +11,8 @@
 @inject ResultService ResultService
 @inherits EventAwareComponentBase
 
-<AuthorizeView Context="_"
-    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+<AuthorizeView Context="AuthContext"
+    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
     <Authorized>
         <PageTitle>@(IsEdit ? "Edit Result Set" : "Capture Results")</PageTitle>
         <h3>@(IsEdit ? "Edit Result Set" : "Capture Results")</h3>

@@ -25,9 +25,6 @@ public class SchoolService(
     private School? _selectedSchool;
 
     /// <summary>
-    /// Sets the current selected school.
-    /// </summary>
-    /// <summary>
     /// Sets the current selected school and persists the selection in the user's record.
     /// For non-system administrators, the selected school must be valid.
     /// </summary>
@@ -40,7 +37,6 @@ public class SchoolService(
             if (schoolId == null)
             {
                 _selectedSchool = null;
-                // Update the persistent store (i.e. the user's record) to clear the selection.
                 await UpdateUserSelectedSchoolAsync(null);
                 await _uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
                 return null;
@@ -59,7 +55,6 @@ public class SchoolService(
 
             _selectedSchool = school;
 
-            // Persist the selection in the user's record.
             await UpdateUserSelectedSchoolAsync(school.Id);
 
             await _uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
@@ -79,13 +74,11 @@ public class SchoolService(
     /// <returns>The selected <see cref="School"/>, or null for system administrators.</returns>
     public async Task<School?> GetSelectedSchoolAsync()
     {
-        // If the school is already loaded in memory, return it.
         if (_selectedSchool != null)
         {
             return _selectedSchool;
         }
 
-        // Retrieve the current user.
         var currentUser = await GetCurrentUserAsync();
         if (currentUser == null)
         {
@@ -93,7 +86,6 @@ public class SchoolService(
             return null;
         }
 
-        // Get full user details from your user service.
         var user = await _userService.GetByIdAsync(currentUser.Id);
         if (user == null)
         {
@@ -101,14 +93,12 @@ public class SchoolService(
             return null;
         }
 
-        // If the user is a system administrator, it's acceptable to have no selected school.
-        if (await _userManager.IsInRoleAsync(user, "System Administrator"))
+        if (user.Roles.Contains(Roles.SystemAdministrator))
         {
             _logger.LogError("Returning null for system administrator user {UserId}.", user.Id);
             return null;
         }
 
-        // For non-system administrator users, the selected school must be set.
         if (user.SchoolId == null)
         {
             _logger.LogError("Non-system administrator user {UserId} does not have an associated selected school.", user.Id);
@@ -153,7 +143,7 @@ public class SchoolService(
 
         try
         {
-            return await _userManager.FindByIdAsync(userId);
+            return await _userService.GetByIdAsync(Guid.Parse(userId));
         }
         catch (Exception ex)
         {
@@ -175,7 +165,6 @@ public class SchoolService(
             return;
         }
 
-        // Get full user details.
         var user = await _userService.GetByIdAsync(currentUser.Id);
         if (user == null)
         {

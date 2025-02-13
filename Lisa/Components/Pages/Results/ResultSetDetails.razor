@@ -5,8 +5,8 @@
 @inject ILogger<ResultSetDetails> Logger
 
 <PageTitle>Result Set Details</PageTitle>
-<AuthorizeView Context="_"
-    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+<AuthorizeView Context="AuthContext"
+    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
     <Authorized>
         <h3>Result Set Details</h3>
 

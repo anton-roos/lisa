@@ -9,8 +9,8 @@
 
 @inherits EventAwareComponentBase
 
-<AuthorizeView Context="_"
-    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+<AuthorizeView Context="AuthContext"
+    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
     <Authorized>
         <PageTitle>Results</PageTitle>
         <h3>Results</h3>
@@ -259,36 +259,35 @@
             return;
         }
 
-        List<ResultSet> results;
 
         if (ViewMode == "Subject")
         {
-            results = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, null, _subjectId, null))
+            ResultsSet = (await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, null, SubjectId, null))
             .OrderBy(r => r.AssessmentDate)
             .ToList();
 
-            GroupedResults = results
-            .GroupBy(r => $"{r.Subject?.Name} - {r.SchoolGrade?.SystemGrade.Name}")
+            GroupedResults = ResultsSet
+            .GroupBy(r => $"{r.Subject.Name} - {r.SchoolGrade.SystemGrade.Name}")
             .ToDictionary(g => $"{g.Key}", g => g.ToList());
         }
         else if (ViewMode == "Grade")
         {
-            results = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, _gradeId, null, null))
+            ResultsSet = (await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, GradeId, null, null))
             .OrderBy(r => r.AssessmentDate)
             .ToList();
 
-            GroupedResults = results
-            .GroupBy(r => r.Subject?.Name)
+            GroupedResults = ResultsSet
+            .GroupBy(r => r.Subject.Name)
             .ToDictionary(g => g.Key, g => g.ToList());
         }
         else if (ViewMode == "Teacher")
         {
-            results = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, null, null, _teacherId))
+            ResultsSet = (await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, null, null, TeacherId))
             .OrderBy(r => r.AssessmentDate)
             .ToList();
 
-            GroupedResults = results
-            .GroupBy(r => new { r.Teacher?.Abbreviation, r.Subject?.Name })
+            GroupedResults = ResultsSet
+            .GroupBy(r => new { r.Teacher.Abbreviation, r.Subject.Name })
             .ToDictionary(g => $"{g.Key.Abbreviation} - {g.Key.Name}", g => g.ToList());
         }
 

@@ -39,7 +39,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             .ThenInclude(sg => sg!.SystemGrade)
             .Include(l => l.Combination)
             .ThenInclude(c => c!.Subjects)
-            .Include(l => l.LearnerSubjects!.Cast<LearnerSubject>())
+            .Include(l => l.LearnerSubjects!)
             .ThenInclude(ls => ls.Subject)
             .Include(l => l.CareGroup)
             .Include(l => l.Parents!)

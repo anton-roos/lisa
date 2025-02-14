@@ -19,20 +19,17 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public IActionResult Login([FromForm] string username, [FromForm] string password)
     {
-        // Validate credentials. (Replace this with your real authentication logic.)
         if (username != "admin@dcegroup.co.za" || password != "Lis@Adm!n7Dc3Gr0up")
         {
             return Unauthorized("Invalid credentials.");
         }
 
-        // Create the claims and the JWT token.
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.Name, username)
-            // add more claims as needed
+            new(ClaimTypes.Name, username)
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? string.Empty));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
@@ -44,7 +41,6 @@ public class AuthController : ControllerBase
 
         var jwtToken = new JwtSecurityTokenHandler().WriteToken(token);
 
-        // **Option 1:** Store the JWT in a cookie so that your Blazor circuit and SignalR can use it.
         Response.Cookies.Append("jwt", jwtToken, new CookieOptions
         {
             HttpOnly = true,
@@ -52,11 +48,7 @@ public class AuthController : ControllerBase
             Expires = DateTimeOffset.Now.AddMinutes(30)
         });
 
-        // **Option 2:** Alternatively, you could return the token to the client and have client-side code store it.
-        // For this example we use cookies.
-
-        // Tell htmx to redirect to "/" after a successful login.
-        Response.Headers.Add("HX-Redirect", "/");
+        Response.Headers.Append("HX-Redirect", "/");
         return Ok();
     }
 }

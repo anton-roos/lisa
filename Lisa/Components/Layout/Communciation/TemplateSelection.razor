@@ -5,13 +5,10 @@
     <label for="templateSelect">Select Template</label>
     <InputSelect id="templateSelect" class="form-select" TValue="Guid?"
         ValueChanged="@(async (id) => await TemplateChanged(id))" ValueExpression="(() => SelectedTemplateId)">
-        <option value="">-- Select Template --</option>
-        @if (Templates != null)
+        <option value="@string.Empty">-- Select Template --</option>
+        @foreach (var template in _templates)
         {
-            @foreach (var template in Templates)
-            {
-                <option value="@template.Id">@template.Name</option>
-            }
+            <option value="@template.Id">@template.Name</option>
         }
     </InputSelect>
 </div>
@@ -31,14 +28,14 @@
     /// <summary>
     /// The list of available email templates.
     /// </summary>
-    private List<EmailTemplate> Templates = new();
+    private List<EmailTemplate> _templates = new();
 
     /// <summary>
     /// Loads all email templates on component initialization.
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
-        Templates = await EmailTemplateService.GetAllTemplatesAsync();
+        _templates = await EmailTemplateService.GetAllTemplatesAsync();
     }
 
     /// <summary>
@@ -49,7 +46,7 @@
         SelectedTemplateId = templateId;
 
         // Find the selected template by its ID
-        var selectedTemplate = Templates.FirstOrDefault(t => t.Id == templateId);
+        var selectedTemplate = _templates.FirstOrDefault(t => t.Id == templateId);
         await OnTemplateSelected.InvokeAsync(selectedTemplate);
     }
 }

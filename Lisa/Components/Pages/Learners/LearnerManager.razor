@@ -1,4 +1,3 @@
-@page "/learners/add"
 @page "/learners/edit/{LearnerId:guid}"
 
 @using Lisa.Models.Entities
@@ -9,7 +8,6 @@
 @inject CombinationService CombinationService
 @inject RegisterClassService RegisterClassService
 @inject SubjectService SubjectService
-@inject ILogger<LearnerManager> Logger
 @inject CareGroupService CareGroupService
 
 @inherits EventAwareComponentBase
@@ -19,205 +17,216 @@
     <Authorized>
         <h3>@(IsEdit ? "Edit Learner" : "Add Learner")</h3>
 
-        @if (!string.IsNullOrEmpty(AlertMessage))
+        @if (!string.IsNullOrEmpty(_alertMessage))
         {
-            <div class="alert alert-@AlertType alert-dismissible fade show" role="alert">
-                @AlertMessage
-                <button type="button" class="btn-close" aria-label="Close" @onclick="ClearAlert"></button>
-            </div>
+        <div class="alert alert-@_alertType alert-dismissible fade show" role="alert">
+            @_alertMessage
+            <button type="button" class="btn-close" aria-label="Close" @onclick="ClearAlert"></button>
+        </div>
         }
 
-        <EditForm Context="Edit" Model="LearnerModel" OnValidSubmit="HandleValidSubmit">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
+        <EditForm Context="edit" Model="_learnerModel" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator/>
+            <ValidationSummary/>
 
             <div class="mb-3">
                 <label for="Code">Code</label>
-                <InputText id="Code" class="form-control" @bind-Value="LearnerModel.Code" />
+                <InputText id="Code" class="form-control" @bind-Value="_learnerModel.Code"/>
             </div>
 
             <div class="mb-3">
                 <label for="surname">Surname</label>
-                <InputText id="surname" class="form-control" @bind-Value="LearnerModel.Surname" />
+                <InputText id="surname" class="form-control" @bind-Value="_learnerModel.Surname"/>
             </div>
 
             <div class="mb-3">
                 <label for="name">Name</label>
-                <InputText id="name" class="form-control" @bind-Value="LearnerModel.Name" />
+                <InputText id="name" class="form-control" @bind-Value="_learnerModel.Name"/>
             </div>
 
             <div class="mb-3">
                 <label>ID Number <span class="text-muted">(Optional)</span></label>
-                <InputText class="form-control" @bind-Value="LearnerModel.IdNumber" />
+                <InputText class="form-control" @bind-Value="_learnerModel.IdNumber"/>
             </div>
 
             <div class="mb-3">
                 <label>Cell Number <span class="text-muted">(Optional)</span></label>
-                <InputText class="form-control" @bind-Value="LearnerModel.CellNumber" />
+                <InputText class="form-control" @bind-Value="_learnerModel.CellNumber"/>
             </div>
 
             <div class="mb-3">
                 <label>Email Address <span class="text-muted">(Optional)</span></label>
-                <InputText class="form-control" @bind-Value="LearnerModel.Email" />
+                <InputText class="form-control" @bind-Value="_learnerModel.Email"/>
             </div>
 
             <div class="mb-3">
                 <label for="Active">Active</label>
-                <InputCheckbox id="Active" @bind-Value="LearnerModel.Active" />
+                <InputCheckbox id="Active" @bind-Value="_learnerModel.Active"/>
             </div>
 
             <div class="mb-3">
                 <label for="CareGroupId">Care Group</label>
-                <InputSelect id="CareGroupId" class="form-control" @bind-Value="LearnerModel.CareGroupId">
+                <InputSelect id="CareGroupId" class="form-control" @bind-Value="_learnerModel.CareGroupId">
                     <option value="">Select Care Group</option>
-                    @foreach (var careGroup in CareGroups)
+                    @foreach (var careGroup in _careGroups)
                     {
-                        <option value="@careGroup.Id">@careGroup.Name</option>
+                    <option value="@careGroup.Id">@careGroup.Name</option>
                     }
                 </InputSelect>
             </div>
 
             <div class="mb-3">
                 <label for="RegisterClassId">Register Class</label>
-                <InputSelect id="RegisterClassId" class="form-control" @bind-Value="LearnerModel.RegisterClassId"
-                    TValue="Guid ?" @oninput="RegisterClassSelected">
+                <InputSelect id="RegisterClassId" class="form-control" @bind-Value="_learnerModel.RegisterClassId"
+                             TValue="Guid ?" @oninput="RegisterClassSelected">
                     <option value="">Select Register Class</option>
-                    @foreach (var registerClass in RegisterClasses!)
+                    @foreach (var registerClass in _registerClasses)
                     {
-                        <option value="@registerClass.Id.ToString()">@registerClass.Name</option>
+                    <option value="@registerClass.Id.ToString()">@registerClass.Name</option>
                     }
                 </InputSelect>
             </div>
 
             <div class="mb-3">
                 <label>Subject Combination</label>
-                @if (CurrentRegisterClass == null)
+                @if (_currentRegisterClass == null)
                 {
-                    <p>Please select a Register Class first.</p>
+                <p>Please select a Register Class first.</p>
                 }
                 else
                 {
-                    <div>Selected Register Class: @CurrentRegisterClass.Name</div>
+                <div>Selected Register Class: @_currentRegisterClass.Name</div>
 
-                    <h3>Compulsory Subjects</h3>
-                    @foreach (var subject in CurrentRegisterClass.CompulsorySubjects)
+                <h3>Compulsory Subjects</h3>
+                @if (_currentRegisterClass?.CompulsorySubjects != null)
+                {
+                    @foreach (var subject in _currentRegisterClass.CompulsorySubjects)
                     {
-                        bool isChecked = LearnerModel.SubjectIds.Contains(subject.Id);
+                        var isChecked = _learnerModel.SubjectIds.Contains(subject.Id);
 
                         <div>
-                            <input type="checkbox" checked="@isChecked" @onchange="@(() => ToggleSubject(subject.Id))" />
+                            <input type="checkbox" checked="@isChecked"
+                            @onchange="@(() => ToggleSubject(subject.Id))"/>
                             <label>@subject.Name</label>
                         </div>
                     }
+                }
 
-                    @if (CurrentRegisterClass.SchoolGrade.SystemGrade.MathGrade)
-                    {
-                        <div class="mb-8" id="math-selection">
-                            <h3>Select 1 (Mathematics or Maths Literacy)</h3>
-                            <div class="row justify-content-start">
-                                @foreach (var MathSubject in MathSubjects)
+                @if (_currentRegisterClass?.SchoolGrade is { SystemGrade.MathGrade: true })
+                {
+                    <div class="mb-8" id="math-selection">
+                        <h3>Select 1 (Mathematics or Maths Literacy)</h3>
+                        <div class="row justify-content-start">
+                            @if (_mathSubjects is not null)
+                            {
+                                @foreach (var mathSubject in _mathSubjects)
                                 {
                                     <div class="col-3">
-                                        <input type="radio" id="math-@MathSubject.Id" name="math" value="@MathSubject.Id"
-                                            @onchange="@(() => OnMathRadioChanged(@MathSubject.Id))"
-                                            checked="@(_mathSelection == MathSubject.Id)" />
-                                        <label for="math-@MathSubject.Id">@MathSubject.Description</label><br>
+                                        <input type="radio" id="math-@mathSubject.Id" name="math"
+                                        value="@mathSubject.Id"
+                                        @onchange="@(() => OnMathRadioChanged(mathSubject.Id))"
+                                        checked="@(MathSelection == mathSubject.Id)"/>
+                                        <label for="math-@mathSubject.Id">@mathSubject.Description</label><br>
                                     </div>
                                 }
-                            </div>
+                            }
                         </div>
-                    }
+                    </div>
+                }
 
-                    @if (CombinationsToChoseFrom != null && CombinationsToChoseFrom.Any())
-                    {
-                        <h3>Select exactly 1 subject from each Combination</h3>
-                        <div class="row">
-                            @foreach (var combination in CombinationsToChoseFrom!)
-                            {
-                                <div class="col">
-                                    <h5>@combination.Name</h5>
-                                    @foreach (var subject in combination.Subjects)
+                @if (_combinationsToChoseFrom != null && _combinationsToChoseFrom.Any())
+                {
+                    <h3>Select exactly 1 subject from each Combination</h3>
+                    <div class="row">
+                        @foreach (var combination in _combinationsToChoseFrom!)
+                        {
+                            <div class="col">
+                                <h5>@combination.Name</h5>
+                                @if (combination.Subjects != null)
+                                {
+                                    foreach (var subject in combination.Subjects)
                                     {
-                                        bool isSelected = LearnerModel.CombinationSelections.TryGetValue(combination.Id, out var
-                                        chosenSubjId)
-                                        && chosenSubjId == subject.Id;
-                                        bool isDisabled = IsSubjectDisabled(combination.Id, subject.Id);
+                                        var isSelected = _learnerModel.CombinationSelections.TryGetValue(combination.Id, out var
+                                                             chosenSubjId)
+                                                         && chosenSubjId == subject.Id;
+                                        var isDisabled = IsSubjectDisabled(combination.Id, subject.Id);
 
                                         <div>
                                             <input type="radio" name="@combination.Id" value="@subject.Id"
-                                                @onclick="@(() => OnCombinationSubjectChanged(combination, subject))"
-                                                checked="@isSelected" disabled="@isDisabled" />
+                                            @onclick="@(() => OnCombinationSubjectChanged(combination, subject))"
+                                            checked="@isSelected" disabled="@isDisabled"/>
                                             <label class="@(isDisabled ? "text-muted" : "")">@subject.Name</label>
                                         </div>
                                     }
-                                </div>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <p>No combinations found for this grade.</p>
-                    }
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p>No combinations found for this grade.</p>
+                }
                 }
             </div>
 
             <h4 class="mt-4">Parent Information</h4>
 
             <div class="row">
-                @foreach (var parent in Parents)
+                @foreach (var parent in _parents)
                 {
-                    <div class="col-12 col-md-6 col-lg-4 col-xl-3 mb-3">
-                        <div class="card h-100">
-                            <div class="card-body">
-                                <h5 class="card-title">Parent @(Parents.IndexOf(parent) + 1)</h5>
+                <div class="col-12 col-md-6 col-lg-4 col-xl-3 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Parent @(_parents.IndexOf(parent) + 1)</h5>
 
-                                <div class="mb-2">
-                                    <label>Surname</label>
-                                    <InputText class="form-control" @bind-Value="parent.Surname" />
-                                </div>
-
-                                <div class="mb-2">
-                                    <label>Name</label>
-                                    <InputText class="form-control" @bind-Value="parent.Name" />
-                                </div>
-
-                                <div class="mb-2">
-                                    <label>Relationship</label>
-                                    <InputText class="form-control" @bind-Value="parent.Relationship" />
-                                </div>
-
-                                <div class="mb-2">
-                                    <label>Primary Email</label>
-                                    <InputText class="form-control" @bind-Value="parent.PrimaryEmail" />
-                                </div>
-
-                                <div class="mb-2">
-                                    <label>Secondary Email <span class="text-muted">(Optional)</span></label>
-                                    <InputText class="form-control" @bind-Value="parent.SecondaryEmail" />
-                                </div>
-
-                                <div class="mb-2">
-                                    <label>Primary Number</label>
-                                    <InputText class="form-control" @bind-Value="parent.PrimaryCellNumber" />
-                                </div>
-
-                                <div class="mb-2">
-                                    <label>Secondary Number <span class="text-muted">(Optional)</span></label>
-                                    <InputText class="form-control" @bind-Value="parent.SecondaryCellNumber" />
-                                </div>
-
-                                <div class="mb-2">
-                                    <label>WhatsApp Number</label>
-                                    <InputText class="form-control" @bind-Value="parent.WhatsAppNumber" />
-                                </div>
-
-                                <button type="button" class="btn btn-danger w-100 mt-2"
-                                    @onclick="@(() => RemoveParent(parent))">
-                                    <i class="bi bi-trash me-1"></i> Remove
-                                </button>
+                            <div class="mb-2">
+                                <label>Surname</label>
+                                <InputText class="form-control" @bind-Value="parent.Surname"/>
                             </div>
+
+                            <div class="mb-2">
+                                <label>Name</label>
+                                <InputText class="form-control" @bind-Value="parent.Name"/>
+                            </div>
+
+                            <div class="mb-2">
+                                <label>Relationship</label>
+                                <InputText class="form-control" @bind-Value="parent.Relationship"/>
+                            </div>
+
+                            <div class="mb-2">
+                                <label>Primary Email</label>
+                                <InputText class="form-control" @bind-Value="parent.PrimaryEmail"/>
+                            </div>
+
+                            <div class="mb-2">
+                                <label>Secondary Email <span class="text-muted">(Optional)</span></label>
+                                <InputText class="form-control" @bind-Value="parent.SecondaryEmail"/>
+                            </div>
+
+                            <div class="mb-2">
+                                <label>Primary Number</label>
+                                <InputText class="form-control" @bind-Value="parent.PrimaryCellNumber"/>
+                            </div>
+
+                            <div class="mb-2">
+                                <label>Secondary Number <span class="text-muted">(Optional)</span></label>
+                                <InputText class="form-control" @bind-Value="parent.SecondaryCellNumber"/>
+                            </div>
+
+                            <div class="mb-2">
+                                <label>WhatsApp Number</label>
+                                <InputText class="form-control" @bind-Value="parent.WhatsAppNumber"/>
+                            </div>
+
+                            <button type="button" class="btn btn-danger w-100 mt-2"
+                            @onclick="@(() => RemoveParent(parent))">
+                                <i class="bi bi-trash me-1"></i> Remove
+                            </button>
                         </div>
                     </div>
+                </div>
                 }
             </div>
 
@@ -231,36 +240,35 @@
         </EditForm>
     </Authorized>
     <NotAuthorized>
-        <Unauthorized />
+        <Unauthorized/>
     </NotAuthorized>
 </AuthorizeView>
 
 @code {
-    [Parameter] public Guid? LearnerId { get; set; }
+    [Microsoft.AspNetCore.Components.Parameter] public Guid? LearnerId { get; set; }
     private bool IsEdit => LearnerId.HasValue;
-    private LearnerViewModel LearnerModel = new();
-    private List<ParentViewModel> Parents = new();
-    private List<RegisterClass> RegisterClasses = new();
-    private List<CareGroup> CareGroups = new();
-    private IEnumerable<Combination>? AllCombinations;
-    private List<Subject>? MathSubjects;
-    private RegisterClass? CurrentRegisterClass;
-    private School? SelectedSchool;
-    private string? SelectedRegisterClassId = string.Empty;
-    private IEnumerable<Combination>? CombinationsToChoseFrom;
-    private string? AlertMessage;
-    private string AlertType = "success";
-    private EditContext? ParentEditContext;
+    private LearnerViewModel _learnerModel = new();
+    private List<ParentViewModel> _parents = [];
+    private List<RegisterClass> _registerClasses = [];
+    private List<CareGroup> _careGroups = [];
+    private IEnumerable<Combination>? _allCombinations;
+    private List<Subject>? _mathSubjects;
+    private RegisterClass? _currentRegisterClass;
+    private School? _selectedSchool;
+    private IEnumerable<Combination>? _combinationsToChoseFrom;
+    private string? _alertMessage;
+    private string _alertType = "success";
+    private EditContext? _parentEditContext;
 
-    private int _mathSelection
+    private int MathSelection
     {
-        get => LearnerModel.MathSelection;
-        set => LearnerModel.MathSelection = value;
+        get => _learnerModel.MathSelection;
+        set => _learnerModel.MathSelection = value;
     }
 
     protected override async Task OnInitializedAsync()
     {
-        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         SubscribeToEvent(UiEvents.SchoolSelected);
 
         await LoadDropdowns();
@@ -275,16 +283,15 @@
 
     private void InitializeParentEditContext()
     {
-        ParentEditContext = new EditContext(new ParentViewModel());
-        ParentEditContext.OnFieldChanged += (sender, args) =>
+        _parentEditContext = new EditContext(new ParentViewModel());
+        _parentEditContext.OnFieldChanged += (_, args) =>
         {
             var fieldIdentifier = args.FieldIdentifier;
-            var messages = new ValidationMessageStore(ParentEditContext);
+            var messages = new ValidationMessageStore(_parentEditContext);
             messages.Clear(fieldIdentifier);
 
             if (fieldIdentifier.FieldName == nameof(ParentViewModel.PrimaryEmail))
             {
-                var value = fieldIdentifier.Model as ParentViewModel;
             }
         };
     }
@@ -293,33 +300,34 @@
     {
         if (eventName == UiEvents.SchoolSelected)
         {
-            SelectedSchool = payload as School;
+            _selectedSchool = payload as School;
             await LoadDropdowns();
             StateHasChanged();
         }
+
         await base.HandleEventAsync(eventName, payload);
     }
 
     private async Task LoadDropdowns()
     {
-        if (SelectedSchool != null)
+        if (_selectedSchool != null)
         {
-            RegisterClasses = await RegisterClassService.GetBySchoolIdAsync(SelectedSchool.Id);
-            AllCombinations = await CombinationService.GetCombinationsBySchoolId(SelectedSchool.Id);
-            CareGroups = await CareGroupService.GetBySchoolAsync(SelectedSchool.Id);
-            MathSubjects = await SubjectService.GetMathSubjectsAsync();
+            _registerClasses = await RegisterClassService.GetBySchoolIdAsync(_selectedSchool.Id)!;
+            _allCombinations = await CombinationService.GetCombinationsBySchoolId(_selectedSchool.Id);
+            _careGroups = await CareGroupService.GetBySchoolAsync(_selectedSchool.Id);
+            _mathSubjects = await SubjectService.GetMathSubjectsAsync();
         }
-        else if (LearnerModel.RegisterClassId.HasValue)
+        else if (_learnerModel.RegisterClassId.HasValue)
         {
-            RegisterClasses = await RegisterClassService.GetBySchoolIdAsync(LearnerModel.SchoolId);
-            AllCombinations = await CombinationService.GetCombinationsBySchoolId(LearnerModel.SchoolId);
-            CareGroups = await CareGroupService.GetBySchoolAsync(LearnerModel.SchoolId);
-            MathSubjects = await SubjectService.GetMathSubjectsAsync();
+            _registerClasses = await RegisterClassService.GetBySchoolIdAsync(_learnerModel.SchoolId)!;
+            _allCombinations = await CombinationService.GetCombinationsBySchoolId(_learnerModel.SchoolId);
+            _careGroups = await CareGroupService.GetBySchoolAsync(_learnerModel.SchoolId);
+            _mathSubjects = await SubjectService.GetMathSubjectsAsync();
         }
         else
         {
-            RegisterClasses.Clear();
-            AllCombinations = Enumerable.Empty<Combination>();
+            _registerClasses.Clear();
+            _allCombinations = [];
         }
     }
 
@@ -334,65 +342,68 @@
             return;
         }
 
-        LearnerModel = new LearnerViewModel
+        if (existingLearner.LearnerSubjects != null)
         {
-            Id = existingLearner.Id,
-            Active = existingLearner.Active,
-            CareGroupId = existingLearner.CareGroupId,
-            CellNumber = existingLearner.CellNumber,
-            Code = existingLearner.Code,
-            Email = existingLearner.Email,
-            Surname = existingLearner.Surname,
-            IdNumber = existingLearner.IdNumber,
-            Name = existingLearner.Name,
-            RegisterClassId = existingLearner.RegisterClassId,
-            SubjectIds = existingLearner.LearnerSubjects.Select(s => s.SubjectId).ToList()
-        };
-
-        Parents = existingLearner.Parents
-        .Select(p => new ParentViewModel
-        {
-            Id = p.Id,
-            Surname = p.Surname,
-            Name = p.Name,
-            Relationship = p.Relationship,
-            PrimaryEmail = p.PrimaryEmail,
-            SecondaryEmail = p.SecondaryEmail,
-            PrimaryCellNumber = p.PrimaryCellNumber,
-            SecondaryCellNumber = p.SecondaryCellNumber,
-            WhatsAppNumber = p.WhatsAppNumber
-        })
-        .ToList();
-
-        if (MathSubjects != null)
-        {
-            var chosenMathSubject = MathSubjects
-            .FirstOrDefault(ms => LearnerModel.SubjectIds.Contains(ms.Id));
-            if (chosenMathSubject != null)
+            _learnerModel = new LearnerViewModel
             {
-                _mathSelection = chosenMathSubject.Id;
-            }
-        }
+                Id = existingLearner.Id,
+                Active = existingLearner.Active,
+                CareGroupId = existingLearner.CareGroupId,
+                CellNumber = existingLearner.CellNumber,
+                Code = existingLearner.Code,
+                Email = existingLearner.Email,
+                Surname = existingLearner.Surname,
+                IdNumber = existingLearner.IdNumber,
+                Name = existingLearner.Name,
+                RegisterClassId = existingLearner.RegisterClassId,
+                SubjectIds = existingLearner.LearnerSubjects.Select(s => s.SubjectId).ToList()
+            };
 
-        if (LearnerModel.RegisterClassId.HasValue)
-        {
-            SelectedRegisterClassId = LearnerModel.RegisterClassId.Value.ToString();
-            CurrentRegisterClass = await RegisterClassService.GetByIdAsync(LearnerModel.RegisterClassId.Value);
-            CombinationsToChoseFrom = AllCombinations?
-            .Where(c => c.SchoolGradeId == CurrentRegisterClass.SchoolGradeId);
-
-            if (CombinationsToChoseFrom != null)
-            {
-                foreach (var combo in CombinationsToChoseFrom)
-                {
-                    var chosenSubject = existingLearner.LearnerSubjects
-                    .Where(ls => ls.CombinationId == combo.Id)
-                    .Select(ls => ls.SubjectId)
-                    .FirstOrDefault();
-
-                    if (chosenSubject != 0)
+            if (existingLearner.Parents != null)
+                _parents = existingLearner.Parents
+                    .Select(p => new ParentViewModel
                     {
-                        LearnerModel.CombinationSelections[combo.Id] = chosenSubject;
+                        Id = p.Id,
+                        Surname = p.Surname,
+                        Name = p.Name,
+                        Relationship = p.Relationship,
+                        PrimaryEmail = p.PrimaryEmail,
+                        SecondaryEmail = p.SecondaryEmail,
+                        PrimaryCellNumber = p.PrimaryCellNumber,
+                        SecondaryCellNumber = p.SecondaryCellNumber,
+                        WhatsAppNumber = p.WhatsAppNumber
+                    })
+                    .ToList();
+
+            if (_mathSubjects != null)
+            {
+                var chosenMathSubject = _mathSubjects
+                    .FirstOrDefault(ms => _learnerModel.SubjectIds.Contains(ms.Id));
+                if (chosenMathSubject != null)
+                {
+                    MathSelection = chosenMathSubject.Id;
+                }
+            }
+
+            if (_learnerModel.RegisterClassId.HasValue)
+            {
+                _currentRegisterClass = await RegisterClassService.GetByIdAsync(_learnerModel.RegisterClassId.Value);
+                _combinationsToChoseFrom = _allCombinations?
+                    .Where(c => _currentRegisterClass != null && c.SchoolGradeId == _currentRegisterClass.SchoolGradeId);
+
+                if (_combinationsToChoseFrom != null)
+                {
+                    foreach (var combo in _combinationsToChoseFrom)
+                    {
+                        var chosenSubject = existingLearner.LearnerSubjects
+                            .Where(ls => ls.CombinationId == combo.Id)
+                            .Select(ls => ls.SubjectId)
+                            .FirstOrDefault();
+
+                        if (chosenSubject != 0)
+                        {
+                            _learnerModel.CombinationSelections[combo.Id] = chosenSubject;
+                        }
                     }
                 }
             }
@@ -409,31 +420,32 @@
         {
             var newRegisterClassId = Guid.Parse(selectedValue);
 
-            if (LearnerModel.RegisterClassId == newRegisterClassId)
+            if (_learnerModel.RegisterClassId == newRegisterClassId)
             {
                 return;
             }
 
-            LearnerModel.RegisterClassId = newRegisterClassId;
-            CurrentRegisterClass = await RegisterClassService.GetByIdAsync(LearnerModel.RegisterClassId.Value);
+            _learnerModel.RegisterClassId = newRegisterClassId;
+            _currentRegisterClass = await RegisterClassService.GetByIdAsync(_learnerModel.RegisterClassId.Value);
 
-            LearnerModel.SubjectIds.Clear();
-            LearnerModel.CombinationSelections.Clear();
-            _mathSelection = 0;
+            _learnerModel.SubjectIds.Clear();
+            _learnerModel.CombinationSelections.Clear();
+            MathSelection = 0;
 
-            foreach (var subj in CurrentRegisterClass.CompulsorySubjects)
-            {
-                LearnerModel.SubjectIds.Add(subj.Id);
-            }
+            if (_currentRegisterClass?.CompulsorySubjects != null)
+                foreach (var subj in _currentRegisterClass.CompulsorySubjects)
+                {
+                    _learnerModel.SubjectIds.Add(subj.Id);
+                }
 
-            CombinationsToChoseFrom = AllCombinations?.Where(
-            c => c.SchoolGradeId == CurrentRegisterClass.SchoolGradeId);
+            _combinationsToChoseFrom = _allCombinations?.Where(
+                c => _currentRegisterClass != null && c.SchoolGradeId == _currentRegisterClass.SchoolGradeId);
         }
         else
         {
-            LearnerModel.RegisterClassId = null;
-            CurrentRegisterClass = null;
-            CombinationsToChoseFrom = null;
+            _learnerModel.RegisterClassId = null;
+            _currentRegisterClass = null;
+            _combinationsToChoseFrom = null;
         }
 
         StateHasChanged();
@@ -441,66 +453,66 @@
 
     private void ToggleSubject(int subjectId)
     {
-        if (LearnerModel.SubjectIds.Contains(subjectId))
+        if (_learnerModel.SubjectIds.Contains(subjectId))
         {
-            LearnerModel.SubjectIds.Remove(subjectId);
+            _learnerModel.SubjectIds.Remove(subjectId);
         }
         else
         {
-            LearnerModel.SubjectIds.Add(subjectId);
+            _learnerModel.SubjectIds.Add(subjectId);
         }
     }
 
     private void OnMathRadioChanged(int mathSubjectId)
     {
-        _mathSelection = mathSubjectId;
+        MathSelection = mathSubjectId;
 
-        foreach (var ms in MathSubjects ?? Enumerable.Empty<Subject>())
+        foreach (var ms in _mathSubjects ?? Enumerable.Empty<Subject>())
         {
-            LearnerModel.SubjectIds.Remove(ms.Id);
+            _learnerModel.SubjectIds.Remove(ms.Id);
         }
 
-        if (!LearnerModel.SubjectIds.Contains(_mathSelection))
+        if (!_learnerModel.SubjectIds.Contains(MathSelection))
         {
-            LearnerModel.SubjectIds.Add(_mathSelection);
+            _learnerModel.SubjectIds.Add(MathSelection);
         }
     }
 
     private void OnCombinationSubjectChanged(Combination combo, Subject newSubject)
     {
-        if (LearnerModel.CombinationSelections.TryGetValue(combo.Id, out var oldSubjectId))
+        if (_learnerModel.CombinationSelections.TryGetValue(combo.Id, out var oldSubjectId))
         {
-            LearnerModel.SubjectIds.Remove(oldSubjectId);
+            _learnerModel.SubjectIds.Remove(oldSubjectId);
         }
 
-        LearnerModel.CombinationSelections[combo.Id] = newSubject.Id;
+        _learnerModel.CombinationSelections[combo.Id] = newSubject.Id;
 
-        if (!LearnerModel.SubjectIds.Contains(newSubject.Id))
+        if (!_learnerModel.SubjectIds.Contains(newSubject.Id))
         {
-            LearnerModel.SubjectIds.Add(newSubject.Id);
+            _learnerModel.SubjectIds.Add(newSubject.Id);
         }
     }
 
     private bool IsSubjectDisabled(Guid currentComboId, int subjectId)
     {
-        return LearnerModel.CombinationSelections.Any(kvp => kvp.Key != currentComboId && kvp.Value == subjectId);
+        return _learnerModel.CombinationSelections.Any(kvp => kvp.Key != currentComboId && kvp.Value == subjectId);
     }
 
     private void AddParent()
     {
-        Parents.Add(new ParentViewModel());
+        _parents.Add(new ParentViewModel());
         StateHasChanged();
     }
 
     private void RemoveParent(ParentViewModel parent)
     {
-        Parents.Remove(parent);
+        _parents.Remove(parent);
         StateHasChanged();
     }
 
     private async Task HandleValidSubmit()
     {
-        if (SelectedSchool == null)
+        if (_selectedSchool == null)
         {
             SetAlert("danger", "Please select a school before saving.");
             return;
@@ -510,7 +522,7 @@
         {
             if (!IsEdit)
             {
-                var learnerExists = await LearnerService.LearnerExistsByCodeAsync(LearnerModel.Code!);
+                var learnerExists = await LearnerService.LearnerExistsByCodeAsync(_learnerModel.Code!);
                 if (learnerExists)
                 {
                     SetAlert("danger", "A learner with this code already exists.");
@@ -520,13 +532,13 @@
 
             if (IsEdit && LearnerId.HasValue)
             {
-                LearnerModel.Id = LearnerId.Value;
-                await LearnerService.UpdateLearnerAsync(LearnerModel, Parents);
+                _learnerModel.Id = LearnerId.Value;
+                await LearnerService.UpdateLearnerAsync(_learnerModel, _parents);
                 SetAlert("success", "Learner updated successfully.");
             }
             else
             {
-                await LearnerService.AddLearnerAsync(LearnerModel, Parents, SelectedSchool.Id);
+                await LearnerService.AddLearnerAsync(_learnerModel, _parents, _selectedSchool.Id);
                 SetAlert("success", "Learner and Parents added successfully.");
             }
 
@@ -540,14 +552,15 @@
 
     private void SetAlert(string type, string message)
     {
-        AlertType = type;
-        AlertMessage = message;
+        _alertType = type;
+        _alertMessage = message;
         StateHasChanged();
     }
 
     private void ClearAlert()
     {
-        AlertMessage = null;
+        _alertMessage = null;
         StateHasChanged();
     }
+
 }

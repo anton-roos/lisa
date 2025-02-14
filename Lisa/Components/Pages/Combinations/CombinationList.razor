@@ -7,28 +7,28 @@
 @inject SchoolService SchoolService
 
 <PageTitle>Subject Combinations</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>Subject Combinations</h3>
 
-        @if (SelectedSchool == null)
+        @if (_selectedSchool == null)
         {
             <div class="alert alert-info">
                 Please select a school to view subject combinations.
             </div>
         }
-        else if (SubjectCombinations == null)
+        else if (_subjectCombinations == null)
         {
             <p>Loading...</p>
         }
-        else if (SchoolGrades == null || !SchoolGrades.Any())
+        else if (_schoolGrades == null || !_schoolGrades.Any())
         {
             <button class="btn btn-primary mb-3" @onclick="AddCombination">Add Combination</button>
             <div class="alert alert-warning">
                 No Grades found. Please add a grade first before adding Subject combination.
             </div>
         }
-        else if (!SubjectCombinations.Any())
+        else if (!_subjectCombinations.Any())
         {
             <button class="btn btn-primary mb-3" @onclick="AddCombination">Add Combination</button>
             <div class="alert alert-info">
@@ -40,7 +40,7 @@
             <button class="btn btn-primary mb-3" @onclick="AddCombination">Add Combination</button>
             <div>
                 <div class="row">
-                    @foreach (var combination in SubjectCombinations)
+                    @foreach (var combination in _subjectCombinations)
                     {
                         <div class="col-md-6 col-lg-4">
                             <div class="card shadow-sm mb-4">
@@ -52,9 +52,12 @@
                                     <div class="mb-3">
                                         <strong>Subjects:</strong>
                                         <div class="mt-1">
-                                            @foreach (var subject in combination.Subjects)
+                                            @if (combination.Subjects != null)
                                             {
-                                                <Pill Color="danger" AdditionalClasses="me-1">@subject.Code</Pill>
+                                                foreach (var subject in combination.Subjects)
+                                                {
+                                                    <Pill Color="danger" AdditionalClasses="me-1">@subject.Code</Pill>
+                                                }
                                             }
                                         </div>
                                     </div>
@@ -76,9 +79,9 @@
 </AuthorizeView>
 
 @code {
-    private IEnumerable<Combination>? SubjectCombinations;
-    private IEnumerable<SchoolGrade>? SchoolGrades;
-    private School? SelectedSchool;
+    private IEnumerable<Combination>? _subjectCombinations;
+    private IEnumerable<SchoolGrade>? _schoolGrades;
+    private School? _selectedSchool;
 
     protected override async Task OnInitializedAsync()
     {
@@ -86,13 +89,13 @@
         await LoadCombinations();
     }
 
-    public async Task LoadCombinations()
+    private async Task LoadCombinations()
     {
-        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
-        if (SelectedSchool != null)
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        if (_selectedSchool != null)
         {
-            SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
-            SubjectCombinations = await CombinationService.GetSubjectCombinationsForSchool(SelectedSchool);
+            _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+            _subjectCombinations = await CombinationService.GetSubjectCombinationsForSchool(_selectedSchool);
         }
     }
 
@@ -101,7 +104,7 @@
         switch (eventName)
         {
             case UiEvents.SchoolSelected:
-                SelectedSchool = payload as School;
+                _selectedSchool = payload as School;
                 await LoadCombinations();
                 break;
         }
@@ -126,10 +129,10 @@
 
     private async Task DeleteCombination(Combination combination)
     {
-        var Combination = await CombinationService.GetByIdAsync(combination.Id);
-        if (Combination != null)
+        var combinationEntity = await CombinationService.GetByIdAsync(combination.Id);
+        if (combinationEntity != null)
         {
-            await CombinationService.DeleteAsync(Combination.Id);
+            await CombinationService.DeleteAsync(combinationEntity.Id);
             await LoadCombinations();
             await InvokeAsync(StateHasChanged);
         }

@@ -1,7 +1,7 @@
 @inherits ErrorBoundary
 @inject ILogger<CustomErrorBoundary> Logger
 @inject NavigationManager NavigationManager
-@inject IJSRuntime JSRuntime
+@inject IJSRuntime JsRuntime
 @inject VersionService VersionService
 
 @if (CurrentException is null)
@@ -36,10 +36,9 @@ else if (ErrorContent is not null)
         Logger.LogError(ex, "An error occurred in the application.");
         return Task.CompletedTask;
     }
-
-    protected async Task Recover()
+    protected new async Task Recover()
     {
         base.Recover();
-        await JSRuntime.InvokeVoidAsync("reloadToMainPage");
+        await JsRuntime.InvokeVoidAsync("reloadToMainPage");
     }
 }

@@ -8,7 +8,7 @@
     <Authorized>
         <h3>Learner Details</h3>
 
-        @if (Learner == null)
+        @if (_learner == null)
         {
             <p>Loading Learner...</p>
         }
@@ -16,59 +16,59 @@
         {
             <dl class="row">
                 <dt class="col-sm-2">Code</dt>
-                <dd class="col-sm-10">@Learner.Code</dd>
+                <dd class="col-sm-10">@_learner.Code</dd>
 
                 <dt class="col-sm-2">Surname</dt>
-                <dd class="col-sm-10">@Learner.Surname</dd>
+                <dd class="col-sm-10">@_learner.Surname</dd>
 
                 <dt class="col-sm-2">Name</dt>
-                <dd class="col-sm-10">@Learner.Name</dd>
+                <dd class="col-sm-10">@_learner.Name</dd>
 
                 <dt class="col-sm-2">Active?</dt>
-                <dd class="col-sm-10">@Learner.Active</dd>
+                <dd class="col-sm-10">@_learner.Active</dd>
 
                 <dt class="col-sm-2">Created At</dt>
-                <dd class="col-sm-10">@Learner.CreatedAt</dd>
+                <dd class="col-sm-10">@_learner.CreatedAt</dd>
 
                 <dt class="col-sm-2">Updated At</dt>
-                <dd class="col-sm-10">@Learner.UpdatedAt</dd>
+                <dd class="col-sm-10">@_learner.UpdatedAt</dd>
             </dl>
 
             <h4>Register Class</h4>
-            @if (Learner.RegisterClass == null)
+            @if (_learner.RegisterClass == null)
             {
                 <p>No register class assigned.</p>
             }
             else
             {
-                <p>@Learner.RegisterClass.Name (Grade: @Learner.RegisterClass.SchoolGrade?.SystemGrade.Name)</p>
+                <p>@_learner.RegisterClass.Name (Grade: @_learner.RegisterClass.SchoolGrade?.SystemGrade.Name)</p>
             }
 
             <h4>Care Group</h4>
-            @if (Learner.CareGroup == null)
+            @if (_learner.CareGroup == null)
             {
                 <p>No care group assigned.</p>
             }
             else
             {
-                <p>@Learner.CareGroup.Name</p>
+                <p>@_learner.CareGroup.Name</p>
             }
 
             <h4>Subjects</h4>
-            @if (Learner.LearnerSubjects == null)
+            @if (_learner.LearnerSubjects == null)
             {
                 <p>No subjects found for this Leaner.</p>
             }
             else
             {
-                @foreach (var ls in Learner.LearnerSubjects)
+                @foreach (var ls in _learner.LearnerSubjects)
                 {
                     <p>@ls.Subject.Name</p>
                 }
             }
 
             <h4>Parents</h4>
-            @if (Learner.Parents == null || !Learner.Parents.Any())
+            @if (_learner.Parents == null || !_learner.Parents.Any())
             {
                 <p>No parents associated.</p>
             }
@@ -88,7 +88,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var lp in Learner.Parents)
+                        @foreach (var lp in _learner.Parents)
                         {
                             <tr>
                                 <td>@(lp.Surname ?? "Unknown")</td>
@@ -106,7 +106,7 @@
             }
 
             <h4>Results</h4>
-            @if (Learner.Results == null || !Learner.Results.Any())
+            @if (_learner.Results == null || !_learner.Results.Any())
             {
                 <p>No results recorded.</p>
             }
@@ -121,10 +121,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var result in Learner.Results)
+                        @foreach (var result in _learner.Results)
                         {
                             <tr>
-                                <td>@result.ResultSet.Subject.Name</td>
+                                <td>@result.ResultSet?.Subject?.Name</td>
                                 <td>@result.Score</td>
                                 <td>@(result.Absent ? "Yes" : "No")</td>
                             </tr>
@@ -143,11 +143,11 @@
 
 @code {
     [Parameter] public Guid LearnerId { get; set; }
-    private Learner? Learner;
+    private Learner? _learner;
 
     protected override async Task OnInitializedAsync()
     {
-        Learner = await LearnerService.GetByIdAsync(LearnerId);
+        _learner = await LearnerService.GetByIdAsync(LearnerId);
     }
 
     private void GoBack()

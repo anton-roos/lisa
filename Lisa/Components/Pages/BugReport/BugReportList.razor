@@ -1,19 +1,19 @@
 @page "/bug-reports"
 @using Lisa.Models.Entities
 @inject BugReportService BugReportService
-@inject IJSRuntime JSRuntime
+@inject IJSRuntime JsRuntime
 @inject NavigationManager NavigationManager
 
 <PageTitle>Bug Reports</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator}")">
     <Authorized>
         <h3>Bug Reports</h3>
 
-        @if (isLoading)
+        @if (_isLoading)
         {
             <p>Loading bug reports...</p>
         }
-        else if (!bugReports.Any())
+        else if (!_bugReports.Any())
         {
             <p>No bug reports found.</p>
         }
@@ -31,7 +31,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var bug in bugReports)
+                    @foreach (var bug in _bugReports)
                     {
                         <tr class="@GetRowClass(bug.Status)">
                             <td>@bug.WhatTried</td>
@@ -50,7 +50,7 @@
                                     Value="@bug.Status"
                                     ValueChanged="@(async (status) => await UpdateBugStatusAsync(bug, status))"
                                     ValueExpression="@(() => bug.Status)">
-                                    <option value="">-- Select Status --</option>
+                                    <option value="@string.Empty">-- Select Status --</option>
                                     @foreach (var status in Enum.GetValues(typeof(BugReportStatus)).Cast<BugReportStatus>())
                                     {
                                         <option value="@status">@status</option>
@@ -75,18 +75,18 @@
 
 
 @code {
-    private List<BugReport> bugReports = new();
-    private bool isLoading = true;
+    private List<BugReport> _bugReports = [];
+    private bool _isLoading = true;
 
     private string GetRowClass(BugReportStatus status)
     {
         return status switch
         {
-            BugReportStatus.Open => "table-danger", // Red
-            BugReportStatus.InProgress => "table-warning", // Yellow
-            BugReportStatus.Resolved => "table-warning", // Yellow
-            BugReportStatus.Closed => "table-success", // Green
-            _ => ""
+            BugReportStatus.Open => "table-danger",
+            BugReportStatus.InProgress => "table-warning",
+            BugReportStatus.Resolved => "table-warning",
+            BugReportStatus.Closed => "table-success",
+            _ => string.Empty
         };
     }
 
@@ -97,24 +97,24 @@
 
     private async Task LoadBugList()
     {
-        isLoading = true;
+        _isLoading = true;
 
         try
         {
             var allBugs = await BugReportService.GetAllAsync();
 
-            bugReports = allBugs
+            _bugReports = allBugs
             .OrderBy(bug => bug.Status)
             .ThenByDescending(bug => bug.ReportedAt)
             .ToList();
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error loading bug reports: {ex.Message}");
+            await JsRuntime.InvokeVoidAsync("alert", $"Error loading bug reports: {ex.Message}");
         }
         finally
         {
-            isLoading = false;
+            _isLoading = false;
         }
     }
 
@@ -126,17 +126,17 @@
 
             await BugReportService.UpdateStatusAsync(bug.Id, newStatus);
 
-            await JSRuntime.InvokeVoidAsync("alert", $"Bug ID {bug.Id} status updated successfully!");
+            await JsRuntime.InvokeVoidAsync("alert", $"Bug ID {bug.Id} status updated successfully!");
             await LoadBugList();
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error updating status for Bug ID {bug.Id}: {ex.Message}");
+            await JsRuntime.InvokeVoidAsync("alert", $"Error updating status for Bug ID {bug.Id}: {ex.Message}");
 
         }
     }
 
-    private async Task ViewBugReportAsync(BugReport bug)
+    private void ViewBugReportAsync(BugReport bug)
     {
         NavigationManager.NavigateTo($"/bug-reports/details/{bug.Id}");
     }

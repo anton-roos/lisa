@@ -2,18 +2,15 @@
 @inject SchoolService SchoolService
 @inject CareGroupService CareGroupService
 @inject NavigationManager Navigation
-@inject ILogger<CareGroupManager> Logger
 @using Lisa.Models.Entities
-@using Lisa.Models.ViewModels
-@using Microsoft.AspNetCore.Components.Forms
 @inject UserService UserService
 
 <PageTitle>@(IsEdit ? "Edit Care Group" : "Add Care Group")</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
-        <h3>@(IsEdit ? "Edit Care Group" : $"Add Care Group for {SelectedSchool?.ShortName}")</h3>
+        <h3>@(IsEdit ? "Edit Care Group" : $"Add Care Group for {_selectedSchool?.ShortName}")</h3>
 
-        @if (!IsEdit && SelectedSchool is null)
+        @if (!IsEdit && _selectedSchool is null)
         {
             <div class="alert alert-info">
                 Please select a school to add care groups.
@@ -56,12 +53,12 @@
 
                 <h5>Add Teacher</h5>
                 <div class="mb-3">
-                    <select class="form-select mb-2" @bind="SelectedUser">
-                        <option value="">Select a user</option>
-                        @if (AvailableUsers != null)
+                    <select class="form-select mb-2" @bind="_selectedUser">
+                        <option value="@string.Empty"> -- Select Teacher --</option>
+                        @if (_availableUsers != null)
                         {
-                            @foreach (var user in AvailableUsers.Where(u => CareGroup.Users == null || !CareGroup.Users.Any(cu
-                           => cu.Id == u.Id)))
+                            @foreach (var user in _availableUsers.Where(u => CareGroup.Users == null || !CareGroup.Users.Any(cu
+                                                => cu.Id == u.Id)))
                             {
                                 <option value="@user.Id">@user.Surname @user.Name (@user.Abbreviation)</option>
                             }
@@ -83,31 +80,31 @@
 @code {
     [Parameter] public Guid? Id { get; set; }
 
-    private CareGroup CareGroup { get; set; } = new();
-    private School? SelectedSchool;
+    private CareGroup? CareGroup { get; set; } = new();
+    private School? _selectedSchool;
     private bool IsEdit => Id.HasValue;
-    private IEnumerable<User>? AvailableUsers;
-    private string? SelectedUser;
+    private IEnumerable<User>? _availableUsers;
+    private string? _selectedUser;
 
     protected override async Task OnInitializedAsync()
     {
-        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
 
         if (IsEdit)
         {
-            CareGroup = await CareGroupService.GetByIdAsync(Id.Value) ?? new();
+            CareGroup = await CareGroupService.GetByIdAsync(Id!.Value) ?? new();
         }
         else
         {
-            if (SelectedSchool == null)
+            if (_selectedSchool == null)
             {
                 CareGroup = null;
                 return;
             }
-            CareGroup = new CareGroup { SchoolId = SelectedSchool.Id };
+            CareGroup = new CareGroup { SchoolId = _selectedSchool.Id };
         }
 
-        AvailableUsers = await UserService.GetAllAsync();
+        _availableUsers = await UserService.GetAllAsync();
     }
 
     private async Task HandleValidSubmit()
@@ -133,21 +130,27 @@
 
     private async Task AddUserToCareGroup()
     {
-        if (!string.IsNullOrEmpty(SelectedUser))
+        if (!string.IsNullOrEmpty(_selectedUser))
         {
-            var userId = Guid.Parse(SelectedUser);
-            await CareGroupService.AddUserToCareGroupAsync(CareGroup.Id, userId);
-            CareGroup = await CareGroupService.GetByIdAsync(CareGroup.Id);
-            AvailableUsers = await UserService.GetAllAsync();
+            var userId = Guid.Parse(_selectedUser);
+            if (CareGroup != null)
+            {
+                await CareGroupService.AddUserToCareGroupAsync(CareGroup.Id, userId);
+                CareGroup = await CareGroupService.GetByIdAsync(CareGroup.Id);
+            }
+            _availableUsers = await UserService.GetAllAsync();
             await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task RemoveUserFromCareGroup(Guid userId)
     {
-        await CareGroupService.RemoveUserFromCareGroupAsync(CareGroup.Id, userId);
-        CareGroup = await CareGroupService.GetByIdAsync(CareGroup.Id);
-        AvailableUsers = await UserService.GetAllAsync();
+        if (CareGroup != null)
+        {
+            await CareGroupService.RemoveUserFromCareGroupAsync(CareGroup.Id, userId);
+            CareGroup = await CareGroupService.GetByIdAsync(CareGroup.Id);
+        }
+        _availableUsers = await UserService.GetAllAsync();
         await InvokeAsync(StateHasChanged);
     }
 }

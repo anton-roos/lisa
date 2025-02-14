@@ -4,9 +4,9 @@
 @inject ILogger<EmailCampaignManager> Logger
 
 <PageTitle>Email Campaign</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
     <Authorized>
-        @if (isLoading)
+        @if (_isLoading)
         {
             <p>Loading campaign details...</p>
         }
@@ -29,22 +29,22 @@
                 <p>Sent @SentCount of @TotalRecipients emails...</p>
 
                 <div class="d-flex gap-3">
-                    <button class="btn btn-success" @onclick="StartCampaign" disabled="@isProcessing">
+                    <button class="btn btn-success" @onclick="StartCampaign" disabled="@_isProcessing">
                         <i class="bi bi-play-fill"></i> Start
                     </button>
 
-                    <button class="btn btn-warning" @onclick="PauseCampaign" disabled="@isProcessing">
+                    <button class="btn btn-warning" @onclick="PauseCampaign" disabled="@_isProcessing">
                         <i class="bi bi-pause-fill"></i> Pause
                     </button>
 
-                    <button class="btn btn-danger" @onclick="StopCampaign" disabled="@isProcessing">
+                    <button class="btn btn-danger" @onclick="StopCampaign" disabled="@_isProcessing">
                         <i class="bi bi-x-circle-fill"></i> Cancel
                     </button>
                 </div>
 
-                @if (!string.IsNullOrEmpty(StatusMessage))
+                @if (!string.IsNullOrEmpty(_statusMessage))
                 {
-                    <div class="alert alert-info mt-3">@StatusMessage</div>
+                    <div class="alert alert-info mt-3">@_statusMessage</div>
                 }
             </div>
         }
@@ -57,18 +57,18 @@
 @code {
     [Parameter] public Guid Id { get; set; }
     private EmailCampaign? Campaign { get; set; }
-    private int ProgressPercent { get; set; } = 0;
-    private int SentCount { get; set; } = 0;
-    private int TotalRecipients { get; set; } = 0;
-    private string? StatusMessage = null;
-    private bool isLoading = true;
-    private bool isProcessing = false;
+    private int ProgressPercent { get; set; } 
+    private int SentCount { get; set; } 
+    private int TotalRecipients { get; set; } 
+    private string? _statusMessage;
+    private bool _isLoading = true;
+    private bool _isProcessing;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            isLoading = true;
+            _isLoading = true;
             Campaign = await EmailCampaignService.GetByIdAsync(Id);
             if (Campaign != null)
             {
@@ -80,11 +80,11 @@
         catch (Exception ex)
         {
             Logger.LogError("Error loading campaign: {ex.Message}", ex.Message);
-            StatusMessage = "Failed to load campaign details.";
+            _statusMessage = "Failed to load campaign details.";
         }
         finally
         {
-            isLoading = false;
+            _isLoading = false;
         }
     }
 
@@ -93,7 +93,7 @@
         await ExecuteCampaignAction(async () =>
         {
             await EmailCampaignService.StartCampaignAsync(Id);
-            StatusMessage = "Campaign Started";
+            _statusMessage = "Campaign Started";
         });
     }
 
@@ -102,7 +102,7 @@
         await ExecuteCampaignAction(async () =>
         {
             await EmailCampaignService.PauseCampaignAsync(Id);
-            StatusMessage = "Campaign Paused";
+            _statusMessage = "Campaign Paused";
         });
     }
 
@@ -111,7 +111,7 @@
         await ExecuteCampaignAction(async () =>
         {
             await EmailCampaignService.StopCampaignAsync(Id);
-            StatusMessage = "Campaign Cancelled";
+            _statusMessage = "Campaign Cancelled";
         });
     }
 
@@ -119,17 +119,17 @@
     {
         try
         {
-            isProcessing = true;
+            _isProcessing = true;
             await campaignAction();
         }
         catch (Exception ex)
         {
             Logger.LogError("Error updating campaign: {ex.Message}", ex.Message);
-            StatusMessage = "Error processing campaign action.";
+            _statusMessage = "Error processing campaign action.";
         }
         finally
         {
-            isProcessing = false;
+            _isProcessing = false;
         }
     }
 }

@@ -2,10 +2,6 @@
 
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
-@using Microsoft.AspNetCore.Components
-@using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.EntityFrameworkCore
 @inject NavigationManager Navigation
 @inject RegisterClassService RegisterClassService
 @inject SchoolService SchoolService
@@ -16,7 +12,7 @@
 @inject ILogger<RegisterClassManager> Logger
 
 <PageTitle>Care Group Manager</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>@(IsEdit ? "Edit Register Class" : "Add Register Class")</h3>
 
@@ -28,7 +24,7 @@
             </div>
         }
 
-        @if (SelectedSchool == null)
+        @if (_selectedSchool == null)
         {
             <div class="alert alert-warning">No school is selected. Please select a school first.</div>
         }
@@ -69,7 +65,7 @@
                     <InputSelect class="form-select" id="SelectGrade" TValue="Guid" Value="@RegisterClassModel.GradeId"
                         ValueChanged="OnGradeSelected" ValueExpression="@(() => RegisterClassModel.GradeId)">
                         <option value="">-- Select School --</option>
-                        @foreach (var grade in SchoolGrades!)
+                        @foreach (var grade in _schoolGrades!)
                         {
                             <option value="@grade.Id">@grade.SystemGrade.Name</option>
                         }
@@ -80,9 +76,9 @@
                     <label class="form-label">Teacher</label>
                     <select class="form-select" @bind="RegisterClassModel.TeacherId">
                         <option value="">-- Select Teacher --</option>
-                        @if (Users != null)
+                        @if (_users != null)
                         {
-                            @foreach (var teacher in Users)
+                            @foreach (var teacher in _users)
                             {
                                 <option value="@teacher.Id">@($"{teacher.Surname} {teacher.Name}")</option>
                             }
@@ -94,20 +90,17 @@
                     <label class="form-label">Compulsory Subjects</label>
                     <div class="mb-3">
                         <label class="form-label">Search Subjects</label>
-                        <InputText class="form-control" @bind-Value="SearchText" @oninput="OnInputChange"
+                        <InputText class="form-control" @bind-Value="_searchText" @oninput="OnInputChange"
                             placeholder="Type to filter subjects..." />
                     </div>
                     <div role="group">
-                        @if (FilteredSubjects != null)
+                        @foreach (var subject in FilteredSubjects)
                         {
-                            @foreach (var subject in FilteredSubjects)
-                            {
-                                <div>
-                                    <input type="checkbox" checked="@RegisterClassModel.SubjectIds.Contains(subject.Id)"
-                                        @onchange="@(() => ToggleSubject(subject.Id))" />
-                                    <label>@subject.Name</label>
-                                </div>
-                            }
+                            <div>
+                                <input type="checkbox" checked="@RegisterClassModel.SubjectIds.Contains(subject.Id)"
+                                       @onchange="@(() => ToggleSubject(subject.Id))" />
+                                <label>@subject.Name</label>
+                            </div>
                         }
                     </div>
                 </div>
@@ -130,45 +123,48 @@
     private bool IsEdit => RegisterClassId.HasValue && RegisterClassId.Value != Guid.Empty;
     private bool IsLoading { get; set; } = true;
     private RegisterClassViewModel RegisterClassModel { get; set; } = new();
-    private School? SelectedSchool;
-    private List<SchoolGrade>? SchoolGrades;
-    private List<User>? Users;
-    private List<Subject> AllSubjectsMaster = new();
-    private List<Subject> AllSubjects = new();
-    private string SearchText = string.Empty;
+    private School? _selectedSchool;
+    private List<SchoolGrade>? _schoolGrades;
+    private List<User>? _users;
+    private List<Subject> _allSubjectsMaster = [];
+    private List<Subject> _allSubjects = [];
+    private string _searchText = string.Empty;
     private string? AlertMessage { get; set; }
     private string AlertType { get; set; } = "success";
 
     private IEnumerable<Subject> FilteredSubjects =>
-    AllSubjects.Where(s => string.IsNullOrEmpty(SearchText)
-    || (s.Name != null && s.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)));
+    _allSubjects.Where(s => string.IsNullOrEmpty(_searchText)
+    || (s.Name != null && s.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase)));
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             SubscribeToEvent(UiEvents.SchoolSelected);
-            SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
+            _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
 
-            if (SelectedSchool != null)
+            if (_selectedSchool != null)
             {
-                SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
-                Users = await UserService.GetAllByRoleAndSchoolAsync(new[] { Roles.Teacher }, SelectedSchool.Id);
+                _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+                _users = await UserService.GetAllByRoleAndSchoolAsync(new[] { Roles.Teacher }, _selectedSchool.Id);
 
-                AllSubjectsMaster = await SubjectService.GetAllAsync();
-                AllSubjectsMaster = AllSubjectsMaster.Where(s => s.SubjectType == SubjectType.Compulsory).ToList();
+                _allSubjectsMaster = await SubjectService.GetAllAsync();
+                _allSubjectsMaster = _allSubjectsMaster.Where(s => s.SubjectType == SubjectType.Compulsory).ToList();
 
                 if (IsEdit)
                 {
-                    var existingRegisterClass = await RegisterClassService.GetByIdAsync(RegisterClassId.Value);
-                    RegisterClassModel = new RegisterClassViewModel
+                    if (RegisterClassId != null)
+                    {
+                        var existingRegisterClass = await RegisterClassService.GetByIdAsync(RegisterClassId.Value);
+                        RegisterClassModel = new RegisterClassViewModel
                         {
-                            Name = existingRegisterClass.Name,
-                            TeacherId = existingRegisterClass.UserId,
+                            Name = existingRegisterClass?.Name,
+                            TeacherId = existingRegisterClass!.UserId,
                             GradeId = existingRegisterClass.SchoolGradeId,
-                            SubjectIds = existingRegisterClass.CompulsorySubjects.Select(s => s.Id).ToList(),
+                            SubjectIds = existingRegisterClass.CompulsorySubjects!.Select(s => s.Id).ToList(),
                             Grade = existingRegisterClass.SchoolGrade
                         };
+                    }
                 }
 
                 if (RegisterClassModel.GradeId != Guid.Empty)
@@ -191,7 +187,7 @@
     {
         try
         {
-            if (SelectedSchool == null)
+            if (_selectedSchool == null)
             {
                 SetAlert("danger", "Please select a school.");
                 return;
@@ -219,7 +215,7 @@
 
     private void OnInputChange(ChangeEventArgs e)
     {
-        SearchText = e?.Value?.ToString() ?? string.Empty;
+        _searchText = e.Value?.ToString() ?? string.Empty;
         StateHasChanged();
     }
 
@@ -257,7 +253,7 @@
             RegisterClassModel.GradeId = grade.Id;
             RegisterClassModel.Grade = grade;
 
-            AllSubjects = AllSubjectsMaster.Where(s => s.GradesApplicable.Contains(grade.SystemGrade.SequenceNumber)).ToList();
+            _allSubjects = _allSubjectsMaster.Where(s => s.GradesApplicable != null && s.GradesApplicable.Contains(grade.SystemGrade.SequenceNumber)).ToList();
         }
         else
         {

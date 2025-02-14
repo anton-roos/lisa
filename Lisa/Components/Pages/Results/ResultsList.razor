@@ -1,12 +1,10 @@
 @page "/result-list"
 @using Lisa.Models.Entities
-@using Microsoft.AspNetCore.WebUtilities
 @inject ResultService ResultService
 @inject SchoolService SchoolService
 @inject SchoolGradeService SchoolGradeService
 @inject SubjectService SubjectService
 @inject NavigationManager Navigation
-@inject ILogger<ResultsList> Logger
 @inject UserService UserService
 
 @inherits EventAwareComponentBase
@@ -17,11 +15,11 @@
         <PageTitle>Results</PageTitle>
         <h3>Results</h3>
 
-        @if (SelectedSchool == null)
+        @if (_selectedSchool == null)
         {
             <div class="alert alert-info">Please select a school to view results.</div>
         }
-        else if (Loading)
+        else if (_loading)
         {
             <p>Loading results...</p>
         }
@@ -31,15 +29,15 @@
                 <label><strong>View Results by:</strong></label>
                 <div class="btn-group" role="group">
                     <input type="radio" class="btn-check" name="viewMode" id="viewByGrade" value="Grade"
-                        checked="@(ViewMode == "Grade")" @onchange="@(e => SetViewMode("Grade"))" />
+                        checked="@(ViewMode == "Grade")" @onchange="@(_ => SetViewMode("Grade"))" />
                     <label class="btn btn-outline-secondary" for="viewByGrade">Grade</label>
 
                     <input type="radio" class="btn-check" name="viewMode" id="viewBySubject" value="Subject"
-                        checked="@(ViewMode == "Subject")" @onchange="@(e => SetViewMode("Subject"))" />
+                        checked="@(ViewMode == "Subject")" @onchange="@(_ => SetViewMode("Subject"))" />
                     <label class="btn btn-outline-secondary" for="viewBySubject">Subject</label>
 
                     <input type="radio" class="btn-check" name="viewMode" id="viewByTeacher" value="Teacher"
-                        checked="@(ViewMode == "Teacher")" @onchange="@(e => SetViewMode("Teacher"))" />
+                        checked="@(ViewMode == "Teacher")" @onchange="@(_ => SetViewMode("Teacher"))" />
                     <label class="btn btn-outline-secondary" for="viewByTeacher">Teacher</label>
                 </div>
             </div>
@@ -49,10 +47,10 @@
             {
                 <div class="mb-3">
                     <label><strong>Select Grade:</strong></label>
-                    <InputSelect class="form-select" TValue="Guid ?" Value="@GradeId" ValueChanged="OnGradeChange"
-                        ValueExpression="() => GradeId">
+                    <InputSelect class="form-select" TValue="Guid ?" Value="@_gradeId" ValueChanged="OnGradeChange"
+                        ValueExpression="() => _gradeId">
                         <option value="">-- Select Grade --</option>
-                        @foreach (var grade in SchoolGrades)
+                        @foreach (var grade in _schoolGrades)
                         {
                             <option value="@grade.Id">@grade.SystemGrade.Name</option>
                         }
@@ -95,24 +93,24 @@
             {
                 <div class="mb-3">
                     <label><strong>Select Subject:</strong></label>
-                    <InputSelect class="form-select" TValue="int?" Value="@SubjectId" ValueChanged="OnSubjectChange"
-                        ValueExpression="() => SubjectId">
+                    <InputSelect class="form-select" TValue="int?" Value="@_subjectId" ValueChanged="OnSubjectChange"
+                        ValueExpression="() => _subjectId">
                         <option value="">-- Select Subject --</option>
-                        @foreach (var subject in Subjects)
+                        @foreach (var subject in _subjects)
                         {
                             <option value="@subject.Id">@subject.Name</option>
                         }
                     </InputSelect>
                 </div>
 
-                @if (SubjectId is not null)
+                @if (_subjectId is not null)
                 {
                     <div class="mb-3">
                         <label><strong>Select Grade:</strong></label>
                         <div class="d-flex flex-wrap">
-                            @foreach (var grade in AvailableGradesForSubject)
+                            @foreach (var grade in _availableGradesForSubject)
                             {
-                                <button class="btn btn-sm @(SelectedGrades.Contains(grade) ? "btn-success" : "btn-outline-success")"
+                                <button class="btn btn-sm @(_selectedGrades.Contains(grade) ? "btn-success" : "btn-outline-success")"
                                     @onclick="() => ToggleGradeSelection(grade)">
                                     @FormatGrade(grade)
                                 </button>
@@ -157,10 +155,10 @@
             {
                 <div class="mb-3">
                     <label><strong>Select Teacher:</strong></label>
-                    <InputSelect class="form-select" TValue="Guid ?" Value="@TeacherId" ValueChanged="OnTeacherChange"
-                        ValueExpression="() => TeacherId">
+                    <InputSelect class="form-select" TValue="Guid ?" Value="@_teacherId" ValueChanged="OnTeacherChange"
+                        ValueExpression="() => _teacherId">
                         <option value="">-- Select Teacher --</option>
-                        @foreach (var teacher in Teachers)
+                        @foreach (var teacher in _teachers)
                         {
                             <option value="@teacher.Id">@teacher.Abbreviation @teacher.Surname</option>
                         }
@@ -203,22 +201,21 @@
 
 @code {
     private string ViewMode { get; set; } = "Grade";
-    private List<ResultSet> ResultsSet = new();
     private Dictionary<string, List<ResultSet>> GroupedResults { get; set; } = new();
-    private List<SchoolGrade> SchoolGrades = new();
-    private List<Subject> Subjects = new();
-    private List<User> Teachers = new();
-    private List<int> AvailableGradesForSubject = new();
-    private HashSet<int> SelectedGrades = new();
-    private bool Loading = false;
-    private School? SelectedSchool;
-    private Guid? GradeId, TeacherId;
-    private int? SubjectId;
+    private List<SchoolGrade> _schoolGrades = [];
+    private List<Subject> _subjects = [];
+    private List<User> _teachers = [];
+    private List<int> _availableGradesForSubject = [];
+    private readonly HashSet<int> _selectedGrades = [];
+    private bool _loading;
+    private School? _selectedSchool;
+    private Guid? _gradeId, _teacherId;
+    private int? _subjectId;
 
     protected override async Task OnInitializedAsync()
     {
         SubscribeToEvent(UiEvents.SchoolSelected);
-        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         await LoadFilters();
     }
 
@@ -229,7 +226,7 @@
             case UiEvents.SchoolSelected:
                 if (payload is School school)
                 {
-                    SelectedSchool = school;
+                    _selectedSchool = school;
                     await LoadFilters();
                 }
                 break;
@@ -244,8 +241,7 @@
     private void SetViewMode(string mode)
     {
         ViewMode = mode;
-        SelectedGrades.Clear();
-        ResultsSet.Clear();
+        _selectedGrades.Clear();
         StateHasChanged();
     }
 
@@ -255,12 +251,11 @@
     /// </summary>
     private async Task LoadResults()
     {
-        Loading = true;
-        ResultsSet.Clear();
+        _loading = true;
 
-        if (SelectedSchool is null)
+        if (_selectedSchool is null)
         {
-            Loading = false;
+            _loading = false;
             return;
         }
 
@@ -296,7 +291,7 @@
             .ToDictionary(g => $"{g.Key.Abbreviation} - {g.Key.Name}", g => g.ToList());
         }
 
-        Loading = false;
+        _loading = false;
         await InvokeAsync(StateHasChanged);
     }
     /// <summary>
@@ -304,11 +299,11 @@
     /// </summary>
     private async Task LoadFilters()
     {
-        if (SelectedSchool != null)
+        if (_selectedSchool != null)
         {
-            SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
-            Subjects = await SubjectService.GetAllAsync();
-            Teachers = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], SelectedSchool.Id);
+            _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+            _subjects = await SubjectService.GetAllAsync();
+            _teachers = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], _selectedSchool.Id);
         }
     }
 
@@ -317,10 +312,10 @@
     /// </summary>
     private async Task ToggleGradeSelection(int gradeId)
     {
-        if (SelectedGrades.Contains(gradeId))
-            SelectedGrades.Remove(gradeId);
+        if (_selectedGrades.Contains(gradeId))
+            _selectedGrades.Remove(gradeId);
         else
-            SelectedGrades.Add(gradeId);
+            _selectedGrades.Add(gradeId);
 
         await LoadResults();
     }
@@ -330,23 +325,23 @@
     /// </summary>
     private async Task OnSubjectChange(int? value)
     {
-        SubjectId = value;
+        _subjectId = value;
         if (value.HasValue)
         {
             var subject = await SubjectService.GetByIdAsync(value.Value);
-            AvailableGradesForSubject = subject.GradesApplicable;
+            _availableGradesForSubject = subject.GradesApplicable;
         }
         else
         {
-            AvailableGradesForSubject.Clear();
+            _availableGradesForSubject.Clear();
         }
-        SelectedGrades.Clear();
+        _selectedGrades.Clear();
         await LoadResults();
     }
 
     private async Task OnGradeChange(Guid? value)
     {
-        GradeId = value;
+        _gradeId = value;
         await LoadResults();
     }
 
@@ -355,7 +350,7 @@
     /// </summary>
     private async Task OnTeacherChange(Guid? value)
     {
-        TeacherId = value;
+        _teacherId = value;
         await LoadResults();
     }
 

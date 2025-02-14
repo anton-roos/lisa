@@ -8,9 +8,9 @@
 <PageTitle>Learner Details</PageTitle>
 <AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
     <Authorized>
-        @if (SelectedSchool != null)
+        @if (_selectedSchool != null)
         {
-            <h3>Learners for @SelectedSchool.ShortName</h3>
+            <h3>Learners for @_selectedSchool.ShortName</h3>
             <div class="row mb-3">
                 <div class="col-12 col-md-4 mb-2">
                     <label for="gradeFilter" class="form-label">Filter by Grade</label>
@@ -29,7 +29,7 @@
                     <!-- Name Search -->
                     <label for="nameSearch" class="form-label">Search by Name</label>
                     <input id="nameSearch" type="text" class="form-control" @oninput="OnSearchTermChanged"
-                        @bind="SearchTerm" placeholder="Type name..." />
+                           @bind="SearchTerm" placeholder="Type name..."/>
                 </div>
                 <div class="col-12 col-md-4 mb-2 d-flex align-items-end">
                     <button class="btn btn-primary mb-3" @onclick="AddLearner">Add Learner</button>
@@ -40,29 +40,38 @@
             {
                 <table class="table table-striped">
                     <thead>
-                        <tr>
-                            <th>Code</th>
-                            <th>Surname</th>
-                            <th>Name</th>
-                            <th>Grade</th>
-                            <th>Subjects Count</th>
-                            <th>Subjects Selected</th>
-                            <th>Parents</th>
-                            <th>Care Group</th>
-                            <th>Actions</th>
-                        </tr>
+                    <tr>
+                        <th>Code</th>
+                        <th>Surname</th>
+                        <th>Name</th>
+                        <th>Grade</th>
+                        <th>Subjects Count</th>
+                        <th>Subjects Selected</th>
+                        <th>Parents</th>
+                        <th>Care Group</th>
+                        <th>Actions</th>
+                    </tr>
                     </thead>
                     <tbody>
-                        @foreach (var learner in FilteredLearners)
-                        {
-                            <tr>
-                                <td>@learner.Code</td>
-                                <td>@learner.Surname</td>
-                                <td>@learner.Name</td>
-                                <td>@(learner.RegisterClass?.SchoolGrade?.SystemGrade.Name ?? "Unassigned")</td>
+                    @foreach (var learner in FilteredLearners)
+                    {
+                        <tr>
+                            <td>@learner.Code</td>
+                            <td>@learner.Surname</td>
+                            <td>@learner.Name</td>
+                            <td>@(learner.RegisterClass?.SchoolGrade?.SystemGrade.Name ?? "Unassigned")</td>
+                            @if (@learner.LearnerSubjects is not null)
+                            {
                                 <td>@learner.LearnerSubjects.Count()</td>
-                                <td>
+                            }
+                            else
+                            {
+                                <td>0</td>
+                            }
 
+                            <td>
+                                @if (@learner.LearnerSubjects is not null)
+                                {
                                     @foreach (var subject in learner.LearnerSubjects)
                                     {
                                         switch (subject.Subject.SubjectType)
@@ -82,20 +91,21 @@
                                                 break;
                                         }
                                     }
-                                </td>
-                                <td>@learner.Parents.Count()</td>
-                                <td>@learner.CareGroup.Name</td>
-                                <ActionButtons TEntity="Learner" Entity="learner" OnView="ViewLearner" OnEdit="EditLearner"
-                                    OnDelete="DeleteLearner" />
-                            </tr>
-                        }
+                                }
+                            </td>
+                            <td>@learner.Parents?.Count()</td>
+                            <td>@learner.CareGroup?.Name</td>
+                            <ActionButtons TEntity="Learner" Entity="learner" OnView="ViewLearner" OnEdit="EditLearner"
+                                           OnDelete="DeleteLearner"/>
+                        </tr>
+                    }
                     </tbody>
                 </table>
             }
             else
             {
                 <div class="alert alert-info">
-                    No learners found for @SelectedSchool.ShortName with the current filters.
+                    No learners found for @_selectedSchool.ShortName with the current filters.
                 </div>
             }
         }
@@ -107,14 +117,14 @@
         }
     </Authorized>
     <NotAuthorized>
-        <Unauthorized />
+        <Unauthorized/>
     </NotAuthorized>
 </AuthorizeView>
 
 @code {
-    private List<Learner> Learners = new();
+    private List<Learner> _learners = [];
     private IEnumerable<Learner> FilteredLearners => ApplyFilters();
-    private School? SelectedSchool;
+    private School? _selectedSchool;
 
     private string? SelectedGradeId { get; set; }
     private string? SearchTerm { get; set; }
@@ -122,7 +132,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         SubscribeToEvent(UiEvents.SchoolSelected);
         await LoadLearners();
     }
@@ -132,7 +142,7 @@
         switch (eventName)
         {
             case UiEvents.SchoolSelected:
-                SelectedSchool = payload as School;
+                _selectedSchool = payload as School;
                 await LoadLearners();
                 break;
         }
@@ -142,40 +152,40 @@
 
     private async Task LoadLearners()
     {
-        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
-        if (SelectedSchool?.Id != null)
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        if (_selectedSchool?.Id != null)
         {
-            Learners = await LearnerService.GetLearnersBySchoolAsync(SelectedSchool.Id);
-            Learners.ForEach(l => l.LearnerSubjects = l.LearnerSubjects.OrderBy(ls => ls.Subject.Order).ToList());
+            _learners = await LearnerService.GetLearnersBySchoolAsync(_selectedSchool.Id);
+            _learners.ForEach(l => l.LearnerSubjects = l.LearnerSubjects?.OrderBy(ls => ls.Subject.Order).ToList());
 
-            AvailableGrades = Learners
-            .Where(l => l.RegisterClass?.SchoolGrade != null)
-            .Select(l => l.RegisterClass!.SchoolGrade!)
-            .DistinctBy(g => g.Id)
-            .ToList();
+            AvailableGrades = _learners
+                .Where(l => l.RegisterClass?.SchoolGrade != null)
+                .Select(l => l.RegisterClass!.SchoolGrade!)
+                .DistinctBy(g => g.Id)
+                .ToList();
         }
         else
         {
-            Learners = new List<Learner>();
+            _learners = new List<Learner>();
             AvailableGrades = new List<SchoolGrade>();
         }
     }
 
     private IEnumerable<Learner> ApplyFilters()
     {
-        var query = Learners.AsEnumerable();
+        var query = _learners.AsEnumerable();
 
         if (!string.IsNullOrEmpty(SelectedGradeId))
         {
             query = query.Where(l => l.RegisterClass?.SchoolGrade != null
-            && l.RegisterClass.SchoolGrade.Id == Guid.Parse(SelectedGradeId));
+                                     && l.RegisterClass.SchoolGrade.Id == Guid.Parse(SelectedGradeId));
         }
 
         if (!string.IsNullOrEmpty(SearchTerm))
         {
             var term = SearchTerm.Trim().ToLower();
             query = query.Where(l =>
-            ($"{l.Surname} {l.Name}").ToLower().Contains(term));
+                ($"{l.Surname} {l.Name}").ToLower().Contains(term));
         }
 
         return query;
@@ -199,7 +209,7 @@
 
     private void AddLearner()
     {
-        NavigationManager.NavigateTo("/learners/add");
+        NavigationManager.NavigateTo("/learners/edit");
     }
 
     private async Task DeleteLearner(Learner learner)
@@ -208,4 +218,5 @@
         await LoadLearners();
         await InvokeAsync(StateHasChanged);
     }
+
 }

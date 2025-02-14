@@ -10,12 +10,12 @@
 @inject SchoolGradeService SchoolGradeService
 
 <PageTitle>@(IsEdit ? "Edit Subject Combination" : "Add Subject Combination")</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>@(IsEdit ? "Edit Subject Combination" : "Add Subject Combination")</h3>
 
 
-        @if (SchoolGrades == null || !SchoolGrades.Any())
+        @if (!_schoolGrades.Any())
         {
             <div class="alert alert-warning">
                 No grades found that supports combinations. Please add a grade that supports combinations first before adding a combination.
@@ -23,20 +23,20 @@
         }
         else
         {
-            <EditForm Context="edit" Model="@CombinationModel" OnValidSubmit="HandleValidSubmit">
+            <EditForm Context="edit" Model="@_combinationModel" OnValidSubmit="HandleValidSubmit">
                 <DataAnnotationsValidator />
                 <ValidationSummary />
 
                 <div class="mb-3">
                     <label class="form-label">Name</label>
-                    <InputText class="form-control" @bind-Value="CombinationModel.Name" />
+                    <InputText class="form-control" @bind-Value="_combinationModel.Name" />
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label">Grade</label>
-                    <select class="form-select" @bind="CombinationModel.GradeId">
+                    <select class="form-select" @bind="_combinationModel.GradeId">
                         <option value="">-- Select Grade --</option>
-                        @foreach (var grade in SchoolGrades)
+                        @foreach (var grade in _schoolGrades)
                         {
                             <option value="@grade.Id">@grade.SystemGrade.Name</option>
                         }
@@ -45,7 +45,7 @@
 
                 <div class="mb-3">
                     <label class="form-label">Search Subjects</label>
-                    <InputText class="form-control" @oninput="OnInputChange" @bind-Value="searchText"
+                    <InputText class="form-control" @oninput="OnInputChange" @bind-Value="_searchText"
                         placeholder="Type to filter subjects..." />
                 </div>
 
@@ -56,10 +56,10 @@
                     {
                         @foreach (var subject in FilteredSubjects)
                         {
-                            bool isChecked = SelectedSubjectIds.Contains(subject.Id);
-                            bool isDisabled = (CombinationModel.CombinationType == CombinationType.MathCombination)
+                            bool isChecked = _selectedSubjectIds.Contains(subject.Id);
+                            bool isDisabled = (_combinationModel.CombinationType == CombinationType.MathCombination)
                             && !isChecked
-                            && (SelectedSubjectIds.Count >= 2);
+                            && (_selectedSubjectIds.Count >= 2);
 
                             <div>
                                 <input type="checkbox" checked="@isChecked" disabled="@isDisabled"
@@ -73,12 +73,12 @@
                         <div>No matching subjects found.</div>
                     }
 
-                    @if (CombinationModel.CombinationType == CombinationType.MathCombination && SelectedSubjectIds.Count !=
+                    @if (_combinationModel.CombinationType == CombinationType.MathCombination && _selectedSubjectIds.Count !=
                    2)
                     {
                         <small class="text-danger">Exactly 2 subjects required for a Math Combination.</small>
                     }
-                    else if (CombinationModel.CombinationType == CombinationType.MathCombination)
+                    else if (_combinationModel.CombinationType == CombinationType.MathCombination)
                     {
                         <small class="text-success">2 subjects selected.</small>
                     }
@@ -97,35 +97,33 @@
 @code {
     [Parameter] public Guid? Id { get; set; }
     private bool IsEdit => Id.HasValue;
-    private CombinationViewModel CombinationModel = new();
-    private List<SchoolGrade> SchoolGrades = new();
-    private List<Subject> CombinationSubjects = new();
-    private List<int> SelectedSubjectIds = new();
-    private string searchText = string.Empty;
+    private CombinationViewModel _combinationModel = new();
+    private List<SchoolGrade> _schoolGrades = [];
+    private List<Subject> _combinationSubjects = [];
+    private List<int> _selectedSubjectIds = [];
+    private string _searchText = string.Empty;
 
     private bool IsFormValid =>
-    CombinationModel.CombinationType != CombinationType.MathCombination || (SelectedSubjectIds.Count == 2);
+    _combinationModel.CombinationType != CombinationType.MathCombination || (_selectedSubjectIds.Count == 2);
 
     private IEnumerable<Subject> FilteredSubjects =>
-    CombinationSubjects.Where(s => string.IsNullOrEmpty(searchText)
-    || (s.Name != null && s.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase)));
+    _combinationSubjects.Where(s => string.IsNullOrEmpty(_searchText)
+    || (s.Name != null && s.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase)));
 
     protected override async Task OnInitializedAsync()
     {
         var school = await SchoolService.GetSelectedSchoolAsync();
         if (school == null)
         {
-            // handle no selected school
             return;
         }
 
-        CombinationSubjects = await SubjectService.GetAllCombinationSubjectsAsync();
-        SchoolGrades = await SchoolGradeService.GetCombinationGradesForSchool(school.Id);
+        _combinationSubjects = await SubjectService.GetAllCombinationSubjectsAsync();
+        _schoolGrades = await SchoolGradeService.GetCombinationGradesForSchool(school.Id);
 
-        // If editing, load existing combination
         if (IsEdit)
         {
-            await LoadCombination(Id.Value);
+            if (Id != null) await LoadCombination(Id.Value);
         }
     }
 
@@ -134,12 +132,12 @@
         var existing = await CombinationService.GetByIdAsync(id);
         if (existing == null)
         {
-            // handle combination not found
             Navigation.NavigateTo("/combinations");
             return;
         }
 
-        CombinationModel = new CombinationViewModel
+        if (existing.Subjects != null)
+            _combinationModel = new CombinationViewModel
             {
                 Id = existing.Id,
                 Name = existing.Name,
@@ -148,22 +146,22 @@
                 SubjectIds = existing.Subjects.Select(s => s.Id).ToList()
             };
 
-        SelectedSubjectIds = new List<int>(CombinationModel.SubjectIds);
+        _selectedSubjectIds = [.._combinationModel.SubjectIds];
     }
 
     private async Task HandleValidSubmit()
     {
-        var selectedSubjects = CombinationSubjects
-        .Where(subject => SelectedSubjectIds.Contains(subject.Id))
+        var selectedSubjects = _combinationSubjects
+        .Where(subject => _selectedSubjectIds.Contains(subject.Id))
         .ToList();
 
         if (IsEdit)
         {
-            await CombinationService.UpdateCombinationAsync(CombinationModel, selectedSubjects);
+            await CombinationService.UpdateCombinationAsync(_combinationModel, selectedSubjects);
         }
         else
         {
-            await CombinationService.AddCombinationAsync(CombinationModel, selectedSubjects);
+            await CombinationService.AddCombinationAsync(_combinationModel, selectedSubjects);
         }
 
         Navigation.NavigateTo("/combinations");
@@ -176,37 +174,18 @@
 
     private void ToggleSubject(int subjectId)
     {
-        if (SelectedSubjectIds.Contains(subjectId))
+        if (_selectedSubjectIds.Contains(subjectId))
         {
-            SelectedSubjectIds.Remove(subjectId);
+            _selectedSubjectIds.Remove(subjectId);
         }
         else
         {
-            SelectedSubjectIds.Add(subjectId);
+            _selectedSubjectIds.Add(subjectId);
         }
     }
 
-    private void OnCombinationTypeChanged(ChangeEventArgs e)
+    private void OnInputChange(ChangeEventArgs? e)
     {
-        if (e.Value is null) return;
-
-        if (Enum.TryParse<CombinationType>(e.Value.ToString(), out var newType) &&
-        newType != CombinationModel.CombinationType)
-        {
-            CombinationModel.CombinationType = newType;
-
-            if (CombinationModel.CombinationType == CombinationType.MathCombination)
-            {
-                if (SelectedSubjectIds.Count > 2)
-                {
-                    SelectedSubjectIds = SelectedSubjectIds.Take(2).ToList();
-                }
-            }
-        }
-    }
-
-    private void OnInputChange(ChangeEventArgs e)
-    {
-        searchText = e?.Value?.ToString() ?? string.Empty;
+        _searchText = e?.Value?.ToString() ?? string.Empty;
     }
 }

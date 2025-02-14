@@ -1,4 +1,4 @@
-namespace Lisa.Actions;
+namespace Lisa.Test.Actions;
 
 public class SchoolActions
 {

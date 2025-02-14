@@ -90,7 +90,7 @@ namespace Lisa.Services
         /// <summary>
         /// Sends communication to all staff in a selected school.
         /// </summary>
-        public async Task<EmailCampaign?> SendToStaffAsync(School selectedSchool, EmailTemplate template)
+        public async Task<EmailCampaign?> SendToStaffAsync(School? selectedSchool, EmailTemplate? template)
         {
             var request = new CommunicationRequest
             {
@@ -105,7 +105,7 @@ namespace Lisa.Services
         /// <summary>
         /// Sends communication to both learners and staff in a selected school.
         /// </summary>
-        public async Task<EmailCampaign?> SendToLearnersAndStaffAsync(School selectedSchool, EmailTemplate template)
+        public async Task<EmailCampaign?> SendToLearnersAndStaffAsync(School? selectedSchool, EmailTemplate? template)
         {
             var request = new CommunicationRequest
             {

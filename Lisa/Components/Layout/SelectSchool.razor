@@ -24,7 +24,7 @@ else
         </div>
         <div>
             <InputSelect class="form-select" id="SelectedSchoolId" TValue="string" Value="@_selectedSchoolId"
-                ValueChanged="OnSchoolSelected" ValueExpression="@(() => _selectedSchoolId ?? string.Empty)">
+                ValueChanged="OnSchoolSelected" ValueExpression="@(() => _selectedSchoolId)">
                 <option value="@string.Empty">-- Select School --</option>
                 @foreach (var school in _schools!)
                 {

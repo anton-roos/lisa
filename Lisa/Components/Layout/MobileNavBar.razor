@@ -1,0 +1,22 @@
+﻿@inherits LayoutComponentBase
+
+<div class="top-row ps-3 navbar navbar-dark d-lg-none mobile-nav">
+    <nav class="nav d-flex justify-content-around w-100">
+        <AuthorizeView Context="_" Roles="@Roles.SystemAdministrator">
+            <NavLink class="nav-link" href="schools">
+                <span class="bi bi-mortarboard" aria-hidden="true"></span>
+            </NavLink>
+        </AuthorizeView>
+        <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+            <NavLink class="nav-link" href="care-groups">
+                <span class="bi care-groups-icon" aria-hidden="true"></span>
+            </NavLink>
+        </AuthorizeView>
+        <AuthorizeView Context="_"
+            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+            <NavLink class="nav-link" href="learners">
+                <span class="bi bi-people" aria-hidden="true"></span>
+            </NavLink>
+        </AuthorizeView>
+    </nav>
+</div>

@@ -10,6 +10,10 @@
         <NavMenu />
     </div>
 
+    <div class="mobile-sidebar">
+        <MobileNavBar />
+    </div>
+
     <main class="flex-grow-1">
         <div id="header" class="d-flex justify-content-between align-items-center bg-light px-4 shadow-sm">
             <div>
@@ -80,7 +84,7 @@
     private bool _isBugReportModalVisible;
     private string _whatTried = string.Empty;
     private string _whatHappened = string.Empty;
-    
+
     private void OpenBugReportModal()
     {
         _isBugReportModalVisible = true;
@@ -100,10 +104,10 @@
         try
         {
             var bugreport = new BugReport
-                {
-                    WhatTried = _whatTried,
-                    WhatHappened = _whatHappened
-                };
+            {
+                WhatTried = _whatTried,
+                WhatHappened = _whatHappened
+            };
 
             await BugReportService.LogBugAsync(bugreport);
         }

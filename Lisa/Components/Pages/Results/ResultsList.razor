@@ -201,6 +201,7 @@
 
 @code {
     private string ViewMode { get; set; } = "Grade";
+    private List<ResultSet?> _resultsSet = [];
     private Dictionary<string, List<ResultSet>> GroupedResults { get; set; } = new();
     private List<SchoolGrade> _schoolGrades = [];
     private List<Subject> _subjects = [];
@@ -262,31 +263,31 @@
 
         if (ViewMode == "Subject")
         {
-            ResultsSet = (await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, null, SubjectId, null))
+            _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, null, _subjectId, null))
             .OrderBy(r => r.AssessmentDate)
             .ToList();
 
-            GroupedResults = ResultsSet
+            GroupedResults = _resultsSet
             .GroupBy(r => $"{r.Subject.Name} - {r.SchoolGrade.SystemGrade.Name}")
             .ToDictionary(g => $"{g.Key}", g => g.ToList());
         }
         else if (ViewMode == "Grade")
         {
-            ResultsSet = (await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, GradeId, null, null))
+            _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, _gradeId, null, null))
             .OrderBy(r => r.AssessmentDate)
             .ToList();
 
-            GroupedResults = ResultsSet
+            GroupedResults = _resultsSet
             .GroupBy(r => r.Subject.Name)
             .ToDictionary(g => g.Key, g => g.ToList());
         }
         else if (ViewMode == "Teacher")
         {
-            ResultsSet = (await ResultService.GetResultsByFiltersAsync(SelectedSchool.Id, null, null, TeacherId))
+            _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, null, null, _teacherId))
             .OrderBy(r => r.AssessmentDate)
             .ToList();
 
-            GroupedResults = ResultsSet
+            GroupedResults = _resultsSet
             .GroupBy(r => new { r.Teacher.Abbreviation, r.Subject.Name })
             .ToDictionary(g => $"{g.Key.Abbreviation} - {g.Key.Name}", g => g.ToList());
         }

@@ -17,7 +17,7 @@
 
 .top-row {
     min-height: 3.5rem;
-    background-color: rgba(0,0,0,0.4);
+    background-color: rgba(0, 0, 0, 0.4);
 }
 
 .navbar-brand {
@@ -67,7 +67,7 @@
 }
 
 .subject-icon {
-    
+
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='667' height='668' viewBox='0 0 667 668' fill='none'%3E%3Cpath d='M473.667 0.666992H194.334C73.0003 0.666992 0.666992 73.0003 0.666992 194.334V473.334C0.666992 595 73.0003 667.334 194.334 667.334H473.334C594.667 667.334 667 595 667 473.667V194.334C667.334 73.0003 595 0.666992 473.667 0.666992ZM301.667 522.667C311.334 532.334 311.334 548.334 301.667 558C296.667 563 290.334 565.334 284 565.334C277.667 565.334 271.334 563 266.334 558L209 500.667L151.667 558C146.667 562.667 140.334 565.334 134 565.334C127.667 565.334 121.334 563 116.334 558C106.667 548.334 106.667 532.334 116.334 522.667L173.667 465.334L116.334 408C106.667 398.334 106.667 382.334 116.334 372.667C126 363 142 363 151.667 372.667L209 430L266.334 372.667C276 363 292 363 301.667 372.667C311.334 382.334 311.334 398.334 301.667 408L244.334 465.334L301.667 522.667ZM284 227.667H134C120.334 227.667 109 216.334 109 202.667C109 189 120.334 177.667 134 177.667H284C297.667 177.667 309 189 309 202.667C309 216.334 297.667 227.667 284 227.667ZM534 552.667H384C370.334 552.667 359 541.334 359 527.667C359 514 370.334 502.667 384 502.667H534C547.667 502.667 559 514 559 527.667C559 541.334 547.667 552.667 534 552.667ZM534 427.667H384C370.334 427.667 359 416.334 359 402.667C359 389 370.334 377.667 384 377.667H534C547.667 377.667 559 389 559 402.667C559 416.334 547.667 427.667 534 427.667ZM534 227.667H484.667V277.667C484.667 291.334 473.334 302.667 459.667 302.667C446 302.667 434.667 291.334 434.667 277.667V227.667H384C370.334 227.667 359 216.334 359 202.667C359 189 370.334 177.667 384 177.667H434.667V127.667C434.667 114 446 102.667 459.667 102.667C473.334 102.667 484.667 114 484.667 127.667V177.667H534C547.667 177.667 559 189 559 202.667C559 216.334 547.667 227.667 534 227.667Z' fill='white'/%3E%3C/svg%3E");
 }
 
@@ -116,33 +116,33 @@
     padding-bottom: 0.5rem;
 }
 
-    .nav-item:first-of-type {
-        padding-top: 1rem;
-    }
+.nav-item:first-of-type {
+    padding-top: 1rem;
+}
 
-    .nav-item:last-of-type {
-        padding-bottom: 1rem;
-    }
+.nav-item:last-of-type {
+    padding-bottom: 1rem;
+}
 
-    .nav-item ::deep .nav-link {
-        color: #d7d7d7;
-        background: none;
-        border: none;
-        border-radius: 4px;
-        height: 3rem;
-        display: flex;
-        align-items: center;
-        line-height: 3rem;
-        width: 100%;
-    }
+.nav-item ::deep .nav-link {
+    color: #d7d7d7;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    line-height: 3rem;
+    width: 100%;
+}
 
 .nav-item ::deep a.active {
-    background-color: rgba(255,255,255,0.37);
+    background-color: rgba(255, 255, 255, 0.37);
     color: white;
 }
 
 .nav-item ::deep .nav-link:hover {
-    background-color: rgba(255,255,255,0.1);
+    background-color: rgba(255, 255, 255, 0.1);
     color: white;
 }
 
@@ -150,7 +150,7 @@
     display: none;
 }
 
-.navbar-toggler:checked ~ .nav-scrollable {
+.navbar-toggler:checked~.nav-scrollable {
     display: block;
 }
 
@@ -160,10 +160,8 @@
     }
 
     .nav-scrollable {
-        /* Never collapse the sidebar for wide screens */
         display: block;
 
-        /* Allow sidebar to scroll for tall menus */
         height: calc(100vh - 3.5rem);
         overflow-y: auto;
     }

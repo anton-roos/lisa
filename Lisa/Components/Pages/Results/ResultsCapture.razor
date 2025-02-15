@@ -34,7 +34,7 @@
                     <label for="gradeDropdown">Grade</label>
                     <InputSelect class="form-select" id="gradeDropdown" TValue="string" Value="@ViewModel.GradeId"
                         ValueChanged="@(async (value) => await OnGradeChange(value))"
-                        ValueExpression="@(() => ViewModel.GradeId ?? string.Empty)" disabled="@IsEdit">
+                        ValueExpression="@(() => ViewModel.GradeId)" disabled="@IsEdit">
                         <option value="">-- Select Grade --</option>
                         @foreach (var grade in ViewModel.SchoolGrades)
                         {
@@ -46,7 +46,7 @@
                     <label for="subjectDropdown">Subject</label>
                     <InputSelect class="form-select" id="subjectDropdown" TValue="string" Value="@ViewModel.SubjectId"
                         ValueChanged="@(async (value) => await OnSubjectChange(value))"
-                        ValueExpression="@(() => ViewModel.SubjectId ?? string.Empty)" disabled="@IsEdit">
+                        ValueExpression="@(() => ViewModel.SubjectId)" disabled="@IsEdit">
                         <option value="">-- Select Subject --</option>
                         @foreach (var subject in ViewModel.FilteredSubjects)
                         {

@@ -11,7 +11,7 @@
         bottom: 0;
         left: 0;
         width: 100%;
-        background-image: linear-gradient(180deg, #2a133a 0%, #4E246C 70%);
+        background-image: linear-gradient(90deg, #2a133a 0%, #4E246C 70%);
         padding: 10px 0;
         z-index: 1000;
         box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.3);

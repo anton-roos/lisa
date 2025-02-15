@@ -39,6 +39,10 @@
                     <input type="radio" class="btn-check" name="viewMode" id="viewByTeacher" value="Teacher"
                         checked="@(ViewMode == "Teacher")" @onchange="@(_ => SetViewMode("Teacher"))" />
                     <label class="btn btn-outline-secondary" for="viewByTeacher">Teacher</label>
+
+                    <input type="radio" class="btn-check" name="viewMode" id="viewByLearner" value="Learner"
+                        checked="@(ViewMode == "Learner")" @onchange="@(_ => SetViewMode("Learner"))" />
+                    <label class="btn btn-outline-secondary" for="viewByLearner">Learner</label>
                 </div>
             </div>
 
@@ -194,6 +198,11 @@
                         <div class="alert alert-secondary">No Results</div>
                     }
                 </div>
+            }
+             
+            @if (ViewMode == "Learner")
+            {
+              <div>Learner Search</div>
             }
         }
     </Authorized>

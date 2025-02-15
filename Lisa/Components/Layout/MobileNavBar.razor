@@ -18,5 +18,29 @@
                 <span class="bi bi-people" aria-hidden="true"></span>
             </NavLink>
         </AuthorizeView>
+        <AuthorizeView Context="_"
+            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+            <NavLink class="nav-link" href="learners">
+                <span class="bi bi-people" aria-hidden="true"></span>
+            </NavLink>
+        </AuthorizeView>
+        <AuthorizeView Context="_"
+            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+            <NavLink class="nav-link" href="learners">
+                <span class="bi bi-people" aria-hidden="true"></span>
+            </NavLink>
+        </AuthorizeView>
+        <AuthorizeView Context="_"
+            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+            <NavLink class="nav-link" href="learners">
+                <span class="bi bi-people" aria-hidden="true"></span>
+            </NavLink>
+        </AuthorizeView>
+        <AuthorizeView Context="_"
+            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+            <NavLink class="nav-link" href="result-list">
+                <span class="bi bi-reward" aria-hidden="true"></span>
+            </NavLink>
+        </AuthorizeView>
     </nav>
 </div>

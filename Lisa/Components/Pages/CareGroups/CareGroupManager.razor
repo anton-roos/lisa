@@ -67,7 +67,6 @@
     private School? _selectedSchool;
     private bool IsEdit => Id.HasValue;
     private IEnumerable<User>? _availableUsers;
-    private string? _selectedUser;
     private List<Guid> SelectedUserIds { get; set; } = new List<Guid>();
 
     protected override async Task OnInitializedAsync()
@@ -156,41 +155,5 @@
     private void Cancel()
     {
         Navigation.NavigateTo("/care-groups");
-    }
-
-    private async Task AddUserToCareGroup()
-    {
-        if (!string.IsNullOrEmpty(_selectedUser))
-        {
-            var userId = Guid.Parse(_selectedUser);
-            if (CareGroup != null)
-            {
-                await CareGroupService.AddUserToCareGroupAsync(CareGroup.Id, userId);
-                CareGroup = await CareGroupService.GetByIdAsync(CareGroup.Id);
-            }
-
-            if (_selectedSchool is not null)
-            {
-                _availableUsers = await UserService.GetBySchoolAsync(_selectedSchool.Id);
-            }
-
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private async Task RemoveUserFromCareGroup(Guid userId)
-    {
-        if (CareGroup != null)
-        {
-            await CareGroupService.RemoveUserFromCareGroupAsync(CareGroup.Id, userId);
-            CareGroup = await CareGroupService.GetByIdAsync(CareGroup.Id);
-        }
-
-        if (_selectedSchool is not null)
-        {
-            _availableUsers = await UserService.GetBySchoolAsync(_selectedSchool.Id);
-        }
-
-        await InvokeAsync(StateHasChanged);
     }
 }

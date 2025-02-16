@@ -19,14 +19,14 @@
             </dl>
             @if (CareGroup.Users != null)
             {
-                foreach (var user in CareGroup.Users)
-                {
-                    <dl class="row">
-                        <dt class="col-sm-2">Teacher</dt>
-                        <dd class="col-sm-10">@user.Abbreviation</dd>
-                        <dd class="col-sm-10">@($"{user.Surname} {user.Name}")</dd>
-                    </dl>
-                }
+                <dl class="row">
+                    <dt class="col-sm-2">Teacher(s)</dt>
+                    @foreach (var user in CareGroup.Users)
+                    {
+                        <dd class="col-sm-10"></dd>
+                        <dd class="col-sm-10"><span class="badge bg-primary">@user.Abbreviation</span> @($"{user.Surname} {user.Name}")</dd>
+                    }
+                </dl>
             }
         }
         <button class="btn btn-secondary" @onclick="GoBack">Back</button>

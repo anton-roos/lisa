@@ -1,177 +1,68 @@
-@page "/email-template/{action}/{id:guid?}"
-@inject EmailTemplateService EmailTemplateService
-@inject NavigationManager NavigationManager
+@page "/email-template-manager/{TemplateId:guid?}"
 @using Lisa.Models.Entities
-@using Blazored.TextEditor
-@inject ILogger<EmailTemplateManager> Logger
+@inject Lisa.Services.EmailTemplateService TemplateService
+@inject NavigationManager NavManager
 
-<PageTitle>@(IsEdit ? "Edit Email Template" : "Add Email Template")</PageTitle>
-<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator}")">
-    <Authorized>
-        <h3>@(IsEdit ? "Edit Email Template" : "Add Email Template")</h3>
+<h3>@(isEdit ? "Edit Template" : "Add New Template")</h3>
 
-        @if (IsEdit && _template is null)
-        {
-            <p>Loading...</p>
-        }
-        else
-        {
-            <EditForm Model="@_template" OnValidSubmit="HandleSubmit">
-                <DataAnnotationsValidator/>
-                <ValidationSummary/>
-
-                <div class="mb-3">
-                    <label class="form-label">Name</label>
-                    @if (_template is not null)
-                    {
-                        <InputText class="form-control" @bind-Value="_template.Name"/>
-                    }
-                </div>
-
-                @if (_template is not null)
-                {
-                    <div class="mb-3">
-                        <label class="form-label">Subject</label>
-                        <InputText class="form-control" @bind-Value="_template.Subject"/>
-                    </div>
-                }
-
-                <div class="mb-3">
-                    <label class="form-label">Content</label>
-                    <BlazoredTextEditor @ref="@_textEditor">
-                        <ToolbarContent>
-                            <select class="ql-header">
-                                <option value="1"></option>
-                                <option value="2"></option>
-                                <option value="3"></option>
-                                <option value="4"></option>
-                                <option value="5"></option>
-                            </select>
-                            <span class="ql-formats">
-                                <button class="ql-bold"></button>
-                                <button class="ql-italic"></button>
-                                <button class="ql-underline"></button>
-                                <button class="ql-strike"></button>
-                            </span>
-                            <span class="ql-formats">
-                                <select class="ql-color"></select>
-                                <select class="ql-background"></select>
-                            </span>
-                            <span class="ql-formats">
-                                <button class="ql-list" value="ordered"></button>
-                                <button class="ql-list" value="bullet"></button>
-                            </span>
-                            <span class="ql-formats">
-                                <button class="ql-link"></button>
-                            </span>
-                        </ToolbarContent>
-                    </BlazoredTextEditor>
-                </div>
-
-                <button type="submit" class="btn btn-success">@SaveButtonLabel</button>
-                <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
-            </EditForm>
-        }
-
-        @if (_successMessage != null)
-        {
-            <div class="alert alert-success mt-3">@_successMessage</div>
-        }
-    </Authorized>
-    <NotAuthorized>
-        <Unauthorized/>
-    </NotAuthorized>
-</AuthorizeView>
+<EditForm Model="templateModel" OnValidSubmit="SaveTemplate">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="mb-3">
+        <label>Name:</label>
+        <InputText @bind-Value="templateModel.Name" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label>Subject:</label>
+        <InputText @bind-Value="templateModel.Subject" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label>Content (HTML with Razor tokens):</label>
+        <InputTextArea @bind-Value="templateModel.Content" class="form-control" rows="10" />
+    </div>
+    <button type="submit" class="btn btn-success">Save</button>
+    <button type="button" class="btn btn-secondary" @onclick="GoBack">Cancel</button>
+</EditForm>
 
 @code {
-    [Parameter] public string Action { get; set; } = string.Empty;
+    [Parameter]
+    public Guid? TemplateId { get; set; }
 
-    [Parameter] public Guid? Id { get; set; }
-
-    private BlazoredTextEditor? _textEditor;
-    private EmailTemplate? _template;
-    private bool IsEdit => Action.Equals("edit", StringComparison.OrdinalIgnoreCase);
-    private string SaveButtonLabel => IsEdit ? "Save Changes" : "Add Template";
-    private string? _successMessage;
+    private EmailTemplate templateModel = new();
+    private bool isEdit => TemplateId.HasValue;
 
     protected override async Task OnInitializedAsync()
     {
-        if (IsEdit)
+        if (TemplateId.HasValue)
         {
-            if (Id.HasValue)
+            var tmpl = await TemplateService.GetTemplateByIdAsync(TemplateId.Value);
+            if (tmpl != null)
             {
-                _template = await EmailTemplateService.GetTemplateByIdAsync(Id.Value) ?? new EmailTemplate();
-                if (string.IsNullOrWhiteSpace(_template.Id.ToString()))
-                {
-                    NavigationManager.NavigateTo("/email-templates");
-                }
-            }
-            else
-            {
-                NavigationManager.NavigateTo("/email-templates");
+                templateModel = tmpl;
             }
         }
     }
 
-    private async Task HandleSubmit()
+    private async Task SaveTemplate()
     {
-        if (_textEditor is not null && _template is not null)
+        bool success;
+        if (isEdit)
         {
-            _template.Content = await _textEditor.GetHTML();
-
-            if (string.IsNullOrWhiteSpace(_template.Name))
-            {
-                _successMessage = "Template Name cannot be empty.";
-                return;
-            }
-
-            if (IsEdit)
-            {
-                await EmailTemplateService.UpdateTemplateAsync(_template);
-                _successMessage = "Template updated successfully!";
-            }
-            else
-            {
-                if (_template.Subject != null) await EmailTemplateService.SaveTemplateAsync(_template.Name, _template.Subject, _template.Content);
-                _successMessage = "Template added successfully!";
-            }
-
-            StateHasChanged();
-            await Task.Delay(500);
-
-            NavigationManager.NavigateTo("/email-templates");
+            success = await TemplateService.UpdateTemplateAsync(templateModel);
+        }
+        else
+        {
+            success = await TemplateService.SaveTemplateAsync(templateModel.Name, templateModel.Subject, templateModel.Content);
+        }
+        if (success)
+        {
+            NavManager.NavigateTo("/email-templates");
+        }
+        else
+        {
+            // Show error message if needed
         }
     }
 
-    private void Cancel()
-    {
-        NavigationManager.NavigateTo("/email-templates");
-    }
-
-    private bool _isEditorInitialized;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && IsEdit && _textEditor != null && _template != null)
-        {
-            try
-            {
-                await Task.Delay(50);
-                if (!string.IsNullOrWhiteSpace(_template.Content) && !_isEditorInitialized)
-                {
-                    await _textEditor.LoadHTMLContent(_template.Content);
-                    _isEditorInitialized = true;
-                }
-            }
-            catch (JSException jsEx)
-            {
-                Logger.LogError("JavaScript error initializing editor: {jsEx.Message}", jsEx.Message);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError("Error initializing editor: {ex.Message}", ex.Message);
-            }
-        }
-    }
-
+    private void GoBack() => NavManager.NavigateTo("/email-templates");
 }

@@ -20,10 +20,10 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners.CountAsync();
     }
-    public async Task<int> GetCountAsync(Guid SchoolId)
+    public async Task<int> GetCountAsync(Guid schoolId)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.Learners.Where(x => x.SchoolId == SchoolId).CountAsync();
+        return await context.Learners.Where(x => x.SchoolId == schoolId).CountAsync();
     }
 
     /// <summary>
@@ -250,7 +250,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         return await context.Learners
             .Include(l => l.RegisterClass!)
             .ThenInclude(rc => rc.SchoolGrade!)
-            .ThenInclude(sg => sg!.SystemGrade)
+            .ThenInclude(sg => sg.SystemGrade)
             .Include(l => l.LearnerSubjects!)
             .ThenInclude(ls => ls.Subject)
             .Include(l => l.CareGroup!)
@@ -276,9 +276,9 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             .Where(l => l.RegisterClass != null && l.RegisterClass.SchoolGradeId == gradeId)
             .Include(l => l.RegisterClass!)
             .ThenInclude(r => r.SchoolGrade!)
-            .ThenInclude(sg => sg!.SystemGrade)
+            .ThenInclude(sg => sg.SystemGrade)
             .Include(l => l.LearnerSubjects!)
-            .ThenInclude(ls => ls.Subject!)
+            .ThenInclude(ls => ls.Subject)
             .ToListAsync();
         return learners;
     }
@@ -289,7 +289,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         return await context.Learners
             .Where(l => l.RegisterClass != null && l.RegisterClass.SchoolGradeId == gradeId)
             .Include(l => l.LearnerSubjects!)
-            .ThenInclude(ls => ls.Subject!)
+            .ThenInclude(ls => ls.Subject)
             .Include(l => l.RegisterClass!)
             .ThenInclude(rc => rc.CompulsorySubjects!)
             .Include(l => l.Combination!)

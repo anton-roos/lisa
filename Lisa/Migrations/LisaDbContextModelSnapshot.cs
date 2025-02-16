@@ -63,13 +63,15 @@ namespace Lisa.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("PageUrl")
-                        .HasColumnType("text");
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<DateTime>("ReportedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ReportedBy")
-                        .HasColumnType("text");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<DateTime?>("ResolvedAt")
                         .HasColumnType("timestamp with time zone");
@@ -81,13 +83,16 @@ namespace Lisa.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("Version")
-                        .HasColumnType("text");
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
 
                     b.Property<string>("WhatHappened")
-                        .HasColumnType("text");
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
 
                     b.Property<string>("WhatTried")
-                        .HasColumnType("text");
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
 
                     b.HasKey("Id");
 
@@ -101,7 +106,8 @@ namespace Lisa.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
@@ -126,7 +132,8 @@ namespace Lisa.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<Guid>("SchoolGradeId")
                         .HasColumnType("uuid");
@@ -147,10 +154,12 @@ namespace Lisa.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ContentHtml")
-                        .HasColumnType("text");
+                        .HasMaxLength(8912)
+                        .HasColumnType("character varying(8912)");
 
                     b.Property<string>("ContentText")
-                        .HasColumnType("text");
+                        .HasMaxLength(8912)
+                        .HasColumnType("character varying(8912)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -274,16 +283,19 @@ namespace Lisa.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Content")
-                        .HasColumnType("text");
+                        .HasMaxLength(8192)
+                        .HasColumnType("character varying(8192)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<string>("Subject")
-                        .HasColumnType("text");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -305,10 +317,12 @@ namespace Lisa.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("EventData")
-                        .HasColumnType("text");
+                        .HasMaxLength(8192)
+                        .HasColumnType("character varying(8192)");
 
                     b.Property<string>("EventType")
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.HasKey("Id");
 
@@ -328,7 +342,8 @@ namespace Lisa.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("CellNumber")
-                        .HasColumnType("text");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<string>("Code")
                         .HasMaxLength(20)
@@ -341,13 +356,16 @@ namespace Lisa.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
-                        .HasColumnType("text");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("IdNumber")
-                        .HasColumnType("text");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<Guid?>("RegisterClassId")
                         .HasColumnType("uuid");
@@ -356,7 +374,8 @@ namespace Lisa.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Surname")
-                        .HasColumnType("text");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -410,28 +429,36 @@ namespace Lisa.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("PrimaryCellNumber")
-                        .HasColumnType("text");
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("PrimaryEmail")
-                        .HasColumnType("text");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("Relationship")
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("SecondaryCellNumber")
-                        .HasColumnType("text");
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("SecondaryEmail")
-                        .HasColumnType("text");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("Surname")
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("WhatsAppNumber")
-                        .HasColumnType("text");
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.HasKey("Id");
 
@@ -451,7 +478,8 @@ namespace Lisa.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Description")
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<DateTime>("EndTime")
                         .HasColumnType("timestamp with time zone");
@@ -500,7 +528,8 @@ namespace Lisa.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<Guid>("SchoolGradeId")
                         .HasColumnType("uuid");
@@ -534,7 +563,8 @@ namespace Lisa.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("AbsentReason")
-                        .HasColumnType("text");
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<Guid>("LearnerId")
                         .HasColumnType("uuid");
@@ -567,10 +597,12 @@ namespace Lisa.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("AssessmentTopic")
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("AssessmentType")
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<Guid>("CapturedById")
                         .HasColumnType("uuid");
@@ -613,10 +645,12 @@ namespace Lisa.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Color")
-                        .HasColumnType("text");
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
 
                     b.Property<string>("LongName")
-                        .HasColumnType("text");
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<Guid>("SchoolCurriculumId")
                         .HasColumnType("uuid");
@@ -629,13 +663,16 @@ namespace Lisa.Migrations
                         .HasColumnType("character varying(20)");
 
                     b.Property<string>("SmtpEmail")
-                        .HasColumnType("text");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("SmtpHost")
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("SmtpPassword")
-                        .HasColumnType("text");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<int>("SmtpPort")
                         .HasColumnType("integer");
@@ -659,10 +696,12 @@ namespace Lisa.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Description")
-                        .HasColumnType("text");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.HasKey("Id");
 
@@ -698,7 +737,8 @@ namespace Lisa.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.HasKey("Id");
 
@@ -718,13 +758,15 @@ namespace Lisa.Migrations
                         .HasColumnType("character varying(20)");
 
                     b.Property<string>("Description")
-                        .HasColumnType("text");
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.PrimitiveCollection<List<int>>("GradesApplicable")
                         .HasColumnType("integer[]");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<int>("Order")
                         .HasColumnType("integer");
@@ -756,7 +798,8 @@ namespace Lisa.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<int>("SequenceNumber")
                         .HasColumnType("integer");
@@ -824,7 +867,8 @@ namespace Lisa.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -861,7 +905,8 @@ namespace Lisa.Migrations
                         .HasColumnType("character varying(256)");
 
                     b.Property<string>("UserType")
-                        .HasColumnType("text");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.HasKey("Id");
 

@@ -36,8 +36,8 @@ public class ResultsCaptureViewModel
     public User? Teacher { get; set; }
 
     // Query parameters
-    public string? GradeId { get; set; }
-    public string? SubjectId { get; set; }
+    public string GradeId { get; set; } = string.Empty;
+    public string SubjectId { get; set; } = string.Empty;
 
     // Assessment fields
     [Required(ErrorMessage = "Assessment topic is required.")]

@@ -1,14 +1,22 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Lisa.Models.Entities;
 
 public class School
 {
     public Guid Id { get; set; }
+    [MaxLength(8)]
     public string? ShortName { get; set; }
+    [MaxLength(64)]
     public string? LongName { get; set; }
+    [MaxLength(8)]
     public string? Color { get; set; }
+    [MaxLength(32)]
     public string? SmtpHost { get; set; }
     public int SmtpPort { get; set; }
+    [MaxLength(256)]
     public string? SmtpEmail { get; set; }
+    [MaxLength(256)]
     public string? SmtpPassword { get; set; }
     public Guid SchoolTypeId { get; set; }
     public Guid SchoolCurriculumId { get; set; }

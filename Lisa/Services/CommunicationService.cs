@@ -5,22 +5,17 @@ using Lisa.Data;
 
 namespace Lisa.Services
 {
-    public class CommunicationService
-    (
+    public class CommunicationService(
         EmailCampaignService emailCampaignService,
         LearnerService learnerService,
         UserService userService,
-        ILogger<CommunicationService> logger,
-        SchoolService schoolService,
-        EmailTemplateService emailTemplateService
+        ILogger<CommunicationService> logger
     )
     {
         private readonly EmailCampaignService _emailCampaignService = emailCampaignService;
         private readonly LearnerService _learnerService = learnerService;
         private readonly UserService _userService = userService;
         private readonly ILogger<CommunicationService> _logger = logger;
-        private readonly SchoolService _schoolService = schoolService;
-        private readonly EmailTemplateService _emailTemplateService = emailTemplateService;
 
         /// <summary>
         /// General method to send communication based on the CommunicationRequest.
@@ -29,9 +24,9 @@ namespace Lisa.Services
         {
             try
             {
-                List<string> recipientEmails = await GetRecipientEmailsAsync(request);
+                var recipientEmails = await GetRecipientEmailsAsync(request);
 
-                if (recipientEmails == null || !recipientEmails.Any())
+                if (recipientEmails.Count == 0)
                 {
                     _logger.LogWarning("No valid recipients found for the communication request.");
                     return null;
@@ -51,31 +46,10 @@ namespace Lisa.Services
         }
 
         /// <summary>
-        /// Replaces placeholders in the email template with actual learner data.
-        /// </summary>
-        private static string GenerateEmailBody(EmailTemplate template, Learner learner, Parent parent, School school, string subject, string marksTable)
-        {
-            if (template.Content == null)
-            {
-                throw new ArgumentNullException(nameof(template), "Email template content cannot be null.");
-            }
-
-            return template.Content
-                .Replace("{Learner.Surname}", learner.Surname)
-                .Replace("{Learner.Name}", learner.Name)
-                .Replace("{Parent.Surname}", parent.Surname)
-                .Replace("{Parent.Name}", parent.Name)
-                .Replace("{Subject}", subject)
-                .Replace("{MarksTable}", marksTable)
-                .Replace("{School.Name}", school.LongName)
-                .Replace("{School.Email}", school.SmtpEmail)
-                .Replace("{School.Phone}", "0813049304");
-        }
-
-        /// <summary>
         /// Sends communication to a single learners in a selected school.
         /// </summary>
-        public async Task<EmailCampaign?> SendToLearnerAsync(School selectedSchool, EmailTemplate template, Learner learner)
+        public async Task<EmailCampaign?> SendToLearnerAsync(School selectedSchool, EmailTemplate template,
+            Learner learner)
         {
             var request = new CommunicationRequest
             {
@@ -92,6 +66,11 @@ namespace Lisa.Services
         /// </summary>
         public async Task<EmailCampaign?> SendToStaffAsync(School? selectedSchool, EmailTemplate? template)
         {
+            if (selectedSchool is null || template is null)
+            {
+                return null;
+            }
+
             var request = new CommunicationRequest
             {
                 SchoolId = selectedSchool.Id,
@@ -107,6 +86,11 @@ namespace Lisa.Services
         /// </summary>
         public async Task<EmailCampaign?> SendToLearnersAndStaffAsync(School? selectedSchool, EmailTemplate? template)
         {
+            if (selectedSchool is null || template is null)
+            {
+                return null;
+            }
+            
             var request = new CommunicationRequest
             {
                 SchoolId = selectedSchool.Id,
@@ -290,11 +274,6 @@ namespace Lisa.Services
         /// </summary>
         private static EmailCampaign CreateEmailCampaign(CommunicationRequest request, List<string> recipientEmails)
         {
-            if (request?.SchoolId == null)
-            {
-                throw new Exception("School ID is required to create an email campaign.");
-            }
-
             var emailCampaign = new EmailCampaign
             {
                 Id = Guid.NewGuid(),
@@ -314,14 +293,17 @@ namespace Lisa.Services
                 StatsClickCount = 0,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                EmailRecipients = [.. recipientEmails.Select(email => new EmailRecipient
-                {
-                    Id = Guid.NewGuid(),
-                    EmailAddress = email,
-                    Status = EmailRecipientStatus.Pending,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                })],
+                EmailRecipients =
+                [
+                    .. recipientEmails.Select(email => new EmailRecipient
+                    {
+                        Id = Guid.NewGuid(),
+                        EmailAddress = email,
+                        Status = EmailRecipientStatus.Pending,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    })
+                ],
                 SchoolId = request.SchoolId
             };
 

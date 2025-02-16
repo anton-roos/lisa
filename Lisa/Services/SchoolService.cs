@@ -10,7 +10,6 @@ namespace Lisa.Services;
 public class SchoolService(
     IDbContextFactory<LisaDbContext> dbContextFactory,
     IUiEventService uiEventService,
-    UserManager<User> userManager,
     UserService userService,
     AuthenticationStateProvider authenticationStateProvider,
     ILogger<SchoolService> logger
@@ -18,7 +17,6 @@ public class SchoolService(
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly IUiEventService _uiEventService = uiEventService;
-    private readonly UserManager<User> _userManager = userManager;
     private readonly ILogger<SchoolService> _logger = logger;
     private readonly UserService _userService = userService;
     private readonly AuthenticationStateProvider _authenticationStateProvider = authenticationStateProvider;
@@ -37,7 +35,7 @@ public class SchoolService(
             if (schoolId == null)
             {
                 _selectedSchool = null;
-                await UpdateUserSelectedSchoolAsync(null);
+                await UpdateUserSelectedSchoolAsync();
                 await _uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
                 return null;
             }
@@ -55,7 +53,7 @@ public class SchoolService(
 
             _selectedSchool = school;
 
-            await UpdateUserSelectedSchoolAsync(school.Id);
+            await UpdateUserSelectedSchoolAsync();
 
             await _uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
             return _selectedSchool;
@@ -107,7 +105,7 @@ public class SchoolService(
 
         using var context = await _dbContextFactory.CreateDbContextAsync();
         _selectedSchool = await context.Schools
-            .AsNoTracking()
+            .AsNoTracking().Include(school => school.Learners)
             .FirstOrDefaultAsync(s => s.Id == user.SchoolId);
 
         if (_selectedSchool == null)
@@ -128,7 +126,7 @@ public class SchoolService(
         var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
         var userPrincipal = authState.User;
 
-        if (userPrincipal == null || userPrincipal.Identity is null || !userPrincipal.Identity.IsAuthenticated)
+        if (userPrincipal.Identity is null || !userPrincipal.Identity.IsAuthenticated)
         {
             _logger.LogError("User is not authenticated.");
             return null;
@@ -155,8 +153,7 @@ public class SchoolService(
     /// <summary>
     /// Updates the persistent store with the current selected school ID for the logged-in user.
     /// </summary>
-    /// <param name="selectedSchoolId">The ID of the selected school, or null to clear the selection.</param>
-    private async Task UpdateUserSelectedSchoolAsync(Guid? selectedSchoolId)
+    private async Task UpdateUserSelectedSchoolAsync()
     {
         var currentUser = await GetCurrentUserAsync();
         if (currentUser == null)

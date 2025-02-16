@@ -6,8 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class EmailCampaignService
-(
+public class EmailCampaignService(
     IDbContextFactory<LisaDbContext> contextFactory,
     IUiEventService uiEventService,
     ILogger<EmailCampaignService> logger,
@@ -17,7 +16,7 @@ public class EmailCampaignService
     private readonly IDbContextFactory<LisaDbContext> _contextFactory = contextFactory;
     private readonly IUiEventService _uiEventService = uiEventService;
     private readonly ILogger<EmailCampaignService> _logger = logger;
-    private static readonly ConcurrentDictionary<Guid, CancellationTokenSource> _campaignTokens = new();
+    private static readonly ConcurrentDictionary<Guid, CancellationTokenSource> CampaignTokens = new();
     private readonly EmailService _emailService = emailService;
 
     public async Task<List<EmailCampaign>> GetBySchoolIdAsync(Guid schoolId)
@@ -52,10 +51,10 @@ public class EmailCampaignService
             campaign.Status = EmailCampaignStatus.Sending;
             await context.SaveChangesAsync();
 
-            await _uiEventService.PublishAsync(UiEvents.EmailCampaignStarted, new { Id = campaign.Id });
+            await _uiEventService.PublishAsync(UiEvents.EmailCampaignStarted, new { campaign.Id });
 
             var tokenSource = new CancellationTokenSource();
-            if (!_campaignTokens.TryAdd(campaignId, tokenSource))
+            if (!CampaignTokens.TryAdd(campaignId, tokenSource))
             {
                 _logger.LogError("Failed to add campaign {campaignId} to token dictionary.", campaignId);
                 return;
@@ -94,7 +93,8 @@ public class EmailCampaignService
                         string subject = campaign.SubjectLine ?? "No Subject";
                         string body = campaign.ContentHtml ?? "No Content";
 
-                        BackgroundJob.Enqueue(() => SendEmailWithRetryAsync(recipient.EmailAddress, subject, body, campaign.SchoolId));
+                        BackgroundJob.Enqueue(() =>
+                            SendEmailWithRetryAsync(recipient.EmailAddress, subject, body, campaign.SchoolId));
                         await Task.Delay(2000, cancellationToken);
 
                         recipient.Status = EmailRecipientStatus.Sent;
@@ -109,7 +109,7 @@ public class EmailCampaignService
 
                     await _uiEventService.PublishAsync(UiEvents.EmailCampaignProgressUpdated, new
                     {
-                        Id = campaign.Id,
+                        campaign.Id,
                         Progress = progress,
                         Total = total,
                         Sent = sent
@@ -117,7 +117,8 @@ public class EmailCampaignService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError("Error sending email to {recipient.EmailAddress}: {ex.Message}", recipient.EmailAddress, ex.Message);
+                    _logger.LogError("Error sending email to {recipient.EmailAddress}: {ex.Message}",
+                        recipient.EmailAddress, ex.Message);
                     recipient.Status = EmailRecipientStatus.Bounced;
                 }
             }
@@ -125,7 +126,7 @@ public class EmailCampaignService
             campaign.Status = EmailCampaignStatus.Sent;
             await context.SaveChangesAsync(cancellationToken);
 
-            await _uiEventService.PublishAsync(UiEvents.EmailCampaignCompleted, new { Id = campaign.Id });
+            await _uiEventService.PublishAsync(UiEvents.EmailCampaignCompleted, new { campaign.Id });
         }
         catch (OperationCanceledException)
         {
@@ -133,11 +134,12 @@ public class EmailCampaignService
         }
         catch (Exception ex)
         {
-            _logger.LogError("Unexpected error in ProcessEmailsAsync for campaign {campaignId}: {ex.Message}", campaignId, ex.Message);
+            _logger.LogError("Unexpected error in ProcessEmailsAsync for campaign {campaignId}: {ex.Message}",
+                campaignId, ex.Message);
         }
         finally
         {
-            _campaignTokens.TryRemove(campaignId, out _);
+            CampaignTokens.TryRemove(campaignId, out _);
         }
     }
 
@@ -151,12 +153,14 @@ public class EmailCampaignService
         {
             if (!string.IsNullOrWhiteSpace(recipientEmailAddress))
             {
-                await _emailService.SendEmailAsync(schoolId: schoolId, to: recipientEmailAddress, subject: subject, body: body);
+                await _emailService.SendEmailAsync(schoolId: schoolId, to: recipientEmailAddress, subject: subject,
+                    body: body);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError("Failed to send email to {recipient.EmailAddress}: {ex.Message}", recipientEmailAddress, ex.Message);
+            _logger.LogError("Failed to send email to {recipient.EmailAddress}: {ex.Message}", recipientEmailAddress,
+                ex.Message);
             throw;
         }
     }
@@ -195,10 +199,10 @@ public class EmailCampaignService
 
     private bool TryCancelCampaign(Guid campaignId)
     {
-        if (_campaignTokens.TryGetValue(campaignId, out var tokenSource))
+        if (CampaignTokens.TryGetValue(campaignId, out var tokenSource))
         {
             tokenSource.Cancel();
-            _campaignTokens.TryRemove(campaignId, out _);
+            CampaignTokens.TryRemove(campaignId, out _);
             return true;
         }
 

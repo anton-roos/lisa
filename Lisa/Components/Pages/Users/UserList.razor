@@ -1,26 +1,25 @@
 @page "/users"
 @using Lisa.Models.Entities
-@using Microsoft.AspNetCore.Components.Authorization
 @inject NavigationManager Navigation
 @inject SchoolService SchoolService
 @inject UserService UserService
 @inherits EventAwareComponentBase
 
 <PageTitle>Staff</PageTitle>
-<AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>Staff</h3>
-        <button class="btn btn-primary mb-3" @onclick="GoToAddUser" disabled="@(SelectedSchool == null)">
+        <button class="btn btn-primary mb-3" @onclick="GoToAddUser" disabled="@(_selectedSchool == null)">
             Add Staff Member
         </button>
 
-        @if (SelectedSchool == null)
+        @if (_selectedSchool == null)
         {
             <div class="alert alert-warning">
                 No school selected. Please select a school first.
             </div>
         }
-        else if (Users == null)
+        else if (_users == null)
         {
             <p>Loading...</p>
         }
@@ -29,20 +28,20 @@
             <div class="mb-3 d-flex flex-wrap align-items-center">
                 <!-- Search Filter -->
                 <div class="me-3">
-                    <input type="text" class="form-control" placeholder="Search users..." @bind="searchQuery"
-                        @oninput="FilterUsers">
+                    <input type="text" class="form-control" placeholder="Search users..." @bind="_searchQuery"
+                           @oninput="FilterUsers">
                 </div>
 
                 <!-- Role Filter Buttons -->
-                <button class="btn @(selectedRole == null ? "btn-primary" : "btn-secondary") me-2"
-                    @onclick="ClearRoleFilter">
+                <button class="btn @(_selectedRole == null ? "btn-primary" : "btn-secondary") me-2"
+                        @onclick="ClearRoleFilter">
                     All Roles
                 </button>
 
-                @foreach (var role in AvailableRoles)
+                @foreach (var role in _availableRoles)
                 {
-                    <button class="btn @(selectedRole == role ? "btn-primary" : "btn-secondary") me-2"
-                        @onclick="() => SelectRole(role)">
+                    <button class="btn @(_selectedRole == role ? "btn-primary" : "btn-secondary") me-2"
+                            @onclick="() => SelectRole(role)">
                         @role
                     </button>
                 }
@@ -79,8 +78,11 @@
                                     </div>
 
                                     <div class="d-flex justify-content-between">
-                                        <button class="btn btn-sm btn-secondary" @onclick="() => EditUser(user.Id)">Edit</button>
-                                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteUser(user)">Delete</button>
+                                        <button class="btn btn-sm btn-secondary" @onclick="() => EditUser(user.Id)">
+                                            Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteUser(user)">Delete
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -91,45 +93,44 @@
         }
     </Authorized>
     <NotAuthorized>
-        <Unauthorized />
+        <Unauthorized/>
     </NotAuthorized>
 </AuthorizeView>
 
 @code {
-    [CascadingParameter]
-    private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
 
-    private School? SelectedSchool;
-    private List<User>? Users;
-    private string? selectedRole = null; // Now only one role can be selected at a time
-    private string searchQuery = string.Empty;
+    private School? _selectedSchool;
+    private List<User>? _users;
+    private string? _selectedRole;
+    private string _searchQuery = string.Empty;
 
-    private List<string> AvailableRoles = new List<string>
-{
-Roles.Principal,
-Roles.Administrator,
-Roles.SchoolManagement,
-Roles.SystemAdministrator,
-Roles.Teacher
-};
+    private readonly List<string> _availableRoles =
+    [
+        Roles.Principal,
+        Roles.Administrator,
+        Roles.SchoolManagement,
+        Roles.SystemAdministrator,
+        Roles.Teacher
+    ];
 
-    private bool isCurrentUserSystemAdmin;
+    private bool _isCurrentUserSystemAdmin;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateTask;
         var user = authState.User;
-        isCurrentUserSystemAdmin = user.IsInRole(Roles.SystemAdministrator);
+        _isCurrentUserSystemAdmin = user.IsInRole(Roles.SystemAdministrator);
 
-        if (!isCurrentUserSystemAdmin)
+        if (!_isCurrentUserSystemAdmin)
         {
-            AvailableRoles.Remove(Roles.SystemAdministrator);
+            _availableRoles.Remove(Roles.SystemAdministrator);
         }
 
-        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         SubscribeToEvent(UiEvents.SchoolSelected);
 
-        if (SelectedSchool != null)
+        if (_selectedSchool != null)
         {
             await LoadUsers();
         }
@@ -142,9 +143,10 @@ Roles.Teacher
             case UiEvents.SchoolSelected:
                 if (payload is School school)
                 {
-                    SelectedSchool = school;
+                    _selectedSchool = school;
                     await LoadUsers();
                 }
+
                 break;
         }
 
@@ -153,47 +155,41 @@ Roles.Teacher
 
     private async Task LoadUsers()
     {
-        if (SelectedSchool == null)
+        if (_selectedSchool == null)
             throw new InvalidOperationException("No school selected.");
 
-        Users = await UserService.GetAllByRoleAndSchoolAsync(AvailableRoles.ToArray(), SelectedSchool.Id);
+        _users = await UserService.GetAllByRoleAndSchoolAsync(_availableRoles.ToArray(), _selectedSchool.Id);
 
-        if (!isCurrentUserSystemAdmin && Users != null)
+        if (!_isCurrentUserSystemAdmin && _users != null)
         {
-            Users = Users.Where(u => !u.Roles.Contains(Roles.SystemAdministrator)).ToList();
+            _users = _users.Where(u => !u.Roles.Contains(Roles.SystemAdministrator)).ToList();
         }
     }
 
     private IEnumerable<User> FilteredUsers =>
-    Users == null ? Enumerable.Empty<User>() :
-    Users.Where(u =>
-    (selectedRole == null || u.Roles.Contains(selectedRole)) &&
-    (string.IsNullOrWhiteSpace(searchQuery) ||
-    u.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-    u.Surname.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-    (u.Abbreviation?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false)
-    ));
+        _users == null
+            ? []
+            : _users.Where(u =>
+                (_selectedRole == null || u.Roles.Contains(_selectedRole)) &&
+                (string.IsNullOrWhiteSpace(_searchQuery) ||
+                 u.Name!.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                 u.Surname!.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                 (u.Abbreviation?.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ?? false)
+                ));
 
     private void FilterUsers(ChangeEventArgs e)
     {
-        searchQuery = e.Value?.ToString() ?? string.Empty;
+        _searchQuery = e.Value?.ToString() ?? string.Empty;
     }
 
     private void SelectRole(string role)
     {
-        if (selectedRole == role)
-        {
-            selectedRole = null; // Deselect if already selected
-        }
-        else
-        {
-            selectedRole = role; // Select the clicked role
-        }
+        _selectedRole = _selectedRole == role ? null : role;
     }
 
     private void ClearRoleFilter()
     {
-        selectedRole = null; // Show all users
+        _selectedRole = null;
     }
 
     private void GoToAddUser()

@@ -1,13 +1,20 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Lisa.Models.Entities;
 
 public class Learner
 {
     public Guid Id { get; set; }
     public string? Code { get; set; }
+    [MaxLength(30)]
     public string? Surname { get; set; }
+    [MaxLength(30)]
     public string? Name { get; set; }
+    [MaxLength(20)]
     public string? IdNumber { get; set; }
+    [MaxLength(256)]
     public string? Email { get; set; }
+    [MaxLength(30)]
     public string? CellNumber { get; set; }
     public bool Active { get; set; }
     public DateTime CreatedAt { get; set; }

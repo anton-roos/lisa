@@ -1,27 +1,26 @@
 @page "/schools/edit/{Id:guid}"
-@using Lisa.Data
 @using Lisa.Models.Entities
-@using Lisa.Services
 @inject SchoolService SchoolService
 @inject NavigationManager NavigationManager
+@inject ILogger Logger
 
 <PageTitle>Edit School</PageTitle>
 
-<AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
     <Authorized>
         <h3>Edit School</h3>
 
-        @if (IsLoading)
+        @if (_isLoading)
         {
             <p>Loading...</p>
         }
-        else if (school == null)
+        else if (School == null)
         {
             <p>School not found.</p>
         }
         else
         {
-            <SchoolForm School="@school" SchoolTypes="@SchoolTypes" Curriculums="@Curriculums"
+            <SchoolForm School="@School" SchoolTypes="@_schoolTypes" Curriculums="@_curriculums"
                 OnValidSubmitCallback="@HandleValidSubmit" OnCancelCallback="@Cancel" />
         }
     </Authorized>
@@ -33,20 +32,20 @@
 @code {
     [Parameter]
     public Guid Id { get; set; }
-    private School? school { get; set; }
-    private List<SchoolType> SchoolTypes = new();
-    private List<SchoolCurriculum> Curriculums = new();
-    private bool IsLoading = false;
+    private School? School { get; set; }
+    private List<SchoolType> _schoolTypes = new();
+    private List<SchoolCurriculum> _curriculums = new();
+    private bool _isLoading;
 
     protected override async Task OnInitializedAsync()
     {
-        IsLoading = true;
+        _isLoading = true;
         try
         {
-            SchoolTypes = await SchoolService.GetSchoolTypesAsync();
-            Curriculums = await SchoolService.GetSchoolCurriculumsAsync();
-            school = await SchoolService.GetSchoolAsync(Id);
-            if (school == null)
+            _schoolTypes = await SchoolService.GetSchoolTypesAsync();
+            _curriculums = await SchoolService.GetSchoolCurriculumsAsync();
+            School = await SchoolService.GetSchoolAsync(Id);
+            if (School == null)
             {
                 NavigationManager.NavigateTo("/schools");
             }
@@ -57,7 +56,7 @@
         }
         finally
         {
-            IsLoading = false;
+            _isLoading = false;
         }
     }
 
@@ -65,12 +64,12 @@
     {
         try
         {
-            await SchoolService.UpdateAsync(school!);
+            await SchoolService.UpdateAsync(School!);
             NavigationManager.NavigateTo("/schools");
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error saving school: {ex.Message}");
+            Logger.LogError("Error saving school: {Message}", ex.Message);
         }
     }
 

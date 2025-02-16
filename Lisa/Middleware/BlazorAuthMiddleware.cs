@@ -100,7 +100,7 @@ public interface ILoginStore : IDisposable
 /// <summary>
 /// In-memory store for temporary login information.
 /// </summary>
-public class InMemoryLoginStore : ILoginStore, IDisposable
+public class InMemoryLoginStore : ILoginStore
 {
     private readonly ConcurrentDictionary<Guid, SecureLoginInfo> _logins = new();
     private readonly TimeSpan _expiration = TimeSpan.FromMinutes(5);
@@ -152,7 +152,7 @@ public class InMemoryLoginStore : ILoginStore, IDisposable
 
     public void Dispose()
     {
-        _cleanupTimer?.Dispose();
+        _cleanupTimer.Dispose();
         _logins.Clear();
         GC.SuppressFinalize(this);
     }

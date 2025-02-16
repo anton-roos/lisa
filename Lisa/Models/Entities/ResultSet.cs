@@ -1,10 +1,14 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Lisa.Models.Entities;
 
 public class ResultSet
 {
     public Guid Id { get; set; }
     public DateTime? AssessmentDate { get; set; }
+    [MaxLength(32)]
     public string? AssessmentType { get; set; }
+    [MaxLength(32)]
     public string? AssessmentTopic { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

@@ -9,7 +9,7 @@
 
 @inherits EventAwareComponentBase
 
-<AuthorizeView Context="AuthContext"
+<AuthorizeView
     Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
     <Authorized>
         <PageTitle>Results</PageTitle>
@@ -29,19 +29,19 @@
                 <label><strong>View Results by:</strong></label>
                 <div class="btn-group" role="group">
                     <input type="radio" class="btn-check" name="viewMode" id="viewByGrade" value="Grade"
-                        checked="@(ViewMode == "Grade")" @onchange="@(_ => SetViewMode("Grade"))" />
+                           checked="@(ViewMode == "Grade")" @onchange="@(_ => SetViewMode("Grade"))"/>
                     <label class="btn btn-outline-secondary" for="viewByGrade">Grade</label>
 
                     <input type="radio" class="btn-check" name="viewMode" id="viewBySubject" value="Subject"
-                        checked="@(ViewMode == "Subject")" @onchange="@(_ => SetViewMode("Subject"))" />
+                           checked="@(ViewMode == "Subject")" @onchange="@(_ => SetViewMode("Subject"))"/>
                     <label class="btn btn-outline-secondary" for="viewBySubject">Subject</label>
 
                     <input type="radio" class="btn-check" name="viewMode" id="viewByTeacher" value="Teacher"
-                        checked="@(ViewMode == "Teacher")" @onchange="@(_ => SetViewMode("Teacher"))" />
+                           checked="@(ViewMode == "Teacher")" @onchange="@(_ => SetViewMode("Teacher"))"/>
                     <label class="btn btn-outline-secondary" for="viewByTeacher">Teacher</label>
 
                     <input type="radio" class="btn-check" name="viewMode" id="viewByLearner" value="Learner"
-                        checked="@(ViewMode == "Learner")" @onchange="@(_ => SetViewMode("Learner"))" />
+                           checked="@(ViewMode == "Learner")" @onchange="@(_ => SetViewMode("Learner"))"/>
                     <label class="btn btn-outline-secondary" for="viewByLearner">Learner</label>
                 </div>
             </div>
@@ -52,7 +52,7 @@
                 <div class="mb-3">
                     <label><strong>Select Grade:</strong></label>
                     <InputSelect class="form-select" TValue="Guid ?" Value="@_gradeId" ValueChanged="OnGradeChange"
-                        ValueExpression="() => _gradeId">
+                                 ValueExpression="() => _gradeId">
                         <option value="">-- Select Grade --</option>
                         @foreach (var grade in _schoolGrades)
                         {
@@ -71,9 +71,14 @@
                                 <div class="d-flex flex-wrap">
                                     @foreach (var set in group.Value)
                                     {
+                                        @if (set is null)
+                                        {
+                                            continue;
+                                        }
+
                                         <div class="mt-3">
                                             <div type="button" class="badge @GetResultSetStatusColor(set)"
-                                                @onclick="() => EditResult(set.Id)">
+                                                 @onclick="() => EditResult(set.Id)">
                                                 @if (set.AssessmentDate.HasValue)
                                                 {
                                                     @set.AssessmentDate.Value.ToString("dd MMM")
@@ -98,7 +103,7 @@
                 <div class="mb-3">
                     <label><strong>Select Subject:</strong></label>
                     <InputSelect class="form-select" TValue="int?" Value="@_subjectId" ValueChanged="OnSubjectChange"
-                        ValueExpression="() => _subjectId">
+                                 ValueExpression="() => _subjectId">
                         <option value="">-- Select Subject --</option>
                         @foreach (var subject in _subjects)
                         {
@@ -112,12 +117,16 @@
                     <div class="mb-3">
                         <label><strong>Select Grade:</strong></label>
                         <div class="d-flex flex-wrap">
-                            @foreach (var grade in _availableGradesForSubject)
+                            @if (_availableGradesForSubject is not null)
                             {
-                                <button class="btn btn-sm @(_selectedGrades.Contains(grade) ? "btn-success" : "btn-outline-success")"
-                                    @onclick="() => ToggleGradeSelection(grade)">
-                                    @FormatGrade(grade)
-                                </button>
+                                foreach (var grade in _availableGradesForSubject)
+                                {
+                                    <button
+                                        class="btn btn-sm @(_selectedGrades.Contains(grade) ? "btn-success" : "btn-outline-success")"
+                                        @onclick="() => ToggleGradeSelection(grade)">
+                                        @FormatGrade(grade)
+                                    </button>
+                                }
                             }
                         </div>
                     </div>
@@ -133,9 +142,14 @@
                                 <div class="d-flex flex-wrap">
                                     @foreach (var set in group.Value)
                                     {
+                                        @if (set is null)
+                                        {
+                                            continue;
+                                        }
+                                        
                                         <div class="mt-3">
                                             <div type="button" class="badge @GetResultSetStatusColor(set)"
-                                                @onclick="() => EditResult(set.Id)">
+                                                 @onclick="() => EditResult(set.Id)">
                                                 @if (set.AssessmentDate.HasValue)
                                                 {
                                                     @set.AssessmentDate.Value.ToString("dd MMM")
@@ -160,7 +174,7 @@
                 <div class="mb-3">
                     <label><strong>Select Teacher:</strong></label>
                     <InputSelect class="form-select" TValue="Guid ?" Value="@_teacherId" ValueChanged="OnTeacherChange"
-                        ValueExpression="() => _teacherId">
+                                 ValueExpression="() => _teacherId">
                         <option value="">-- Select Teacher --</option>
                         @foreach (var teacher in _teachers)
                         {
@@ -179,9 +193,14 @@
                                 <div class="d-flex flex-wrap">
                                     @foreach (var set in group.Value)
                                     {
+                                        @if (set is null)
+                                        {
+                                            continue;
+                                        }
+                                        
                                         <div class="mt-3">
                                             <div type="button" class="badge @GetResultSetStatusColor(set)"
-                                                @onclick="() => EditResult(set.Id)">
+                                                 @onclick="() => EditResult(set.Id)">
                                                 @if (set.AssessmentDate.HasValue)
                                                 {
                                                     @set.AssessmentDate.Value.ToString("dd MMM")
@@ -199,10 +218,10 @@
                     }
                 </div>
             }
-             
+
             @if (ViewMode == "Learner")
             {
-              <div>Learner Search</div>
+                <div>Learner Search</div>
             }
         }
     </Authorized>
@@ -211,11 +230,11 @@
 @code {
     private string ViewMode { get; set; } = "Grade";
     private List<ResultSet?> _resultsSet = [];
-    private Dictionary<string, List<ResultSet>> GroupedResults { get; set; } = new();
+    private Dictionary<string, List<ResultSet?>> GroupedResults { get; set; } = new();
     private List<SchoolGrade> _schoolGrades = [];
     private List<Subject> _subjects = [];
     private List<User> _teachers = [];
-    private List<int> _availableGradesForSubject = [];
+    private List<int>? _availableGradesForSubject = [];
     private readonly HashSet<int> _selectedGrades = [];
     private bool _loading;
     private School? _selectedSchool;
@@ -239,6 +258,7 @@
                     _selectedSchool = school;
                     await LoadFilters();
                 }
+
                 break;
         }
 
@@ -270,40 +290,41 @@
         }
 
 
-        if (ViewMode == "Subject")
+        switch (ViewMode)
         {
-            _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, null, _subjectId, null))
-            .OrderBy(r => r.AssessmentDate)
-            .ToList();
+            case "Subject":
+                _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, null, _subjectId, null))
+                    .OrderBy(r => r!.AssessmentDate)
+                    .ToList();
 
-            GroupedResults = _resultsSet
-            .GroupBy(r => $"{r.Subject.Name} - {r.SchoolGrade.SystemGrade.Name}")
-            .ToDictionary(g => $"{g.Key}", g => g.ToList());
-        }
-        else if (ViewMode == "Grade")
-        {
-            _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, _gradeId, null, null))
-            .OrderBy(r => r.AssessmentDate)
-            .ToList();
+                GroupedResults = _resultsSet
+                    .GroupBy(r => $"{r!.Subject!.Name!} - {r.SchoolGrade!.SystemGrade.Name!}")
+                    .ToDictionary(g => $"{g.Key}", g => g.ToList());
+                break;
+            case "Grade":
+                _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, _gradeId, null, null))
+                    .OrderBy(r => r?.AssessmentDate)
+                    .ToList();
 
-            GroupedResults = _resultsSet
-            .GroupBy(r => r.Subject.Name)
-            .ToDictionary(g => g.Key, g => g.ToList());
-        }
-        else if (ViewMode == "Teacher")
-        {
-            _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, null, null, _teacherId))
-            .OrderBy(r => r.AssessmentDate)
-            .ToList();
+                GroupedResults = _resultsSet
+                    .GroupBy(r => r!.Subject!.Name)
+                    .ToDictionary(g => g.Key!, g => g.ToList());
+                break;
+            case "Teacher":
+                _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, null, null, _teacherId))
+                    .OrderBy(r => r!.AssessmentDate)
+                    .ToList();
 
-            GroupedResults = _resultsSet
-            .GroupBy(r => new { r.Teacher.Abbreviation, r.Subject.Name })
-            .ToDictionary(g => $"{g.Key.Abbreviation} - {g.Key.Name}", g => g.ToList());
+                GroupedResults = _resultsSet
+                    .GroupBy(r => new { r!.Teacher!.Abbreviation, r.Subject!.Name })
+                    .ToDictionary(g => $"{g.Key.Abbreviation} - {g.Key.Name}", g => g.ToList());
+                break;
         }
 
         _loading = false;
         await InvokeAsync(StateHasChanged);
     }
+
     /// <summary>
     /// Loads filter options such as grades, subjects, and teachers.
     /// </summary>
@@ -339,12 +360,13 @@
         if (value.HasValue)
         {
             var subject = await SubjectService.GetByIdAsync(value.Value);
-            _availableGradesForSubject = subject.GradesApplicable;
+            if (subject != null) _availableGradesForSubject = subject.GradesApplicable;
         }
         else
         {
-            _availableGradesForSubject.Clear();
+            _availableGradesForSubject?.Clear();
         }
+
         _selectedGrades.Clear();
         await LoadResults();
     }
@@ -376,13 +398,13 @@
     /// Formats the grade value for display.
     /// </summary>
     private string FormatGrade(int grade) =>
-    grade switch
-    {
-        -2 => "Gr RRR",
-        -1 => "Gr RR",
-        0 => "Gr R",
-        _ => $"Gr {grade}"
-    };
+        grade switch
+        {
+            -2 => "Gr RRR",
+            -1 => "Gr RR",
+            0 => "Gr R",
+            _ => $"Gr {grade}"
+        };
 
     private static string GetResultSetStatusColor(ResultSet set)
     {
@@ -399,4 +421,5 @@
             return "bg-secondary";
         }
     }
+
 }

@@ -1,18 +1,12 @@
-@page "/system-administrators/manage"
-@page "/system-administrators/manage/{Id:guid}"
+@page "/system-administrators/manage/{Id:guid?}"
 
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
-@using Microsoft.AspNetCore.Components
-@using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
 @inject NavigationManager Navigation
 @inject UserManager<User> UserManager
-@inject SchoolService SchoolService
-@inherits EventAwareComponentBase
 
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator}")">
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator}")">
     <Authorized>
         <h3>@(IsEdit ? "Edit System Administrator" : "Add System Administrator")</h3>
 
@@ -27,7 +21,7 @@
         }
         else
         {
-            <EditForm Model="SysAdmin" OnValidSubmit="HandleValidSubmit">
+            <EditForm Context="_" Model="SysAdmin" OnValidSubmit="HandleValidSubmit">
                 <DataAnnotationsValidator />
                 <ValidationSummary />
 
@@ -79,16 +73,11 @@
 
     private SystemAdminViewModel SysAdmin { get; set; } = new();
     private string ErrorMessage { get; set; } = string.Empty;
-    private School? SelectedSchool;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            SubscribeToEvent(UiEvents.SchoolSelected);
-
-            SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
-
             if (IsEdit && Id.HasValue)
             {
                 var userEntity = await UserManager.FindByIdAsync(Id.Value.ToString());
@@ -114,18 +103,6 @@
         {
             IsLoading = false;
         }
-    }
-
-    protected override async Task HandleEventAsync(string eventName, object? payload)
-    {
-        switch (eventName)
-        {
-            case UiEvents.SchoolSelected:
-                SelectedSchool = payload as School;
-                break;
-        }
-
-        await base.HandleEventAsync(eventName, payload);
     }
 
     private async Task HandleValidSubmit()

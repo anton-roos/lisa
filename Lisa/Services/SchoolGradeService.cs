@@ -98,13 +98,13 @@ public class SchoolGradeService(IDbContextFactory<LisaDbContext> dbContextFactor
             .ToListAsync();
     }
 
-    public async Task<SchoolGrade?> GetBySystemGradeAndSchoolAsync(int systemGradeId, Guid SelectedSchoolId)
+    public async Task<SchoolGrade?> GetBySystemGradeAndSchoolAsync(int systemGradeId, Guid selectedSchoolId)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.SchoolGrades
             .AsNoTracking()
             .Include(g => g.SystemGrade)
-            .Where(s => s.SystemGradeId == systemGradeId && s.SchoolId == SelectedSchoolId)
+            .Where(s => s.SystemGradeId == systemGradeId && s.SchoolId == selectedSchoolId)
             .FirstOrDefaultAsync();
     }
 }

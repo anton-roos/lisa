@@ -7,7 +7,7 @@ namespace Lisa.Data;
 public class DatabaseSeed
 {
     private const string DefaultAdminEmail = "admin@dcegroup.co.za";
-    private static string AdminPassword = "Lis@Adm!n7Dc3Gr0up"; // Securely overridden
+    private static string _adminPassword = "Lis@Adm!n7Dc3Gr0up"; // Securely overridden
 
     /// <summary>
     /// Runs all seed methods in a single transaction for efficiency.
@@ -96,7 +96,7 @@ public class DatabaseSeed
 
         // Fetch Admin Password from Configuration (Environment Variables or appsettings.json)
         var configuredPassword = config["AdminPassword"];
-        AdminPassword = !string.IsNullOrWhiteSpace(configuredPassword) ? configuredPassword : AdminPassword;
+        _adminPassword = !string.IsNullOrWhiteSpace(configuredPassword) ? configuredPassword : _adminPassword;
 
         // Try retrieving the admin user from the database
         var adminUser = await userManager.FindByEmailAsync(DefaultAdminEmail);
@@ -114,7 +114,7 @@ public class DatabaseSeed
                 EmailConfirmed = true
             };
 
-            var result = await userManager.CreateAsync(adminUser, AdminPassword);
+            var result = await userManager.CreateAsync(adminUser, _adminPassword);
             if (!result.Succeeded)
             {
                 logger.LogError("Failed to create admin user: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));

@@ -39,7 +39,7 @@ public class RegisterClassService(
     /// <summary>
     /// Retrieves a RegisterClass by ID.
     /// </summary>
-    public async Task<List<RegisterClass>>? GetBySchoolIdAsync(Guid schoolId)
+    public async Task<List<RegisterClass>> GetBySchoolIdAsync(Guid schoolId)
     {
         try
         {
@@ -70,7 +70,7 @@ public class RegisterClassService(
                 .Include(rc => rc.SchoolGrade!)
                 .ThenInclude(g => g.School!)
                 .Include(rc => rc.SchoolGrade!)
-                .ThenInclude(g => g.SystemGrade!)
+                .ThenInclude(g => g.SystemGrade)
                 .Include(rc => rc.User!)
                 .Include(rc => rc.CompulsorySubjects!)
                 .Include(rc => rc.Learners!)
@@ -174,8 +174,8 @@ public class RegisterClassService(
                 registerClass.SchoolGradeId = model.GradeId;
                 registerClass.UserId = model.TeacherId;
 
-                registerClass?.CompulsorySubjects?.Clear();
-                registerClass?.CompulsorySubjects.AddRange(selectedSubjects);
+                registerClass.CompulsorySubjects?.Clear();
+                registerClass.CompulsorySubjects.AddRange(selectedSubjects);
             }
             else
             {
@@ -191,10 +191,7 @@ public class RegisterClassService(
             }
 
             await context.SaveChangesAsync();
-            if (registerClass != null)
-            {
-                _logger.LogInformation("Register Class {Action} successfully: {RegisterClassId}", registerClassId.HasValue ? "updated" : "created", registerClass.Id);
-            }
+            _logger.LogInformation("Register Class {Action} successfully: {RegisterClassId}", registerClassId.HasValue ? "updated" : "created", registerClass.Id);
             return true;
         }
         catch (Exception ex)

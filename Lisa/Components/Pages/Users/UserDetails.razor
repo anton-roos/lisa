@@ -4,11 +4,11 @@
 @inject UserService UserService
 
 <PageTitle>User Details</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>User Details</h3>
 
-        @if (User == null)
+        @if (_user == null)
         {
             <p>Loading user...</p>
         }
@@ -16,35 +16,35 @@
         {
             <dl class="row">
                 <dt class="col-sm-2">Surname</dt>
-                <dd class="col-sm-10">@User.Surname</dd>
+                <dd class="col-sm-10">@_user.Surname</dd>
 
                 <dt class="col-sm-2">Abbreviation</dt>
-                <dd class="col-sm-10">@User.Abbreviation</dd>
+                <dd class="col-sm-10">@_user.Abbreviation</dd>
 
                 <dt class="col-sm-2">Name</dt>
-                <dd class="col-sm-10">@User.Name</dd>
+                <dd class="col-sm-10">@_user.Name</dd>
 
                 <dt class="col-sm-2">Email</dt>
-                <dd class="col-sm-10">@User.Email</dd>
+                <dd class="col-sm-10">@_user.Email</dd>
 
                 <dt class="col-sm-2">Roles</dt>
-                <dd class="col-sm-10">@string.Join(", ", User.Roles)</dd>
+                <dd class="col-sm-10">@string.Join(", ", _user.Roles)</dd>
             </dl>
 
-            @if (User.Roles.Contains(Roles.Teacher))
+            @if (_user.Roles.Contains(Roles.Teacher))
             {
                 <h4>Teacher Details</h4>
                 <dl class="row">
                     <dt class="col-sm-2">Care Groups</dt>
                     <dd class="col-sm-10">
                         <ul>
-                            @if (User.CareGroups == null || !User.CareGroups.Any())
+                            @if (_user.CareGroups == null || !_user.CareGroups.Any())
                             {
                                 <li>No care groups assigned.</li>
                             }
                             else
                             {
-                                @foreach (var cg in User.CareGroups)
+                                @foreach (var cg in _user.CareGroups)
                                 {
                                     <li>@cg.Name</li>
                                 }
@@ -55,14 +55,14 @@
 
                     <dt class="col-sm-2">Register Classes</dt>
                     <dd class="col-sm-10">
-                        @if (User.RegisterClasses == null || !User.RegisterClasses.Any())
+                        @if (_user.RegisterClasses == null || !_user.RegisterClasses.Any())
                         {
                             <p>No register classes.</p>
                         }
                         else
                         {
                             <ul>
-                                @foreach (var rc in User.RegisterClasses)
+                                @foreach (var rc in _user.RegisterClasses)
                                 {
                                     <li>@rc.Name (Grade: @rc.SchoolGrade?.SystemGrade.Name)</li>
                                 }
@@ -73,14 +73,14 @@
                     <dt class="col-sm-2">Periods</dt>
                     <dd class="col-sm-10">
 
-                        @if (User.Periods == null || !User.Periods.Any())
+                        @if (_user.Periods == null || !_user.Periods.Any())
                         {
                             <p>No periods assigned.</p>
                         }
                         else
                         {
                             <ul>
-                                @foreach (var period in User.Periods)
+                                @foreach (var period in _user.Periods)
                                 {
                                     <li>@($"{period.StartTime} - {period.EndTime}")</li>
                                 }
@@ -103,11 +103,11 @@
     [Parameter]
     public Guid UserId { get; set; }
 
-    private User? User;
+    private User? _user;
 
     protected override async Task OnInitializedAsync()
     {
-        User = await UserService.GetByIdAsync(UserId);
+        _user = await UserService.GetByIdAsync(UserId);
     }
 
     private void GoBack()

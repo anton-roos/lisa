@@ -20,7 +20,7 @@ public class HangfireAuthorizationFilter(ILogger<HangfireAuthorizationFilter> lo
         var httpContext = context.GetHttpContext();
         var user = httpContext.User;
 
-        if (user?.Identity?.IsAuthenticated != true)
+        if (user.Identity?.IsAuthenticated != true)
         {
             _logger.LogWarning("Unauthorized access attempt to Hangfire Dashboard. User not authenticated.");
             return false;

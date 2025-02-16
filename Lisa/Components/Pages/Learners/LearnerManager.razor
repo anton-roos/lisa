@@ -13,7 +13,7 @@
 @inherits EventAwareComponentBase
 
 <PageTitle>Learner Manager</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
     <Authorized>
         <h3>@(IsEdit ? "Edit Learner" : "Add Learner")</h3>
 
@@ -25,7 +25,7 @@
         </div>
         }
 
-        <EditForm Context="edit" Model="_learnerModel" OnValidSubmit="HandleValidSubmit">
+        <EditForm Context="_" Model="_learnerModel" OnValidSubmit="HandleValidSubmit">
             <DataAnnotationsValidator/>
             <ValidationSummary/>
 
@@ -245,7 +245,7 @@
 </AuthorizeView>
 
 @code {
-    [Microsoft.AspNetCore.Components.Parameter] public Guid? LearnerId { get; set; }
+    [Parameter] public Guid? LearnerId { get; set; }
     private bool IsEdit => LearnerId.HasValue;
     private LearnerViewModel _learnerModel = new();
     private List<ParentViewModel> _parents = [];
@@ -312,14 +312,14 @@
     {
         if (_selectedSchool != null)
         {
-            _registerClasses = await RegisterClassService.GetBySchoolIdAsync(_selectedSchool.Id)!;
+            _registerClasses = await RegisterClassService.GetBySchoolIdAsync(_selectedSchool.Id);
             _allCombinations = await CombinationService.GetCombinationsBySchoolId(_selectedSchool.Id);
             _careGroups = await CareGroupService.GetBySchoolAsync(_selectedSchool.Id);
             _mathSubjects = await SubjectService.GetMathSubjectsAsync();
         }
         else if (_learnerModel.RegisterClassId.HasValue)
         {
-            _registerClasses = await RegisterClassService.GetBySchoolIdAsync(_learnerModel.SchoolId)!;
+            _registerClasses = await RegisterClassService.GetBySchoolIdAsync(_learnerModel.SchoolId);
             _allCombinations = await CombinationService.GetCombinationsBySchoolId(_learnerModel.SchoolId);
             _careGroups = await CareGroupService.GetBySchoolAsync(_learnerModel.SchoolId);
             _mathSubjects = await SubjectService.GetMathSubjectsAsync();

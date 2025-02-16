@@ -1,14 +1,12 @@
 using Lisa.Data;
 using Lisa.Models.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Lisa.Repositories;
 
 public interface IEventLogRepository
 {
     Task LogEventAsync(string eventType, string eventData);
-    Task<List<EventLog>> GetAllEventLogsAsync(int pageNumber = 1, int pageSize = 50);
 }
 
 public class EventLogRepository(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<EventLogRepository> logger)

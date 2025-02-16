@@ -1,8 +1,6 @@
 @page "/users/manage/{UserId:guid?}"
 @using Lisa.Models.ViewModels
-@using Microsoft.AspNetCore.Authorization
 @using Lisa.Models.Entities
-@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Identity
 @inject NavigationManager Navigation
 @inject UserManager<User> UserManagerService
@@ -13,34 +11,34 @@
 @inject SubjectService SubjectService
 @inject SchoolGradeService SchoolGradeService
 
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>@(IsEdit ? "Edit User" : "Add User")</h3>
 
-        <EditForm Model="User" OnValidSubmit="HandleValidSubmit">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
+        <EditForm Context="_" Model="User" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator/>
+            <ValidationSummary/>
 
             <div class="form-group mb-3">
                 <label for="surname">Surname</label>
-                <InputText id="surname" class="form-control" @bind-Value="User.Surname" />
+                <InputText id="surname" class="form-control" @bind-Value="User.Surname"/>
             </div>
             <div class="form-group mb-3">
                 <label for="abbreviation">Abbreviation</label>
-                <InputText id="abbreviation" class="form-control" @bind-Value="User.Abbreviation" />
+                <InputText id="abbreviation" class="form-control" @bind-Value="User.Abbreviation"/>
             </div>
             <div class="form-group mb-3">
                 <label for="name">Name</label>
-                <InputText id="name" class="form-control" @bind-Value="User.Name" />
+                <InputText id="name" class="form-control" @bind-Value="User.Name"/>
             </div>
             <div class="form-group mb-3">
                 <label for="email">Email</label>
-                <InputText id="email" class="form-control" @bind-Value="User.Email" disabled="@(IsEdit)" />
+                <InputText id="email" class="form-control" @bind-Value="User.Email" disabled="@(IsEdit)"/>
             </div>
             <div class="form-group mb-3">
                 <label for="password">Password</label>
                 <small class="text-muted">Leave blank to keep the current password.</small>
-                <InputText id="password" type="password" class="form-control" @bind-Value="User.Password" />
+                <InputText id="password" type="password" class="form-control" @bind-Value="User.Password"/>
             </div>
 
             <div class="form-group mb-3">
@@ -49,8 +47,9 @@
                 {
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="@($"role_{role}")"
-                            checked="@User.SelectedRoles.Contains(role)" @onchange="(e) => ToggleRole(role, (bool)e.Value)"
-                            disabled="@(role == Roles.SystemAdministrator && !IsCurrentUserSystemAdmin)" />
+                               checked="@User.SelectedRoles.Contains(role)"
+                               @onchange="(e) => ToggleRole(role, (bool)e.Value!)"
+                               disabled="@(role == Roles.SystemAdministrator && !IsCurrentUserSystemAdmin)"/>
                         <label class="form-check-label" for="@($"role_{role}")">@role</label>
                     </div>
                 }
@@ -66,8 +65,8 @@
                             <div class="col-4 d-flex align-items-center">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="@($"careGroup_{group.Id}")"
-                                        checked="@User.SelectedCareGroupIds.Contains(group.Id)"
-                                        @onchange="(e) => ToggleCareGroup(group.Id, (bool)e.Value)" />
+                                           checked="@User.SelectedCareGroupIds.Contains(group.Id)"
+                                           @onchange="(e) => ToggleCareGroup(group.Id, (bool)e.Value!)"/>
                                     <label class="form-check-label" for="@($"careGroup_{group.Id}")">@group.Name</label>
                                 </div>
                             </div>
@@ -80,7 +79,8 @@
             {
                 <label>Subjects</label>
                 <button type="button" class="btn btn-primary me-2" @onclick="OpenSubjectSelectModal">Add / Edit
-                    Subjects</button>
+                    Subjects
+                </button>
                 @if (User.Subjects != null && User.Subjects.Any())
                 {
                     <div class="mb-3">
@@ -96,7 +96,7 @@
                                         <span class="badge bg-primary me-1">@FormatGrade(teacherSubject.Grade)</span>
                                     }
                                     <button type="button" class="btn btn-sm btn-outline-danger ms-2"
-                                        @onclick="@(() => RemoveSubject(subject.Id))" @onclick:stopPropagation>
+                                            @onclick="@(() => RemoveSubject(subject.Id))" @onclick:stopPropagation>
                                         Remove
                                     </button>
                                 </div>
@@ -115,7 +115,7 @@
         </EditForm>
 
         <div class="modal fade @(ShowErrorModal ? "show d-block" : "d-none")" tabindex="-1"
-            style="background-color: rgba(0,0,0,0.5);" role="dialog">
+             style="background-color: rgba(0,0,0,0.5);" role="dialog">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -133,43 +133,45 @@
         </div>
 
         <div class="modal fade @(ShowSubjectSelectionModal ? "show d-block" : "d-none")" tabindex="-1"
-            style="background-color: rgba(0,0,0,0.5);" role="dialog">
+             style="background-color: rgba(0,0,0,0.5);" role="dialog">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Select Subjects</h5>
                         <button type="button" class="btn-close" aria-label="Close"
-                            @onclick="CloseSubjectSelectModal"></button>
+                                @onclick="CloseSubjectSelectModal"></button>
                     </div>
                     <div class="modal-body">
                         <InputText @bind-Value="SubjectSearchTerm" @oninput="FilterSubjects" class="form-control mb-3"
-                            placeholder="Search subjects..." />
+                                   placeholder="Search subjects..."/>
                         <div style="max-height: 300px; overflow-y: auto;">
                             @foreach (var subject in FilteredSubjects)
                             {
                                 <div class="mb-3 border-bottom pb-2">
                                     <div class="d-flex align-items-center">
-                                        <input class="form-check-input me-1" type="checkbox" id="@($"subject_{subject.Id}")"
-                                            checked="@IsSubjectSelected(subject.Id)"
-                                            @onchange="(e) => ToggleSubject(subject.Id, (bool)e.Value)" />
+                                        <input class="form-check-input me-1" type="checkbox"
+                                               id="@($"subject_{subject.Id}")"
+                                               checked="@IsSubjectSelected(subject.Id)"
+                                               @onchange="(e) => ToggleSubject(subject.Id, (bool)e.Value!)"/>
                                         <label class="form-check-label fw-bold me-2" for="@($"subject_{subject.Id}")">
                                             @subject.Name
                                         </label>
-                                        <span class="badge bg-primary">@(FormatGradeRange(subject.GradesApplicable))</span>
+                                        <span
+                                            class="badge bg-primary">@(FormatGradeRange(subject.GradesApplicable))</span>
                                     </div>
                                     @if (IsSubjectSelected(subject.Id))
                                     {
                                         <div class="ms-4 mt-2">
                                             @foreach (var grade in subject.GradesApplicable?.Where(g =>
-                                                                                SchoolApplicableGrades.Contains(g)) ?? Enumerable.Empty<int>())
+                                                              SchoolApplicableGrades.Contains(g)) ?? Enumerable.Empty<int>())
                                             {
                                                 <div class="d-flex align-items-center mb-1">
                                                     <input class="form-check-input me-1" type="checkbox"
-                                                        id="@($"subject_{subject.Id}_grade_{grade}")"
-                                                        checked="@IsGradeSelected(subject.Id, grade)"
-                                                        @onchange="(e) => ToggleGrade(subject.Id, grade, (bool)e.Value)" />
+                                                           id="@($"subject_{subject.Id}_grade_{grade}")"
+                                                           checked="@IsGradeSelected(subject.Id, grade)"
+                                                           @onchange="(e) => ToggleGrade(subject.Id, grade, (bool)e.Value!)"/>
                                                     <label class="form-check-label me-2"
-                                                        for="@($"subject_{subject.Id}_grade_{grade}")">
+                                                           for="@($"subject_{subject.Id}_grade_{grade}")">
                                                         Grade @FormatGrade(grade)
                                                     </label>
                                                     <span
@@ -186,7 +188,8 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary"
-                            @onclick="CloseSubjectSelectModal">Cancel</button>
+                                @onclick="CloseSubjectSelectModal">Cancel
+                        </button>
                         <button type="button" class="btn btn-primary" @onclick="CloseSubjectSelectModal">Save</button>
                     </div>
                 </div>
@@ -202,18 +205,18 @@
 @code {
     [Parameter] public Guid? UserId { get; set; }
     private UserViewModel User { get; set; } = new();
-    private School? SelectedSchool;
+    private School? _selectedSchool;
     private List<CareGroup> AvailableCareGroups { get; set; } = new();
     private List<Subject> AvailableSubjects { get; set; } = new();
     private List<int> SchoolApplicableGrades { get; set; } = new();
-    private List<string> AvailableRoles { get; set; } = new()
-{
-Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher
-};
 
-    [CascadingParameter]
-    private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
-    private bool IsCurrentUserSystemAdmin { get; set; } = false;
+    private List<string> AvailableRoles { get; set; } = new()
+    {
+        Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher
+    };
+
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
+    private bool IsCurrentUserSystemAdmin { get; set; }
 
     private string SubjectSearchTerm { get; set; } = "";
     private List<Subject> FilteredSubjects { get; set; } = new();
@@ -230,14 +233,14 @@ Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdmini
         var currentUser = authState.User;
         IsCurrentUserSystemAdmin = currentUser.IsInRole(Roles.SystemAdministrator);
 
-        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         AvailableSubjects = await SubjectService.GetAllAsync();
 
-        if (SelectedSchool != null)
+        if (_selectedSchool != null)
         {
-            var gradesForSchool = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
+            var gradesForSchool = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
             SchoolApplicableGrades = gradesForSchool.Select(g => g.SystemGrade.SequenceNumber).ToList();
-            AvailableCareGroups = await CareGroupService.GetBySchoolAsync(SelectedSchool.Id);
+            AvailableCareGroups = await CareGroupService.GetBySchoolAsync(_selectedSchool.Id);
         }
 
         if (!IsEdit)
@@ -251,22 +254,25 @@ Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdmini
         }
         else
         {
-            var existingUser = await UserService.GetByIdAsync(UserId.Value);
-            if (existingUser != null)
+            if (UserId is not null)
             {
-                var currentRoles = await UserManagerService.GetRolesAsync(existingUser);
-                User = new UserViewModel
+                var existingUser = await UserService.GetByIdAsync(UserId.Value);
+                if (existingUser != null)
                 {
-                    Id = existingUser.Id,
-                    Surname = existingUser.Surname,
-                    Abbreviation = existingUser.Abbreviation,
-                    Name = existingUser.Name,
-                    Email = existingUser.Email,
-                    SelectedRoles = currentRoles.ToList(),
-                    SchoolId = existingUser.SchoolId,
-                    Subjects = existingUser.Subjects.ToList(),
-                    SelectedCareGroupIds = existingUser.CareGroups?.Select(cg => cg.Id).ToList() ?? new List<Guid>()
-                };
+                    var currentRoles = await UserManagerService.GetRolesAsync(existingUser);
+                    User = new UserViewModel
+                    {
+                        Id = existingUser.Id,
+                        Surname = existingUser.Surname!,
+                        Abbreviation = existingUser.Abbreviation!,
+                        Name = existingUser.Name!,
+                        Email = existingUser.Email!,
+                        SelectedRoles = currentRoles.ToList(),
+                        SchoolId = existingUser.SchoolId,
+                        Subjects = existingUser.Subjects!.ToList(),
+                        SelectedCareGroupIds = existingUser.CareGroups?.Select(cg => cg.Id).ToList() ?? []
+                    };
+                }
             }
         }
 
@@ -305,13 +311,13 @@ Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdmini
                 var subject = AvailableSubjects.FirstOrDefault(s => s.Id == subjectId);
                 if (subject != null && subject.GradesApplicable != null && subject.GradesApplicable.Any())
                 {
-                    User.Subjects.Add(new TeacherSubject { SubjectId = subjectId, Grade = subject.GradesApplicable.First() });
+                    User.Subjects?.Add(new TeacherSubject { SubjectId = subjectId, Grade = subject.GradesApplicable.First() });
                 }
             }
         }
         else
         {
-            User.Subjects.RemoveAll(ts => ts.SubjectId == subjectId);
+            User.Subjects?.RemoveAll(ts => ts.SubjectId == subjectId);
         }
     }
 
@@ -321,12 +327,12 @@ Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdmini
         {
             if (!IsGradeSelected(subjectId, grade))
             {
-                User.Subjects.Add(new TeacherSubject { SubjectId = subjectId, Grade = grade });
+                User.Subjects?.Add(new TeacherSubject { SubjectId = subjectId, Grade = grade });
             }
         }
         else
         {
-            User.Subjects.RemoveAll(ts => ts.SubjectId == subjectId && ts.Grade == grade);
+            User.Subjects?.RemoveAll(ts => ts.SubjectId == subjectId && ts.Grade == grade);
         }
     }
 
@@ -348,19 +354,14 @@ Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdmini
         else
         {
             FilteredSubjects = AvailableSubjects
-            .Where(s => s.Name.Contains(SubjectSearchTerm, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+                .Where(s => s.Name!.Contains(SubjectSearchTerm, StringComparison.OrdinalIgnoreCase))
+                .ToList();
         }
-    }
-
-    private void ConfirmSubjectSelection()
-    {
-        CloseSubjectSelectModal();
     }
 
     private void RemoveSubject(int subjectId)
     {
-        User.Subjects.RemoveAll(ts => ts.SubjectId == subjectId);
+        User.Subjects?.RemoveAll(ts => ts.SubjectId == subjectId);
     }
 
     private void ToggleRole(string role, bool isSelected)
@@ -385,7 +386,7 @@ Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdmini
     {
         try
         {
-            if (SelectedSchool == null)
+            if (_selectedSchool == null)
                 throw new Exception("No Selected School while trying to manage a user.");
 
             if (IsEdit)
@@ -406,7 +407,7 @@ Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdmini
                     Email = User.Email,
                     UserName = User.Email,
                     Subjects = User.Subjects,
-                    SchoolId = SelectedSchool.Id
+                    SchoolId = _selectedSchool.Id
                 };
 
                 var result = await UserManagerService.CreateAsync(newUser, User.Password);
@@ -438,17 +439,18 @@ Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdmini
     private void CloseErrorModal() => ShowErrorModal = false;
 
     private bool ShouldShowCareGroups() => !User.SelectedRoles.Contains(Roles.SystemAdministrator);
+
     private bool ShouldShowSubjects() => !User.SelectedRoles.Contains(Roles.SystemAdministrator)
-    && User.SelectedRoles.Contains(Roles.Teacher);
+                                         && User.SelectedRoles.Contains(Roles.Teacher);
 
     private string FormatGrade(int grade) =>
-    grade switch
-    {
-        -2 => "Gr RRR",
-        -1 => "Gr RR",
-        0 => "Gr R",
-        _ => $"Gr {grade}"
-    };
+        grade switch
+        {
+            -2 => "Gr RRR",
+            -1 => "Gr RR",
+            0 => "Gr R",
+            _ => $"Gr {grade}"
+        };
 
     private string FormatGradeRange(List<int>? grades)
     {
@@ -463,4 +465,5 @@ Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdmini
         int maxGrade = applicableGrades.Max();
         return $"{FormatGrade(minGrade)} - {FormatGrade(maxGrade)}";
     }
+
 }

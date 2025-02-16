@@ -1,18 +1,18 @@
 @page "/users/delete/{UserId:guid}"
 @using Lisa.Models.Entities
 @inject NavigationManager Navigation
-@inject IJSRuntime JSRuntime
+@inject IJSRuntime JsRuntime
 @inject UserService UserService
 
 <PageTitle>Delete User</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>Delete User</h3>
-        @if (isLoading)
+        @if (_isLoading)
         {
             <p>Loading...</p>
         }
-        else if (user == null)
+        else if (_user == null)
         {
             <p>User not found.</p>
         }
@@ -21,19 +21,19 @@
             <div>
                 <p>
                     Are you sure you want to delete
-                    <strong>@user.Surname @user.Name</strong>?
+                    <strong>@_user.Surname @_user.Name</strong>?
                 </p>
 
-                @if (user.Roles.Contains(Roles.Teacher) && hasRegisterClasses)
+                @if (_user.Roles.Contains(Roles.Teacher) && _hasRegisterClasses)
                 {
                     <p>
                         This teacher is assigned to one or more Register Classes.
                         You must transfer these classes to another teacher before deletion.
                     </p>
                     <div class="py-3">
-                        <InputSelect class="form-select" id="SelectedTeacherId" TValue="string" @bind-Value="selectedTeacherId">
+                        <InputSelect class="form-select" id="SelectedTeacherId" TValue="string" @bind-Value="_selectedTeacherId">
                             <option value="">-- Select Replacement Teacher --</option>
-                            @foreach (var t in availableTeachers)
+                            @foreach (var t in _availableTeachers)
                             {
                                 <option value="@t.Id">@t.Surname @t.Name</option>
                             }
@@ -42,7 +42,7 @@
                 }
 
                 <button class="btn btn-danger" @onclick="ConfirmDelete"
-                        disabled="@(user.Roles.Contains(Roles.Teacher) && hasRegisterClasses && string.IsNullOrEmpty(selectedTeacherId))">
+                        disabled="@(_user.Roles.Contains(Roles.Teacher) && _hasRegisterClasses && string.IsNullOrEmpty(_selectedTeacherId))">
                     Delete User
                 </button>
                 <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
@@ -58,37 +58,37 @@
     [Parameter]
     public Guid UserId { get; set; }
 
-    private User? user;
-    private bool isLoading = true;
-    private bool hasRegisterClasses = false;
-    private List<User> availableTeachers = new();
-    private string selectedTeacherId = string.Empty;
+    private User? _user;
+    private bool _isLoading = true;
+    private bool _hasRegisterClasses;
+    private List<User> _availableTeachers = [];
+    private string _selectedTeacherId = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        isLoading = true;
+        _isLoading = true;
         try
         {
             // Get the user (which may be a teacher)
-            user = await UserService.GetByIdAsync(UserId);
-            if (user != null && user.Roles.Contains(Roles.Teacher))
+            _user = await UserService.GetByIdAsync(UserId);
+            if (_user != null && _user.Roles.Contains(Roles.Teacher))
             {
                 // Check if this teacher has any register classes
-                hasRegisterClasses = await UserService.HasRegisterClassesAsync(UserId);
-                if (hasRegisterClasses)
+                _hasRegisterClasses = await UserService.HasRegisterClassesAsync(UserId);
+                if (_hasRegisterClasses)
                 {
                     // Get available teachers (other than this one) to transfer classes
-                    availableTeachers = await UserService.GetAvailableTeachersAsync(UserId);
+                    _availableTeachers = await UserService.GetAvailableTeachersAsync(UserId);
                 }
             }
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+            await JsRuntime.InvokeVoidAsync("alert", $"Error: {ex.Message}");
         }
         finally
         {
-            isLoading = false;
+            _isLoading = false;
         }
     }
 
@@ -96,10 +96,10 @@
     {
         try
         {
-            if (user != null && user.Roles.Contains(Roles.Teacher) && hasRegisterClasses && !string.IsNullOrEmpty(selectedTeacherId))
+            if (_user != null && _user.Roles.Contains(Roles.Teacher) && _hasRegisterClasses && !string.IsNullOrEmpty(_selectedTeacherId))
             {
                 // Transfer register classes from this teacher to the selected replacement
-                await UserService.TransferRegisterClassesAsync(UserId, Guid.Parse(selectedTeacherId));
+                await UserService.TransferRegisterClassesAsync(UserId, Guid.Parse(_selectedTeacherId));
             }
             bool deleted = await UserService.DeleteAsync(UserId);
             if (deleted)
@@ -108,12 +108,12 @@
             }
             else
             {
-                await JSRuntime.InvokeVoidAsync("alert", "Failed to delete user.");
+                await JsRuntime.InvokeVoidAsync("alert", "Failed to delete user.");
             }
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+            await JsRuntime.InvokeVoidAsync("alert", $"Error: {ex.Message}");
         }
     }
 

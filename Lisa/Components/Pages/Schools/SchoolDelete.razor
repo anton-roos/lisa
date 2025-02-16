@@ -7,13 +7,14 @@
 <PageTitle>Confirm School Delete</PageTitle>
 <h2>Confirm School Delete</h2>
 
-<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+<AuthorizeView Roles="@Roles.SystemAdministrator">
     <Authorized>
         @if (School != null)
         {
             <div class="alert alert-warning">
                 <p>
-                    <Icon Name="IconName.ExclamationDiamondFill"></Icon> Are you sure you want to delete the school
+                    <Icon Name="IconName.ExclamationDiamondFill"></Icon>
+                    Are you sure you want to delete the school
                     <strong>@School.ShortName</strong>?
                 </p>
                 <p>This will delete the record. Once deleted, this can not be rolled back.</p>
@@ -22,9 +23,27 @@
                 </p>
                 <p>This School has:</p>
                 <ul>
-                    <li>@School.Staff.Count Staff</li>
-                    <li>@School.Learners.Count Learners</li>
-                    <li>@School.RegisterClasses.Count Register Classes</li>
+                    <li>
+                        @if (School.Staff != null)
+                        {
+                            @School.Staff.Count
+                        }
+                        Staff
+                    </li>
+                    <li>
+                        @if (School.Learners != null)
+                        {
+                            @School.Learners.Count
+                        }
+                        Learners
+                    </li>
+                    <li>
+                        @if (School.RegisterClasses != null)
+                        {
+                            @School.RegisterClasses.Count
+                        }
+                        Register Classes
+                    </li>
                 </ul>
                 <p>Do you want to proceed?</p>
             </div>
@@ -36,14 +55,14 @@
         }
     </Authorized>
     <NotAuthorized>
-        <Unauthorized />
+        <Unauthorized/>
     </NotAuthorized>
 </AuthorizeView>
 
-<Modal @ref="ErrorModal" Title="Info">
+<Modal @ref="_errorModal" Title="Info">
     <BodyTemplate>
         You can't delete this school because of the following:
-        @Exception.Message
+        @_exception.Message
     </BodyTemplate>
     <FooterTemplate>
         <Button Color="ButtonColor.Primary" @onclick="CloseErrorModal">Ok</Button>
@@ -53,11 +72,10 @@
 
 @code
 {
-    [Parameter]
-    public Guid? Id { get; set; }
-    public School? School { get; set; }
-    private Modal ErrorModal = default!;
-    private Exception Exception = new();
+    [Parameter] public Guid? Id { get; set; }
+    private School? School { get; set; }
+    private Modal _errorModal = null!;
+    private Exception _exception = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -73,9 +91,9 @@
         {
             try
             {
-                var SchoolToDelete = await SchoolService.GetSchoolAsync(School.Id);
+                var schoolToDelete = await SchoolService.GetSchoolAsync(School.Id);
 
-                if (SchoolToDelete == null)
+                if (schoolToDelete == null)
                 {
                     throw new Exception("School not found.");
                 }
@@ -86,15 +104,14 @@
             }
             catch (Exception ex)
             {
-                Exception = ex;
-                await ErrorModal.ShowAsync();
+                _exception = ex;
+                await _errorModal.ShowAsync();
             }
         }
-
     }
 
     private async Task CloseErrorModal()
     {
-        ErrorModal.HideAsync();
+        await _errorModal.HideAsync();
     }
 }

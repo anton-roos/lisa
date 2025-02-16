@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Lisa.Models.Entities;
 
 public class EmailCampaign
@@ -8,7 +10,9 @@ public class EmailCampaign
     public string? SubjectLine { get; set; }
     public string? SenderName { get; set; }
     public string? SenderEmail { get; set; }
+    [MaxLength(8912)]
     public string? ContentHtml { get; set; }
+    [MaxLength(8912)]
     public string? ContentText { get; set; }
     public EmailCampaignStatus Status { get; set; }
     public DateTime? ScheduledAt { get; set; }

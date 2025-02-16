@@ -1,17 +1,14 @@
 @page "/schools/add"
-@using Lisa.Events
-@using Lisa.Services
-@using Microsoft.EntityFrameworkCore
 @using Lisa.Models.Entities
 @inject NavigationManager Navigation
 @inject SchoolService SchoolService
 @inject IEventBus EventBus
 
-<AuthorizeView Context="authContext">
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator}")">
     <Authorized>
         <h3>Add School</h3>
 
-        <SchoolForm School="@School" SchoolTypes="@SchoolTypes" Curriculums="@Curriculums"
+        <SchoolForm School="@_school" SchoolTypes="@_schoolTypes" Curriculums="@_curriculums"
             OnValidSubmitCallback="@HandleValidSubmit" OnCancelCallback="@Cancel" />
     </Authorized>
     <NotAuthorized>
@@ -20,22 +17,22 @@
 </AuthorizeView>
 
 @code {
-    private School School = new();
-    private List<SchoolType> SchoolTypes = new();
-    private List<SchoolCurriculum> Curriculums = new();
+    private readonly School _school = new();
+    private List<SchoolType> _schoolTypes = new();
+    private List<SchoolCurriculum> _curriculums = new();
 
     protected override async Task OnInitializedAsync()
     {
-        SchoolTypes = await SchoolService.GetSchoolTypesAsync();
-        Curriculums = await SchoolService.GetSchoolCurriculumsAsync();
-        School.SmtpPort = 587;
-        School.SmtpHost = "smtp.office365.com";
+        _schoolTypes = await SchoolService.GetSchoolTypesAsync();
+        _curriculums = await SchoolService.GetSchoolCurriculumsAsync();
+        _school.SmtpPort = 587;
+        _school.SmtpHost = "smtp.office365.com";
     }
 
     private async Task HandleValidSubmit()
     {
-        await EventBus.PublishAsync(new AddSchoolEvent { School = School });
-        await SchoolService.AddSchoolAsync(School);
+        await EventBus.PublishAsync(new AddSchoolEvent { School = _school });
+        await SchoolService.AddSchoolAsync(_school);
         Navigation.NavigateTo("/schools");
     }
 

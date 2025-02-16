@@ -4,6 +4,7 @@
 @inject NavigationManager Navigation
 @using Lisa.Models.Entities
 @inject UserService UserService
+@inherits EventAwareComponentBase
 
 <PageTitle>@(IsEdit ? "Edit Care Group" : "Add Care Group")</PageTitle>
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
@@ -31,40 +32,23 @@
                     <InputText class="form-control" @bind-Value="CareGroup.Name" />
                 </div>
 
-                <h5>Teachers in this Care Group</h5>
                 <div class="mb-3">
-                    @if (CareGroup.Users != null && CareGroup.Users.Any())
+                    <label class="form-label">Assign Teachers</label>
+                    @if (_availableUsers != null)
                     {
-                        @foreach (var user in CareGroup.Users)
+                        @foreach (var user in _availableUsers)
                         {
-                            <div class="d-flex align-items-center mb-2">
-                                <span class="badge bg-primary me-2">@user.Abbreviation</span>
-                                <span>@user.Surname @user.Name</span>
-                                <button class="btn btn-sm btn-danger ms-2"
-                                    @onclick="() => RemoveUserFromCareGroup(user.Id)">Remove</button>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="userCheckbox_@user.Id"
+                                    checked="@SelectedUserIds.Contains(user.Id)"
+                                    @onchange="@(e => OnUserCheckboxChanged(user.Id, e))" />
+                                <label class="form-check-label" for="userCheckbox_@user.Id">
+                                    @user.Surname @user.Name (@user.Abbreviation)
+                                </label>
                             </div>
                         }
                     }
-                    else
-                    {
-                        <p>No teachers assigned.</p>
-                    }
-                </div>
-
-                <h5>Add Teacher</h5>
-                <div class="mb-3">
-                    <select class="form-select mb-2" @bind="_selectedUser">
-                        <option value="@string.Empty"> -- Select Teacher --</option>
-                        @if (_availableUsers != null)
-                        {
-                            @foreach (var user in _availableUsers.Where(u => CareGroup.Users == null || !CareGroup.Users.Any(cu
-                                                => cu.Id == u.Id)))
-                            {
-                                <option value="@user.Id">@user.Surname @user.Name (@user.Abbreviation)</option>
-                            }
-                        }
-                    </select>
-                    <button class="btn btn-sm btn-success" @onclick="AddUserToCareGroup">Add</button>
+                    <ValidationMessage For="@(() => SelectedUserIds)" />
                 </div>
 
                 <button type="submit" class="btn btn-primary">Save</button>
@@ -79,20 +63,25 @@
 
 @code {
     [Parameter] public Guid? Id { get; set; }
-
     private CareGroup? CareGroup { get; set; } = new();
     private School? _selectedSchool;
     private bool IsEdit => Id.HasValue;
     private IEnumerable<User>? _availableUsers;
     private string? _selectedUser;
+    private List<Guid> SelectedUserIds { get; set; } = new List<Guid>();
 
     protected override async Task OnInitializedAsync()
     {
+        SubscribeToEvent(UiEvents.SchoolSelected);
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
 
         if (IsEdit)
         {
             CareGroup = await CareGroupService.GetByIdAsync(Id!.Value) ?? new();
+            if (CareGroup.Users is not null)
+            {
+                SelectedUserIds = CareGroup.Users.Select(u => u.Id).ToList();
+            }
         }
         else
         {
@@ -104,7 +93,20 @@
             CareGroup = new CareGroup { SchoolId = _selectedSchool.Id };
         }
 
-        _availableUsers = await UserService.GetAllAsync();
+        if (_selectedSchool is not null)
+        {
+            _availableUsers = await UserService.GetBySchoolAsync(_selectedSchool.Id);
+        }
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        _selectedSchool = eventName switch
+        {
+            UiEvents.SchoolSelected => payload is School school ? await OnSchoolSelected(school) : _selectedSchool,
+            _ => _selectedSchool
+        };
+        await base.HandleEventAsync(eventName, payload);
     }
 
     private async Task HandleValidSubmit()
@@ -113,14 +115,42 @@
 
         if (IsEdit)
         {
-            await CareGroupService.UpdateAsync(CareGroup);
-            Navigation.NavigateTo("/care-groups");
+            await CareGroupService.UpdateAsync(CareGroup, SelectedUserIds);
         }
         else
         {
-            await CareGroupService.CreateAsync(CareGroup);
-            Navigation.NavigateTo("/care-groups");
+            await CareGroupService.CreateAsync(CareGroup, SelectedUserIds);
         }
+
+        Navigation.NavigateTo("/care-groups");
+    }
+
+    private void OnUserCheckboxChanged(Guid userId, ChangeEventArgs e)
+    {
+        if (e.Value is bool isChecked)
+        {
+            if (isChecked)
+            {
+                if (!SelectedUserIds.Contains(userId))
+                {
+                    SelectedUserIds.Add(userId);
+                }
+            }
+            else
+            {
+                SelectedUserIds.Remove(userId);
+            }
+        }
+    }
+
+    private async Task<School> OnSchoolSelected(School school)
+    {
+        _selectedSchool = school;
+        if (_selectedSchool is not null)
+        {
+            _availableUsers = await UserService.GetBySchoolAsync(_selectedSchool.Id);
+        }
+        return school;
     }
 
     private void Cancel()
@@ -138,7 +168,12 @@
                 await CareGroupService.AddUserToCareGroupAsync(CareGroup.Id, userId);
                 CareGroup = await CareGroupService.GetByIdAsync(CareGroup.Id);
             }
-            _availableUsers = await UserService.GetAllAsync();
+
+            if (_selectedSchool is not null)
+            {
+                _availableUsers = await UserService.GetBySchoolAsync(_selectedSchool.Id);
+            }
+
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -150,7 +185,12 @@
             await CareGroupService.RemoveUserFromCareGroupAsync(CareGroup.Id, userId);
             CareGroup = await CareGroupService.GetByIdAsync(CareGroup.Id);
         }
-        _availableUsers = await UserService.GetAllAsync();
+
+        if (_selectedSchool is not null)
+        {
+            _availableUsers = await UserService.GetBySchoolAsync(_selectedSchool.Id);
+        }
+
         await InvokeAsync(StateHasChanged);
     }
 }

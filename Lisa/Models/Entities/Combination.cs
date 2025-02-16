@@ -1,8 +1,11 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Lisa.Models.Entities;
 
 public class Combination
 {
     public Guid Id { get; set; }
+    [MaxLength(30)]
     public string? Name { get; set; }
     public Guid SchoolGradeId { get; set; }
     public SchoolGrade? SchoolGrade { get; set; }

@@ -381,7 +381,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
 
             entity.Property(r => r.EmailAddress)
                 .HasMaxLength(255)
-                .IsRequired(true);
+                .IsRequired();
 
             entity.Property(r => r.Status)
                 .HasConversion<string>()

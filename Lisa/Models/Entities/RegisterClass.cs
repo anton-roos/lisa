@@ -1,8 +1,11 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Lisa.Models.Entities;
 
 public class RegisterClass
 {
     public Guid Id { get; set; }
+    [MaxLength(32)]
     public string? Name { get; set; }
     public Guid SchoolGradeId { get; set; }
     public SchoolGrade? SchoolGrade { get; set; }

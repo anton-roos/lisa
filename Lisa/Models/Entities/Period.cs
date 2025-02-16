@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Lisa.Interfaces;
 
 namespace Lisa.Models.Entities;
@@ -10,6 +11,7 @@ public class Period : IValidatable
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
     public PeriodStatus Status { get; set; }
+    [MaxLength(32)]
     public string? Description { get; set; }
     public Guid SchoolGradeId { get; set; }
     public SchoolGrade? SchoolGrade { get; set; }

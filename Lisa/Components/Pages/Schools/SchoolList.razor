@@ -1,20 +1,19 @@
 ﻿@page "/schools"
 @using Lisa.Models.Entities
-@using Lisa.Services
 @inject NavigationManager NavigationManager
 @inject SchoolService SchoolService
 
-<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+<AuthorizeView Roles="@Roles.SystemAdministrator">
     <Authorized>
         <h3>Schools</h3>
         <button class="btn btn-primary mb-3" @onclick="() => AddSchool()">
             Add School
         </button>
-        @if (schools == null)
+        @if (_schools == null)
         {
             <p>Loading...</p>
         }
-        else if (schools.Count == 0)
+        else if (_schools.Count == 0)
         {
             <div class="alert alert-info">
                 No Schools found, please add a School.
@@ -32,7 +31,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var school in schools)
+                    @foreach (var school in _schools)
                     {
                         <tr>
                             <td class="align-middle">@school.ShortName</td>
@@ -56,11 +55,11 @@
     </NotAuthorized>
 </AuthorizeView>
 
-<ConfirmDialog @ref="Dialog" />
-<Modal @ref="ErrorModal" Title="Info">
+<ConfirmDialog />
+<Modal @ref="_errorModal" Title="Info">
     <BodyTemplate>
         You can't delete this school because of the following:
-        @Exception.Message
+        @_exception.Message
     </BodyTemplate>
     <FooterTemplate>
         <Button Color="ButtonColor.Primary" @onclick="CloseErrorModal">Ok</Button>
@@ -68,14 +67,13 @@
 </Modal>
 
 @code {
-    private List<Lisa.Models.Entities.School>? schools;
-    private ConfirmDialog Dialog = default!;
-    private Modal ErrorModal = default!;
-    private Exception Exception = new();
+    private List<School>? _schools;
+    private Modal _errorModal = default!;
+    private readonly Exception _exception = new();
 
-    protected async override Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
-        schools = await SchoolService.GetAllAsync();
+        _schools = await SchoolService.GetAllAsync();
     }
 
     private void EditSchool(School school)
@@ -85,7 +83,7 @@
 
     private async Task CloseErrorModal()
     {
-        ErrorModal.HideAsync();
+        await _errorModal.HideAsync();
     }
 
     private void ViewSchool(School school)
@@ -93,9 +91,9 @@
         NavigationManager.NavigateTo($"schools/details/{school.Id}");
     }
 
-    private void DeleteSchool(School School)
+    private void DeleteSchool(School school)
     {
-        NavigationManager.NavigateTo($"schools/delete/{School.Id}");
+        NavigationManager.NavigateTo($"schools/delete/{school.Id}");
     }
 
     private void AddSchool()

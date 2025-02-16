@@ -4,7 +4,7 @@
 @inject NavigationManager Navigation
 
 <PageTitle>Learner Details</PageTitle>
-<AuthorizeView Context="auth" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
     <Authorized>
         <h3>Learner Details</h3>
 

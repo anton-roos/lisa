@@ -37,9 +37,8 @@ else
 
 @code {
     private List<School>? _schools;
-    private string? _selectedSchoolId;
+    private string _selectedSchoolId = string.Empty;
     private bool _isLoading = false;
-
 
     protected override async Task OnInitializedAsync()
     {
@@ -54,7 +53,7 @@ else
         _schools = await SchoolService.GetAllAsync();
         _schools = _schools.OrderBy(s => s.Id).ToList();
         var selectedSchool = await SchoolService.GetSelectedSchoolAsync();
-        _selectedSchoolId = selectedSchool?.Id.ToString();
+        _selectedSchoolId = selectedSchool?.Id.ToString() ?? string.Empty;
         _isLoading = false;
         await InvokeAsync(StateHasChanged);
     }

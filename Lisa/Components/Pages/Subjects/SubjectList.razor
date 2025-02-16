@@ -3,19 +3,19 @@
 @inject NavigationManager Navigation
 @inject SubjectService SubjectService
 
-<AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+<AuthorizeView Roles="@Roles.SystemAdministrator">
     <Authorized>
         <h3>Subjects</h3>
 
         <div class="d-flex">
             <button class="btn btn-primary mb-3 me-3" @onclick="AddSubject">Add Subject</button>
             <div>
-                <InputText class="form-control" @bind-Value="searchText" @oninput="OnInputChange"
+                <InputText class="form-control" @bind-Value="_searchText" @oninput="OnInputChange"
                     placeholder="Type to filter subjects..." />
             </div>
         </div>
 
-        @if (Subjects == null)
+        @if (_subjects == null)
         {
             <p>Loading subjects...</p>
         }
@@ -29,13 +29,13 @@
                 @foreach (var subject in FilteredSubjects)
                 {
                     <div class="list-group-item d-flex justify-content-start align-items-center subject-row"
-                        @ondragover="OnDragOver" @ondragover:preventDefault="true" @ondrop="(e) => OnDrop(e, subject)"
+                        @ondragover="OnDragOver" @ondragover:preventDefault="true" @ondrop="(_) => OnDrop(subject)"
                         @ondrop:preventDefault="true">
                         <div>
-                            @if (string.IsNullOrWhiteSpace(searchText))
+                            @if (string.IsNullOrWhiteSpace(_searchText))
                             {
                                 <button class="btn btn-sm btn-secondary me-1 drag-handle" draggable="true"
-                                    @ondragstart="(e) => OnDragStart(e, subject)">
+                                    @ondragstart="(_) => OnDragStart(subject)">
                                     <i class="bi bi-grip-vertical"></i>
                                 </button>
                             }
@@ -69,22 +69,22 @@
 </AuthorizeView>
 
 @code {
-    private List<Subject>? Subjects;
-    private string searchText = string.Empty;
-    private Subject? draggedSubject;
+    private List<Subject>? _subjects;
+    private string _searchText = string.Empty;
+    private Subject? _draggedSubject;
 
     protected override async Task OnInitializedAsync()
     {
-        Subjects = await SubjectService.GetAllAsync();
+        _subjects = await SubjectService.GetAllAsync();
     }
 
     private IEnumerable<Subject> FilteredSubjects
-    => Subjects?.Where(s =>
-    string.IsNullOrWhiteSpace(searchText)
-    || (s.Name ?? "").Contains(searchText, StringComparison.OrdinalIgnoreCase)
-    || (s.Code ?? "").Contains(searchText, StringComparison.OrdinalIgnoreCase)
-    || (s.Description ?? "").Contains(searchText, StringComparison.OrdinalIgnoreCase)
-    ) ?? Enumerable.Empty<Subject>();
+    => _subjects?.Where(s =>
+    string.IsNullOrWhiteSpace(_searchText)
+    || (s.Name ?? "").Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+    || (s.Code ?? "").Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+    || (s.Description ?? "").Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+    ) ?? [];
 
     private void AddSubject()
     {
@@ -101,18 +101,18 @@
         Navigation.NavigateTo($"/subjects/edit/{subject.Id}");
     }
 
-    private async Task DeleteSubject(Subject subject)
+    private async Task DeleteSubject(Subject? subject)
     {
         if (subject is not null)
         {
             await SubjectService.DeleteAsync(subject.Id);
-            Subjects = await SubjectService.GetAllAsync();
+            _subjects = await SubjectService.GetAllAsync();
         }
     }
 
     private void OnInputChange(ChangeEventArgs e)
     {
-        searchText = e.Value?.ToString() ?? string.Empty;
+        _searchText = e.Value?.ToString() ?? string.Empty;
     }
 
     private string GetPillColorForSubjectType(SubjectType subjectType) => subjectType switch
@@ -133,7 +133,7 @@
 
     private string GetFirstAndLastGrade(Subject subject)
     {
-        if (subject?.GradesApplicable == null || !subject.GradesApplicable.Any())
+        if (subject.GradesApplicable == null || !subject.GradesApplicable.Any())
             return string.Empty;
 
         int firstGrade = subject.GradesApplicable.First();
@@ -155,47 +155,50 @@
         _ => grade.ToString()
     };
 
-    private void OnDragStart(DragEventArgs e, Subject subject)
+    private void OnDragStart(Subject subject)
     {
-        draggedSubject = subject;
+        _draggedSubject = subject;
     }
 
-    private void OnDragOver(DragEventArgs e)
+    private static void OnDragOver(DragEventArgs e)
     {
-        if (e.DataTransfer != null)
-            e.DataTransfer.DropEffect = "move";
+        e.DataTransfer.DropEffect = "move";
     }
 
-    private async Task OnDrop(DragEventArgs e, Subject targetSubject)
+    private async Task OnDrop(Subject targetSubject)
     {
-        if (draggedSubject == null || draggedSubject == targetSubject)
+        if (_draggedSubject == null || _draggedSubject == targetSubject)
         {
             return;
         }
 
-        int oldIndex = Subjects.IndexOf(draggedSubject);
-        int newIndex = Subjects.IndexOf(targetSubject);
+        if (_subjects is not null)
+        {
+            var oldIndex = _subjects.IndexOf(_draggedSubject);
+            var newIndex = _subjects.IndexOf(targetSubject);
 
-        if (oldIndex < newIndex) newIndex--;
-        if (newIndex < 0) newIndex = 0;
+            if (oldIndex < newIndex) newIndex--;
+            if (newIndex < 0) newIndex = 0;
 
-        Subjects.RemoveAt(oldIndex);
-        Subjects.Insert(newIndex, draggedSubject);
+            _subjects.RemoveAt(oldIndex);
+            _subjects.Insert(newIndex, _draggedSubject);
+        }
 
         await SaveOrderChanges();
 
-        draggedSubject = null;
+        _draggedSubject = null;
     }
 
     private async Task SaveOrderChanges()
     {
-        for (int i = 0; i < Subjects.Count; i++)
-        {
-            Subjects[i].Order = i;
-        }
+        if (_subjects is not null)
+            for (var i = 0; i < _subjects.Count; i++)
+            {
+                _subjects[i].Order = i;
+            }
 
-        await SubjectService.UpdateOrderAsync(Subjects);
-        Subjects = await SubjectService.GetAllAsync();
+        if (_subjects != null) await SubjectService.UpdateOrderAsync(_subjects);
+        _subjects = await SubjectService.GetAllAsync();
         await InvokeAsync(StateHasChanged);
     }
 }

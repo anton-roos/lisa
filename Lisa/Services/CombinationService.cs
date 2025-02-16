@@ -106,7 +106,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
     /// <summary>
     /// Update an existing Combination.
     /// </summary>
-    public async Task UpdateCombinationAsync(CombinationViewModel model, IEnumerable<Subject> selectedSubjects)
+    public async Task UpdateCombinationAsync(CombinationViewModel model, List<Subject> selectedSubjects)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
 
@@ -123,9 +123,10 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
             .Select(s => s.Id)
             .ToList() ?? [];
 
-        var newSubjectIds = selectedSubjects?
+        var newSubjectIds = selectedSubjects
             .Select(s => s.Id)
-            .ToList() ?? [];
+            .ToList();
+        
 
         var subjectsToRemove = existingCombination.Subjects?
             .Where(s => !newSubjectIds.Contains(s.Id))
@@ -139,7 +140,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
             }
         }
 
-        foreach (var subject in selectedSubjects ?? [])
+        foreach (var subject in selectedSubjects)
         {
             if (!currentSubjectIds.Contains(subject.Id))
             {

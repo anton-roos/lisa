@@ -25,7 +25,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
                 AssessmentDate = DateTime.SpecifyKind(viewModel.AssessmentDate!.Value, DateTimeKind.Utc),
                 AssessmentType = viewModel.AssessmentType,
                 AssessmentTopic = viewModel.AssessmentTopic,
-                SubjectId = int.Parse(viewModel.SubjectId!),
+                SubjectId = int.Parse(viewModel.SubjectId),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 CapturedById = capturedById,
@@ -156,7 +156,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
                 .ThenInclude(r => r.Learner!)
                 .ThenInclude(l => l.RegisterClass!)
                 .ThenInclude(rc => rc.SchoolGrade!)
-                .ThenInclude(sg => sg.SystemGrade!)
+                .ThenInclude(sg => sg.SystemGrade)
                 .Include(rs => rs.Subject)
                 .Include(rs => rs.SchoolGrade)
                 .FirstOrDefaultAsync(rs => rs.Id == id);
@@ -171,7 +171,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
     /// <summary>
     /// Retrieves results based on filters.
     /// </summary>
-    public async Task<List<ResultSet>> GetResultsByFiltersAsync(
+    public async Task<List<ResultSet?>> GetResultsByFiltersAsync(
     Guid schoolId,
     Guid? gradeId,
     int? subjectId,
@@ -187,7 +187,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
                 .ThenInclude(r => r.Learner!)
                 .ThenInclude(l => l.RegisterClass!)
                 .ThenInclude(rc => rc.SchoolGrade!)
-                .ThenInclude(sg => sg.SystemGrade!)
+                .ThenInclude(sg => sg.SystemGrade)
                 .Include(rs => rs.Subject)
                 .Include(rs => rs.SchoolGrade)
                 .Include(rs => rs.Teacher)
@@ -212,7 +212,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
                 query = query.Where(rs => rs.TeacherId == teacherId.Value);
             }
 
-            return await query.ToListAsync();
+            return (await query.ToListAsync())!;
         }
         catch (Exception ex)
         {

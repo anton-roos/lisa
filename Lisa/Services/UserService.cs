@@ -13,59 +13,56 @@ public class UserService(
     IUiEventService uiEventService,
     IPasswordHasher<User> passwordHasher)
 {
-    private readonly UserManager<User> _userManager = userManager;
-    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-    private readonly ILogger<UserService> _logger = logger;
-    private readonly IUiEventService _uiEventService = uiEventService;
-    private readonly IPasswordHasher<User> _passwordHasher = passwordHasher;
-
     /// <summary>
     /// Retrieves all users by role and school.
     /// </summary>
-    public async Task<List<User>> GetAllByRoleAndSchoolAsync(string[] roles, Guid? SchoolId = null)
+    public async Task<List<User>> GetAllByRoleAndSchoolAsync(string[] roles, Guid? schoolId = null)
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            var context = await dbContextFactory.CreateDbContextAsync();
 
             // Retrieve users who either belong to the school OR are System Administrators
             var usersQuery = context.Users.AsNoTracking();
 
-            if (SchoolId != null)
+            if (schoolId != null)
             {
-                usersQuery = usersQuery.Where(u => u.SchoolId == SchoolId || context.UserRoles
-                .Where(ur => ur.UserId == u.Id)
-                .Join(context.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name)
-                .Contains(Roles.SystemAdministrator));
+                usersQuery = usersQuery.Where(u => u.SchoolId == schoolId || context.UserRoles
+                    .Where(ur => ur.UserId == u.Id)
+                    .Join(context.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name)
+                    .Contains(Roles.SystemAdministrator));
             }
 
             var users = await usersQuery
-            .Include(t => t.School)
-            .Include(t => t.CareGroups)
-            .Include(t => t.Subjects)
-            .Include(t => t.RegisterClasses)
-            .Include(t => t.Periods)
-            .ToListAsync();
+                .Include(t => t.School)
+                .Include(t => t.CareGroups)
+                .Include(t => t.Subjects)
+                .Include(t => t.RegisterClasses)
+                .Include(t => t.Periods)
+                .ToListAsync();
 
             var userIds = users.Select(u => u.Id).ToList();
             var userRoles = await (from userRole in context.UserRoles
-                join role in context.Roles on userRole.RoleId equals role.Id
-                where userIds.Contains(userRole.UserId)
-                select new { userRole.UserId, role.Name })
-            .ToListAsync();
+                                   join role in context.Roles on userRole.RoleId equals role.Id
+                                   where userIds.Contains(userRole.UserId)
+                                   select new { userRole.UserId, role.Name })
+                .ToListAsync();
 
             foreach (var user in users)
             {
-                user.Roles = [.. userRoles
-                    .Where(ur => ur.UserId == user.Id)
-                    .Select(ur => ur.Name)];
+                user.Roles =
+                [
+                    .. userRoles
+                        .Where(ur => ur.UserId == user.Id)
+                        .Select(ur => ur.Name)
+                ];
             }
 
             return [.. users.Where(u => u.Roles.Intersect(roles).Any())];
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching users for SchoolId {SchoolId}.", SchoolId);
+            logger.LogError(ex, "Error fetching users for SchoolId {SchoolId}.", schoolId);
             return [];
         }
     }
@@ -80,7 +77,7 @@ public class UserService(
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await dbContextFactory.CreateDbContextAsync();
 
             var user = await context.Users
                 .AsNoTracking()
@@ -109,7 +106,7 @@ public class UserService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching user with ID: {UserId}", id);
+            logger.LogError(ex, "Error fetching user with ID: {UserId}", id);
             return null;
         }
     }
@@ -118,23 +115,24 @@ public class UserService(
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await dbContextFactory.CreateDbContextAsync();
 
             var grade = await context.SchoolGrades.FindAsync(gradeId);
 
             var user = await context.Users
                 .Include(u => u.Subjects)
                 .FirstOrDefaultAsync(u => u.Subjects != null
-                    && grade != null
-                    && u.Subjects
-                .Any(ts => ts.Grade == grade.SystemGrade.SequenceNumber
-                    && ts.SubjectId == subjectId));
+                                          && grade != null
+                                          && u.Subjects
+                                              .Any(ts => ts.Grade == grade.SystemGrade.SequenceNumber
+                                                         && ts.SubjectId == subjectId));
 
             return user;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching teacher for grade: {GradeId} and subject: {SubjectId}", gradeId, subjectId);
+            logger.LogError(ex, "Error fetching teacher for grade: {GradeId} and subject: {SubjectId}", gradeId,
+                subjectId);
             return null;
         }
     }
@@ -143,23 +141,23 @@ public class UserService(
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await dbContextFactory.CreateDbContextAsync();
             var existing = await context.Users.FindAsync(user.Id);
 
             if (existing == null)
             {
-                _logger.LogWarning("Attempted to update non-existent teacher. TeacherId: {TeacherId}", user.Id);
+                logger.LogWarning("Attempted to update non-existent teacher. TeacherId: {TeacherId}", user.Id);
                 return;
             }
 
             existing.SchoolId = user.SchoolId;
 
             await context.SaveChangesAsync();
-            _logger.LogInformation("Updated teacher's school: {TeacherId}", user.Id);
+            logger.LogInformation("Updated teacher's school: {TeacherId}", user.Id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating teacher's school with ID: {TeacherId}", user.Id);
+            logger.LogError(ex, "Error updating teacher's school with ID: {TeacherId}", user.Id);
         }
     }
 
@@ -170,7 +168,7 @@ public class UserService(
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await dbContextFactory.CreateDbContextAsync();
             var existing = await context.Users
                 .Include(t => t.CareGroups)
                 .Include(t => t.Subjects)
@@ -178,7 +176,7 @@ public class UserService(
 
             if (existing == null)
             {
-                _logger.LogWarning("Attempted to update non-existent teacher. TeacherId: {TeacherId}", user.Id);
+                logger.LogWarning("Attempted to update non-existent teacher. TeacherId: {TeacherId}", user.Id);
                 return false;
             }
 
@@ -190,7 +188,7 @@ public class UserService(
             existing.SchoolId = user.SchoolId;
 
             existing.CareGroups?.Clear();
-            if (user.SelectedCareGroupIds != null && user.SelectedCareGroupIds.Count != 0)
+            if (user.SelectedCareGroupIds.Count != 0)
             {
                 var newCareGroups = await context.CareGroups
                     .Where(cg => user.SelectedCareGroupIds.Contains(cg.Id))
@@ -214,53 +212,54 @@ public class UserService(
             {
                 if (existing is not null)
                 {
-                    existing.PasswordHash = _passwordHasher.HashPassword(existing, newPassword);
+                    existing.PasswordHash = passwordHasher.HashPassword(existing, newPassword);
                 }
-                _logger.LogInformation("Updated password for teacher: {TeacherId}", user.Id);
+
+                logger.LogInformation("Updated password for teacher: {TeacherId}", user.Id);
             }
 
             await context.SaveChangesAsync();
 
             if (existing is null)
             {
-                _logger.LogWarning("Attempted to update roles for non-existent user. UserId: {UserId}", user.Id);
+                logger.LogWarning("Attempted to update roles for non-existent user. UserId: {UserId}", user.Id);
                 return false;
             }
 
-            var currentRoles = await _userManager.GetRolesAsync(existing);
+            var currentRoles = await userManager.GetRolesAsync(existing);
 
             var rolesToAdd = user.SelectedRoles.Except(currentRoles).ToArray();
             var rolesToRemove = currentRoles.Except(user.SelectedRoles).ToArray();
 
             if (rolesToRemove.Length != 0)
             {
-                var removeResult = await _userManager.RemoveFromRolesAsync(existing, rolesToRemove);
+                var removeResult = await userManager.RemoveFromRolesAsync(existing, rolesToRemove);
                 if (!removeResult.Succeeded)
                 {
                     var errorMessage = string.Join(", ", removeResult.Errors.Select(e => e.Description));
-                    _logger.LogError("Failed to remove roles: {ErrorMessage}", errorMessage);
+                    logger.LogError("Failed to remove roles: {ErrorMessage}", errorMessage);
                     return false;
                 }
             }
 
             if (rolesToAdd.Length != 0)
             {
-                var addResult = await _userManager.AddToRolesAsync(existing, rolesToAdd);
+                var addResult = await userManager.AddToRolesAsync(existing, rolesToAdd);
                 if (!addResult.Succeeded)
                 {
                     var errorMessage = string.Join(", ", addResult.Errors.Select(e => e.Description));
-                    _logger.LogError("Failed to add roles: {ErrorMessage}", errorMessage);
+                    logger.LogError("Failed to add roles: {ErrorMessage}", errorMessage);
                     return false;
                 }
             }
 
-            await _uiEventService.PublishAsync(UiEvents.UsersUpdated);
-            _logger.LogInformation("Updated teacher: {TeacherId}", user.Id);
+            await uiEventService.PublishAsync(UiEvents.UsersUpdated);
+            logger.LogInformation("Updated teacher: {TeacherId}", user.Id);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating teacher with ID: {TeacherId}", user.Id);
+            logger.LogError(ex, "Error updating teacher with ID: {TeacherId}", user.Id);
             return false;
         }
     }
@@ -272,23 +271,23 @@ public class UserService(
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await dbContextFactory.CreateDbContextAsync();
             var existing = await context.Users.FindAsync(id);
             if (existing == null)
             {
-                _logger.LogWarning("Attempted to delete non-existent teacher. TeacherId: {TeacherId}", id);
+                logger.LogWarning("Attempted to delete non-existent teacher. TeacherId: {TeacherId}", id);
                 return false;
             }
 
             context.Users.Remove(existing);
             await context.SaveChangesAsync();
-            await _uiEventService.PublishAsync(UiEvents.UsersUpdated);
-            _logger.LogInformation("Deleted teacher: {TeacherId}", id);
+            await uiEventService.PublishAsync(UiEvents.UsersUpdated);
+            logger.LogInformation("Deleted teacher: {TeacherId}", id);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting teacher with ID: {TeacherId}", id);
+            logger.LogError(ex, "Error deleting teacher with ID: {TeacherId}", id);
             return false;
         }
     }
@@ -300,13 +299,29 @@ public class UserService(
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await dbContextFactory.CreateDbContextAsync();
             return await context.Users
                 .ToListAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching all teachers.");
+            logger.LogError(ex, "Error fetching all teachers.");
+            return [];
+        }
+    }
+
+    public async Task<List<User>> GetBySchoolAsync(Guid schoolId)
+    {
+        try
+        {
+            using var context = await dbContextFactory.CreateDbContextAsync();
+            return await context.Users
+                .Where(u => u.SchoolId == schoolId)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error fetching all teachers.");
             return [];
         }
     }
@@ -316,7 +331,7 @@ public class UserService(
     /// </summary>
     public async Task<bool> HasRegisterClassesAsync(Guid userId)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.RegisterClasses.AnyAsync(rc => rc.UserId == userId);
     }
 
@@ -327,7 +342,7 @@ public class UserService(
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await dbContextFactory.CreateDbContextAsync();
             var teacher = await context.Users.FindAsync(userId);
             if (teacher == null) return [];
 
@@ -338,7 +353,7 @@ public class UserService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching available users for TeacherId: {TeacherId}", userId);
+            logger.LogError(ex, "Error fetching available users for TeacherId: {TeacherId}", userId);
             return [];
         }
     }
@@ -350,7 +365,7 @@ public class UserService(
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            using var context = await dbContextFactory.CreateDbContextAsync();
 
             var teachers = await context.Users
                 .Where(t => t.Id == oldUserId || t.Id == newUserId)
@@ -362,14 +377,14 @@ public class UserService(
             await registerClasses.ForEachAsync(rc => rc.UserId = newUserId);
 
             await context.SaveChangesAsync();
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Transferred register classes from TeacherId {OldTeacherId} to TeacherId {NewTeacherId}", oldUserId,
                 newUserId);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error transferring register classes.");
+            logger.LogError(ex, "Error transferring register classes.");
             return false;
         }
     }

@@ -1,8 +1,7 @@
 @using Lisa.Models.Entities
-@using Lisa.Services
 @inject SchoolService SchoolService
 
-<EditForm Model="School" OnValidSubmit="HandleValidSubmit">
+<EditForm Model="School" Context="_" OnValidSubmit="HandleValidSubmit">
     <DataAnnotationsValidator />
     <ValidationSummary />
 

@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Mail;
-using Hangfire;
 using Lisa.Models.Entities;
 
 namespace Lisa.Services
@@ -11,12 +10,10 @@ namespace Lisa.Services
         private readonly ILogger<EmailService> _logger = logger;
         public async Task SendBugReportEmailAsync(BugReport bugReport)
         {
-            using var smtpClient = new SmtpClient("smtp.office365.com")
-            {
-                Port = 587,
-                Credentials = new NetworkCredential("portalDCEG@dcegroup.co.za", "Portal@DCEG"),
-                EnableSsl = true
-            };
+            using var smtpClient = new SmtpClient("smtp.office365.com");
+            smtpClient.Port = 587;
+            smtpClient.Credentials = new NetworkCredential("portalDCEG@dcegroup.co.za", "Portal@DCEG");
+            smtpClient.EnableSsl = true;
 
             var mailMessage = new MailMessage
             {
@@ -71,12 +68,10 @@ namespace Lisa.Services
                     throw new Exception($"School with ID {schoolId} not found.");
                 }
 
-                using var smtpClient = new SmtpClient("smtp.office365.com")
-                {
-                    Port = school.SmtpPort,
-                    Credentials = new NetworkCredential(school.SmtpEmail, school.SmtpPassword),
-                    EnableSsl = true
-                };
+                using var smtpClient = new SmtpClient("smtp.office365.com");
+                smtpClient.Port = school.SmtpPort;
+                smtpClient.Credentials = new NetworkCredential(school.SmtpEmail, school.SmtpPassword);
+                smtpClient.EnableSsl = true;
 
                 var mailMessage = new MailMessage
                 {

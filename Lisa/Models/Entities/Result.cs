@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Lisa.Models.Entities;
 
 public class Result
@@ -9,6 +11,7 @@ public class Result
     public ResultSet? ResultSet { get; set; }
     public int? Score { get; set; }
     public bool Absent { get; set; }
+    [MaxLength(64)]
     public string? AbsentReason { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

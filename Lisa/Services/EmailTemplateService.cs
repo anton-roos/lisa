@@ -54,7 +54,7 @@ public class EmailTemplateService(IDbContextFactory<LisaDbContext> contextFactor
     /// <summary>
     /// Saves a new template or updates an existing one by name.
     /// </summary>
-    public async Task<bool> SaveTemplateAsync(string name, string subject, string content)
+    public async Task<bool> SaveTemplateAsync(string name, string subject, string content, string modelType)
     {
         try
         {
@@ -69,22 +69,23 @@ public class EmailTemplateService(IDbContextFactory<LisaDbContext> contextFactor
                     Name = name,
                     Subject = subject,
                     Content = content,
+                    ModelType = modelType,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
 
                 await context.EmailTemplates.AddAsync(newTemplate);
-                _logger.LogInformation("Created new template '{name}'.", name);
-
+                _logger.LogInformation("Created new template '{name}' with model type '{modelType}'.", name, modelType);
             }
             else
             {
                 existingTemplate.Subject = subject;
                 existingTemplate.Content = content;
+                existingTemplate.ModelType = modelType;
                 existingTemplate.UpdatedAt = DateTime.UtcNow;
 
                 context.Entry(existingTemplate).State = EntityState.Modified;
-                _logger.LogInformation("Updated template '{name}'.", name);
+                _logger.LogInformation("Updated template '{name}' with model type '{modelType}'.", name, modelType);
             }
 
             await context.SaveChangesAsync();
@@ -116,6 +117,7 @@ public class EmailTemplateService(IDbContextFactory<LisaDbContext> contextFactor
             existingTemplate.Name = template.Name;
             existingTemplate.Subject = template.Subject;
             existingTemplate.Content = template.Content;
+            existingTemplate.ModelType = template.ModelType;
             existingTemplate.UpdatedAt = DateTime.UtcNow;
 
             context.Entry(existingTemplate).State = EntityState.Modified;

@@ -1,5 +1,6 @@
 @page "/email-template-manager/{TemplateId:guid?}"
 @using Lisa.Models.Entities
+@using Lisa.Models.EmailModels
 @inject Lisa.Services.EmailTemplateService TemplateService
 @inject NavigationManager NavManager
 
@@ -20,6 +21,15 @@
         <label>Content (HTML with Razor tokens):</label>
         <InputTextArea @bind-Value="templateModel.Content" class="form-control" rows="10" />
     </div>
+    <div class="mb-3">
+        <label>Model Type:</label>
+        <InputSelect @bind-Value="templateModel.ModelType" class="form-control">
+            @foreach (var type in availableModelTypes)
+            {
+                <option value="@type">@type</option>
+            }
+        </InputSelect>
+    </div>
     <button type="submit" class="btn btn-success">Save</button>
     <button type="button" class="btn btn-secondary" @onclick="GoBack">Cancel</button>
 </EditForm>
@@ -30,6 +40,11 @@
 
     private EmailTemplate templateModel = new();
     private bool isEdit => TemplateId.HasValue;
+
+    private List<string> availableModelTypes = new List<string>
+{
+typeof(ProgressReportModel).FullName!,
+};
 
     protected override async Task OnInitializedAsync()
     {
@@ -52,7 +67,8 @@
         }
         else
         {
-            success = await TemplateService.SaveTemplateAsync(templateModel.Name, templateModel.Subject, templateModel.Content);
+            success = await TemplateService.SaveTemplateAsync(templateModel.Name, templateModel.Subject, templateModel.Content,
+            templateModel.ModelType);
         }
         if (success)
         {

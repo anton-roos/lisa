@@ -415,18 +415,6 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             entity.Property(r => r.UpdatedAt)
                 .IsRequired();
         });
-
-        var expectedVariablesComparer = new ValueComparer<List<string>>(
-            (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
-            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-            c => c.ToList());
-
-        modelBuilder.Entity<EmailTemplate>()
-            .Property(e => e.ExpectedVariables)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())
-            .Metadata.SetValueComparer(expectedVariablesComparer);
     }
 
     public override int SaveChanges()

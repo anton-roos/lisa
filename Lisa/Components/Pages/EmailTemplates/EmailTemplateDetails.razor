@@ -24,10 +24,23 @@ else
     <hr />
 
     <h4>Test Render</h4>
-    <div class="mb-3">
-        <label>Example Value for SomeVariable:</label>
-        <InputText @bind-Value="testModel.SomeVariable" class="form-control" />
-    </div>
+
+    @if (testValues.Any())
+    {
+        @foreach (var kvp in testValues)
+        {
+            <div class="mb-3">
+                <label>@kvp.Key:</label>
+                <input type="text" value="@testValues[kvp.Key]" @onchange="(e) => testValues[kvp.Key] = e.Value?.ToString()"
+                    class="form-control" />
+            </div>
+        }
+    }
+    else
+    {
+        <p>No test fields available for this model.</p>
+    }
+
     <button class="btn btn-primary" @onclick="RenderTestTemplate">Render Template</button>
 
     @if (!string.IsNullOrEmpty(renderedOutput))
@@ -47,26 +60,63 @@ else
     private EmailTemplate? template;
     private string renderedOutput = string.Empty;
 
-    // This is our test model. Add more properties if your template expects them.
-    private TestModel testModel = new() { SomeVariable = "TestValue" };
+    // A dictionary to store test input values keyed by property name.
+    private Dictionary<string, string> testValues = new();
 
     protected override async Task OnInitializedAsync()
     {
         template = await TemplateService.GetTemplateByIdAsync(TemplateId);
+        if (template != null && !string.IsNullOrWhiteSpace(template.ModelType))
+        {
+            // Get the model type from the stored ModelType string.
+            var modelType = Type.GetType(template.ModelType);
+            if (modelType != null)
+            {
+                // For each public property, add an entry to the dictionary.
+                foreach (var prop in modelType.GetProperties(System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.Instance))
+                {
+                    // For simplicity, only handle properties of type string here.
+                    // You could add support for other types (with conversion) as needed.
+                    if (prop.PropertyType == typeof(string))
+                    {
+                        testValues[prop.Name] = string.Empty;
+                    }
+                }
+            }
+        }
     }
 
     private async Task RenderTestTemplate()
     {
         if (template != null)
         {
-            // Use the template's Id as the cache key.
-            renderedOutput = await RendererService.RenderTemplateAsync("template-" + template.Id, template.Content, testModel);
-        }
-    }
+            var modelType = Type.GetType(template.ModelType);
+            if (modelType != null)
+            {
+                // Create an instance of the model type.
+                var modelInstance = Activator.CreateInstance(modelType);
+                if (modelInstance != null)
+                {
+                    // For each property, set its value from the testValues dictionary.
+                    foreach (var prop in modelType.GetProperties(System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.Instance))
+                    {
+                        if (testValues.TryGetValue(prop.Name, out var value))
+                        {
+                            if (prop.PropertyType == typeof(string))
+                            {
+                                prop.SetValue(modelInstance, value);
+                            }
+                            // Additional type conversions can be added here.
+                        }
+                    }
 
-    // Define a simple test model with properties matching your template placeholders.
-    public class TestModel
-    {
-        public string SomeVariable { get; set; } = string.Empty;
+                    // Render the template using the instance populated with test values.
+                    renderedOutput = await RendererService.RenderTemplateAsync(
+                    "template-" + template.Id, template.Content, modelInstance);
+                }
+            }
+        }
     }
 }

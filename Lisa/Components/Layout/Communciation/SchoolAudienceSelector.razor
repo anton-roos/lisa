@@ -3,7 +3,7 @@
 <div class="mb-3">
     <label for="audienceSelect">Select Audience</label>
     <InputSelect id="audienceSelect" class="form-select" TValue="string"
-        ValueChanged="@(async (id) => await AudienceChanged(id))" ValueExpression="(() => SelectedAudienceId ?? string.Empty)">
+        ValueChanged="@(async (id) => await AudienceChanged(id))" ValueExpression="(() => SelectedAudienceId)">
         <option value="@string.Empty">-- Select Audience --</option>
         @foreach (var audience in _audienceOptions)
         {

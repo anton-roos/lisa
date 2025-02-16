@@ -1,12 +1,14 @@
 @page "/communication"
 @using Lisa.Enums
 @using Lisa.Models.Entities
+@using Lisa.Models.EmailModels
 @using Lisa.Components.Layout.Communciation
 @inject SchoolService SchoolService
 @inject SchoolGradeService SchoolGradeService
 @inject SubjectService SubjectService
 @inject LearnerService LearnerService
 @inject CommunicationService CommunicationService
+@inject EmailRendererService RendererService
 @inject NavigationManager NavigationManager
 
 @inherits EventAwareComponentBase
@@ -48,7 +50,16 @@
                     break;
             }
 
+            <!-- Template selection integrated from the Template module -->
             <TemplateSelection OnTemplateSelected="OnTemplateSelected" />
+
+            <!-- Optional preview button -->
+            @if (SelectedTemplate != null)
+            {
+                <button class="btn btn-secondary btn-sm mt-2" @onclick="PreviewTemplate">
+                    <i class="bi bi-eye"></i> Preview Template
+                </button>
+            }
 
             <button type="button" class="btn btn-primary btn-sm mt-2" @onclick="SendCommunication"
                 disabled="@(IsSendDisabled || IsSending)">
@@ -66,6 +77,16 @@
             {
                 <div class="alert alert-info mt-2">@StatusMessage</div>
             }
+
+            @if (!string.IsNullOrEmpty(PreviewHtml))
+            {
+                <div class="card mt-3">
+                    <div class="card-header">Template Preview</div>
+                    <div class="card-body">
+                        @((MarkupString)PreviewHtml)
+                    </div>
+                </div>
+            }
         }
     </Authorized>
     <NotAuthorized>
@@ -76,18 +97,19 @@
 @code {
     private CommunicationTarget SelectedTarget { get; set; } = CommunicationTarget.School;
     private string? SearchTerm { get; set; }
-    private List<Learner> _learners = [];
+    private List<Learner> _learners = new();
     private IEnumerable<Learner> FilteredLearners => ApplyFilters();
     private School? SelectedSchool { get; set; }
     private Guid? SelectedGradeId { get; set; }
     private string? SelectedSchoolAudienceId { get; set; }
-    private List<SchoolGrade> _schoolGrades = [];
-    private List<Subject> _subjects = [];
+    private List<SchoolGrade> _schoolGrades = new();
+    private List<Subject> _subjects = new();
     private int SelectedSubjectId { get; set; }
     private EmailTemplate? SelectedTemplate { get; set; }
     private bool IsSendDisabled => SelectedTemplate == null;
     private bool IsSending { get; set; }
     private string? StatusMessage { get; set; }
+    private string PreviewHtml { get; set; } = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -142,14 +164,14 @@
 
     private IEnumerable<Learner> ApplyFilters()
     {
-        if (!_learners.Any()) return [];
+        if (!_learners.Any()) return Enumerable.Empty<Learner>();
 
         var query = _learners.AsEnumerable();
 
         if (SelectedGradeId.HasValue)
             query = query.Where(l => l.RegisterClass?.SchoolGrade?.Id == SelectedGradeId);
 
-        if (string.IsNullOrEmpty(SearchTerm)) return query;
+        if (!string.IsNullOrEmpty(SearchTerm))
         {
             var term = SearchTerm.Trim().ToLower();
             query = query.Where(l => $"{l.Surname} {l.Name}".ToLower().Contains(term));
@@ -202,7 +224,6 @@
                     break;
 
                 case CommunicationTarget.Learner:
-                case CommunicationTarget.Parent:
                 default:
                     StatusMessage = "Invalid communication target!";
                     return;
@@ -211,9 +232,7 @@
             if (result is { Id: not null })
             {
                 StatusMessage = "Communication sent successfully!";
-                {
-                    NavigateToCampaign(result.Id.Value);
-                }
+                NavigateToCampaign(result.Id.Value);
             }
             else
                 StatusMessage = "Error: No recipients found!";
@@ -230,13 +249,13 @@
 
     private async Task<EmailCampaign?> SendToSchoolAudience()
     {
-            return SelectedSchoolAudienceId switch
-            {
-                //"Parents" => await CommunicationService.SendProgressFeedbackAsync(SelectedSchool, SelectedTemplate),
-                "Staff" => await CommunicationService.SendToStaffAsync(SelectedSchool, SelectedTemplate),
-                "LearnersAndStaff" => await CommunicationService.SendToLearnersAndStaffAsync(SelectedSchool, SelectedTemplate),
-                _ => null
-            };
+        return SelectedSchoolAudienceId switch
+        {
+            "Parents" => await CommunicationService.SendCommunicationAsync(SelectedSchool, SelectedTemplate),
+            "Staff" => await CommunicationService.SendToStaffAsync(SelectedSchool, SelectedTemplate),
+            "LearnersAndStaff" => await CommunicationService.SendToLearnersAndStaffAsync(SelectedSchool, SelectedTemplate),
+            _ => null
+        };
     }
 
     private async Task SendCommunicationForLearner(Learner learner)
@@ -276,6 +295,11 @@
     private async Task OnTemplateSelected(EmailTemplate? template)
     {
         SelectedTemplate = template;
+        // Optionally, auto-preview when a template is selected.
+        if (SelectedTemplate != null)
+        {
+            await PreviewTemplate();
+        }
         await InvokeAsync(StateHasChanged);
     }
 
@@ -283,5 +307,36 @@
     {
         SelectedSchoolAudienceId = audienceId;
         await InvokeAsync(StateHasChanged);
+    }
+
+    // New method to preview the selected template.
+    private async Task PreviewTemplate()
+    {
+        if (SelectedTemplate == null)
+            return;
+
+        // For demonstration, if the template expects a ProgressReportModel,
+        // create a sample instance with custom JSON values.
+        if (SelectedTemplate.ModelType == typeof(ProgressReportModel).FullName)
+        {
+            var previewModel = new ProgressReportModel
+            {
+                ParentName = "Doe",
+                ChildName = "Jane Doe",
+                Results = new List<Result>
+{
+new Result { Score = 95, Learner = new Learner { Surname = "Roos" } },
+new Result { Score = 87, Learner = new Learner { Surname = "Smith" } }
+}
+            };
+
+            PreviewHtml = await RendererService.RenderTemplateAsync(
+            "preview-" + SelectedTemplate.Id, SelectedTemplate.Content, previewModel);
+        }
+        else
+        {
+            // For other model types, you can create default test data or handle accordingly.
+            PreviewHtml = "No preview available for this model type.";
+        }
     }
 }

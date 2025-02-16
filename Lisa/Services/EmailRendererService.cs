@@ -5,12 +5,14 @@ namespace Lisa.Services
     public class EmailRendererService
     {
         private readonly RazorLightEngine _engine;
+        private readonly ILogger<EmailRendererService> _logger;
 
-        public EmailRendererService()
+        public EmailRendererService(ILogger<EmailRendererService> logger)
         {
             _engine = new RazorLightEngineBuilder()
                 .UseMemoryCachingProvider()
                 .Build();
+            _logger = logger;
         }
 
         /// <summary>
@@ -23,7 +25,16 @@ namespace Lisa.Services
         /// <returns>Rendered HTML as a string.</returns>
         public async Task<string> RenderTemplateAsync<T>(string templateKey, string templateContent, T model)
         {
-            return await _engine.CompileRenderStringAsync(templateKey, templateContent, model);
+            try
+            {
+                return await _engine.CompileRenderStringAsync(templateKey, templateContent, model);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to render template {templateKey}.", templateKey);
+                return string.Empty;
+            }
         }
     }
 }

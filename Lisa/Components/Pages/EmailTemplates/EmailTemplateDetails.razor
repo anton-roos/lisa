@@ -1,4 +1,5 @@
 @page "/email-template-details/{TemplateId:guid}"
+@using Lisa.Models.EmailModels
 @using Lisa.Models.Entities
 @inject Lisa.Services.EmailTemplateService TemplateService
 @inject Lisa.Services.EmailRendererService RendererService
@@ -27,12 +28,31 @@ else
 
     @if (testValues.Any())
     {
-        @foreach (var kvp in testValues)
+        @foreach (var field in testValues)
         {
             <div class="mb-3">
-                <label>@kvp.Key:</label>
-                <input type="text" value="@testValues[kvp.Key]" @onchange="(e) => testValues[kvp.Key] = e.Value?.ToString()"
-                    class="form-control" />
+                <label>@field.Key:</label>
+                @if (testFieldTypes.TryGetValue(field.Key, out var fieldType))
+                {
+                    if (fieldType == typeof(string))
+                    {
+                        <!-- Simple text input for string -->
+                        <input type="text" value="@testValues[field.Key]" @onchange="(e) => testValues[field.Key] = e.Value?.ToString()"
+                            class="form-control" />
+                    }
+                    else if (fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(List<>))
+                    {
+                        <!-- Textarea for JSON editing of a list -->
+                        <textarea class="form-control"
+                            @onchange="(e) => testValues[field.Key] = e.Value?.ToString()">@testValues[field.Key]</textarea>
+                    }
+                    else
+                    {
+                        <!-- Fallback to text input -->
+                        <input type="text" value="@testValues[field.Key]" @onchange="(e) => testValues[field.Key] = e.Value?.ToString()"
+                            class="form-control" />
+                    }
+                }
             </div>
         }
     }
@@ -60,27 +80,60 @@ else
     private EmailTemplate? template;
     private string renderedOutput = string.Empty;
 
-    // A dictionary to store test input values keyed by property name.
+    // Dictionary to store test input values (property name => value)
     private Dictionary<string, string> testValues = new();
+    // Dictionary to store property types so we can choose the right UI element.
+    private Dictionary<string, Type> testFieldTypes = new();
 
     protected override async Task OnInitializedAsync()
     {
         template = await TemplateService.GetTemplateByIdAsync(TemplateId);
         if (template != null && !string.IsNullOrWhiteSpace(template.ModelType))
         {
-            // Get the model type from the stored ModelType string.
             var modelType = Type.GetType(template.ModelType);
             if (modelType != null)
             {
-                // For each public property, add an entry to the dictionary.
+                // Create a dummy instance of the model.
+                var dummyInstance = Activator.CreateInstance(modelType);
                 foreach (var prop in modelType.GetProperties(System.Reflection.BindingFlags.Public |
                 System.Reflection.BindingFlags.Instance))
                 {
-                    // For simplicity, only handle properties of type string here.
-                    // You could add support for other types (with conversion) as needed.
+                    testFieldTypes[prop.Name] = prop.PropertyType;
                     if (prop.PropertyType == typeof(string))
                     {
+                        // Initialize as empty string.
                         testValues[prop.Name] = string.Empty;
+                    }
+                    else if (prop.PropertyType.IsGenericType && prop.PropertyType.GetGenericTypeDefinition() == typeof(List<>))
+                    {
+                        // For a list property, check if we want custom JSON.
+                        if (modelType == typeof(ProgressReportModel) && prop.Name == "Results")
+                        {
+                            // Set your custom JSON here for ProgressReportModel's Results property.
+                            testValues[prop.Name] = @"[
+                                    {
+                                    ""Score"": 95,
+                                    ""Learner"": { ""Surname"": ""Roos"" }
+                                    },
+                                    {
+                                    ""Score"": 87,
+                                    ""Learner"": { ""Surname"": ""Doe"" }
+                                    }
+                                    ]";
+                        }
+                        else
+                        {
+                            // Otherwise, serialize the current value or default to an empty array.
+                            var listValue = prop.GetValue(dummyInstance);
+                            testValues[prop.Name] = listValue != null
+                            ? System.Text.Json.JsonSerializer.Serialize(listValue)
+                            : "[]";
+                        }
+                    }
+                    else
+                    {
+                        // For other types, use ToString (or customize as needed)
+                        testValues[prop.Name] = prop.GetValue(dummyInstance)?.ToString() ?? string.Empty;
                     }
                 }
             }
@@ -94,11 +147,10 @@ else
             var modelType = Type.GetType(template.ModelType);
             if (modelType != null)
             {
-                // Create an instance of the model type.
+                // Create an instance of the model.
                 var modelInstance = Activator.CreateInstance(modelType);
                 if (modelInstance != null)
                 {
-                    // For each property, set its value from the testValues dictionary.
                     foreach (var prop in modelType.GetProperties(System.Reflection.BindingFlags.Public |
                     System.Reflection.BindingFlags.Instance))
                     {
@@ -108,13 +160,28 @@ else
                             {
                                 prop.SetValue(modelInstance, value);
                             }
-                            // Additional type conversions can be added here.
+                            else if (prop.PropertyType.IsGenericType && prop.PropertyType.GetGenericTypeDefinition() == typeof(List<>))
+                            {
+                                // Attempt to deserialize JSON string into the appropriate list.
+                                try
+                                {
+                                    var deserialized = System.Text.Json.JsonSerializer.Deserialize(value, prop.PropertyType);
+                                    prop.SetValue(modelInstance, deserialized);
+                                }
+                                catch (Exception ex)
+                                {
+                                    // Handle JSON errors if needed.
+                                    Console.WriteLine($"Error deserializing property {prop.Name}: {ex.Message}");
+                                }
+                            }
+                            else
+                            {
+                                // You can add support for additional types as needed.
+                            }
                         }
                     }
-
                     // Render the template using the instance populated with test values.
-                    renderedOutput = await RendererService.RenderTemplateAsync(
-                    "template-" + template.Id, template.Content, modelInstance);
+                    renderedOutput = await RendererService.RenderTemplateAsync("template-" + template.Id, template.Content, modelInstance);
                 }
             }
         }

@@ -1,16 +1,6 @@
 @using Lisa.Models.Entities
 @inherits ComponentBase
 
-<div class="mb-3">
-    <label for="subjectSelect">Select Subject</label>
-    <InputSelect id="subjectSelect" class="form-select" @bind-Value="SelectedSubjectId" @onchange="HandleSubjectChange">
-        <option value="@string.Empty">-- Select Subject --</option>
-        @foreach (var subject in Subjects)
-        {
-            <option value="@subject.Id">@subject.Name</option>
-        }
-    </InputSelect>
-</div>
 
 @code {
     /// <summary>

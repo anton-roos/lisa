@@ -1,16 +1,5 @@
 @inherits ComponentBase
 
-<div class="mb-3">
-    <label for="audienceSelect">Select Audience</label>
-    <InputSelect id="audienceSelect" class="form-select" TValue="string"
-        ValueChanged="@(async (id) => await AudienceChanged(id))" ValueExpression="(() => SelectedAudienceId)">
-        <option value="@string.Empty">-- Select Audience --</option>
-        @foreach (var audience in _audienceOptions)
-        {
-            <option value="@audience.Key">@audience.Value</option>
-        }
-    </InputSelect>
-</div>
 
 @code {
     /// <summary>
@@ -40,9 +29,5 @@
     /// <summary>
     /// Called when the user selects a new audience.
     /// </summary>
-    private async Task AudienceChanged(string? audienceId)
-    {
-        SelectedAudienceId = audienceId;
-        await OnAudienceSelected.InvokeAsync(SelectedAudienceId);
-    }
+    
 }

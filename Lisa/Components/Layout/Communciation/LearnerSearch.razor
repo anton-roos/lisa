@@ -2,49 +2,7 @@
 @inherits ComponentBase
 @inject ILogger<LearnerSearch> Logger
 
-<div class="mb-3">
-    <label for="learnerSearch">Search by Name:</label>
-    <input id="learnerSearch" type="text" class="form-control" placeholder="Enter learner name..." @bind="SearchTerm"
-        @bind:event="oninput" />
-</div>
 
-@if (IsLoading)
-{
-    <div class="text-center">
-        <i class="bi bi-hourglass-split text-primary"></i> Loading...
-    </div>
-}
-else if (!Learners.Any())
-{
-    <div class="text-center text-muted">No learners found.</div>
-}
-else
-{
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Grade</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var learner in Learners)
-            {
-                <tr>
-                    <td>@learner.Surname @learner.Name</td>
-                    <td>@learner.RegisterClass?.SchoolGrade?.SystemGrade.Name</td>
-                    <td>
-                        <button class="btn btn-primary btn-sm" @onclick="() => SendCommunication(learner)"
-                            disabled="@IsSending">
-                            <i class="bi bi-envelope-fill"></i> Send Communication
-                        </button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
 
 @code {
     /// <summary>
@@ -83,8 +41,7 @@ else
     [Parameter]
     public EventCallback<Learner> OnSend { get; set; }
 
-    private bool IsLoading { get; set; } = false;
-    private bool IsSending { get; set; } = false;
+
 
     /// <summary>
     /// Triggers the search immediately when the user types.

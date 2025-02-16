@@ -13,7 +13,7 @@
 
 @inherits EventAwareComponentBase
 
-<PageTitle>Care Groups</PageTitle>
+<PageTitle>Send Communication</PageTitle>
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
     <Authorized>
         @if (SelectedSchool == null)
@@ -30,23 +30,92 @@
             @switch (SelectedTarget)
             {
                 case CommunicationTarget.School:
-                    <SchoolAudienceSelector OnAudienceSelected="OnSchoolAudienceSelected"
-                        SelectedAudience="SelectedSchoolAudienceId" />
+                    <div class="mb-3">
+                        <label for="audienceSelect">Select Audience</label>
+                        <InputSelect id="audienceSelect" class="form-select" TValue="string"
+                            ValueChanged="@(async (id) => await AudienceChanged(id))" ValueExpression="(() => SelectedAudienceId)">
+                            <option value="@string.Empty">-- Select Audience --</option>
+                            @foreach (var audience in _audiences)
+                            {
+                                <option value="@audience.Key">@audience.Value</option>
+                            }
+                        </InputSelect>
+                    </div>
                     break;
 
                 case CommunicationTarget.SchoolGrade:
-                    <GradeSelection SchoolGrades="_schoolGrades" SelectedGradeId="@SelectedGradeId"
-                        OnGradeSelected="OnGradeSelected" />
+                    <div class="mb-3">
+                        <label for="gradeSelect">Select Grade</label>
+                        <InputSelect id="gradeSelect" class="form-select" @bind-Value="SelectedGradeId"
+                            @onchange="HandleGradeChange">
+                            <option value="@string.Empty">-- Select Grade --</option>
+                            @foreach (var grade in _schoolGrades)
+                            {
+                                <option value="@grade.Id">@grade.SystemGrade.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
                     break;
 
                 case CommunicationTarget.Subject:
-                    <SubjectSelection Subjects="_subjects" SelectedSubjectId="@SelectedSubjectId"
-                        OnSubjectSelected="OnSubjectSelected" />
+                    <div class="mb-3">
+                        <label for="subjectSelect">Select Subject</label>
+                        <InputSelect id="subjectSelect" class="form-select" @bind-Value="SelectedSubjectId"
+                            @onchange="@(async (e) => OnSubjectSelected((int)e.Value))">
+                            <option value="@string.Empty">-- Select Subject --</option>
+                            @foreach (var subject in _subjects)
+                            {
+                                <option value="@subject.Id">@subject.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+
                     break;
 
                 case CommunicationTarget.Learner:
-                    <LearnerSearch SearchTerm="@SearchTerm" OnSearchTermChanged="OnSearchTermChanged" Learners="FilteredLearners"
-                        OnSend="SendCommunicationForLearner" />
+                    <div class="mb-3">
+                        <label for="learnerSearch">Search by Name:</label>
+                        <input id="learnerSearch" type="text" class="form-control" placeholder="Enter learner name..."
+                            @bind="SearchTerm" @bind:event="oninput" />
+                    </div>
+
+                    @if (IsLoading)
+                    {
+                        <div class="text-center">
+                            <i class="bi bi-hourglass-split text-primary"></i> Loading...
+                        </div>
+                    }
+                    else if (!Learners.Any())
+                    {
+                        <div class="text-center text-muted">No learners found.</div>
+                    }
+                    else
+                    {
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Grade</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var learner in Learners)
+                                {
+                                    <tr>
+                                        <td>@learner.Surname @learner.Name</td>
+                                        <td>@learner.RegisterClass?.SchoolGrade?.SystemGrade.Name</td>
+                                        <td>
+                                            <button class="btn btn-primary btn-sm" @onclick="() => SendCommunication(learner)"
+                                                disabled="@IsSending">
+                                                <i class="bi bi-envelope-fill"></i> Send Communication
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
                     break;
             }
 
@@ -110,6 +179,8 @@
     private bool IsSending { get; set; }
     private string? StatusMessage { get; set; }
     private string PreviewHtml { get; set; } = string.Empty;
+    private bool IsLoading { get; set; } = false;
+    public IEnumerable<Learner> Learners { get; set; } = Enumerable.Empty<Learner>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -338,5 +409,69 @@ new Result { Score = 87, Learner = new Learner { Surname = "Smith" } }
             // For other model types, you can create default test data or handle accordingly.
             PreviewHtml = "No preview available for this model type.";
         }
+    }
+
+
+    private async Task SendCommunication()
+    {
+        if (SelectedTemplate == null || SelectedSchool == null)
+        {
+            StatusMessage = "Error: Please select a template and school!";
+            return;
+        }
+
+        var request = new CommunicationRequest
+        {
+            Target = SelectedTarget,
+            Audience = SelectedSchoolAudienceId,
+            GradeId = SelectedGradeId,
+            SubjectId = SelectedSubjectId,
+            TemplateId = SelectedTemplate.Id,
+            SchoolId = SelectedSchool.Id
+        };
+
+        IsSending = true;
+        StatusMessage = "Sending communication...";
+
+        try
+        {
+            var result = await CommunicationService.SendCommunicationAsync(request);
+            if (result is { Id: not null })
+            {
+                StatusMessage = "Communication sent successfully!";
+                NavigateToCampaign(result.Id.Value);
+            }
+            else
+            {
+                StatusMessage = "Error: No recipients found!";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsSending = false;
+        }
+    }
+
+    private async Task AudienceChanged(string? audienceId)
+    {
+        SelectedAudienceId = audienceId;
+        await OnAudienceSelected.InvokeAsync(SelectedAudienceId);
+    }
+
+    private async Task HandleGradeChange(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var gradeId))
+        {
+            SelectedGradeId = gradeId;
+        }
+        else
+        {
+            SelectedGradeId = null;
+        }
+        await OnGradeSelected.InvokeAsync(SelectedGradeId);
     }
 }

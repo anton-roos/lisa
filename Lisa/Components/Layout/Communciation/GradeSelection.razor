@@ -1,16 +1,7 @@
 @using Lisa.Models.Entities
 @inherits ComponentBase
 
-<div class="mb-3">
-    <label for="gradeSelect">Select Grade</label>
-    <InputSelect id="gradeSelect" class="form-select" @bind-Value="SelectedGradeId" @onchange="HandleGradeChange">
-        <option value="@string.Empty">-- Select Grade --</option>
-        @foreach (var grade in SchoolGrades)
-        {
-            <option value="@grade.Id">@grade.SystemGrade.Name</option>
-        }
-    </InputSelect>
-</div>
+
 
 @code {
     /// <summary>
@@ -34,16 +25,5 @@
     /// <summary>
     /// Handles the change event for the grade selection and notifies the parent component.
     /// </summary>
-    private async Task HandleGradeChange(ChangeEventArgs e)
-    {
-        if (Guid.TryParse(e.Value?.ToString(), out var gradeId))
-        {
-            SelectedGradeId = gradeId;
-        }
-        else
-        {
-            SelectedGradeId = null;
-        }
-        await OnGradeSelected.InvokeAsync(SelectedGradeId);
-    }
+    
 }

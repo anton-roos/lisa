@@ -7,7 +7,7 @@
 @inject SchoolGradeService SchoolGradeService
 @inject SubjectService SubjectService
 @inject LearnerService LearnerService
-@inject CommunicationService CommunicationService
+@inject EmailCampaignService EmailCampaignService
 @inject EmailRendererService RendererService
 @inject NavigationManager NavigationManager
 
@@ -33,7 +33,6 @@
                     <div class="mb-3">
                         <label for="audienceSelect">Select Audience</label>
                         <InputSelect id="audienceSelect" class="form-select" TValue="Audience" @bind-Value="SelectedAudience">
-                            <option value="">-- Select Audience --</option>
                             @foreach (Audience audience in Enum.GetValues(typeof(Audience)))
                             {
                                 <option value="@audience">@audience</option>
@@ -102,7 +101,8 @@
                                         <td>@learner.Surname @learner.Name</td>
                                         <td>@learner.RegisterClass?.SchoolGrade?.SystemGrade.Name</td>
                                         <td>
-                                            <button class="btn btn-primary btn-sm" @onclick="() => SendCommunication()"
+                                            <button class="btn btn-primary btn-sm"
+                                                @onclick="async () => { SelectedLearner = learner; await SendCommunication(); }"
                                                 disabled="@IsSending">
                                                 <i class="bi bi-envelope-fill"></i> Send Communication
                                             </button>
@@ -160,7 +160,6 @@
 </AuthorizeView>
 
 @code {
-    // Basic properties
     private CommunicationTarget SelectedTarget { get; set; } = CommunicationTarget.School;
     private string? SearchTerm { get; set; }
     private List<Learner> _learners = new();
@@ -179,14 +178,6 @@
     private bool IsLoading { get; set; } = false;
     public IEnumerable<Learner> Learners { get; set; } = Enumerable.Empty<Learner>();
     public Learner? SelectedLearner { get; set; }
-
-    // Audiences dictionary for School communication
-    private Dictionary<string, string> _audiences = new()
-{
-{ "Parents", "Parents" },
-{ "Staff", "Staff" },
-{ "LearnersAndStaff", "Learners and Staff" }
-};
 
     protected override async Task OnInitializedAsync()
     {
@@ -267,7 +258,7 @@
             SubjectId = SelectedSubjectId,
             TemplateId = SelectedTemplate.Id,
             SchoolId = SelectedSchool.Id,
-            LearnerId = SelectedLearner?.Id
+            LearnerId = SelectedLearner?.Id,
         };
 
         IsSending = true;
@@ -275,7 +266,7 @@
 
         try
         {
-            var result = await CommunicationService.SendCommunicationAsync(request);
+            var result = await EmailCampaignService.CreateAsync(request);
             if (result is { Id: not null })
             {
                 StatusMessage = "Communication sent successfully!";

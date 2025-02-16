@@ -157,10 +157,6 @@ namespace Lisa.Migrations
                         .HasMaxLength(8912)
                         .HasColumnType("character varying(8912)");
 
-                    b.Property<string>("ContentText")
-                        .HasMaxLength(8912)
-                        .HasColumnType("character varying(8912)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 

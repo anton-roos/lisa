@@ -141,7 +141,6 @@ builder.Services.AddScoped<BugReportService>();
 builder.Services.AddScoped<VersionService>();
 builder.Services.AddSingleton<IEventBus, EventBus>();
 builder.Services.AddScoped<IEventLogRepository, EventLogRepository>();
-builder.Services.AddScoped<CommunicationService>();
 builder.Services.AddSingleton<ILoginStore, InMemoryLoginStore>();
 builder.Services.AddSingleton<HangfireAuthorizationFilter>();
 builder.Services.AddScoped<SystemGradeService>();

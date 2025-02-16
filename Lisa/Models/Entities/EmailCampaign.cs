@@ -12,8 +12,6 @@ public class EmailCampaign
     public string? SenderEmail { get; set; }
     [MaxLength(8912)]
     public string? ContentHtml { get; set; }
-    [MaxLength(8912)]
-    public string? ContentText { get; set; }
     public EmailCampaignStatus Status { get; set; }
     public DateTime? ScheduledAt { get; set; }
     public DateTime? CompletedAt { get; set; }

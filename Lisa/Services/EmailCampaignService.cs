@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using Hangfire;
 using Lisa.Data;
+using Lisa.Enums;
+using Lisa.Models.EmailModels;
 using Lisa.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +12,11 @@ public class EmailCampaignService(
     IDbContextFactory<LisaDbContext> contextFactory,
     IUiEventService uiEventService,
     ILogger<EmailCampaignService> logger,
-    EmailService emailService
+    EmailService emailService,
+    LearnerService learnerService,
+    UserService userService,
+    EmailRendererService emailRendererService,
+    EmailTemplateService emailTemplateService
 )
 {
     private readonly IDbContextFactory<LisaDbContext> _contextFactory = contextFactory;
@@ -18,6 +24,10 @@ public class EmailCampaignService(
     private readonly ILogger<EmailCampaignService> _logger = logger;
     private static readonly ConcurrentDictionary<Guid, CancellationTokenSource> CampaignTokens = new();
     private readonly EmailService _emailService = emailService;
+    private readonly LearnerService _learnerService = learnerService;
+    private readonly UserService _userService = userService;
+    private readonly EmailRendererService _emailRendererService = emailRendererService;
+    private readonly EmailTemplateService _emailTemplateService = emailTemplateService;
 
     public async Task<List<EmailCampaign>> GetBySchoolIdAsync(Guid schoolId)
     {
@@ -219,21 +229,256 @@ public class EmailCampaignService(
     /// <summary>
     /// Create a new EmailCampaign.
     /// </summary>
-    public async Task<EmailCampaign> CreateAsync(EmailCampaign campaign)
+    public async Task<EmailCampaign> CreateAsync(CommunicationRequest request)
     {
-        if (campaign.Id == null || campaign.Id == Guid.Empty)
+        if (request != null)
         {
-            campaign.Id = Guid.NewGuid();
+            var recipientEmails = await GetRecipientEmailsAsync(request);
+            var template = await _emailTemplateService.GetTemplateByIdAsync(request.TemplateId);
+            request.EmailTemplate = template;
+            var html = await GenerateCampaignHtml(request);
+
+            if (recipientEmails == null || recipientEmails.Count == 0)
+                throw new ArgumentException("Recipient emails list cannot be empty.", nameof(recipientEmails));
+
+            var utcNow = DateTime.UtcNow;
+
+            // Determine a default subject based on the communication target if none is provided.
+            var subjectLine = string.IsNullOrWhiteSpace(request.SubjectLine)
+                ? request.Target switch
+                {
+                    CommunicationTarget.Learner => "Personalized Update for Our Learner",
+                    CommunicationTarget.School => "Important Announcement to the School Community",
+                    CommunicationTarget.SchoolGrade => "Grade-Specific Update",
+                    CommunicationTarget.Subject => "Subject Update from Your School",
+                    _ => "Important Update from Your School"
+                }
+                : request.SubjectLine;
+
+            var emailCampaign = new EmailCampaign
+            {
+                Id = Guid.NewGuid(),
+                Name = GenerateCampaignName(request),
+                Description = $"Automated notification for {request.Audience} via {request.Target}",
+                SubjectLine = subjectLine,
+                SenderName = string.IsNullOrWhiteSpace(request.SenderName) ? "School Admin" : request.SenderName,
+                SenderEmail = string.IsNullOrWhiteSpace(request.SenderEmail) ? "admin@school.com" : request.SenderEmail, // Consider sourcing this from configuration
+                ContentHtml = html,
+                Status = EmailCampaignStatus.Draft,
+                ScheduledAt = utcNow.AddMinutes(1),
+                TrackOpens = true,
+                TrackClicks = true,
+                StatsSentCount = 0,
+                StatsOpenCount = 0,
+                StatsClickCount = 0,
+                CreatedAt = utcNow,
+                UpdatedAt = utcNow,
+                EmailRecipients = [.. recipientEmails.Select(email => new EmailRecipient
+                {
+                    Id = Guid.NewGuid(),
+                    EmailAddress = email,
+                    Status = EmailRecipientStatus.Pending,
+                    CreatedAt = utcNow,
+                    UpdatedAt = utcNow
+                })],
+                SchoolId = request.SchoolId
+            };
+
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            context.EmailCampaigns.Add(emailCampaign);
+            await context.SaveChangesAsync();
+
+            return emailCampaign;
         }
 
-        campaign.CreatedAt = DateTime.UtcNow;
-        campaign.UpdatedAt = DateTime.UtcNow;
+        throw new ArgumentNullException(nameof(request));
+    }
 
-        using var context = await _contextFactory.CreateDbContextAsync();
+    /// <summary>
+    /// Gathers recipient emails based on the CommunicationRequest.
+    /// </summary>
+    private async Task<List<string>> GetRecipientEmailsAsync(CommunicationRequest request)
+    {
+        switch (request.Audience)
+        {
+            case Audience.Learners:
+                return await GetLearnerEmailsAsync(request.SchoolId);
 
-        context.EmailCampaigns.Add(campaign);
-        await context.SaveChangesAsync();
+            case Audience.Staff:
+                return await GetStaffEmailsAsync(request.SchoolId);
 
-        return campaign;
+            case Audience.Parents:
+                return await GetParentEmailsAsync(request.SchoolId);
+
+            case Audience.LearnersAndStaff:
+                var learners = await GetLearnerEmailsAsync(request.SchoolId);
+                var staff = await GetStaffEmailsAsync(request.SchoolId);
+                return learners.Concat(staff).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+            case Audience.Grade:
+                if (request.GradeId.HasValue)
+                {
+                    return await GetGradeEmailsAsync(request.GradeId.Value);
+                }
+                else
+                {
+                    _logger.LogWarning("Grade ID is null when retrieving grade emails.");
+                    return [];
+                }
+
+            case Audience.Subject:
+                return await GetSubjectEmailsAsync(request.SubjectId);
+
+            default:
+                _logger.LogWarning("Unknown audience type: {Audience}", request.Audience);
+                return [];
+        }
+    }
+
+    /// <summary>
+    /// Generates a campaign name based on the audience and current timestamp.
+    /// </summary>
+    private static string GenerateCampaignName(CommunicationRequest request)
+    {
+        return $"{request.Target} - {request.Audience} Communication - {DateTime.UtcNow:yyyyMMddHHmmss}";
+    }
+
+    /// <summary>
+    /// Generates the HTML content for the campaign email based on the template type.
+    /// If the template is of type "ProgressReportEmail", it renders a ProgressReportModel using the EmailRendererService.
+    /// Otherwise, it falls back to using the provided ContentHtml.
+    /// </summary>
+    private async Task<string> GenerateCampaignHtml(CommunicationRequest request)
+    {
+        // Check if the request indicates that the email template is a ProgressReportEmail.
+        // (Assuming request.TemplateModelType or similar is set to "ProgressReportEmail")
+        if (request.EmailTemplate.Name?.Equals("Progress Report", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            // Create a default ProgressReportModel. In a real scenario you might pull these values from the request or another data source.
+            var progressReportModel = new ProgressReportModel
+            {
+                ParentName = "Default Parent",
+                ChildName = "Default Child",
+                Results = new List<Result>
+            {
+                new Result { Score = 95, Learner = new Learner { Surname = "Smith" } },
+                new Result { Score = 87, Learner = new Learner { Surname = "Doe" } }
+            }
+            };
+
+            var template = await _emailTemplateService.GetTemplateByIdAsync(request.TemplateId);
+
+            // Use the EmailRendererService to render the HTML.
+            // request.TemplateKey and request.TemplateContent should be provided in your CommunicationRequest.
+            var renderedHtml = await _emailRendererService.RenderTemplateAsync(
+                "template-" + template.Id,         // a unique key (could be the template ID)
+                template.Content,     // the Razor template content
+                progressReportModel);
+
+            // Fallback in case rendering fails.
+            return string.IsNullOrWhiteSpace(renderedHtml) ? "<p>No content available</p>" : renderedHtml;
+        }
+        else
+        {
+            // For other template types or if no template is provided, return the provided content or a default message.
+            return "<p>No content available</p>";
+        }
+    }
+
+    /// <summary>
+    /// Retrieves parent emails for learners in a specific school.
+    /// </summary>
+    private async Task<List<string>> GetParentEmailsAsync(Guid? schoolId)
+    {
+        if (!schoolId.HasValue)
+        {
+            _logger.LogWarning("School ID is null when retrieving parent emails.");
+            return [];
+        }
+
+        var learners = await _learnerService.GetLearnersBySchoolWithParentsAsync(schoolId.Value);
+        var emails = learners
+            .Where(l => l.Parents != null && l.Parents.Any())
+            .SelectMany(l => l.Parents ?? Enumerable.Empty<Parent>())
+            .SelectMany(p => new[] { p.PrimaryEmail, p.SecondaryEmail })
+            .Where(email => !string.IsNullOrWhiteSpace(email))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return emails.Where(email => email != null).ToList()!;
+    }
+
+    /// <summary>
+    /// Retrieves learner emails for a specific grade.
+    /// </summary>
+    private async Task<List<string>> GetGradeEmailsAsync(Guid gradeId)
+    {
+        var learners = await _learnerService.GetLearnersByGradeAsync(gradeId);
+        var emails = learners
+            .Select(l => l.Email)
+            .Where(email => !string.IsNullOrWhiteSpace(email))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return emails.Where(email => email != null).ToList()!;
+    }
+
+    /// <summary>
+    /// Retrieves learner emails for a specific subject.
+    /// </summary>
+    private async Task<List<string>> GetSubjectEmailsAsync(int subjectId)
+    {
+        var learners = await _learnerService.GetBySubjectIdAsync(subjectId);
+        var emails = learners
+            .Select(l => l.Email)
+            .Where(email => !string.IsNullOrWhiteSpace(email))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return emails.Where(email => email != null).ToList()!;
+    }
+
+    /// <summary>
+    /// Retrieves learner emails for a specific school.
+    /// </summary>
+    private async Task<List<string>> GetLearnerEmailsAsync(Guid? schoolId)
+    {
+        if (!schoolId.HasValue)
+        {
+            _logger.LogWarning("School ID is null when retrieving learner emails.");
+            return new List<string>();
+        }
+
+        var learners = await _learnerService.GetLearnersBySchoolAsync(schoolId.Value);
+        var emails = learners
+            .Select(l => l.Email)
+            .Where(email => !string.IsNullOrWhiteSpace(email))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return emails.Where(email => email != null).ToList()!;
+    }
+
+    /// <summary>
+    /// Retrieves staff emails for a specific school.
+    /// </summary>
+    private async Task<List<string>> GetStaffEmailsAsync(Guid? schoolId)
+    {
+        if (!schoolId.HasValue)
+        {
+            _logger.LogWarning("School ID is null when retrieving staff emails.");
+            return new List<string>();
+        }
+
+        var roles = new[] { Roles.Administrator, Roles.Principal, Roles.Teacher, Roles.SchoolManagement };
+        var staff = await _userService.GetAllByRoleAndSchoolAsync(roles, schoolId.Value);
+        var emails = staff
+            .Select(s => s.Email)
+            .Where(email => !string.IsNullOrWhiteSpace(email))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return emails.Where(email => email != null).ToList()!;
     }
 }

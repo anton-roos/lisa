@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Lisa.Enums;
+using Lisa.Models.Entities;
 
 namespace Lisa.Models.EmailModels;
 
@@ -17,8 +18,8 @@ public class CommunicationRequest
     public string? SenderName { get; set; }
     [EmailAddress]
     public string? SenderEmail { get; set; }
-    public string? ContentHtml { get; set; }
-    public string? ContentText { get; set; }
-    public string? Description { get; set; }
     public Guid? LearnerId { get; set; }
+    public ProgressReportModel? ProgressReport { get; set; }
+    public string TemplateModelType { get; set; } = string.Empty;
+    public EmailTemplate? EmailTemplate { get; set; }
 }

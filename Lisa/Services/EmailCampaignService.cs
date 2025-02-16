@@ -16,7 +16,8 @@ public class EmailCampaignService(
     LearnerService learnerService,
     UserService userService,
     EmailRendererService emailRendererService,
-    EmailTemplateService emailTemplateService
+    EmailTemplateService emailTemplateService,
+    IEnumerable<ICampaignTemplateProcessor> templateProcessors
 )
 {
     private readonly IDbContextFactory<LisaDbContext> _contextFactory = contextFactory;
@@ -28,6 +29,7 @@ public class EmailCampaignService(
     private readonly UserService _userService = userService;
     private readonly EmailRendererService _emailRendererService = emailRendererService;
     private readonly EmailTemplateService _emailTemplateService = emailTemplateService;
+    private readonly IEnumerable<ICampaignTemplateProcessor> _templateProcessors = templateProcessors;
 
     public async Task<List<EmailCampaign>> GetBySchoolIdAsync(Guid schoolId)
     {
@@ -231,68 +233,74 @@ public class EmailCampaignService(
     /// </summary>
     public async Task<EmailCampaign> CreateAsync(CommunicationRequest request)
     {
-        if (request != null)
+        if (request == null)
+            throw new ArgumentNullException(nameof(request));
+
+        // Get the recipient emails and template.
+        var recipientEmails = await GetRecipientEmailsAsync(request);
+        var template = await _emailTemplateService.GetTemplateByIdAsync(request.TemplateId);
+        if (template == null)
+            throw new InvalidOperationException("Email template not found.");
+
+        request.EmailTemplate = template;
+
+        // Select the appropriate processor.
+        var processor = _templateProcessors.FirstOrDefault(p => p.CanProcess(template))
+                        ?? throw new InvalidOperationException("No processor found for the given template.");
+
+        // Generate the campaign HTML and process any additional actions.
+        var html = await processor.GenerateHtmlAsync(request);
+        await processor.ProcessAdditionalActionsAsync(request);
+
+        if (recipientEmails == null || !recipientEmails.Any())
+            throw new ArgumentException("Recipient emails list cannot be empty.", nameof(recipientEmails));
+
+        var utcNow = DateTime.UtcNow;
+        var subjectLine = string.IsNullOrWhiteSpace(request.SubjectLine)
+            ? request.Target switch
+            {
+                CommunicationTarget.Learner => "Personalized Update for Our Learner",
+                CommunicationTarget.School => "Important Announcement to the School Community",
+                CommunicationTarget.SchoolGrade => "Grade-Specific Update",
+                CommunicationTarget.Subject => "Subject Update from Your School",
+                _ => "Important Update from Your School"
+            }
+            : request.SubjectLine;
+
+        var emailCampaign = new EmailCampaign
         {
-            var recipientEmails = await GetRecipientEmailsAsync(request);
-            var template = await _emailTemplateService.GetTemplateByIdAsync(request.TemplateId);
-            request.EmailTemplate = template;
-            var html = await GenerateCampaignHtml(request);
-
-            if (recipientEmails == null || recipientEmails.Count == 0)
-                throw new ArgumentException("Recipient emails list cannot be empty.", nameof(recipientEmails));
-
-            var utcNow = DateTime.UtcNow;
-
-            // Determine a default subject based on the communication target if none is provided.
-            var subjectLine = string.IsNullOrWhiteSpace(request.SubjectLine)
-                ? request.Target switch
-                {
-                    CommunicationTarget.Learner => "Personalized Update for Our Learner",
-                    CommunicationTarget.School => "Important Announcement to the School Community",
-                    CommunicationTarget.SchoolGrade => "Grade-Specific Update",
-                    CommunicationTarget.Subject => "Subject Update from Your School",
-                    _ => "Important Update from Your School"
-                }
-                : request.SubjectLine;
-
-            var emailCampaign = new EmailCampaign
+            Id = Guid.NewGuid(),
+            Name = GenerateCampaignName(request),
+            Description = $"Automated notification for {request.Audience} via {request.Target}",
+            SubjectLine = subjectLine,
+            SenderName = string.IsNullOrWhiteSpace(request.SenderName) ? "School Admin" : request.SenderName,
+            SenderEmail = string.IsNullOrWhiteSpace(request.SenderEmail) ? "admin@school.com" : request.SenderEmail,
+            ContentHtml = html,
+            Status = EmailCampaignStatus.Draft,
+            ScheduledAt = utcNow.AddMinutes(1),
+            TrackOpens = true,
+            TrackClicks = true,
+            StatsSentCount = 0,
+            StatsOpenCount = 0,
+            StatsClickCount = 0,
+            CreatedAt = utcNow,
+            UpdatedAt = utcNow,
+            EmailRecipients = [.. recipientEmails.Select(email => new EmailRecipient
             {
                 Id = Guid.NewGuid(),
-                Name = GenerateCampaignName(request),
-                Description = $"Automated notification for {request.Audience} via {request.Target}",
-                SubjectLine = subjectLine,
-                SenderName = string.IsNullOrWhiteSpace(request.SenderName) ? "School Admin" : request.SenderName,
-                SenderEmail = string.IsNullOrWhiteSpace(request.SenderEmail) ? "admin@school.com" : request.SenderEmail, // Consider sourcing this from configuration
-                ContentHtml = html,
-                Status = EmailCampaignStatus.Draft,
-                ScheduledAt = utcNow.AddMinutes(1),
-                TrackOpens = true,
-                TrackClicks = true,
-                StatsSentCount = 0,
-                StatsOpenCount = 0,
-                StatsClickCount = 0,
+                EmailAddress = email,
+                Status = EmailRecipientStatus.Pending,
                 CreatedAt = utcNow,
-                UpdatedAt = utcNow,
-                EmailRecipients = [.. recipientEmails.Select(email => new EmailRecipient
-                {
-                    Id = Guid.NewGuid(),
-                    EmailAddress = email,
-                    Status = EmailRecipientStatus.Pending,
-                    CreatedAt = utcNow,
-                    UpdatedAt = utcNow
-                })],
-                SchoolId = request.SchoolId
-            };
+                UpdatedAt = utcNow
+            })],
+            SchoolId = request.SchoolId
+        };
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
+        context.EmailCampaigns.Add(emailCampaign);
+        await context.SaveChangesAsync();
 
-            context.EmailCampaigns.Add(emailCampaign);
-            await context.SaveChangesAsync();
-
-            return emailCampaign;
-        }
-
-        throw new ArgumentNullException(nameof(request));
+        return emailCampaign;
     }
 
     /// <summary>
@@ -358,7 +366,6 @@ public class EmailCampaignService(
             // Create a default ProgressReportModel. In a real scenario you might pull these values from the request or another data source.
             var progressReportModel = new ProgressReportModel
             {
-                ParentName = "Default Parent",
                 ChildName = "Default Child",
                 Results = new List<Result>
             {
@@ -480,5 +487,81 @@ public class EmailCampaignService(
             .ToList();
 
         return emails.Where(email => email != null).ToList()!;
+    }
+
+    /// <summary>
+    /// Sends a personalized progress report email to each parent of every learner.
+    /// Each email is rendered with a ProgressReportModel specific to the learner.
+    /// </summary>
+    /// <param name="schoolId">The school identifier.</param>
+    /// <param name="templateId">The template ID for the progress report email.</param>
+    /// <returns>A Task representing the asynchronous operation.</returns>
+    public async Task SendProgressReportsAsync(Guid schoolId, Guid templateId)
+    {
+        // Retrieve the progress report template.
+        var template = await _emailTemplateService.GetTemplateByIdAsync(templateId);
+        if (template == null)
+        {
+            _logger.LogError("Progress report template with ID {TemplateId} not found.", templateId);
+            return;
+        }
+
+        // Retrieve learners for the school.
+        var learners = await _learnerService.GetLearnersBySchoolAsync(schoolId);
+        if (learners == null || learners.Count == 0)
+        {
+            _logger.LogWarning("No learners found for school {SchoolId}.", schoolId);
+            return;
+        }
+
+        foreach (var learner in learners)
+        {
+            if (learner.Parents == null || learner.Parents.Count == 0)
+            {
+                _logger.LogWarning("Learner {LearnerId} has no associated parents.", learner.Id);
+                continue;
+            }
+
+            var progressReportModel = new ProgressReportModel
+            {
+                ChildName = $"{learner.Name} {learner.Surname}",
+                Results = new List<Result>
+                    {
+                        new Result { Score = 95, Learner = learner },
+                        new Result { Score = 87, Learner = learner }
+                    }
+            };
+
+            // Render the personalized HTML content.
+            var renderedHtml = await _emailRendererService.RenderTemplateAsync(
+                "template-" + template.Id,
+                template.Content,
+                progressReportModel);
+
+            // Determine the email subject.
+            var subject = string.IsNullOrWhiteSpace(template.Subject)
+                ? "Your Child's Progress Report"
+                : template.Subject;
+
+            // For each parent, send the personalized email.
+            foreach (var parent in learner.Parents)
+            {
+                if (string.IsNullOrWhiteSpace(parent.PrimaryEmail) && string.IsNullOrWhiteSpace(parent.SecondaryEmail))
+                {
+                    _logger.LogWarning("Parent for learner {LearnerId} does not have a valid email.", learner.Id);
+                    continue;
+                }
+
+                var recipientEmail = !string.IsNullOrWhiteSpace(parent.PrimaryEmail)
+                    ? parent.PrimaryEmail
+                    : parent.SecondaryEmail;
+
+                BackgroundJob.Enqueue(() =>
+                    SendEmailWithRetryAsync(recipientEmail, subject, renderedHtml, schoolId));
+
+                _logger.LogInformation("Scheduled progress report email for learner {LearnerId} to parent {ParentEmail}.",
+                    learner.Id, recipientEmail);
+            }
+        }
     }
 }

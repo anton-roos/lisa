@@ -293,7 +293,7 @@
         switch (ViewMode)
         {
             case "Subject":
-                _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, null, _subjectId, null))
+                _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, null, _subjectId, null, null))
                     .OrderBy(r => r!.AssessmentDate)
                     .ToList();
 
@@ -302,7 +302,7 @@
                     .ToDictionary(g => $"{g.Key}", g => g.ToList());
                 break;
             case "Grade":
-                _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, _gradeId, null, null))
+                _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, _gradeId, null, null, null))
                     .OrderBy(r => r?.AssessmentDate)
                     .ToList();
 
@@ -311,7 +311,7 @@
                     .ToDictionary(g => g.Key!, g => g.ToList());
                 break;
             case "Teacher":
-                _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, null, null, _teacherId))
+                _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, null, null, _teacherId, null))
                     .OrderBy(r => r!.AssessmentDate)
                     .ToList();
 

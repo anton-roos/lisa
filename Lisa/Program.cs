@@ -15,6 +15,7 @@ using Lisa.Events;
 using Hangfire.Dashboard;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Lisa.Models.EmailModels;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -149,6 +150,8 @@ builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<EmailCampaignService>();
 builder.Services.AddScoped<EmailTemplateService>();
 builder.Services.AddSingleton<EmailRendererService>();
+builder.Services.AddTransient<ICampaignTemplateProcessor, ProgressReportCampaignProcessor>();
+builder.Services.AddTransient<ICampaignTemplateProcessor, DefaultCampaignProcessor>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();

@@ -175,7 +175,9 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
     Guid schoolId,
     Guid? gradeId,
     int? subjectId,
-    Guid? teacherId)
+    Guid? teacherId,
+    Guid? learnerId
+    )
     {
         try
         {
@@ -210,6 +212,11 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             if (teacherId.HasValue)
             {
                 query = query.Where(rs => rs.TeacherId == teacherId.Value);
+            }
+
+            if (learnerId.HasValue)
+            {
+                query = query.Where(rs => rs.Results!.Any(r => r.LearnerId == learnerId));
             }
 
             return (await query.ToListAsync())!;

@@ -20,4 +20,5 @@ public class CommunicationRequest
     public string? ContentHtml { get; set; }
     public string? ContentText { get; set; }
     public string? Description { get; set; }
+    public Guid? LearnerId { get; set; }
 }

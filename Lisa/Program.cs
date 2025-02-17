@@ -152,6 +152,7 @@ builder.Services.AddScoped<EmailTemplateService>();
 builder.Services.AddSingleton<EmailRendererService>();
 builder.Services.AddTransient<ICampaignTemplateProcessor, ProgressReportCampaignProcessor>();
 builder.Services.AddTransient<ICampaignTemplateProcessor, DefaultCampaignProcessor>();
+builder.Services.AddScoped<ProgressFeedbackService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();

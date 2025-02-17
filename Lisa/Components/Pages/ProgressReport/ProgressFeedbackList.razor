@@ -1,0 +1,111 @@
+@page "/progress-feedback"
+@using Lisa.Models.EmailModels
+@using Lisa.Models.Entities
+@inject ProgressFeedbackService ProgressFeedbackService
+@inject SchoolService SchoolService
+@inject NavigationManager NavigationManager
+@inherits EventAwareComponentBase
+
+<PageTitle>Progress Feedback List</PageTitle>
+<h1>Progress Feedback List</h1>
+
+<AuthorizeView
+    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+    <Authorized>
+        @if (_selectedSchool != null)
+        {
+            if (_isLoading)
+            {
+                <p>Loading progress feedback...</p>
+            }
+            else if (_progressFeedbackList == null || !_progressFeedbackList.Any())
+            {
+                <p>No progress feedback available.</p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Child Name</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var feedback in _progressFeedbackList)
+                        {
+                            <tr>
+                                <td>@feedback.ChildName</td>
+                                <td>
+                                    <button class="btn btn-primary" @onclick="() => NavigateToDetails(feedback.LearnerId)">
+                                        View Details
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+        else
+        {
+            <div class="alert alert-info">
+                Please select a school to view learners.
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<ProgressFeedbackListItem>? _progressFeedbackList;
+    private School? _selectedSchool;
+    private bool _isLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Subscribe to school selection events.
+        SubscribeToEvent(UiEvents.SchoolSelected);
+
+        // Get the currently selected school.
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+
+        // If a school is already selected, load the feedback list.
+        if (_selectedSchool != null)
+        {
+            await LoadProgressFeedbackList();
+        }
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected)
+        {
+            _selectedSchool = payload as School;
+            if (_selectedSchool != null)
+            {
+                await LoadProgressFeedbackList();
+            }
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadProgressFeedbackList()
+    {
+        _isLoading = true;
+        await InvokeAsync(StateHasChanged);
+
+        _progressFeedbackList = await ProgressFeedbackService.GetProgressFeedbackListAsync(_selectedSchool.Id);
+
+        _isLoading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void NavigateToDetails(Guid learnerId)
+    {
+        NavigationManager.NavigateTo($"/progress-feedback-details/{learnerId}");
+    }
+}

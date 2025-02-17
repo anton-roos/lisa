@@ -1,0 +1,94 @@
+@page "/progress-feedback-details/{LearnerId:guid}"
+@using Lisa.Models.EmailModels
+@inject ProgressFeedbackService ProgressFeedbackService
+@inject NavigationManager NavigationManager
+
+@if (feedback == null)
+{
+    <div class="d-flex justify-content-center align-items-center" style="height: 100vh;">
+        <p class="text-muted">Loading...</p>
+    </div>
+}
+else
+{
+    <div class="container mt-4" style="max-width: 600px; margin: auto;">
+        <h1 class="text-center mb-4">Progress Feedback for <span class="text-primary">@feedback.LearnerName</span></h1>
+
+        @if (feedback.ResultsBySubject != null && feedback.ResultsBySubject.Any())
+        {
+            @foreach (var subjectGroup in feedback.ResultsBySubject)
+            {
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">@subjectGroup.Key</h4>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped text-center">
+                            <thead class="table-dark">
+                                <tr>
+                                    @for (int i = 0; i < 3; i++)
+                                    {
+                                        <th>Date</th>
+                                        <th>Mark</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    int totalResults = Math.Min(subjectGroup.Value.Count, 6);
+                                    int rows = (int)Math.Ceiling(totalResults / 3.0);
+                                }
+                                @for (int row = 0; row < rows; row++)
+                                {
+                                    <tr>
+                                        @for (int col = 0; col < 3; col++)
+                                        {
+                                            int index = row * 3 + col;
+                                            if (index < totalResults)
+                                            {
+                                                var result = subjectGroup.Value[index];
+                                                var markClass = result.Score.HasValue && result.Score.Value < 50 ? "text-danger fw-bold" : "text-success fw-bold";
+                                                <td>@result.UpdatedAt.ToString("dd/MM")</td>
+                                                <td class="@markClass">@(result.Score.HasValue ? result.Score.Value.ToString() + "%" : "N/A")</td>
+                                            }
+                                            else
+                                            {
+                                                <td>&nbsp;</td>
+                                                <td>&nbsp;</td>
+                                            }
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="alert alert-warning text-center">No results available for this student.</p>
+        }
+
+        <div class="text-center mt-4">
+            <button class="btn btn-secondary btn-lg" @onclick="GoBack">Back</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guid LearnerId { get; set; }
+
+    private ProgressFeedback? feedback;
+
+    protected override async Task OnInitializedAsync()
+    {
+        feedback = await ProgressFeedbackService.GetProgressFeedbackAsync(LearnerId);
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/progress-feedback");
+    }
+}

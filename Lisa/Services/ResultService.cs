@@ -229,4 +229,17 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             return [];
         }
     }
+
+    public async Task<List<Result?>> GetByLearnerIdAsync(Guid id)
+    {
+        using var context = await _dbContextFactory.CreateDbContextAsync();
+
+        var learner = await context.Learners
+            .AsNoTracking()
+            .Include(l => l.Results)
+            .ThenInclude(r => r.ResultSet)
+            .FirstOrDefaultAsync(l => l.Id == id);
+
+        return learner?.Results.ToList()!;
+    }
 }

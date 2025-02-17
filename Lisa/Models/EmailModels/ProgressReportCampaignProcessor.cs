@@ -23,13 +23,13 @@ public class ProgressReportCampaignProcessor : ICampaignTemplateProcessor
     public bool CanProcess(EmailTemplate template) =>
         template.Name?.Equals("Progress Report", StringComparison.OrdinalIgnoreCase) == true;
 
-    public async Task<string> GenerateHtmlAsync(CommunicationRequest request)
+    public async Task<string> GenerateHtmlAsync(CommunicationCommand command)
     {
-        var resultSets = await _resultService.GetResultsByFiltersAsync(request.SchoolId, null, null, null, request.LearnerId);
-        var progressReportModel = new ProgressReportModel
+        var resultSets = await _resultService.GetResultsByFiltersAsync(command.SchoolId, null, null, null, command.LearnerId);
+        var progressReportModel = new ProgressFeedback
         {
-            ChildName = "Default Child",
-            Results = []
+            LearnerName = "Default Child",
+            ResultsBySubject = []
         };
 
 
@@ -40,13 +40,13 @@ public class ProgressReportCampaignProcessor : ICampaignTemplateProcessor
 
         foreach (var resultSet in resultSets)
         {
-            progressReportModel.Results.AddRange(resultSet.Results);
+            //progressReportModel.ResultsBySubject.AddRange(resultSet.Results);
         }
         
         
         var renderedHtml = await _emailRendererService.RenderTemplateAsync(
-            $"template-{request.TemplateId}",
-            request.EmailTemplate.Content,
+            $"template-{command.TemplateId}",
+            command.EmailTemplate.Content,
             progressReportModel);
 
         return string.IsNullOrWhiteSpace(renderedHtml)
@@ -54,11 +54,11 @@ public class ProgressReportCampaignProcessor : ICampaignTemplateProcessor
             : renderedHtml;
     }
 
-    public Task ProcessAdditionalActionsAsync(CommunicationRequest request)
+    public Task ProcessAdditionalActionsAsync(CommunicationCommand command)
     {
         // Use IBackgroundJobClient to enqueue the job without directly depending on EmailCampaignService.
         _backgroundJobClient.Enqueue<EmailCampaignService>(service =>
-            service.SendProgressReportsAsync(request.SchoolId, request.TemplateId));
+            service.SendProgressReportsAsync(command.SchoolId, command.TemplateId));
 
         return Task.CompletedTask;
     }

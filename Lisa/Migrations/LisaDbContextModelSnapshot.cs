@@ -200,6 +200,9 @@ namespace Lisa.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<Guid>("TemplateId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("TrackClicks")
                         .HasColumnType("boolean");
 
@@ -210,6 +213,8 @@ namespace Lisa.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TemplateId");
 
                     b.ToTable("EmailCampaigns", (string)null);
                 });
@@ -1119,6 +1124,17 @@ namespace Lisa.Migrations
                         .IsRequired();
 
                     b.Navigation("SchoolGrade");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.EmailCampaign", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.EmailTemplate", "EmailTemplate")
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("EmailTemplate");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.EmailRecipient", b =>

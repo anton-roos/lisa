@@ -12,11 +12,11 @@ public interface ICampaignTemplateProcessor
     /// <summary>
     /// Generates the HTML content for the email campaign.
     /// </summary>
-    Task<string> GenerateHtmlAsync(CommunicationRequest request);
+    Task<string> GenerateHtmlAsync(CommunicationCommand command);
 
     /// <summary>
     /// Performs any additional actions required for the campaign.
     /// For example, sending progress reports immediately.
     /// </summary>
-    Task ProcessAdditionalActionsAsync(CommunicationRequest request);
+    Task ProcessAdditionalActionsAsync(CommunicationCommand command);
 }

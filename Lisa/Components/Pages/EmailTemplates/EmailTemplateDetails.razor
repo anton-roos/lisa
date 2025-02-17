@@ -107,9 +107,9 @@ else
                     else if (prop.PropertyType.IsGenericType && prop.PropertyType.GetGenericTypeDefinition() == typeof(List<>))
                     {
                         // For a list property, check if we want custom JSON.
-                        if (modelType == typeof(ProgressReportModel) && prop.Name == "Results")
+                        if (modelType == typeof(ProgressFeedback) && prop.Name == "Results")
                         {
-                            // Set your custom JSON here for ProgressReportModel's Results property.
+                            // Set your custom JSON here for ProgressFeedback's Results property.
                             testValues[prop.Name] = @"[
                                     {
                                     ""Score"": 95,

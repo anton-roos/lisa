@@ -190,65 +190,68 @@
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        switch (eventName)
+        if (eventName == UiEvents.SchoolSelected && payload is School school)
         {
-            case UiEvents.SchoolSelected:
-                if (payload is School school)
-                {
-                    _selectedSchool = school;
-                    await LoadDropdowns();
-                }
-                break;
+            _selectedSchool = school;
+            ViewModel.GradeId = string.Empty;
+            ViewModel.SubjectId = string.Empty;
+            ViewModel.Teacher = null;
+            ViewModel.LearnerResults = new List<LearnerResultViewModel>();
+            await LoadDropdowns();
         }
 
         await base.HandleEventAsync(eventName, payload);
     }
 
     private async Task OnGradeChange(string value)
-{
-    ViewModel.GradeId = value;
-    
-    if (string.IsNullOrEmpty(value))
     {
-        // Clear related data if no grade is selected.
-        ViewModel.SchoolGrade = null;
+        ViewModel.GradeId = value;
         ViewModel.SubjectId = string.Empty;
-        ViewModel.FilteredSubjects = new List<Subject>();
-        ViewModel.LearnerResults = new List<LearnerResultViewModel>();
-        await InvokeAsync(StateHasChanged);
-        return;
-    }
-    
-    ViewModel.SchoolGrade = ViewModel.SchoolGrades.FirstOrDefault(g => g.Id == Guid.Parse(value));
-    ViewModel.SubjectId = string.Empty;
-    await LoadSubjectsForGrade();
-}
-
-private async Task OnSubjectChange(string value)
-{
-    ViewModel.SubjectId = value;
-
-    if (string.IsNullOrEmpty(value))
-    {
-        // Optionally clear teacher or learner results if no subject is selected.
         ViewModel.Teacher = null;
         ViewModel.LearnerResults = new List<LearnerResultViewModel>();
+
+        if (string.IsNullOrEmpty(value))
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        ViewModel.SchoolGrade = ViewModel.SchoolGrades.FirstOrDefault(g => g.Id == Guid.Parse(value));
+        
+        await LoadSubjectsForGrade();
         await InvokeAsync(StateHasChanged);
-        return;
+    }
+    private async Task LoadTeacher()
+    {
+        ViewModel.Teacher = null;
+        if (!string.IsNullOrEmpty(ViewModel.GradeId) && !string.IsNullOrEmpty(ViewModel.SubjectId))
+        {
+            ViewModel.Teacher = await UserService.GetTeacherForGradeAndSubjectAsync(
+                _selectedSchool.Id,
+                Guid.Parse(ViewModel.GradeId), int.Parse(ViewModel.SubjectId));
+        }
+        await InvokeAsync(StateHasChanged);
     }
 
-    if (!string.IsNullOrEmpty(ViewModel.GradeId))
+    private async Task OnSubjectChange(string value)
     {
-        ViewModel.Teacher = await UserService.GetTeacherForGradeAndSubjectAsync(
-            Guid.Parse(ViewModel.GradeId), int.Parse(ViewModel.SubjectId));
+        ViewModel.SubjectId = value;
+        ViewModel.Teacher = null;
+        ViewModel.LearnerResults = new List<LearnerResultViewModel>();
 
+        await InvokeAsync(StateHasChanged);
+
+        if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(ViewModel.GradeId))
+            return;
+        
+        await LoadTeacher();
+        
         if (!IsEdit)
         {
             var learners = await LearnerService.GetLearnersWithTheirSubjectsByGradeAsync(Guid.Parse(ViewModel.GradeId));
-
             ViewModel.LearnerResults = learners
                 .Where(learner => learner.LearnerSubjects != null &&
-                                  learner.LearnerSubjects.Any(subject => subject.SubjectId == int.Parse(ViewModel.SubjectId)))
+                                learner.LearnerSubjects.Any(subject => subject.SubjectId == int.Parse(ViewModel.SubjectId)))
                 .Select(learner => new LearnerResultViewModel
                 {
                     LearnerId = learner.Id,
@@ -258,7 +261,6 @@ private async Task OnSubjectChange(string value)
                 .ToList();
         }
     }
-}
 
     private async Task LoadDropdowns()
     {
@@ -329,7 +331,7 @@ private async Task OnSubjectChange(string value)
         }
 
         ViewModel.FilteredSubjects = (await SubjectService.GetSubjectsForGradeAsync(Guid.Parse(ViewModel.GradeId))).ToList();
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task SaveResults()

@@ -111,7 +111,7 @@ public class UserService(
         }
     }
 
-    public async Task<User?> GetTeacherForGradeAndSubjectAsync(Guid gradeId, int subjectId)
+    public async Task<User?> GetTeacherForGradeAndSubjectAsync(Guid schoolId, Guid gradeId, int subjectId)
     {
         try
         {
@@ -122,6 +122,7 @@ public class UserService(
             var user = await context.Users
                 .Include(u => u.Subjects)
                 .FirstOrDefaultAsync(u => u.Subjects != null
+                                          && u.SchoolId == schoolId
                                           && grade != null
                                           && u.Subjects
                                               .Any(ts => ts.Grade == grade.SystemGrade.SequenceNumber

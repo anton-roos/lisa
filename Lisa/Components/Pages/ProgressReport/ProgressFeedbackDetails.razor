@@ -48,7 +48,7 @@ else
                                             {
                                                 var result = subjectGroup.Value[index];
                                                 var markClass = result.Score.HasValue && result.Score.Value < 50 ? "text-danger fw-bold" : "text-success fw-bold";
-                                                <td>@result.UpdatedAt.ToString("dd/MM")</td>
+                                                <td>@result.ResultSet.AssessmentDate.Value.ToString("MM/dd")</td>
                                                 <td class="@markClass">@(result.Score.HasValue ? result.Score.Value.ToString() + "%" : "N/A")</td>
                                             }
                                             else

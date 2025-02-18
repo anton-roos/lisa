@@ -12,9 +12,10 @@
 else
 {
     <div class="container mt-4" style="max-width: 600px; margin: auto;">
-        <h1 class="text-center mb-4">Progress Feedback for <span class="text-primary">@feedback.LearnerName</span></h1>
+        <h1 class="text-center mb-3">Progress Feedback</h1>
+        <h3 class="text-center mb-4">@feedback.LearnerName</h3>
 
-        @if (feedback.ResultsBySubject != null && feedback.ResultsBySubject.Any())
+        @if (feedback.ResFultsBySubject != null && feedback.ResultsBySubject.Any())
         {
             @foreach (var subjectGroup in feedback.ResultsBySubject)
             {

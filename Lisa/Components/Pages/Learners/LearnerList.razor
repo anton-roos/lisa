@@ -12,7 +12,7 @@
         {
             <h3>Learners for @_selectedSchool.ShortName</h3>
             <div class="row mb-3">
-                <div class="col-12 col-md-4 mb-2">
+                <div class="col-12 col-md-3 mb-2">
                     <label for="gradeFilter" class="form-label">Filter by Grade</label>
                     <select id="gradeFilter" class="form-select" @bind="SelectedGradeId">
                         <option value="">All Grades</option>
@@ -25,82 +25,76 @@
                         }
                     </select>
                 </div>
-                <div class="col-12 col-md-4 mb-2">
-                    <!-- Name Search -->
+                <div class="col-12 col-md-3 mb-2">
                     <label for="nameSearch" class="form-label">Search by Name</label>
                     <input id="nameSearch" type="text" class="form-control" @oninput="OnSearchTermChanged"
-                           @bind="SearchTerm" placeholder="Type name..."/>
+                    @bind="SearchTerm" placeholder="Type name..." />
                 </div>
-                <div class="col-12 col-md-4 mb-2 d-flex align-items-end">
-                    <button class="btn btn-primary mb-3" @onclick="AddLearner">Add Learner</button>
+                <div class="col-12 col-md-3 mb-2 d-flex align-items-end">
+                    <button class="btn btn-secondary" @onclick="ToggleSort">
+                        Sort by: @(_sortByLastName ? "First Name" : "Last Name")
+                    </button>
+                </div>
+                <div class="col-12 col-md-3 mb-2 d-flex align-items-end justify-content-md-end">
+                    <button class="btn btn-primary" @onclick="AddLearner">Add Learner</button>
                 </div>
             </div>
 
-            @if (FilteredLearners.Any())
+            @if (SortedLearners.Any())
             {
-                <table class="table table-striped">
-                    <thead>
-                    <tr>
-                        <th>Code</th>
-                        <th>Surname</th>
-                        <th>Name</th>
-                        <th>Grade</th>
-                        <th>Subjects Count</th>
-                        <th>Subjects Selected</th>
-                        <th>Parents</th>
-                        <th>Care Group</th>
-                        <th>Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @foreach (var learner in FilteredLearners)
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
+                    @foreach (var learner in SortedLearners)
                     {
-                        <tr>
-                            <td>@learner.Code</td>
-                            <td>@learner.Surname</td>
-                            <td>@learner.Name</td>
-                            <td>@(learner.RegisterClass?.SchoolGrade?.SystemGrade.Name ?? "Unassigned")</td>
-                            @if (@learner.LearnerSubjects is not null)
-                            {
-                                <td>@learner.LearnerSubjects.Count()</td>
-                            }
-                            else
-                            {
-                                <td>0</td>
-                            }
-
-                            <td>
-                                @if (@learner.LearnerSubjects is not null)
-                                {
-                                    @foreach (var subject in learner.LearnerSubjects)
-                                    {
-                                        switch (subject.Subject.SubjectType)
+                        <div class="col">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="card-title">@learner.Surname, @learner.Name</h5>
+                                    <p class="card-text mb-1">
+                                        <small class="text-muted">Code: @learner.Code</small>
+                                    </p>
+                                    <p class="card-text mb-1">
+                                        <small class="text-muted">Grade: @(learner.RegisterClass?.SchoolGrade?.SystemGrade.Name ?? "Unassigned")</small>
+                                    </p>
+                                    <p class="card-text mb-1">
+                                        <strong>Subjects:</strong>
+                                        @if (learner.LearnerSubjects is not null && learner.LearnerSubjects.Any())
                                         {
-                                            case SubjectType.Compulsory:
-                                                <span class="badge bg-primary mx-1">@subject.Subject.Code</span>
-                                                break;
-                                            case SubjectType.MathCombination:
-                                                <span class="badge bg-success mx-1">@subject.Subject.Code</span>
-                                                break;
-                                            case SubjectType.Combination:
-
-                                                <span class="badge bg-danger mx-1">@subject.Subject.Code</span>
-                                                break;
-                                            default:
-                                                <span class="badge bg-light mx-1s">@subject.Subject.Code</span>
-                                                break;
+                                            @foreach (var subject in learner.LearnerSubjects)
+                                            {
+                                                <span class="badge mx-1 
+                                                    @(subject.Subject.SubjectType switch {
+                                                        SubjectType.Compulsory => "bg-primary",
+                                                        SubjectType.MathCombination => "bg-success",
+                                                        SubjectType.Combination => "bg-danger",
+                                                        _ => "bg-light text-dark"
+                                                    })">
+                                                    @subject.Subject.Code
+                                                </span>
+                                            }
                                         }
-                                    }
-                                }
-                            </td>
-                            <td>@learner.Parents?.Count()</td>
-                            <td>@learner.CareGroup?.Name</td>
-                            <ActionButtons TEntity="Learner" Entity="learner" OnView="ViewLearner" OnEdit="EditLearner"
-                                           OnDelete="DeleteLearner"/>
-                        </tr>
+                                        else
+                                        {
+                                            <span class="text-muted">None</span>
+                                        }
+                                    </p>
+                                    <p class="card-text mb-1">
+                                        <small class="text-muted">Parents: @(learner.Parents?.Count() ?? 0)</small>
+                                    </p>
+                                    <p class="card-text">
+                                        <small class="text-muted">Care Group: @learner.CareGroup?.Name</small>
+                                    </p>
+                                </div>
+                                <div class="card-footer bg-transparent border-top-0">
+                                    <div class="d-flex justify-content-between">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ViewLearner(learner)">View</button>
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditLearner(learner)">Edit</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLearner(learner)">Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     }
-                    </tbody>
-                </table>
+                </div>
             }
             else
             {
@@ -117,13 +111,17 @@
         }
     </Authorized>
     <NotAuthorized>
-        <Unauthorized/>
+        <Unauthorized />
     </NotAuthorized>
 </AuthorizeView>
 
 @code {
     private List<Learner> _learners = [];
     private IEnumerable<Learner> FilteredLearners => ApplyFilters();
+    private bool _sortByLastName = true;
+    private IEnumerable<Learner> SortedLearners => _sortByLastName
+        ? FilteredLearners.OrderBy(l => l.Surname).ThenBy(l => l.Name)
+        : FilteredLearners.OrderBy(l => l.Name).ThenBy(l => l.Surname);
     private School? _selectedSchool;
 
     private string? SelectedGradeId { get; set; }
@@ -139,14 +137,11 @@
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        switch (eventName)
+        if (eventName == UiEvents.SchoolSelected)
         {
-            case UiEvents.SchoolSelected:
-                _selectedSchool = payload as School;
-                await LoadLearners();
-                break;
+            _selectedSchool = payload as School;
+            await LoadLearners();
         }
-
         await base.HandleEventAsync(eventName, payload);
     }
 
@@ -177,20 +172,24 @@
 
         if (!string.IsNullOrEmpty(SelectedGradeId))
         {
-            query = query.Where(l => l.RegisterClass?.SchoolGrade != null
-                                     && l.RegisterClass.SchoolGrade.Id == Guid.Parse(SelectedGradeId));
+            query = query.Where(l => l.RegisterClass?.SchoolGrade != null &&
+                                     l.RegisterClass.SchoolGrade.Id == Guid.Parse(SelectedGradeId));
         }
 
         if (!string.IsNullOrEmpty(SearchTerm))
         {
             var term = SearchTerm.Trim().ToLower();
-            query = query.Where(l =>
-                ($"{l.Surname} {l.Name}").ToLower().Contains(term));
+            query = query.Where(l => ($"{l.Surname} {l.Name}").ToLower().Contains(term));
         }
 
         return query;
     }
 
+    private void ToggleSort()
+    {
+        _sortByLastName = !_sortByLastName;
+    }
+    
     private async Task OnSearchTermChanged(ChangeEventArgs e)
     {
         SearchTerm = e.Value?.ToString();
@@ -218,5 +217,4 @@
         await LoadLearners();
         await InvokeAsync(StateHasChanged);
     }
-
 }

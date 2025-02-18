@@ -27,8 +27,7 @@
                 </div>
                 <div class="col-12 col-md-3 mb-2">
                     <label for="nameSearch" class="form-label">Search by Name</label>
-                    <input id="nameSearch" type="text" class="form-control" @oninput="OnSearchTermChanged"
-                    @bind="SearchTerm" placeholder="Type name..." />
+                    <input id="nameSearch" type="text" class="form-control" @oninput="OnSearchTermChanged" @bind="SearchTerm" placeholder="Type name..." />
                 </div>
                 <div class="col-12 col-md-3 mb-2 d-flex align-items-end">
                     <button class="btn btn-secondary" @onclick="ToggleSort">
@@ -42,59 +41,87 @@
 
             @if (SortedLearners.Any())
             {
-                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
-                    @foreach (var learner in SortedLearners)
-                    {
-                        <div class="col">
-                            <div class="card h-100 shadow-sm">
-                                <div class="card-body">
-                                    <h5 class="card-title">@learner.Surname, @learner.Name</h5>
-                                    <p class="card-text mb-1">
-                                        <small class="text-muted">Code: @learner.Code</small>
-                                    </p>
-                                    <p class="card-text mb-1">
-                                        <small class="text-muted">Grade: @(learner.RegisterClass?.SchoolGrade?.SystemGrade.Name ?? "Unassigned")</small>
-                                    </p>
-                                    <p class="card-text mb-1">
-                                        <strong>Subjects:</strong>
-                                        @if (learner.LearnerSubjects is not null && learner.LearnerSubjects.Any())
-                                        {
-                                            @foreach (var subject in learner.LearnerSubjects)
-                                            {
-                                                <span class="badge mx-1 
-                                                    @(subject.Subject.SubjectType switch {
-                                                        SubjectType.Compulsory => "bg-primary",
-                                                        SubjectType.MathCombination => "bg-success",
-                                                        SubjectType.Combination => "bg-danger",
-                                                        _ => "bg-light text-dark"
-                                                    })">
-                                                    @subject.Subject.Code
-                                                </span>
-                                            }
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">None</span>
-                                        }
-                                    </p>
-                                    <p class="card-text mb-1">
-                                        <small class="text-muted">Parents: @(learner.Parents?.Count() ?? 0)</small>
-                                    </p>
-                                    <p class="card-text">
-                                        <small class="text-muted">Care Group: @learner.CareGroup?.Name</small>
-                                    </p>
-                                </div>
-                                <div class="card-footer bg-transparent border-top-0">
-                                    <div class="d-flex justify-content-between">
-                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ViewLearner(learner)">View</button>
-                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditLearner(learner)">Edit</button>
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLearner(learner)">Delete</button>
+               <div class="row">
+                @foreach (var learner in SortedLearners)
+                {
+                    <div class="col-12 mb-3">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-sm-8">
+                                        <h5 class="card-title mb-1">@learner.Surname, @learner.Name</h5>
+                                        <p class="mb-1">
+                                            <small class="text-muted">Code: @learner.Code</small>
+                                        </p>
+                                        <p class="mb-1">
+                                            <small class="text-muted">
+                                                Grade: @(learner.RegisterClass?.SchoolGrade?.SystemGrade.Name ?? "Unassigned")
+                                            </small>
+                                        </p>
+                                    </div>
+                                    <div class="col-sm-4 text-sm-end">
+                                        <p class="mb-1">
+                                            <small class="text-muted">
+                                                Parents: @(learner.Parents?.Count() ?? 0)
+                                            </small>
+                                        </p>
+                                        <p class="mb-0">
+                                            <small class="text-muted">
+                                                Care Group: @learner.CareGroup?.Name
+                                            </small>
+                                        </p>
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Move Subjects into the footer, along with the action buttons -->
+                            <div class="card-footer bg-transparent border-top-0 
+                                        d-flex align-items-center justify-content-between flex-wrap">
+                                <!-- Left side: Subjects -->
+                                <div class="mb-2 mb-sm-0">
+                                    <strong>Subjects:</strong>
+                                    @if (learner.LearnerSubjects is not null && learner.LearnerSubjects.Any())
+                                    {
+                                        @foreach (var subject in learner.LearnerSubjects)
+                                        {
+                                            <span class="badge mx-1 
+                                                @(subject.Subject.SubjectType switch {
+                                                    SubjectType.Compulsory => "bg-primary",
+                                                    SubjectType.MathCombination => "bg-success",
+                                                    SubjectType.Combination => "bg-danger",
+                                                    _ => "bg-light text-dark"
+                                                })">
+                                                @subject.Subject.Code
+                                            </span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">None</span>
+                                    }
+                                </div>
+
+                                <!-- Right side: Action buttons -->
+                                <div class="d-flex justify-content-end">
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            @onclick="() => ViewLearner(learner)">
+                                        View
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary ms-2" 
+                                            @onclick="() => EditLearner(learner)">
+                                        Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger ms-2" 
+                                            @onclick="() => DeleteLearner(learner)">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    }
-                </div>
+                    </div>
+                }
+            </div>
+
             }
             else
             {
@@ -189,7 +216,7 @@
     {
         _sortByLastName = !_sortByLastName;
     }
-    
+
     private async Task OnSearchTermChanged(ChangeEventArgs e)
     {
         SearchTerm = e.Value?.ToString();

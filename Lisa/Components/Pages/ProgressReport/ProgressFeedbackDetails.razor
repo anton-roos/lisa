@@ -29,9 +29,9 @@ else
         Principal
         </p>
 
-        @if (feedback.ResultsBySubject != null && feedback.ResultsBySubject.Any())
+        @if (feedback.ResultsBySubject != null && feedback.ResultsBySubject.Any(x => x.Value != null && x.Value.Any()))
         {
-            @foreach (var subjectGroup in feedback.ResultsBySubject)
+            @foreach (var subjectGroup in feedback.ResultsBySubject.Where(x => x.Value != null && x.Value.Any()))
             {
                 <div class="card mb-4 shadow-sm">
                     <div class="card-header">
@@ -62,7 +62,9 @@ else
                                             if (index < totalResults)
                                             {
                                                 var result = subjectGroup.Value[index];
-                                                var markClass = result.Score.HasValue && result.Score.Value < 50 ? "text-danger fw-bold" : "text-success fw-bold";
+                                                var markClass = result.Score.HasValue && result.Score.Value < 50 
+                                                    ? "text-danger fw-bold" 
+                                                    : "text-success fw-bold";
                                                 <td>@result.ResultSet.AssessmentDate.Value.ToString("MM/dd")</td>
                                                 <td class="@markClass">@(result.Score.HasValue ? result.Score.Value.ToString() + "%" : "N/A")</td>
                                             }

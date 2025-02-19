@@ -62,11 +62,22 @@ else
                                             if (index < totalResults)
                                             {
                                                 var result = subjectGroup.Value[index];
-                                                var markClass = result.Score.HasValue && result.Score.Value < 50 
-                                                    ? "text-danger fw-bold" 
-                                                    : "text-success fw-bold";
+                                                string markClass;
+                                                if (!result.Score.HasValue)
+                                                {
+                                                    markClass = "text-warning fw-bold";
+                                                }
+                                                else if (result.Score.Value < 50)
+                                                {
+                                                    markClass = "text-danger fw-bold";
+                                                }
+                                                else
+                                                {
+                                                    markClass = "text-success fw-bold";
+                                                }
+                                                
                                                 <td>@result.ResultSet.AssessmentDate.Value.ToString("MM/dd")</td>
-                                                <td class="@markClass">@(result.Score.HasValue ? result.Score.Value.ToString() + "%" : "N/A")</td>
+                                                <td class="@markClass">@(result.Score.HasValue ? result.Score.Value.ToString() + "%" : "Absent")</td>
                                             }
                                             else
                                             {

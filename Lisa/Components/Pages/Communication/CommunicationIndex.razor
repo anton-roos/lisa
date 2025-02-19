@@ -115,16 +115,19 @@
                     break;
             }
 
-            <!-- Template selection integrated from the Template module -->
-            <TemplateSelection OnTemplateSelected="OnTemplateSelected" />
-
-            <!-- Optional preview button -->
-            @if (SelectedTemplate != null)
-            {
-                <button class="btn btn-secondary btn-sm mt-2" @onclick="PreviewTemplate">
-                    <i class="bi bi-eye"></i> Preview Template
-                </button>
-            }
+            <div class="mb-3">
+                <label for="templateSelect">Select Template</label>
+                <InputSelect id="templateSelect" class="form-select" TValue="Template" 
+                            Value="_selectedTemplate" 
+                            ValueChanged="@(async (template) => await OnTemplateSelected(template))" 
+                            ValueExpression="(() => _selectedTemplate)">
+                    <option value="">-- Select Template --</option>
+                    @foreach (Template t in Enum.GetValues(typeof(Template)))
+                    {
+                        <option value="@t">@t</option>
+                    }
+                </InputSelect>
+            </div>
 
             <button type="button" class="btn btn-primary btn-sm mt-2" @onclick="SendCommunication"
                 disabled="@(IsSendDisabled || IsSending)">
@@ -170,8 +173,8 @@
     private List<SchoolGrade> _schoolGrades = new();
     private List<Subject> _subjects = new();
     private int SelectedSubjectId { get; set; }
-    private EmailTemplate? SelectedTemplate { get; set; }
-    private bool IsSendDisabled => SelectedTemplate == null;
+    private Template _selectedTemplate = Template.None;
+    private bool IsSendDisabled => _selectedTemplate == Template.None;
     private bool IsSending { get; set; }
     private string? StatusMessage { get; set; }
     private string PreviewHtml { get; set; } = string.Empty;
@@ -232,19 +235,15 @@
         SelectedTarget = target;
     }
 
-    private async Task OnTemplateSelected(EmailTemplate? template)
+    private async Task OnTemplateSelected(Template template)
     {
-        SelectedTemplate = template;
-        if (SelectedTemplate != null)
-        {
-            await PreviewTemplate();
-        }
+        _selectedTemplate = template;
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task SendCommunication()
     {
-        if (SelectedTemplate == null || SelectedSchool == null)
+        if (_selectedTemplate == Template.None || SelectedSchool == null)
         {
             StatusMessage = "Error: Please select a template and school!";
             return;
@@ -256,7 +255,7 @@
             Audience = SelectedAudience,
             GradeId = SelectedGradeId,
             SubjectId = SelectedSubjectId,
-            TemplateId = SelectedTemplate.Id,
+            EmailTemplate = _selectedTemplate,
             SchoolId = SelectedSchool.Id,
             LearnerId = SelectedLearner?.Id,
         };
@@ -290,29 +289,5 @@
     private void NavigateToCampaign(Guid campaignId)
     {
         NavigationManager.NavigateTo($"/email-campaign/{campaignId}");
-    }
-
-    private async Task PreviewTemplate()
-    {
-        if (SelectedTemplate == null)
-            return;
-
-        if (SelectedTemplate.ModelType == typeof(ProgressFeedback).FullName)
-        {
-            var previewModel = new ProgressFeedback
-            {
-                LearnerName = "Jane Doe",
-                ResultsBySubject = []
-            };
-
-            PreviewHtml = await RendererService.RenderTemplateAsync(
-            "preview-" + SelectedTemplate.Id,
-            SelectedTemplate.Content,
-            previewModel);
-        }
-        else
-        {
-            PreviewHtml = "No preview available for this model type.";
-        }
     }
 }

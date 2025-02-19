@@ -340,10 +340,6 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
 
         modelBuilder.Entity<EmailCampaign>(entity =>
         {
-            entity.HasOne(ec => ec.EmailTemplate)
-                .WithMany() // or .WithMany( et => et.EmailCampaigns ) if you have that collection
-                .HasForeignKey(ec => ec.TemplateId)
-                .OnDelete(DeleteBehavior.Restrict);
             entity.ToTable("EmailCampaigns");
             entity.HasKey(ec => ec.Id);
             entity.Property(ec => ec.Id)

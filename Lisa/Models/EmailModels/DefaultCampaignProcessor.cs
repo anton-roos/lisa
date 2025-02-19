@@ -1,10 +1,10 @@
-using Lisa.Models.Entities;
+using Lisa.Enums;
 
 namespace Lisa.Models.EmailModels;
 
 public class DefaultCampaignProcessor : ICampaignTemplateProcessor
 {
-    public bool CanProcess(EmailTemplate template) => true;
+    public bool CanProcess(Template template) => true;
 
     public Task<string> GenerateHtmlAsync(CommunicationCommand command)
     {

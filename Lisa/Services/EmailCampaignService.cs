@@ -116,10 +116,7 @@ public class EmailCampaignService(
                         string subject = campaign.SubjectLine ?? "No Subject";
                         string body = campaign.ContentHtml;
 
-                        // If this is a progress report email and the recipient is linked to a learner,
-                        // generate personalized content.
-                        if (campaign.EmailTemplate.Name?.Equals("Progress Report", StringComparison.OrdinalIgnoreCase) == true
-                            && recipient.LearnerId.HasValue)
+                        if (campaign.EmailTemplate == Template.ProgressReport && recipient.LearnerId.HasValue)
                         {
                             var learner = await _learnerService.GetByIdAsync(recipient.LearnerId.Value);
                             if (learner != null)
@@ -133,9 +130,9 @@ public class EmailCampaignService(
                                 };
 
                                 body = await _emailRendererService.RenderTemplateAsync(
-                                    "template-" + campaign.EmailTemplate.Id,
-                                    campaign.EmailTemplate.Content,
-                                    progressReportModel);
+                                   campaign.EmailTemplate,
+                                    campaign.ContentHtml
+                                    );
                             }
                         }
 
@@ -269,17 +266,9 @@ public class EmailCampaignService(
     {
         if (command is null) throw new ArgumentNullException(nameof(command));
 
-        // Get the template.
-        var template = await _emailTemplateService.GetTemplateByIdAsync(command.TemplateId)
-                       ?? throw new InvalidOperationException("Email template not found.");
-        command.EmailTemplate = template;
-        command.TemplateId = template.Id;
-
-        // Select the appropriate processor.
-        var processor = _templateProcessors.FirstOrDefault(p => p.CanProcess(template))
+        var processor = _templateProcessors.FirstOrDefault(p => p.CanProcess(command.EmailTemplate))
                         ?? throw new InvalidOperationException("No processor found for the given template.");
 
-        // Generate the campaign HTML (for non-progress report emails).
         var html = await processor.GenerateHtmlAsync(command);
         await processor.ProcessAdditionalActionsAsync(command);
 
@@ -297,11 +286,8 @@ public class EmailCampaignService(
 
         List<EmailRecipient> recipients;
 
-        // Check if this is a progress report email.
-        if (command.TemplateModelType.Equals("ProgressReportEmail", StringComparison.OrdinalIgnoreCase) ||
-            command.EmailTemplate.Name?.Equals("Progress Report", StringComparison.OrdinalIgnoreCase) == true)
+        if (command.EmailTemplate == Template.ProgressReport)
         {
-            // Retrieve recipients with learner associations.
             var progressRecipients = await GetProgressReportRecipientsAsync(command);
             if (!progressRecipients.Any())
                 throw new ArgumentException("No recipients found for the progress report.", nameof(progressRecipients));
@@ -310,7 +296,7 @@ public class EmailCampaignService(
             {
                 Id = Guid.NewGuid(),
                 EmailAddress = r.Email,
-                LearnerId = r.LearnerId, // Save the learner association
+                LearnerId = r.LearnerId,
                 Status = EmailRecipientStatus.Pending,
                 CreatedAt = utcNow,
                 UpdatedAt = utcNow
@@ -318,7 +304,6 @@ public class EmailCampaignService(
         }
         else
         {
-            // Use the existing method for non-progress report emails.
             var recipientEmails = await GetRecipientEmailsAsync(command);
             if (recipientEmails == null || !recipientEmails.Any())
                 throw new ArgumentException("Recipient emails list cannot be empty.", nameof(recipientEmails));
@@ -353,7 +338,7 @@ public class EmailCampaignService(
             UpdatedAt = utcNow,
             EmailRecipients = recipients,
             SchoolId = command.SchoolId,
-            TemplateId = template.Id
+            EmailTemplate = command.EmailTemplate
         };
 
         using var context = await _contextFactory.CreateDbContextAsync();
@@ -467,26 +452,10 @@ public class EmailCampaignService(
     {
         // Check if the request indicates that the email template is a ProgressReportEmail.
         // (Assuming request.TemplateModelType or similar is set to "ProgressReportEmail")
-        if (command.EmailTemplate.Name?.Equals("Progress Report", StringComparison.OrdinalIgnoreCase) == true)
+        if (command.EmailTemplate == Template.ProgressReport)
         {
-            // Create a default ProgressReportModel. In a real scenario you might pull these values from the request or another data source.
-            var progressReportModel = new ProgressFeedback
-            {
-                LearnerName = "Default Child",
-                ResultsBySubject = []
-            };
 
-            var template = await _emailTemplateService.GetTemplateByIdAsync(command.TemplateId);
-
-            // Use the EmailRendererService to render the HTML.
-            // request.TemplateKey and request.TemplateContent should be provided in your CommunicationRequest.
-            var renderedHtml = await _emailRendererService.RenderTemplateAsync(
-                "template-" + template.Id,         // a unique key (could be the template ID)
-                template.Content,     // the Razor template content
-                progressReportModel);
-
-            // Fallback in case rendering fails.
-            return string.IsNullOrWhiteSpace(renderedHtml) ? "<p>No content available</p>" : renderedHtml;
+            return "<p>Implement HTML</p>";
         }
         else
         {
@@ -598,17 +567,9 @@ public class EmailCampaignService(
     /// <param name="schoolId">The school identifier.</param>
     /// <param name="templateId">The template ID for the progress report email.</param>
     /// <returns>A Task representing the asynchronous operation.</returns>
-    public async Task SendProgressReportsAsync(Guid schoolId, Guid templateId)
+    public async Task SendProgressReportsAsync(Guid schoolId)
     {
-        // Retrieve the progress report template.
-        var template = await _emailTemplateService.GetTemplateByIdAsync(templateId);
-        if (template == null)
-        {
-            _logger.LogError("Progress report template with ID {TemplateId} not found.", templateId);
-            return;
-        }
 
-        // Retrieve learners for the school.
         var learners = await _learnerService.GetLearnersBySchoolAsync(schoolId);
         if (learners == null || learners.Count == 0)
         {
@@ -624,24 +585,12 @@ public class EmailCampaignService(
                 continue;
             }
 
-            var progressReportModel = new ProgressFeedback
-            {
-                LearnerName = $"{learner.Name} {learner.Surname}",
-                ResultsBySubject = []
-            };
-
             // Render the personalized HTML content.
             var renderedHtml = await _emailRendererService.RenderTemplateAsync(
-                "template-" + template.Id,
-                template.Content,
-                progressReportModel);
+                Template.ProgressReport,
+                "progressReportModel");
 
-            // Determine the email subject.
-            var subject = string.IsNullOrWhiteSpace(template.Subject)
-                ? "Your Child's Progress Report"
-                : template.Subject;
-
-            // For each parent, send the personalized email.
+            var subject =  "Progress Report";
             foreach (var parent in learner.Parents)
             {
                 if (string.IsNullOrWhiteSpace(parent.PrimaryEmail) && string.IsNullOrWhiteSpace(parent.SecondaryEmail))

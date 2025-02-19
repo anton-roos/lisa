@@ -1,64 +1,29 @@
 using Hangfire;
+using Lisa.Enums;
 using Lisa.Models.Entities;
 using Lisa.Services;
 
 namespace Lisa.Models.EmailModels;
 
-public class ProgressReportCampaignProcessor : ICampaignTemplateProcessor
+public class ProgressReportCampaignProcessor(
+
+    IBackgroundJobClient backgroundJobClient) : ICampaignTemplateProcessor
 {
-    private readonly EmailRendererService _emailRendererService;
-    private readonly IBackgroundJobClient _backgroundJobClient;
-    private readonly ResultService _resultService;
+    private readonly IBackgroundJobClient _backgroundJobClient = backgroundJobClient;
 
-    public ProgressReportCampaignProcessor(
-        EmailRendererService emailRendererService,
-        IBackgroundJobClient backgroundJobClient,
-        ResultService resultService)
-    {
-        _emailRendererService = emailRendererService;
-        _backgroundJobClient = backgroundJobClient;
-        _resultService = resultService;
-    }
-
-    public bool CanProcess(EmailTemplate template) =>
-        template.Name?.Equals("Progress Report", StringComparison.OrdinalIgnoreCase) == true;
+    public bool CanProcess(Template template) =>
+        template != Template.None;
 
     public async Task<string> GenerateHtmlAsync(CommunicationCommand command)
     {
-        var resultSets = await _resultService.GetResultsByFiltersAsync(command.SchoolId, null, null, null, command.LearnerId);
-        var progressReportModel = new ProgressFeedback
-        {
-            LearnerName = "Default Child",
-            ResultsBySubject = []
-        };
-
-
-        if (resultSets == null || resultSets.Count == 0)
-        {
-            return "<p>No results available</p>";
-        }
-
-        foreach (var resultSet in resultSets)
-        {
-            //progressReportModel.ResultsBySubject.AddRange(resultSet.Results);
-        }
-        
-        
-        var renderedHtml = await _emailRendererService.RenderTemplateAsync(
-            $"template-{command.TemplateId}",
-            command.EmailTemplate.Content,
-            progressReportModel);
-
-        return string.IsNullOrWhiteSpace(renderedHtml)
-            ? "<p>No content available</p>"
-            : renderedHtml;
+        Task.Delay(1000).Wait();
+        return "";
     }
 
     public Task ProcessAdditionalActionsAsync(CommunicationCommand command)
     {
-        // Use IBackgroundJobClient to enqueue the job without directly depending on EmailCampaignService.
         _backgroundJobClient.Enqueue<EmailCampaignService>(service =>
-            service.SendProgressReportsAsync(command.SchoolId, command.TemplateId));
+            service.SendProgressReportsAsync(command.SchoolId));
 
         return Task.CompletedTask;
     }

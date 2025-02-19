@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using Lisa.Enums;
-using Lisa.Models.Entities;
 
 namespace Lisa.Models.EmailModels;
 
@@ -13,7 +12,6 @@ public class CommunicationCommand
     public Audience Audience { get; set; }
     public Guid? GradeId { get; set; }
     [Required]
-    public Guid TemplateId { get; set; }
     public int SubjectId { get; set; }
     public string? SubjectLine { get; set; }
     public string? SenderName { get; set; }
@@ -22,5 +20,5 @@ public class CommunicationCommand
     public Guid? LearnerId { get; set; }
     public ProgressFeedback? ProgressReport { get; set; }
     public string TemplateModelType { get; set; } = string.Empty;
-    public EmailTemplate? EmailTemplate { get; set; }
+    public Template EmailTemplate { get; set; }
 }

@@ -1,17 +1,13 @@
-using RazorLight;
+using Lisa.Enums;
 
 namespace Lisa.Services
 {
     public class EmailRendererService
     {
-        private readonly RazorLightEngine _engine;
         private readonly ILogger<EmailRendererService> _logger;
 
         public EmailRendererService(ILogger<EmailRendererService> logger)
         {
-            _engine = new RazorLightEngineBuilder()
-                .UseMemoryCachingProvider()
-                .Build();
             _logger = logger;
         }
 
@@ -23,16 +19,16 @@ namespace Lisa.Services
         /// <param name="templateContent">The template content (HTML with Razor syntax).</param>
         /// <param name="model">The model with properties that match your template placeholders.</param>
         /// <returns>Rendered HTML as a string.</returns>
-        public async Task<string> RenderTemplateAsync<T>(string templateKey, string templateContent, T model)
+        public async Task<string> RenderTemplateAsync(Template template, string templateContent)
         {
             try
             {
-                return await _engine.CompileRenderStringAsync(templateKey, templateContent, model);
-
+                Task.Delay(1000).Wait(); // Simulate a long-running operation
+                return "Here we need to render template";
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to render template {templateKey}.", templateKey);
+                _logger.LogError(ex, "Failed to render template {template}.", template.ToString());
                 return string.Empty;
             }
         }

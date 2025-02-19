@@ -97,8 +97,7 @@ class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextFactory,
     public async Task<List<ProgressFeedbackListItem>> GetProgressFeedbackListAsync(
     Guid schoolId,
     Guid? gradeId = null,
-    int? subjectId = null,
-    string? searchTerm = null)
+    int? subjectId = null)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
 
@@ -118,12 +117,6 @@ class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextFactory,
         if (subjectId is not null)
         {
             query = query.Where(l => l.LearnerSubjects!.Any(s => s.SubjectId == subjectId));
-        }
-
-        // Filter by search term against learner's name or surname.
-        if (!string.IsNullOrWhiteSpace(searchTerm))
-        {
-            query = query.Where(l => l.Name!.Contains(searchTerm) || l.Surname!.Contains(searchTerm));
         }
 
         // Order the results by surname, then select the desired fields.

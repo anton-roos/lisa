@@ -1,4 +1,4 @@
-@page "/results/manager/{ResultSetId:guid?}"
+@page "/results/manage/{ResultSetId:guid?}"
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
 @using System.Security.Claims
@@ -113,11 +113,11 @@
                                     <td>
                                         <InputNumber TValue="int?" Value="entry.ResultViewModel.Score"
                                             ValueChanged="@(EventCallback.Factory.Create<int?>(this, value => {
-                                                  if (value != null)
-                                                  {
-                                                      OnScoreChanged(value, entry);
-                                                  }
-                                              }))"
+                                            if (value != null)
+                                            {
+                                                OnScoreChanged(value, entry);
+                                            }
+                                            }))"
                                             class="form-control" min="0" max="100" step="1"
                                             ValueExpression="@(() => entry.ResultViewModel.Score)" />
                                     </td>
@@ -135,7 +135,7 @@
                         </tbody>
                     </table>
 
-                    <button class="btn btn-primary mb-3" @onclick="SaveResults">@(@IsEdit ? "Update Results" : "Save Results")</button>
+<button class="btn btn-primary mb-3" @onclick="SaveResults">@(@IsEdit ? "Update Results" : "Save Results")</button>
                 }
                 else
                 {
@@ -165,7 +165,7 @@
     private string _submitError = string.Empty;
     [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
 
-   protected override async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
         if (IsEdit)
         {
@@ -237,15 +237,19 @@
     {
         ViewModel.SubjectId = value;
         ViewModel.Teacher = null;
-        ViewModel.LearnerResults = new List<LearnerResultViewModel>();
+    
+        if (!IsEdit)
+        {
+            ViewModel.LearnerResults = new List<LearnerResultViewModel>();
+        }
 
         await InvokeAsync(StateHasChanged);
 
         if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(ViewModel.GradeId))
             return;
-        
+    
         await LoadTeacher();
-        
+    
         if (!IsEdit)
         {
             var learners = await LearnerService.GetLearnersWithTheirSubjectsByGradeAsync(Guid.Parse(ViewModel.GradeId));
@@ -301,7 +305,7 @@
             ViewModel.SubjectId = resultSet.SubjectId.ToString();
             if (resultSet.Results != null)
             {
-                ViewModel.GradeId = resultSet.Results.FirstOrDefault()?.Learner?.RegisterClass?.SchoolGrade?.Id.ToString() 
+                ViewModel.GradeId = resultSet.Results.FirstOrDefault()?.Learner?.RegisterClass?.SchoolGrade?.Id.ToString()
                                     ?? string.Empty;
                 ViewModel.Teacher = resultSet.Teacher;
 

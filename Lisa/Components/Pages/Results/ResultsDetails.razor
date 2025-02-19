@@ -2,7 +2,7 @@
 @using Lisa.Models.Entities
 @inject NavigationManager Navigation
 @inject ResultService ResultService
-@inject ILogger<ResultSetDetails> Logger
+@inject ILogger<ResultsDetails> Logger
 
 <PageTitle>Result Set Details</PageTitle>
 <AuthorizeView 
@@ -32,7 +32,7 @@
                 <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th>Student</th>
+                            <th>Learner</th>
                             <th>Score</th>
                             <th>Absent?</th>
                             <th>Reason</th>

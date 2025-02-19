@@ -149,17 +149,28 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
         try
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
-            return await context.ResultSets
+            var resultSet = await context.ResultSets
                 .AsNoTracking()
                 .Include(rs => rs.Teacher)
                 .Include(rs => rs.Results!)
-                .ThenInclude(r => r.Learner!)
-                .ThenInclude(l => l.RegisterClass!)
-                .ThenInclude(rc => rc.SchoolGrade!)
-                .ThenInclude(sg => sg.SystemGrade)
+                    .ThenInclude(r => r.Learner!)
+                        .ThenInclude(l => l.RegisterClass!)
+                            .ThenInclude(rc => rc.SchoolGrade!)
+                                .ThenInclude(sg => sg.SystemGrade)
                 .Include(rs => rs.Subject)
                 .Include(rs => rs.SchoolGrade)
                 .FirstOrDefaultAsync(rs => rs.Id == id);
+
+            // Assign the sorted list back to Results
+            if (resultSet?.Results != null)
+            {
+                resultSet.Results = resultSet.Results
+                    .OrderBy(s => s.Learner!.Surname)
+                    .ThenBy(s => s.Learner!.Name)
+                    .ToList();
+            }
+
+            return resultSet;
         }
         catch (Exception ex)
         {

@@ -99,7 +99,7 @@
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                                <th>Student</th>
+                                <th>Learner</th>
                                 <th>Score</th>
                                 <th>Absent?</th>
                                 <th>Reason</th>
@@ -109,7 +109,7 @@
                             @foreach (var entry in ViewModel.LearnerResults)
                             {
                                 <tr>
-                                    <td>@entry.LearnerName</td>
+                                    <td>@entry.Surname @entry.Name</td>
                                     <td>
                                         <InputNumber TValue="int?" Value="entry.ResultViewModel.Score"
                                             ValueChanged="@(EventCallback.Factory.Create<int?>(this, value => {
@@ -256,10 +256,12 @@
             ViewModel.LearnerResults = learners
                 .Where(learner => learner.LearnerSubjects != null &&
                                 learner.LearnerSubjects.Any(subject => subject.SubjectId == int.Parse(ViewModel.SubjectId)))
+                .OrderBy(learner => learner.Surname)
                 .Select(learner => new LearnerResultViewModel
                 {
                     LearnerId = learner.Id,
-                    LearnerName = $"{learner.Surname}, {learner.Name}",
+                    Surname = learner.Surname ?? string.Empty,
+                    Name = learner.Name ?? string.Empty,
                     ResultViewModel = new ResultViewModel()
                 })
                 .ToList();
@@ -312,14 +314,17 @@
                 ViewModel.LearnerResults = resultSet.Results.Select(r => new LearnerResultViewModel
                 {
                     LearnerId = r.LearnerId,
-                    LearnerName = $"{r.Learner?.Surname}, {r.Learner?.Name}",
+                    Surname = r.Learner?.Surname ?? string.Empty,
+                    Name = r.Learner?.Name ?? string.Empty,
                     ResultViewModel = new ResultViewModel
                     {
                         Score = r.Score,
                         Absent = r.Absent,
                         AbsentReason = r.AbsentReason
                     }
-                }).ToList();
+                })
+                .OrderBy(lr => lr.Surname)
+                .ToList();
             }
         }
 
@@ -362,17 +367,17 @@
             {
                 if (entry.ResultViewModel.Score == null)
                 {
-                    _submitError = $"Score is required for {entry.LearnerName} (if not absent).";
+                    _submitError = $"Score is required for {entry.Surname} {entry.Name} (if not absent).";
                     return;
                 }
                 if (entry.ResultViewModel.Score > 100)
                 {
-                    _submitError = $"Score for {entry.LearnerName} cannot exceed 100.";
+                    _submitError = $"Score for {entry.Surname} {entry.Name} cannot exceed 100.";
                     return;
                 }
                 if (entry.ResultViewModel.Score < 0)
                 {
-                    _submitError = $"Score for {entry.LearnerName} cannot be less than 0.";
+                    _submitError = $"Score for {entry.Surname} {entry.Name} cannot be less than 0.";
                     return;
                 }
             }

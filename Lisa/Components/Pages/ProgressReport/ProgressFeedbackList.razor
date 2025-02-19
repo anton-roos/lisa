@@ -100,8 +100,6 @@
     private List<ProgressFeedbackListItem>? _progressFeedbackList;
     private School? _selectedSchool;
     private bool _isLoading;
-
-    // Filter fields
     private Guid? _selectedGradeId = null;
     private int? _selectedSubjectId = null;
     private string _searchTerm = "";
@@ -179,14 +177,14 @@
     private async Task OnGradeChange(Guid? value)
     {
         _selectedGradeId = value;
-        FilterFeedbackInMemory();
+        await LoadProgressFeedbackListFromService();
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnSubjectChange(int? value)
     {
         _selectedSubjectId = value;
-        FilterFeedbackInMemory();
+        await LoadProgressFeedbackListFromService();
         await InvokeAsync(StateHasChanged);
     }
 

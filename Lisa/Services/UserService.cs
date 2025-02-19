@@ -389,4 +389,25 @@ public class UserService(
             return false;
         }
     }
+
+    public async Task<List<User>?> GetLearnerPrincipal(Guid LearnerId)
+    {
+        try
+        {
+            using var context = await dbContextFactory.CreateDbContextAsync();
+            var learner = await context.Learners
+                .Include(l => l.RegisterClass)
+                .ThenInclude(rc => rc!.User)
+                .FirstOrDefaultAsync(l => l.Id == LearnerId);
+
+            var principals = await GetAllByRoleAndSchoolAsync([Roles.Principal], learner?.SchoolId);
+
+            return principals;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error fetching learner principal for LearnerId: {LearnerId}", LearnerId);
+            return null;
+        }
+    }
 }

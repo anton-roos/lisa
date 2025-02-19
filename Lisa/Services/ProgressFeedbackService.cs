@@ -1,3 +1,4 @@
+using System.Globalization;
 using Lisa.Data;
 using Lisa.Models.EmailModels;
 using Lisa.Models.Entities;
@@ -61,10 +62,14 @@ class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextFactory,
 
         // Optionally, if you want to include subjects that may not be in LearnerSubjects
         // but exist in Results, you could also group those separately.
+        string learnerName = $"{learner.Name} {learner.Surname}";
+        TextInfo textInfo = CultureInfo.CurrentCulture.TextInfo;
+
+        string learnerNamTitleCase = textInfo.ToTitleCase(learnerName.ToLower());
 
         var progressFeedback = new ProgressFeedback
         {
-            LearnerName = $"{learner.Name} {learner.Surname}",
+            LearnerName = learnerNamTitleCase,
             ResultsBySubject = resultsBySubject
         };
 

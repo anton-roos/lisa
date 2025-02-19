@@ -1,7 +1,10 @@
 @page "/progress-feedback-details/{LearnerId:guid}"
 @using Lisa.Models.EmailModels
+@using Lisa.Models.Entities
+@using System.Globalization
 @inject ProgressFeedbackService ProgressFeedbackService
 @inject NavigationManager NavigationManager
+@inject UserService UserService
 
 @if (feedback == null)
 {
@@ -12,20 +15,31 @@
 else
 {
     <div class="container mt-4" style="max-width: 600px; margin: auto;">
-        <h1 class="text-center mb-3">Progress Feedback</h1>
-        <h3 class="text-center mb-4">@feedback.LearnerName</h3>
+        <h3>Progress Feedback</h3>
+        <p>Dear Parent of <strong>@feedback.LearnerName</strong></p>
+        <p>Please find below the progress feedback on the tests or assignments your child has completed, expressed as percentages out of 100.</p>
+        <p>Kindly note that this is not a formal report card but rather a reflection of all assessments conducted throughout the term.</p>
+        <p>
+            Regards,<br>
+            @foreach (var principal in principals)
+            {
+                @principal.Name <span> </span>
+                @principal.Surname<br>
+            }
+        Principal
+        </p>
 
         @if (feedback.ResultsBySubject != null && feedback.ResultsBySubject.Any())
         {
             @foreach (var subjectGroup in feedback.ResultsBySubject)
             {
                 <div class="card mb-4 shadow-sm">
-                    <div class="card-header bg-primary text-white">
+                    <div class="card-header">
                         <h4 class="mb-0">@subjectGroup.Key</h4>
                     </div>
                     <div class="card-body">
                         <table class="table table-striped text-center">
-                            <thead class="table-dark">
+                            <thead class="table">
                                 <tr>
                                     @for (int i = 0; i < 3; i++)
                                     {
@@ -80,12 +94,13 @@ else
 @code {
     [Parameter]
     public Guid LearnerId { get; set; }
-
     private ProgressFeedback? feedback;
+    private List<User>? principals = [];
 
     protected override async Task OnInitializedAsync()
     {
         feedback = await ProgressFeedbackService.GetProgressFeedbackAsync(LearnerId);
+        principals = await UserService.GetLearnerPrincipal(LearnerId);
     }
 
     private void GoBack()

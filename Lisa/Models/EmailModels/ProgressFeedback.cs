@@ -11,5 +11,6 @@ public class ProgressFeedback
 public class ProgressFeedbackListItem
 {
     public Guid LearnerId { get; set; }
-    public string ChildName { get; set; } = string.Empty;
+    public string Surname { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 }

@@ -5,10 +5,10 @@
 @inject ILogger<ResultsDetails> Logger
 
 <PageTitle>Result Set Details</PageTitle>
-<AuthorizeView 
+<AuthorizeView
     Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
     <Authorized>
-        <h3>Result Set Details</h3>
+        <h3>Result Details</h3>
 
         @if (_loading)
         {
@@ -17,16 +17,28 @@
         else if (_resultSet == null)
         {
             <div class="alert alert-danger">
-                Result Set not found.
+                Result not found.
             </div>
         }
         else
         {
             <div class="card p-3">
                 <h4>Assessment Details</h4>
+                <div>
+                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => Edit()">
+                        <i class="bi bi-pencil-fill"></i>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => GoBack()">
+                        <i class="bi bi-arrow-left"></i>
+                    </button>
+                </div>
                 <p><strong>Assessment Topic:</strong> @_resultSet.AssessmentTopic</p>
                 <p><strong>Assessment Type:</strong> @_resultSet.AssessmentType</p>
-                <p><strong>Date:</strong> @_resultSet.AssessmentDate?.ToString("yyyy-MM-dd")</p>
+                <p><strong>Assessment Date:</strong> @_resultSet.AssessmentDate?.ToString("yyyy-MM-dd")</p>
+                <p><strong>Teacher:</strong>
+                    <Pill Color="primary"> @_resultSet.Teacher.Abbreviation</Pill>
+                    @_resultSet.Teacher.Surname, @_resultSet.Teacher.Name
+                </p>
 
                 <h4>Results</h4>
                 <table class="table table-striped">
@@ -39,23 +51,20 @@
                         </tr>
                     </thead>
                     <tbody>
-                    @if (_resultSet.Results != null)
-            {
-                foreach (var result in _resultSet.Results)
-                {
-                    <tr>
-                        <td>@result.Learner?.Surname, @result.Learner?.Name</td>
-                        <td>@(result.Absent ? "-" : result.Score?.ToString())</td>
-                        <td>@(result.Absent ? "Yes" : "No")</td>
-                        <td>@result.AbsentReason</td>
-                    </tr>
-                }
-            }
-            </tbody>
+                        @if (_resultSet.Results != null)
+                        {
+                            foreach (var result in _resultSet.Results)
+                            {
+                                <tr>
+                                    <td>@result.Learner?.Surname, @result.Learner?.Name</td>
+                                    <td>@(result.Absent ? "-" : result.Score?.ToString())</td>
+                                    <td>@(result.Absent ? "Yes" : "No")</td>
+                                    <td>@result.AbsentReason</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
                 </table>
-
-                <button class="btn btn-secondary" @onclick="GoBack">Back to Results</button>
-                <button class="btn btn-success" @onclick="Edit">Edit</button>
             </div>
         }
     </Authorized>

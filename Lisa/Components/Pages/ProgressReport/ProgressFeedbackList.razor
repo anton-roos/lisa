@@ -4,17 +4,50 @@
 @inject ProgressFeedbackService ProgressFeedbackService
 @inject SchoolService SchoolService
 @inject NavigationManager NavigationManager
+@inject SubjectService SubjectService
+@inject SchoolGradeService SchoolGradeService
 @inherits EventAwareComponentBase
 
 <PageTitle>Progress Feedback List</PageTitle>
 <h1>Progress Feedback List</h1>
 
-<AuthorizeView
-    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
     <Authorized>
         @if (_selectedSchool != null)
         {
-            if (_isLoading)
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label for="gradeDropdown" class="form-label">Grade</label>
+                    <InputSelect id="gradeDropdown" class="form-select" TValue="Guid?" Value="_selectedGradeId"
+                                 ValueChanged="OnGradeChange" ValueExpression="() => _selectedGradeId">
+                        <option value="">-- Select Grade --</option>
+                        @foreach (var grade in _grades)
+                        {
+                            <option value="@grade.Id">@grade.SystemGrade.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-4">
+                    <label for="subjectDropdown" class="form-label">Subject</label>
+                    <InputSelect id="subjectDropdown" class="form-select" TValue="int?" Value="_selectedSubjectId"
+                                 ValueChanged="OnSubjectChange" ValueExpression="() => _selectedSubjectId">
+                        <option value="">-- Select Subject --</option>
+                        @foreach (var subject in _subjects)
+                        {
+                            <option value="@subject.Id">@subject.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-4">
+                    <label for="searchStudent" class="form-label">Search Learner</label>
+                    <input id="searchStudent" type="text" class="form-control" placeholder="Enter learner name..."
+                           @bind="_searchTerm" @oninput="FilterChanged" />
+                </div>
+            </div>
+
+            @if (_isLoading)
             {
                 <p>Loading progress feedback...</p>
             }
@@ -35,10 +68,11 @@
                         @foreach (var feedback in _progressFeedbackList)
                         {
                             <tr>
-                                <td>@feedback.ChildName</td>
+                                <td>@feedback.Surname, @feedback.Name</td>
                                 <td>
-                                    <button class="btn btn-primary" @onclick="() => NavigateToDetails(feedback.LearnerId)">
-                                        View Details
+                                    <button type="button" class="btn btn-primary btn-sm"
+                                            @onclick="() => NavigateToDetails(feedback.LearnerId)">
+                                        <i class="bi bi-eye"></i>
                                     </button>
                                 </td>
                             </tr>
@@ -60,22 +94,29 @@
 </AuthorizeView>
 
 @code {
+    // The complete list loaded from the service
+    private List<ProgressFeedbackListItem> _allFeedbackList = new();
+    // The filtered list displayed on the UI
     private List<ProgressFeedbackListItem>? _progressFeedbackList;
     private School? _selectedSchool;
     private bool _isLoading;
 
+    // Filter fields
+    private Guid? _selectedGradeId = null;
+    private int? _selectedSubjectId = null;
+    private string _searchTerm = "";
+    private List<Subject> _subjects = new();
+    private List<SchoolGrade> _grades = new();
+
     protected override async Task OnInitializedAsync()
     {
-        // Subscribe to school selection events.
         SubscribeToEvent(UiEvents.SchoolSelected);
-
-        // Get the currently selected school.
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
 
-        // If a school is already selected, load the feedback list.
         if (_selectedSchool != null)
         {
-            await LoadProgressFeedbackList();
+            await LoadDropdowns();
+            await LoadProgressFeedbackListFromService();
         }
     }
 
@@ -86,26 +127,80 @@
             _selectedSchool = payload as School;
             if (_selectedSchool != null)
             {
-                await LoadProgressFeedbackList();
+                await LoadDropdowns();
+                await LoadProgressFeedbackListFromService();
             }
         }
-
         await base.HandleEventAsync(eventName, payload);
     }
 
-    private async Task LoadProgressFeedbackList()
+    /// <summary>
+    /// Loads the full list of progress feedback items for the selected school from the server.
+    /// </summary>
+    private async Task LoadProgressFeedbackListFromService()
     {
+        if (_selectedSchool == null)
+            return;
+
         _isLoading = true;
         await InvokeAsync(StateHasChanged);
 
-        _progressFeedbackList = await ProgressFeedbackService.GetProgressFeedbackListAsync(_selectedSchool.Id);
+        _allFeedbackList = await ProgressFeedbackService.GetProgressFeedbackListAsync(_selectedSchool.Id);
+        FilterFeedbackInMemory();
 
         _isLoading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Filters the in-memory list based on the selected grade, subject, and search term.
+    /// </summary>
+    private void FilterFeedbackInMemory()
+    {
+        IEnumerable<ProgressFeedbackListItem> filtered = _allFeedbackList;
+
+        if (!string.IsNullOrWhiteSpace(_searchTerm))
+        {
+            filtered = filtered.Where(item =>
+                item.Name.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                item.Surname.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        _progressFeedbackList = filtered.OrderBy(item => item.Surname).ToList();
+    }
+
+    private async Task FilterChanged(ChangeEventArgs e)
+    {
+        _searchTerm = e?.Value?.ToString() ?? string.Empty;
+        FilterFeedbackInMemory();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnGradeChange(Guid? value)
+    {
+        _selectedGradeId = value;
+        FilterFeedbackInMemory();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnSubjectChange(int? value)
+    {
+        _selectedSubjectId = value;
+        FilterFeedbackInMemory();
         await InvokeAsync(StateHasChanged);
     }
 
     private void NavigateToDetails(Guid learnerId)
     {
         NavigationManager.NavigateTo($"/progress-feedback-details/{learnerId}");
+    }
+
+    private async Task LoadDropdowns()
+    {
+        if (_selectedSchool != null)
+        {
+            _subjects = await SubjectService.GetAllAsync();
+            _grades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+        }
     }
 }

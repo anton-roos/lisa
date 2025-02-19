@@ -81,7 +81,54 @@ class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextFactory,
             .Select(l => new ProgressFeedbackListItem
             {
                 LearnerId = l.Id,
-                ChildName = $"{l.Name} {l.Surname}"
+                Surname = l.Surname!,
+                Name = l.Name!
+            })
+            .ToListAsync();
+
+        return list;
+    }
+
+    public async Task<List<ProgressFeedbackListItem>> GetProgressFeedbackListAsync(
+    Guid schoolId,
+    Guid? gradeId = null,
+    int? subjectId = null,
+    string? searchTerm = null)
+    {
+        using var context = await _dbContextFactory.CreateDbContextAsync();
+
+        // Start with the base query for learners in the selected school that have results.
+        var query = context.Learners
+            .AsNoTracking()
+            .Where(l => l.Results!.Any() && l.SchoolId == schoolId);
+
+        // Filter by grade if provided.
+        if (gradeId is not null)
+        {
+            query = query.Where(l => l.RegisterClass!.SchoolGradeId == gradeId);
+        }
+
+        // Filter by subject if provided.s
+        // Adjust the predicate according to your data model.
+        if (subjectId is not null)
+        {
+            query = query.Where(l => l.LearnerSubjects!.Any(s => s.SubjectId == subjectId));
+        }
+
+        // Filter by search term against learner's name or surname.
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            query = query.Where(l => l.Name!.Contains(searchTerm) || l.Surname!.Contains(searchTerm));
+        }
+
+        // Order the results by surname, then select the desired fields.
+        var list = await query
+            .OrderBy(l => l.Surname)
+            .Select(l => new ProgressFeedbackListItem
+            {
+                LearnerId = l.Id,
+                Surname = l.Surname!,
+                Name = l.Name!
             })
             .ToListAsync();
 

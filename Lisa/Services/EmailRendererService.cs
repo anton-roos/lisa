@@ -1,15 +1,20 @@
 using Lisa.Enums;
+using Lisa.Models.ViewModels;
 
 namespace Lisa.Services
 {
     public class EmailRendererService
+    (
+        ILogger<EmailRendererService> logger,
+        ProgressFeedbackService progressFeedbackService,
+        UserService userService,
+        RazorLightViewToStringRenderer razorViewToStringRenderer
+    )
     {
-        private readonly ILogger<EmailRendererService> _logger;
-
-        public EmailRendererService(ILogger<EmailRendererService> logger)
-        {
-            _logger = logger;
-        }
+        private readonly RazorLightViewToStringRenderer _razorViewToStringRenderer = razorViewToStringRenderer;
+        private readonly ILogger<EmailRendererService> _logger = logger;
+        private readonly ProgressFeedbackService _progressFeedbackService = progressFeedbackService;
+        private readonly UserService _userService = userService;
 
         /// <summary>
         /// Renders a Razor template stored as a string.
@@ -23,12 +28,39 @@ namespace Lisa.Services
         {
             try
             {
-                Task.Delay(1000).Wait(); // Simulate a long-running operation
+                await Task.Delay(1000); // Simulate a long-running operation
                 return "Here we need to render template";
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to render template {template}.", template.ToString());
+                return string.Empty;
+            }
+        }
+
+        public async Task<string> RenderProgressFeedbackAsync(Guid learnerId)
+        {
+            try
+            {
+                // Retrieve the necessary data using your services.
+                var feedback = await _progressFeedbackService.GetProgressFeedbackAsync(learnerId);
+                var principals = await _userService.GetLearnerPrincipal(learnerId);
+                var model = new ProgressFeedbackViewModel
+                {
+                    Feedback = feedback,
+                    Principals = principals
+                };
+
+                // Define the path to your shared partial view.
+                string viewPath = "Shared/_ProgressFeedback.cshtml";
+
+                // Render the view to a string using your Razor view renderer.
+                string renderedHtml = await _razorViewToStringRenderer.RenderViewToStringAsync(viewPath, model);
+                return renderedHtml;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to render progress feedback for learner {learnerId}.", learnerId);
                 return string.Empty;
             }
         }

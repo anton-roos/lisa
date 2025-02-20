@@ -16,9 +16,7 @@ public class EmailCampaignService(
     LearnerService learnerService,
     UserService userService,
     EmailRendererService emailRendererService,
-    EmailTemplateService emailTemplateService,
-    IEnumerable<ICampaignTemplateProcessor> templateProcessors,
-    ResultService resultService
+    IEnumerable<ICampaignTemplateProcessor> templateProcessors
 )
 {
     private readonly IDbContextFactory<LisaDbContext> _contextFactory = contextFactory;
@@ -29,9 +27,7 @@ public class EmailCampaignService(
     private readonly LearnerService _learnerService = learnerService;
     private readonly UserService _userService = userService;
     private readonly EmailRendererService _emailRendererService = emailRendererService;
-    private readonly EmailTemplateService _emailTemplateService = emailTemplateService;
     private readonly IEnumerable<ICampaignTemplateProcessor> _templateProcessors = templateProcessors;
-    private readonly ResultService _resultService = resultService;
 
     public async Task<List<EmailCampaign>> GetBySchoolIdAsync(Guid schoolId)
     {
@@ -89,7 +85,6 @@ public class EmailCampaignService(
             using var context = await _contextFactory.CreateDbContextAsync();
             var campaign = await context.EmailCampaigns
                 .Include(c => c.EmailRecipients)
-                .Include(c => c.EmailTemplate)
                 .FirstOrDefaultAsync(c => c.Id == campaignId);
 
             if (campaign == null) return;
@@ -118,22 +113,7 @@ public class EmailCampaignService(
 
                         if (campaign.EmailTemplate == Template.ProgressReport && recipient.LearnerId.HasValue)
                         {
-                            var learner = await _learnerService.GetByIdAsync(recipient.LearnerId.Value);
-                            if (learner != null)
-                            {
-                                var results = await _resultService.GetByLearnerIdAsync(learner.Id);
-
-                                var progressReportModel = new ProgressFeedback
-                                {
-                                    LearnerName = $"{learner.Name} {learner.Surname}",
-                                    ResultsBySubject = []
-                                };
-
-                                body = await _emailRendererService.RenderTemplateAsync(
-                                   campaign.EmailTemplate,
-                                    campaign.ContentHtml
-                                    );
-                            }
+                            body = await _emailRendererService.RenderProgressFeedbackAsync(recipient.LearnerId.Value);
                         }
 
                         BackgroundJob.Enqueue(() =>
@@ -393,7 +373,6 @@ public class EmailCampaignService(
         return recipients;
     }
 
-
     /// <summary>
     /// Gathers recipient emails based on the CommunicationRequest.
     /// </summary>
@@ -423,7 +402,7 @@ public class EmailCampaignService(
                 else
                 {
                     _logger.LogWarning("Grade ID is null when retrieving grade emails.");
-                    return [];
+                    return new List<string>();
                 }
 
             case Audience.Subject:
@@ -431,8 +410,26 @@ public class EmailCampaignService(
 
             default:
                 _logger.LogWarning("Unknown audience type: {Audience}", command.Audience);
-                return [];
+                return new List<string>();
         }
+    }
+
+    private async Task<List<string>> GetLearnerEmailsAsync(Guid? schoolId)
+    {
+        if (!schoolId.HasValue)
+        {
+            _logger.LogWarning("School ID is null when retrieving learner emails.");
+            return new List<string>();
+        }
+
+        var learners = await _learnerService.GetLearnersBySchoolAsync(schoolId.Value);
+        var emails = learners
+            .Select(l => l.Email)
+            .Where(email => !string.IsNullOrWhiteSpace(email))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return emails;
     }
 
     /// <summary>
@@ -472,7 +469,7 @@ public class EmailCampaignService(
         if (!schoolId.HasValue)
         {
             _logger.LogWarning("School ID is null when retrieving parent emails.");
-            return [];
+            return new List<string>();
         }
 
         var learners = await _learnerService.GetLearnersBySchoolWithParentsAsync(schoolId.Value);
@@ -484,7 +481,7 @@ public class EmailCampaignService(
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        return emails.Where(email => email != null).ToList()!;
+        return emails;
     }
 
     /// <summary>
@@ -508,27 +505,6 @@ public class EmailCampaignService(
     private async Task<List<string>> GetSubjectEmailsAsync(int subjectId)
     {
         var learners = await _learnerService.GetBySubjectIdAsync(subjectId);
-        var emails = learners
-            .Select(l => l.Email)
-            .Where(email => !string.IsNullOrWhiteSpace(email))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        return emails.Where(email => email != null).ToList()!;
-    }
-
-    /// <summary>
-    /// Retrieves learner emails for a specific school.
-    /// </summary>
-    private async Task<List<string>> GetLearnerEmailsAsync(Guid? schoolId)
-    {
-        if (!schoolId.HasValue)
-        {
-            _logger.LogWarning("School ID is null when retrieving learner emails.");
-            return new List<string>();
-        }
-
-        var learners = await _learnerService.GetLearnersBySchoolAsync(schoolId.Value);
         var emails = learners
             .Select(l => l.Email)
             .Where(email => !string.IsNullOrWhiteSpace(email))
@@ -569,7 +545,6 @@ public class EmailCampaignService(
     /// <returns>A Task representing the asynchronous operation.</returns>
     public async Task SendProgressReportsAsync(Guid schoolId)
     {
-
         var learners = await _learnerService.GetLearnersBySchoolAsync(schoolId);
         if (learners == null || learners.Count == 0)
         {
@@ -585,12 +560,9 @@ public class EmailCampaignService(
                 continue;
             }
 
-            // Render the personalized HTML content.
-            var renderedHtml = await _emailRendererService.RenderTemplateAsync(
-                Template.ProgressReport,
-                "progressReportModel");
-
-            var subject =  "Progress Report";
+            // Render the personalized HTML content using the new Razor page renderer.
+            var renderedHtml = await _emailRendererService.RenderProgressFeedbackAsync(learner.Id);
+            var subject = "Progress Report";
             foreach (var parent in learner.Parents)
             {
                 if (string.IsNullOrWhiteSpace(parent.PrimaryEmail) && string.IsNullOrWhiteSpace(parent.SecondaryEmail))

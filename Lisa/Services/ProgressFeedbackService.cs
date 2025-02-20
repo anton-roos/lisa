@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<LearnerService> logger)
+public class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<LearnerService> logger)
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly ILogger<LearnerService> _logger = logger;

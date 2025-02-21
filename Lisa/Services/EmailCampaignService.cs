@@ -15,8 +15,7 @@ public class EmailCampaignService(
     EmailService emailService,
     LearnerService learnerService,
     UserService userService,
-    EmailRendererService emailRendererService,
-    IEnumerable<ICampaignTemplateProcessor> templateProcessors
+    EmailRendererService emailRendererService
 )
 {
     private readonly IDbContextFactory<LisaDbContext> _contextFactory = contextFactory;
@@ -27,7 +26,6 @@ public class EmailCampaignService(
     private readonly LearnerService _learnerService = learnerService;
     private readonly UserService _userService = userService;
     private readonly EmailRendererService _emailRendererService = emailRendererService;
-    private readonly IEnumerable<ICampaignTemplateProcessor> _templateProcessors = templateProcessors;
 
     public async Task<List<EmailCampaign>> GetBySchoolIdAsync(Guid schoolId)
     {
@@ -170,7 +168,7 @@ public class EmailCampaignService(
     /// Sends an email with automatic retries using Hangfire.
     /// </summary>
     [AutomaticRetry(Attempts = 3)]
-    public async Task SendEmailWithRetryAsync(string recipientEmailAddress, string subject, string body, Guid schoolId)
+    public async Task SendEmailWithRetryAsync(string? recipientEmailAddress, string subject, string body, Guid schoolId)
     {
         try
         {
@@ -246,12 +244,6 @@ public class EmailCampaignService(
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var processor = _templateProcessors.FirstOrDefault(p => p.CanProcess(command.EmailTemplate))
-            ?? throw new InvalidOperationException("No processor found for the given template.");
-
-        var html = await processor.GenerateHtmlAsync(command);
-        await processor.ProcessAdditionalActionsAsync(command);
-
         var utcNow = DateTime.UtcNow;
         var subjectLine = string.IsNullOrWhiteSpace(command.SubjectLine)
             ? command.EmailTemplate switch
@@ -284,17 +276,20 @@ public class EmailCampaignService(
         else
         {
             var recipientEmails = await GetRecipientEmailsAsync(command);
-            if (recipientEmails == null || !recipientEmails.Any())
-                throw new ArgumentException("Recipient emails list cannot be empty.", nameof(recipientEmails));
 
-            recipients = recipientEmails.Select(email => new EmailRecipient
+            if (recipientEmails == null || recipientEmails.Count == 0)
+            {
+                throw new Exception("Recipient emails list cannot be empty or null.");
+            }
+
+            recipients = [.. recipientEmails.Select(email => new EmailRecipient
             {
                 Id = Guid.NewGuid(),
                 EmailAddress = email,
                 Status = EmailRecipientStatus.Pending,
                 CreatedAt = utcNow,
                 UpdatedAt = utcNow
-            }).ToList();
+            })];
         }
 
         var emailCampaign = new EmailCampaign
@@ -305,7 +300,6 @@ public class EmailCampaignService(
             SubjectLine = subjectLine,
             SenderName = string.IsNullOrWhiteSpace(command.SenderName) ? "School Admin" : command.SenderName,
             SenderEmail = string.IsNullOrWhiteSpace(command.SenderEmail) ? "admin@school.com" : command.SenderEmail,
-            ContentHtml = html,
             Status = EmailCampaignStatus.Draft,
             ScheduledAt = utcNow.AddMinutes(1),
             TrackOpens = true,
@@ -385,7 +379,7 @@ public class EmailCampaignService(
     /// <summary>
     /// Gathers recipient emails based on the CommunicationRequest.
     /// </summary>
-    private async Task<List<string>> GetRecipientEmailsAsync(CommunicationCommand command)
+    private async Task<List<string?>> GetRecipientEmailsAsync(CommunicationCommand command)
     {
         switch (command.Audience)
         {
@@ -411,7 +405,7 @@ public class EmailCampaignService(
                 else
                 {
                     _logger.LogWarning("Grade ID is null when retrieving grade emails.");
-                    return new List<string>();
+                    return [];
                 }
 
             case Audience.Subject:
@@ -419,16 +413,16 @@ public class EmailCampaignService(
 
             default:
                 _logger.LogWarning("Unknown audience type: {Audience}", command.Audience);
-                return new List<string>();
+                return [];
         }
     }
 
-    private async Task<List<string>> GetLearnerEmailsAsync(Guid? schoolId)
+    private async Task<List<string?>> GetLearnerEmailsAsync(Guid? schoolId)
     {
         if (!schoolId.HasValue)
         {
             _logger.LogWarning("School ID is null when retrieving learner emails.");
-            return new List<string>();
+            return [];
         }
 
         var learners = await _learnerService.GetLearnersBySchoolAsync(schoolId.Value);
@@ -452,7 +446,7 @@ public class EmailCampaignService(
     /// <summary>
     /// Retrieves parent emails for learners in a specific school.
     /// </summary>
-    private async Task<List<string>> GetParentEmailsAsync(Guid? schoolId)
+    private async Task<List<string?>> GetParentEmailsAsync(Guid? schoolId)
     {
         if (!schoolId.HasValue)
         {
@@ -475,7 +469,7 @@ public class EmailCampaignService(
     /// <summary>
     /// Retrieves learner emails for a specific grade.
     /// </summary>
-    private async Task<List<string>> GetGradeEmailsAsync(Guid gradeId)
+    private async Task<List<string?>> GetGradeEmailsAsync(Guid gradeId)
     {
         var learners = await _learnerService.GetLearnersByGradeAsync(gradeId);
         var emails = learners
@@ -490,7 +484,7 @@ public class EmailCampaignService(
     /// <summary>
     /// Retrieves learner emails for a specific subject.
     /// </summary>
-    private async Task<List<string>> GetSubjectEmailsAsync(int subjectId)
+    private async Task<List<string?>> GetSubjectEmailsAsync(int subjectId)
     {
         var learners = await _learnerService.GetBySubjectIdAsync(subjectId);
         var emails = learners
@@ -505,12 +499,12 @@ public class EmailCampaignService(
     /// <summary>
     /// Retrieves staff emails for a specific school.
     /// </summary>
-    private async Task<List<string>> GetStaffEmailsAsync(Guid? schoolId)
+    private async Task<List<string?>> GetStaffEmailsAsync(Guid? schoolId)
     {
         if (!schoolId.HasValue)
         {
             _logger.LogWarning("School ID is null when retrieving staff emails.");
-            return new List<string>();
+            return [];
         }
 
         var roles = new[] { Roles.Administrator, Roles.Principal, Roles.Teacher, Roles.SchoolManagement };

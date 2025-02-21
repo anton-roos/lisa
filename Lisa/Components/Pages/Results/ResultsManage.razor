@@ -227,7 +227,7 @@
         if (!string.IsNullOrEmpty(ViewModel.GradeId) && !string.IsNullOrEmpty(ViewModel.SubjectId))
         {
             ViewModel.Teacher = await UserService.GetTeacherForGradeAndSubjectAsync(
-                _selectedSchool.Id,
+                _selectedSchool?.Id,
                 Guid.Parse(ViewModel.GradeId), int.Parse(ViewModel.SubjectId));
         }
         await InvokeAsync(StateHasChanged);

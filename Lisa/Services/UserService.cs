@@ -111,7 +111,7 @@ public class UserService(
         }
     }
 
-    public async Task<User?> GetTeacherForGradeAndSubjectAsync(Guid schoolId, Guid gradeId, int subjectId)
+    public async Task<User?> GetTeacherForGradeAndSubjectAsync(Guid? schoolId, Guid gradeId, int subjectId)
     {
         try
         {

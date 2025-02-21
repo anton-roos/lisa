@@ -149,8 +149,6 @@ builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<EmailCampaignService>();
 builder.Services.AddScoped<EmailRendererService>();
-builder.Services.AddTransient<ICampaignTemplateProcessor, ProgressReportCampaignProcessor>();
-builder.Services.AddTransient<ICampaignTemplateProcessor, DefaultCampaignProcessor>();
 builder.Services.AddScoped<ProgressFeedbackService>();
 builder.Services.AddScoped<RazorLightViewToStringRenderer>();
 

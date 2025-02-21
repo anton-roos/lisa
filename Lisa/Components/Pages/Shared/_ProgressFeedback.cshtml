@@ -92,19 +92,19 @@
 <body>
     <div class="container mt-4" style="max-width: 600px; margin: auto;">
         <h3>Progress Feedback</h3>
-        <p>Dear Parent of <strong>@Model.Feedback.LearnerName</strong></p>
+        <p>Dear Parent of <strong>@Model?.Feedback?.LearnerName</strong></p>
         <p>Please find below the progress feedback on the tests or assignments your child has completed, expressed as percentages out of 100.</p>
         <p>Kindly note that this is not a formal report card but rather a reflection of all assessments conducted throughout the term.</p>
         <p>
             Regards,<br />
-            @foreach (var principal in Model.Principals)
+            @foreach (var principal in Model?.Principals!)
             {
                 @principal.Name @principal.Surname<br />
             }
             Principal
         </p>
 
-        @if (Model.Feedback.ResultsBySubject != null && Model.Feedback.ResultsBySubject.Any(x => x.Value != null && x.Value.Any()))
+        @if (Model?.Feedback?.ResultsBySubject != null && Model.Feedback.ResultsBySubject.Any(x => x.Value != null && x.Value.Any()))
         {
             foreach (var subjectGroup in Model.Feedback.ResultsBySubject.Where(x => x.Value != null && x.Value.Any()))
             {
@@ -143,7 +143,7 @@
                                                         ? "text-danger fw-bold" 
                                                         : "text-success fw-bold");
 
-                                                <td>@result.ResultSet.AssessmentDate.Value.ToString("MM/dd")</td>
+                                                <td>@result.ResultSet?.AssessmentDate!.Value.ToString("MM/dd")</td>
                                                 <td class="@markClass">@(result.Score.HasValue ? result.Score.Value + "%" : "Absent")</td>
                                             }
                                             else

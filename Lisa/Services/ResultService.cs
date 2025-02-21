@@ -247,10 +247,10 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
 
         var learner = await context.Learners
             .AsNoTracking()
-            .Include(l => l.Results)
+            .Include(l => l.Results!)
             .ThenInclude(r => r.ResultSet)
             .FirstOrDefaultAsync(l => l.Id == id);
 
-        return learner?.Results.ToList()!;
+        return learner?.Results?.ToList()!;
     }
 }

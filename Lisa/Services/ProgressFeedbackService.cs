@@ -10,24 +10,24 @@ public class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextF
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly ILogger<LearnerService> _logger = logger;
-    public async Task<ProgressFeedback> GetProgressFeedbackAsync(Guid id)
+    public async Task<ProgressFeedback?> GetProgressFeedbackAsync(Guid id)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
         var learner = await context.Learners
             .AsNoTracking()
-            .Include(l => l.RegisterClass)
-                .ThenInclude(rc => rc!.SchoolGrade)
-                    .ThenInclude(sg => sg!.SystemGrade)
-            .Include(l => l.Combination)
-                .ThenInclude(c => c!.Subjects)
+            .Include(l => l.RegisterClass!)
+                .ThenInclude(rc => rc.SchoolGrade!)
+                    .ThenInclude(sg => sg!.SystemGrade!)
+            .Include(l => l.Combination!)
+                .ThenInclude(c => c!.Subjects!)
             .Include(l => l.LearnerSubjects!)
-                .ThenInclude(ls => ls.Subject)
-            .Include(l => l.CareGroup)
+                .ThenInclude(ls => ls.Subject!)
+            .Include(l => l.CareGroup!)
             .Include(l => l.Parents!)
-            .Include(l => l.School)
-            .Include(l => l.Results)
+            .Include(l => l.School!)
+            .Include(l => l.Results!)
                 .ThenInclude(r => r.ResultSet)
-                    .ThenInclude(rs => rs.Subject)
+                    .ThenInclude(rs => rs!.Subject)
             .FirstOrDefaultAsync(l => l.Id == id);
 
         if (learner == null)

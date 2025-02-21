@@ -36,8 +36,8 @@
                 <p><strong>Assessment Type:</strong> @_resultSet.AssessmentType</p>
                 <p><strong>Assessment Date:</strong> @_resultSet.AssessmentDate?.ToString("yyyy-MM-dd")</p>
                 <p><strong>Teacher:</strong>
-                    <Pill Color="primary"> @_resultSet.Teacher.Abbreviation</Pill>
-                    @_resultSet.Teacher.Surname, @_resultSet.Teacher.Name
+                    <Pill Color="primary"> @_resultSet?.Teacher?.Abbreviation</Pill>
+                    @_resultSet?.Teacher?.Surname, @_resultSet?.Teacher?.Name
                 </p>
 
                 <h4>Results</h4>
@@ -51,7 +51,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if (_resultSet.Results != null)
+                        @if (_resultSet?.Results != null)
                         {
                             foreach (var result in _resultSet.Results)
                             {

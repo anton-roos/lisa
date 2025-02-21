@@ -21,10 +21,14 @@ else
         <p>Kindly note that this is not a formal report card but rather a reflection of all assessments conducted throughout the term.</p>
         <p>
             Regards,<br>
-            @foreach (var principal in principals)
+            @if (principals is not null)
             {
-                @principal.Name <span> </span>
-                @principal.Surname<br>
+                @foreach (var principal in principals)
+                {
+                    @principal.Name
+                    <span> </span>
+                    @principal.Surname<br>
+                }
             }
         Principal
         </p>
@@ -76,7 +80,7 @@ else
                                                     markClass = "text-success fw-bold";
                                                 }
                                                 
-                                                <td>@result.ResultSet.AssessmentDate.Value.ToString("MM/dd")</td>
+                                                <td>@result.ResultSet?.AssessmentDate!.Value.ToString("MM/dd")</td>
                                                 <td class="@markClass">@(result.Score.HasValue ? result.Score.Value.ToString() + "%" : "Absent")</td>
                                             }
                                             else

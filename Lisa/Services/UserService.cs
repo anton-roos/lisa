@@ -345,7 +345,11 @@ public class UserService(
         {
             using var context = await dbContextFactory.CreateDbContextAsync();
             var teacher = await context.Users.FindAsync(userId);
-            if (teacher == null) return [];
+
+            if (teacher == null)
+            {
+                return [];
+            }
 
             return await context.Users
                 .AsNoTracking()

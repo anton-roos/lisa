@@ -49,7 +49,7 @@ public class UiEventService(ILogger<UiEventService> logger) : IDisposable
     /// <summary>
     /// Publishes an event to all subscribers.
     /// </summary>
-    public async Task PublishAsync(string eventName, object? payload = null)
+    public async Task PublishAsync(string eventName, object? payload)
     {
         if (!_subscribers.TryGetValue(eventName, out var subscribers) || subscribers.IsEmpty)
         {

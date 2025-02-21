@@ -83,7 +83,9 @@ public class EmailCampaignService(
                 .FirstOrDefaultAsync(c => c.Id == campaignId);
 
             if (campaign == null)
+            {
                 return;
+            }
 
             int total = campaign.EmailRecipients?.Count ?? 0;
             int sent = 0;
@@ -195,7 +197,9 @@ public class EmailCampaignService(
     public async Task PauseCampaignAsync(Guid campaignId)
     {
         if (!TryCancelCampaign(campaignId))
+        {
             return;
+        }
 
         using var context = await _contextFactory.CreateDbContextAsync();
         var campaign = await context.EmailCampaigns.FindAsync(campaignId);
@@ -211,7 +215,9 @@ public class EmailCampaignService(
     public async Task StopCampaignAsync(Guid campaignId)
     {
         if (!TryCancelCampaign(campaignId))
+        {
             return;
+        }
 
         using var context = await _contextFactory.CreateDbContextAsync();
         var campaign = await context.EmailCampaigns.FindAsync(campaignId);

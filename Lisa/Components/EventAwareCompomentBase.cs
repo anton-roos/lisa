@@ -15,7 +15,11 @@ public abstract class EventAwareComponentBase : ComponentBase, IEventSubscriber,
 
     protected void SubscribeToEvent(string eventName)
     {
-        if (_subscriptionIds.ContainsKey(eventName)) return;
+        if (_subscriptionIds.ContainsKey(eventName))
+        {
+            return;
+        }
+
         var id = UiEventService.Subscribe(eventName, this);
         _subscriptionIds.TryAdd(eventName, id);
     }
@@ -57,7 +61,11 @@ public abstract class EventAwareComponentBase : ComponentBase, IEventSubscriber,
 
     protected virtual void Dispose(bool disposing)
     {
-        if (_disposed) return;
+        if (_disposed)
+        {
+            return;
+        }
+
         if (disposing)
         {
             foreach (var subscription in _subscriptionIds)

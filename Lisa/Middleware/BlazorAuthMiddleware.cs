@@ -67,11 +67,6 @@ public class BlazorAuthMiddleware(RequestDelegate next, ILoginStore loginStore)
                 context.Response.Redirect("/");
                 return;
             }
-            else if (result.RequiresTwoFactor)
-            {
-                context.Response.Redirect($"/login-with-2fa/{key}");
-                return;
-            }
 
             context.Response.Redirect("/login-failed");
             return;

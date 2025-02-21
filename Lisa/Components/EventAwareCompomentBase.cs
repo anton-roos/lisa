@@ -5,14 +5,13 @@ using System.Collections.Concurrent;
 
 namespace Lisa.Components;
 
-public abstract class EventAwareComponentBase(ILogger<EventAwareComponentBase> logger) : ComponentBase, IEventSubscriber, IDisposable, IAsyncDisposable
+public abstract class EventAwareComponentBase : ComponentBase, IEventSubscriber, IDisposable, IAsyncDisposable
 {
     [Inject]
     protected IUiEventService UiEventService { get; set; } = null!;
 
     private readonly ConcurrentDictionary<string, Guid> _subscriptionIds = new();
     private bool _disposed;
-    private readonly ILogger<EventAwareComponentBase> _logger = logger;
 
     protected void SubscribeToEvent(string eventName)
     {
@@ -30,14 +29,7 @@ public abstract class EventAwareComponentBase(ILogger<EventAwareComponentBase> l
     {
         if (!_disposed)
         {
-            try
-            {
-                await InvokeAsync(StateHasChanged);
-            }
-            catch (ObjectDisposedException exception)
-            {
-                _logger.LogWarning(exception, "Failed to invoke StateHasChanged in EventAwareComponentBase for event {EventName}", eventName);
-            }
+            await InvokeAsync(StateHasChanged);
         }
     }
 

@@ -94,10 +94,10 @@ public class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextF
         return list;
     }
 
-    public async Task<List<ProgressFeedbackListItem>> GetProgressFeedbackListAsync(
-    Guid schoolId,
-    Guid? gradeId = null,
-    int? subjectId = null)
+    public async Task<List<ProgressFeedbackListItem>> GetProgressFeedbackListAsync
+    (
+        Guid schoolId, Guid? gradeId, int? subjectId
+    )
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
 

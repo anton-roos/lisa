@@ -243,60 +243,23 @@ public class EmailCampaignService(
         return await context.EmailCampaigns.FindAsync(id);
     }
 
-    /// <summary>
-    /// Create a new EmailCampaign.
-    /// </summary>
     public async Task<EmailCampaign> CreateAsync(CommunicationCommand command)
     {
         ArgumentNullException.ThrowIfNull(command);
-
         var utcNow = DateTime.UtcNow;
-        var subjectLine = string.IsNullOrWhiteSpace(command.SubjectLine)
-            ? command.EmailTemplate switch
+
+        var subjectLine = !string.IsNullOrWhiteSpace(command.SubjectLine)
+            ? command.SubjectLine
+            : command.EmailTemplate switch
             {
                 Template.ProgressFeedback => "Progress Feedback",
                 Template.Newsletter => "Latest Newsletter",
                 _ => "Important Update from Your School"
-            }
-            : command.SubjectLine;
+            };
 
-        List<EmailRecipient> recipients;
-
-        if (command.EmailTemplate == Template.ProgressFeedback)
-        {
-            var progressRecipients = await GetProgressReportRecipientsAsync(command);
-
-            if (progressRecipients.Count == 0)
-                throw new ArgumentException("No recipients found for the progress report.", nameof(progressRecipients));
-
-            recipients = progressRecipients.Select(r => new EmailRecipient
-            {
-                Id = Guid.NewGuid(),
-                EmailAddress = r.Email,
-                LearnerId = r.LearnerId,
-                Status = EmailRecipientStatus.Pending,
-                CreatedAt = utcNow,
-                UpdatedAt = utcNow
-            }).ToList();
-        }
-        else
-        {
-            var recipientEmails = await GetRecipientEmailsAsync(command);
-
-            if (recipientEmails == null || recipientEmails.Count == 0)
-            {
-                throw new Exception("Recipient emails list cannot be empty or null.");
-            }
-
-            recipients = [.. recipientEmails.Select(email => new EmailRecipient
-            {
-                Id = Guid.NewGuid(),
-                EmailAddress = email,
-                Status = EmailRecipientStatus.Pending,
-                CreatedAt = utcNow,
-                UpdatedAt = utcNow
-            })];
-        }
+        var recipients = command.EmailTemplate == Template.ProgressFeedback
+            ? await GenerateProgressRecipientsAsync(command, utcNow)
+            : await GenerateStandardRecipientsAsync(command, utcNow);
 
         var emailCampaign = new EmailCampaign
         {
@@ -310,9 +273,6 @@ public class EmailCampaignService(
             ScheduledAt = utcNow.AddMinutes(1),
             TrackOpens = true,
             TrackClicks = true,
-            StatsSentCount = 0,
-            StatsOpenCount = 0,
-            StatsClickCount = 0,
             CreatedAt = utcNow,
             UpdatedAt = utcNow,
             EmailRecipients = recipients,
@@ -323,8 +283,44 @@ public class EmailCampaignService(
         using var context = await _contextFactory.CreateDbContextAsync();
         context.EmailCampaigns.Add(emailCampaign);
         await context.SaveChangesAsync();
-
         return emailCampaign;
+    }
+
+    private async Task<List<EmailRecipient>> GenerateProgressRecipientsAsync(CommunicationCommand command, DateTime utcNow)
+    {
+        var progressRecipients = await GetProgressReportRecipientsAsync(command);
+
+        if (progressRecipients.Count == 0)
+        {
+            _logger.LogWarning("No recipients found for the progress report.");
+        }
+
+        return [.. progressRecipients.Select(r => new EmailRecipient
+        {
+            Id = Guid.NewGuid(),
+            EmailAddress = r.Email,
+            LearnerId = r.LearnerId,
+            Status = EmailRecipientStatus.Pending,
+            CreatedAt = utcNow,
+            UpdatedAt = utcNow
+        })];
+    }
+
+    private async Task<List<EmailRecipient>> GenerateStandardRecipientsAsync(CommunicationCommand command, DateTime utcNow)
+    {
+        var recipientEmails = await GetRecipientEmailsAsync(command);
+        if (recipientEmails == null || recipientEmails.Count == 0)
+        {
+            throw new Exception("Recipient emails list cannot be empty or null.");
+        }
+        return [.. recipientEmails.Select(email => new EmailRecipient
+        {
+            Id = Guid.NewGuid(),
+            EmailAddress = email,
+            Status = EmailRecipientStatus.Pending,
+            CreatedAt = utcNow,
+            UpdatedAt = utcNow
+        })];
     }
 
     private async Task<List<(string Email, Guid LearnerId)>> GetProgressReportRecipientsAsync(CommunicationCommand command)

@@ -112,7 +112,7 @@ builder.Services.AddHangfire(config =>
     }));
 builder.Services.AddHangfireServer();
 
-builder.Services.AddHangfireServer(options => { options.WorkerCount = 2; });
+builder.Services.AddHangfireServer(options => { options.WorkerCount = 1; });
 
 builder.Services.ConfigureApplicationCookie(options =>
 {

@@ -9,14 +9,14 @@ namespace Lisa.Services;
 
 public class SchoolService(
     IDbContextFactory<LisaDbContext> dbContextFactory,
-    IUiEventService uiEventService,
+    UiEventService uiEventService,
     UserService userService,
     AuthenticationStateProvider authenticationStateProvider,
     ILogger<SchoolService> logger
 )
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-    private readonly IUiEventService _uiEventService = uiEventService;
+    private readonly UiEventService _uiEventService = uiEventService;
     private readonly ILogger<SchoolService> _logger = logger;
     private readonly UserService _userService = userService;
     private readonly AuthenticationStateProvider _authenticationStateProvider = authenticationStateProvider;

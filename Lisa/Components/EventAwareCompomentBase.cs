@@ -8,7 +8,7 @@ namespace Lisa.Components;
 public abstract class EventAwareComponentBase : ComponentBase, IEventSubscriber, IDisposable, IAsyncDisposable
 {
     [Inject]
-    protected IUiEventService UiEventService { get; set; } = null!;
+    protected UiEventService UiEventService { get; set; } = null!;
 
     private readonly ConcurrentDictionary<string, Guid> _subscriptionIds = new();
     private bool _disposed;

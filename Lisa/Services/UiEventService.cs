@@ -3,15 +3,7 @@ using Lisa.Interfaces;
 
 namespace Lisa.Services;
 
-public interface IUiEventService
-{
-    Guid Subscribe(string eventName, IEventSubscriber subscriber);
-    void Unsubscribe(string eventName, Guid subscriberId);
-    Task UnsubscribeAsync(string eventName, Guid subscriberId);
-    Task PublishAsync(string eventName, object? payload = null);
-}
-
-public class UiEventService(ILogger<UiEventService> logger) : IUiEventService, IDisposable
+public class UiEventService(ILogger<UiEventService> logger) : IDisposable
 {
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<Guid, WeakReference<IEventSubscriber>>> _subscribers = new();
     private readonly ILogger<UiEventService> _logger = logger;

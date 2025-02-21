@@ -135,7 +135,7 @@ builder.Services.AddScoped<RegisterClassService>();
 builder.Services.AddScoped<SubjectService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ResultService>();
-builder.Services.AddScoped<IUiEventService, UiEventService>();
+builder.Services.AddScoped<UiEventService>();
 builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<ProtectedSessionStorage>();
 builder.Services.AddScoped<BugReportService>();

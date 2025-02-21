@@ -10,7 +10,7 @@ public class UserService(
     UserManager<User> userManager,
     IDbContextFactory<LisaDbContext> dbContextFactory,
     ILogger<UserService> logger,
-    IUiEventService uiEventService,
+    UiEventService uiEventService,
     IPasswordHasher<User> passwordHasher)
 {
     /// <summary>

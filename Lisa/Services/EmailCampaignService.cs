@@ -10,7 +10,7 @@ namespace Lisa.Services;
 
 public class EmailCampaignService(
     IDbContextFactory<LisaDbContext> contextFactory,
-    IUiEventService uiEventService,
+    UiEventService uiEventService,
     ILogger<EmailCampaignService> logger,
     EmailService emailService,
     LearnerService learnerService,
@@ -19,7 +19,7 @@ public class EmailCampaignService(
 )
 {
     private readonly IDbContextFactory<LisaDbContext> _contextFactory = contextFactory;
-    private readonly IUiEventService _uiEventService = uiEventService;
+    private readonly UiEventService _uiEventService = uiEventService;
     private readonly ILogger<EmailCampaignService> _logger = logger;
     private static readonly ConcurrentDictionary<Guid, CancellationTokenSource> CampaignTokens = new();
     private readonly EmailService _emailService = emailService;

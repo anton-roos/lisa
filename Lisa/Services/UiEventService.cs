@@ -9,9 +9,6 @@ public class UiEventService(ILogger<UiEventService> logger) : IDisposable
     private readonly ILogger<UiEventService> _logger = logger;
     private readonly SynchronizationContext? _syncContext = SynchronizationContext.Current;
 
-    /// <summary>
-    /// Subscribes an event subscriber to a given event name.
-    /// </summary>
     public Guid Subscribe(string eventName, IEventSubscriber subscriber)
     {
         var subscriberId = Guid.NewGuid();
@@ -24,9 +21,6 @@ public class UiEventService(ILogger<UiEventService> logger) : IDisposable
         return subscriberId;
     }
 
-    /// <summary>
-    /// Unsubscribes a subscriber from an event.
-    /// </summary>
     public void Unsubscribe(string eventName, Guid subscriberId)
     {
         if (_subscribers.TryGetValue(eventName, out var subscribers))
@@ -37,18 +31,12 @@ public class UiEventService(ILogger<UiEventService> logger) : IDisposable
         }
     }
 
-    /// <summary>
-    /// Asynchronous version of Unsubscribe.
-    /// </summary>
     public Task UnsubscribeAsync(string eventName, Guid subscriberId)
     {
         Unsubscribe(eventName, subscriberId);
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Publishes an event to all subscribers.
-    /// </summary>
     public async Task PublishAsync(string eventName, object? payload)
     {
         if (!_subscribers.TryGetValue(eventName, out var subscribers) || subscribers.IsEmpty)
@@ -74,9 +62,6 @@ public class UiEventService(ILogger<UiEventService> logger) : IDisposable
         await Task.WhenAll(tasks);
     }
 
-    /// <summary>
-    /// Safely invokes an event subscriber.
-    /// </summary>
     private async Task InvokeSubscriberAsync(IEventSubscriber subscriber, string eventName, object? payload)
     {
         try
@@ -96,9 +81,6 @@ public class UiEventService(ILogger<UiEventService> logger) : IDisposable
         }
     }
 
-    /// <summary>
-    /// Cleans up dead references from the subscriber dictionary.
-    /// </summary>
     private static void CleanupDeadReferences(ConcurrentDictionary<Guid, WeakReference<IEventSubscriber>> subscribers)
     {
         var deadSubscribers = subscribers
@@ -112,9 +94,6 @@ public class UiEventService(ILogger<UiEventService> logger) : IDisposable
         }
     }
 
-    /// <summary>
-    /// Disposes of the event service and cleans up all subscriptions.
-    /// </summary>
     public void Dispose()
     {
         foreach (var eventSubscribers in _subscribers.Values)

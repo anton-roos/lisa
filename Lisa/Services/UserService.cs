@@ -13,16 +13,12 @@ public class UserService(
     UiEventService uiEventService,
     IPasswordHasher<User> passwordHasher)
 {
-    /// <summary>
-    /// Retrieves all users by role and school.
-    /// </summary>
     public async Task<List<User>> GetAllByRoleAndSchoolAsync(string[] roles, Guid? schoolId)
     {
         try
         {
             var context = await dbContextFactory.CreateDbContextAsync();
 
-            // Retrieve users who either belong to the school OR are System Administrators
             var usersQuery = context.Users.AsNoTracking();
 
             if (schoolId != null)
@@ -67,12 +63,6 @@ public class UserService(
         }
     }
 
-    /// <summary>
-    /// Retrieves a teacher by ID with related data.
-    /// </summary>
-    /// <summary>
-    /// Retrieves a user by ID with related data (School, CareGroups, Subjects, RegisterClasses, Periods).
-    /// </summary>
     public async Task<User?> GetByIdAsync(Guid id)
     {
         try
@@ -162,9 +152,6 @@ public class UserService(
         }
     }
 
-    /// <summary>
-    /// Updates an existing user.
-    /// </summary>
     public async Task<bool> UpdateAsync(UserViewModel user, string? newPassword)
     {
         try
@@ -254,7 +241,7 @@ public class UserService(
                 }
             }
 
-            await uiEventService.PublishAsync(UiEvents.UsersUpdated);
+            await uiEventService.PublishAsync(UiEvents.UsersUpdated, null);
             logger.LogInformation("Updated teacher: {TeacherId}", user.Id);
             return true;
         }
@@ -265,9 +252,6 @@ public class UserService(
         }
     }
 
-    /// <summary>
-    /// Deletes a user.
-    /// </summary>
     public async Task<bool> DeleteAsync(Guid id)
     {
         try
@@ -282,7 +266,7 @@ public class UserService(
 
             context.Users.Remove(existing);
             await context.SaveChangesAsync();
-            await uiEventService.PublishAsync(UiEvents.UsersUpdated);
+            await uiEventService.PublishAsync(UiEvents.UsersUpdated, null);
             logger.LogInformation("Deleted teacher: {TeacherId}", id);
             return true;
         }
@@ -290,24 +274,6 @@ public class UserService(
         {
             logger.LogError(ex, "Error deleting teacher with ID: {TeacherId}", id);
             return false;
-        }
-    }
-
-    /// <summary>
-    /// Retrieves all users.
-    /// </summary>
-    public async Task<List<User>> GetAllAsync()
-    {
-        try
-        {
-            using var context = await dbContextFactory.CreateDbContextAsync();
-            return await context.Users
-                .ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error fetching all teachers.");
-            return [];
         }
     }
 
@@ -327,18 +293,12 @@ public class UserService(
         }
     }
 
-    /// <summary>
-    /// Checks if a teacher has any assigned register classes.
-    /// </summary>
     public async Task<bool> HasRegisterClassesAsync(Guid userId)
     {
         using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.RegisterClasses.AnyAsync(rc => rc.UserId == userId);
     }
 
-    /// <summary>
-    /// Retrieves available teachers except the given teacher.
-    /// </summary>
     public async Task<List<User>> GetAvailableTeachersAsync(Guid userId)
     {
         try
@@ -363,9 +323,6 @@ public class UserService(
         }
     }
 
-    /// <summary>
-    /// Transfers register classes from one teacher to another.
-    /// </summary>
     public async Task<bool> TransferRegisterClassesAsync(Guid oldUserId, Guid newUserId)
     {
         try

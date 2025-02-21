@@ -2,6 +2,7 @@
 @using Lisa.Models.Entities
 @inject EmailCampaignService EmailCampaignService
 @inject ILogger<EmailCampaignManager> Logger
+@inherits EventAwareComponentBase
 
 <PageTitle>Email Campaign</PageTitle>
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
@@ -14,10 +15,14 @@
         {
             <div class="alert alert-danger">Campaign not found.</div>
         }
+        else if (Campaign != null && Campaign.Status == EmailCampaignStatus.Sent)
+        {
+            <div class="alert alert-success mt-3">Campaign Finished</div>
+        }
         else
         {
             <div class="card p-4 shadow-lg">
-                <h3>@Campaign.Name</h3>
+                <h3>@Campaign?.Name</h3>
 
                 <div class="progress my-3">
                     <div class="progress-bar" role="progressbar" style="width: @ProgressPercent%;"
@@ -57,14 +62,52 @@
 @code {
     [Parameter] public Guid Id { get; set; }
     private EmailCampaign? Campaign { get; set; }
-    private int ProgressPercent { get; set; } 
-    private int SentCount { get; set; } 
-    private int TotalRecipients { get; set; } 
+    private int ProgressPercent { get; set; }
+    private int SentCount { get; set; }
+    private int TotalRecipients { get; set; }
     private string? _statusMessage;
     private bool _isLoading = true;
     private bool _isProcessing;
 
     protected override async Task OnInitializedAsync()
+    {
+        SubscribeToEvent(UiEvents.EmailCampaignProgressUpdated);
+        SubscribeToEvent(UiEvents.EmailCampaignCompleted);
+        SubscribeToEvent(UiEvents.EmailCampaignStarted);
+        SubscribeToEvent(UiEvents.EmailCampaignPaused);
+        SubscribeToEvent(UiEvents.EmailCampaignCancelled);
+
+        await LoadCampaign();
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (payload != null)
+        {
+            dynamic data = payload;
+            if (data.Id != null && Id.Equals(data.Id))
+            {
+                if (eventName == UiEvents.EmailCampaignProgressUpdated)
+                {
+                    ProgressPercent = data.Progress;
+                    SentCount = data.Sent;
+                    TotalRecipients = data.Total;
+                }
+                else if (eventName == UiEvents.EmailCampaignCompleted ||
+                eventName == UiEvents.EmailCampaignPaused ||
+                eventName == UiEvents.EmailCampaignCancelled ||
+                eventName == UiEvents.EmailCampaignStarted)
+                {
+                    await LoadCampaign();
+                }
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadCampaign()
     {
         try
         {
@@ -85,6 +128,7 @@
         finally
         {
             _isLoading = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 

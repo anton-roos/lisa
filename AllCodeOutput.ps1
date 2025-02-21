@@ -16,7 +16,7 @@ if (Test-Path $outputFile) {
 }
 
 # Retrieve all .cs and .razor files recursively from the chosen folder and process each file
-Get-ChildItem -Path $folder -Recurse -Include *.cs,*.razor -File | ForEach-Object {
+Get-ChildItem -Path $folder -Recurse -Include *.cs,*.razor,*.csproj -File | ForEach-Object {
     # Write a header with the file name using the format operator
     "{0}" -f $_.Name | Out-File $outputFile -Append
 

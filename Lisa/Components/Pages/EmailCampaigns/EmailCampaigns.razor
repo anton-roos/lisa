@@ -28,50 +28,50 @@
             <h3>Email Campaigns for @_selectedSchool?.ShortName</h3>
             <table class="table table-striped">
                 <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Status</th>
-                    <th>Subject Line</th>
-                    <th>Created At</th>
-                    <th>Actions</th>
-                </tr>
+                    <tr>
+                        <th>Name</th>
+                        <th>Status</th>
+                        <th>Subject Line</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                    </tr>
                 </thead>
                 <tbody>
-                @if (_emailCampaignList == null)
-                {
-                    <tr>
-                        <td colspan="5">No Email Campaigns Found</td>
-                    </tr>
-                }
-                else
-                {
-                    @foreach (var campaign in _emailCampaignList)
+                    @if (_emailCampaignList == null)
                     {
                         <tr>
-                            <td>@campaign.Name</td>
-                            <td>@campaign.Status</td>
-                            <td>@campaign.SubjectLine</td>
-                            <td>@campaign.CreatedAt.ToLocalTime()</td>
-                            <td>
-                                <button class="btn btn-sm btn-primary" @onclick="@(() =>
-                                     {
-                                         if (campaign.Id != null)
-                                         {
-                                             ViewCampaign(campaign.Id.Value);
-                                         }
-                                     })">
+                            <td colspan="5">No Email Campaigns Found</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var campaign in _emailCampaignList)
+                        {
+                            <tr>
+                                <td>@campaign.Name</td>
+                                <td>@campaign.Status</td>
+                                <td>@campaign.SubjectLine</td>
+                                <td>@campaign.CreatedAt.ToLocalTime()</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" @onclick="@(() =>
+                                                {
+                                                    if (campaign.Id != null)
+                                                    {
+                                                        ViewCampaign(campaign.Id.Value);
+                                                    }
+                                                })">
                                     View
                                 </button>
                             </td>
                         </tr>
                     }
-                }
+        }
                 </tbody>
             </table>
         }
     </Authorized>
     <NotAuthorized>
-        <Unauthorized/>
+        <Unauthorized />
     </NotAuthorized>
 </AuthorizeView>
 
@@ -82,6 +82,12 @@
     protected override async Task OnInitializedAsync()
     {
         SubscribeToEvent(UiEvents.SchoolSelected);
+        SubscribeToEvent(UiEvents.EmailCampaignStarted);
+        SubscribeToEvent(UiEvents.EmailCampaignProgressUpdated);
+        SubscribeToEvent(UiEvents.EmailCampaignCompleted);
+        SubscribeToEvent(UiEvents.EmailCampaignPaused);
+        SubscribeToEvent(UiEvents.EmailCampaignCancelled);
+
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         await LoadEmailCampaigns();
     }
@@ -111,9 +117,17 @@
                 _selectedSchool = payload as School;
                 await LoadEmailCampaigns();
                 break;
+
+            case UiEvents.EmailCampaignStarted:
+            case UiEvents.EmailCampaignProgressUpdated:
+            case UiEvents.EmailCampaignCompleted:
+            case UiEvents.EmailCampaignPaused:
+            case UiEvents.EmailCampaignCancelled:
+                await LoadEmailCampaigns();
+                break;
         }
 
+        await InvokeAsync(StateHasChanged);
         await base.HandleEventAsync(eventName, payload);
     }
-
 }

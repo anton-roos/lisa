@@ -109,7 +109,7 @@ public class EmailCampaignService(
                     if (!string.IsNullOrWhiteSpace(recipient.EmailAddress))
                     {
                         string subject = campaign.SubjectLine ?? "No Subject";
-                        string body = campaign.ContentHtml;
+                        string body = campaign.ContentHtml!;
 
                         if (campaign.EmailTemplate == Template.ProgressReport && recipient.LearnerId.HasValue)
                         {
@@ -332,25 +332,32 @@ public class EmailCampaignService(
     {
         List<Learner> learners;
 
-        // Filter learners based on the Audience and Target.
-        switch (command.Audience)
+        if (command.Target == CommunicationTarget.Learner && command.LearnerId.HasValue)
         {
-            case Audience.Parents:
-            case Audience.LearnersAndStaff:
-                learners = await _learnerService.GetLearnersBySchoolAsync(command.SchoolId);
-                break;
-            case Audience.Grade:
-                if (command.GradeId.HasValue)
-                    learners = await _learnerService.GetLearnersByGradeAsync(command.GradeId.Value);
-                else
-                    learners = new List<Learner>();
-                break;
-            case Audience.Subject:
-                learners = await _learnerService.GetBySubjectIdAsync(command.SubjectId);
-                break;
-            default:
-                learners = await _learnerService.GetLearnersBySchoolAsync(command.SchoolId);
-                break;
+            var learner = await _learnerService.GetByIdAsync(command.LearnerId.Value);
+            learners = learner != null ? [learner] : [];
+        }
+        else
+        {
+            switch (command.Audience)
+            {
+                case Audience.Parents:
+                case Audience.LearnersAndStaff:
+                    learners = await _learnerService.GetLearnersBySchoolAsync(command.SchoolId);
+                    break;
+                case Audience.Grade:
+                    if (command.GradeId.HasValue)
+                        learners = await _learnerService.GetLearnersByGradeAsync(command.GradeId.Value);
+                    else
+                        learners = new List<Learner>();
+                    break;
+                case Audience.Subject:
+                    learners = await _learnerService.GetBySubjectIdAsync(command.SubjectId);
+                    break;
+                default:
+                    learners = await _learnerService.GetLearnersBySchoolAsync(command.SchoolId);
+                    break;
+            }
         }
 
         var recipients = new List<(string Email, Guid LearnerId)>();
@@ -365,13 +372,16 @@ public class EmailCampaignService(
                         ? parent.PrimaryEmail
                         : parent.SecondaryEmail;
                     if (!string.IsNullOrWhiteSpace(email))
+                    {
                         recipients.Add((email, learner.Id));
+                    }
                 }
             }
         }
 
         return recipients;
     }
+
 
     /// <summary>
     /// Gathers recipient emails based on the CommunicationRequest.
@@ -441,27 +451,6 @@ public class EmailCampaignService(
     }
 
     /// <summary>
-    /// Generates the HTML content for the campaign email based on the template type.
-    /// If the template is of type "ProgressReportEmail", it renders a ProgressReportModel using the EmailRendererService.
-    /// Otherwise, it falls back to using the provided ContentHtml.
-    /// </summary>
-    private async Task<string> GenerateCampaignHtml(CommunicationCommand command)
-    {
-        // Check if the request indicates that the email template is a ProgressReportEmail.
-        // (Assuming request.TemplateModelType or similar is set to "ProgressReportEmail")
-        if (command.EmailTemplate == Template.ProgressReport)
-        {
-
-            return "<p>Implement HTML</p>";
-        }
-        else
-        {
-            // For other template types or if no template is provided, return the provided content or a default message.
-            return "<p>No content available</p>";
-        }
-    }
-
-    /// <summary>
     /// Retrieves parent emails for learners in a specific school.
     /// </summary>
     private async Task<List<string>> GetParentEmailsAsync(Guid? schoolId)
@@ -469,7 +458,7 @@ public class EmailCampaignService(
         if (!schoolId.HasValue)
         {
             _logger.LogWarning("School ID is null when retrieving parent emails.");
-            return new List<string>();
+            return [];
         }
 
         var learners = await _learnerService.GetLearnersBySchoolWithParentsAsync(schoolId.Value);

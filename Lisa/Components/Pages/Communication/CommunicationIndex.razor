@@ -29,7 +29,7 @@
 
             @switch (SelectedTarget)
             {
-                @case CommunicationTarget.School:
+                case CommunicationTarget.School:
                     <div class="mb-3">
                         <label for="audienceSelect">Select Audience</label>
                         <InputSelect id="audienceSelect" class="form-select" TValue="Audience" @bind-Value="SelectedAudience">
@@ -40,7 +40,6 @@
                         </InputSelect>
                     </div>
                     break;
-
                 case CommunicationTarget.SchoolGrade:
                     <div class="mb-3">
                         <label for="gradeSelect">Select Grade</label>
@@ -53,7 +52,6 @@
                         </InputSelect>
                     </div>
                     break;
-
                 case CommunicationTarget.Subject:
                     <div class="mb-3">
                         <label for="subjectSelect">Select Subject</label>
@@ -66,7 +64,6 @@
                         </InputSelect>
                     </div>
                     break;
-
                 case CommunicationTarget.Learner:
                     <div class="mb-3">
                         <label for="learnerSearch">Search by Name:</label>
@@ -104,7 +101,14 @@
                                             <button class="btn btn-primary btn-sm"
                                                 @onclick="async () => { SelectedLearner = learner; await SendCommunication(); }"
                                                 disabled="@IsSending">
-                                                <i class="bi bi-envelope-fill"></i> Send Communication
+                                                @if (IsSending)
+                                                {
+                                                    <i class="bi bi-hourglass-split">Sending...</i>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-envelope-fill">Send Communication</i>
+                                                }
                                             </button>
                                         </td>
                                     </tr>
@@ -117,11 +121,8 @@
 
             <div class="mb-3">
                 <label for="templateSelect">Select Template</label>
-                <InputSelect id="templateSelect" class="form-select" TValue="Template" 
-                            Value="_selectedTemplate" 
-                            ValueChanged="@(async (template) => await OnTemplateSelected(template))" 
-                            ValueExpression="(() => _selectedTemplate)">
-                    <option value="">-- Select Template --</option>
+                <InputSelect id="templateSelect" class="form-select" TValue="Template" @bind-Value="_selectedTemplate">
+                    <option value="@Template.None">-- Select Template --</option>
                     @foreach (Template t in Enum.GetValues(typeof(Template)))
                     {
                         <option value="@t">@t</option>
@@ -129,31 +130,24 @@
                 </InputSelect>
             </div>
 
-            <button type="button" class="btn btn-primary btn-sm mt-2" @onclick="SendCommunication"
-                disabled="@(IsSendDisabled || IsSending)">
-                @if (IsSending)
-                {
-                    <i class="bi bi-hourglass-split">Sending...</i>
-                }
-                else
-                {
-                    <i class="bi bi-envelope-arrow-up">Send Communication</i>
-                }
-            </button>
+            @if (SelectedTarget != CommunicationTarget.Learner)
+            {
+                <button type="button" class="btn btn-primary btn-sm mt-2" @onclick="SendCommunication"
+                    disabled="@(IsSendDisabled || IsSending)">
+                    @if (IsSending)
+                    {
+                        <i class="bi bi-hourglass-split">Sending...</i>
+                    }
+                    else
+                    {
+                        <i class="bi bi-envelope-arrow-up">Send Communication</i>
+                    }
+                </button>
+            }
 
             @if (!string.IsNullOrEmpty(StatusMessage))
             {
                 <div class="alert alert-info mt-2">@StatusMessage</div>
-            }
-
-            @if (!string.IsNullOrEmpty(PreviewHtml))
-            {
-                <div class="card mt-3">
-                    <div class="card-header">Template Preview</div>
-                    <div class="card-body">
-                        @((MarkupString)PreviewHtml)
-                    </div>
-                </div>
             }
         }
     </Authorized>
@@ -173,11 +167,10 @@
     private List<SchoolGrade> _schoolGrades = new();
     private List<Subject> _subjects = new();
     private int SelectedSubjectId { get; set; }
-    private Template _selectedTemplate = Template.None;
+    private Template _selectedTemplate { get; set; } = Template.None;
     private bool IsSendDisabled => _selectedTemplate == Template.None;
     private bool IsSending { get; set; }
     private string? StatusMessage { get; set; }
-    private string PreviewHtml { get; set; } = string.Empty;
     private bool IsLoading { get; set; } = false;
     public IEnumerable<Learner> Learners { get; set; } = Enumerable.Empty<Learner>();
     public Learner? SelectedLearner { get; set; }
@@ -235,18 +228,21 @@
         SelectedTarget = target;
     }
 
-    private async Task OnTemplateSelected(Template template)
-    {
-        _selectedTemplate = template;
-        await InvokeAsync(StateHasChanged);
-    }
-
     private async Task SendCommunication()
     {
         if (_selectedTemplate == Template.None || SelectedSchool == null)
         {
-            StatusMessage = "Error: Please select a template and school!";
+            StatusMessage = "Error: Please select a template and a school!";
             return;
+        }
+
+        if (SelectedTarget == CommunicationTarget.Learner)
+        {
+            if (SelectedLearner == null)
+            {
+                StatusMessage = "Error: Please select a learner to send communication to their parents.";
+                return;
+            }
         }
 
         var request = new CommunicationCommand
@@ -257,7 +253,7 @@
             SubjectId = SelectedSubjectId,
             EmailTemplate = _selectedTemplate,
             SchoolId = SelectedSchool.Id,
-            LearnerId = SelectedLearner?.Id,
+            LearnerId = SelectedTarget == CommunicationTarget.Learner ? SelectedLearner?.Id : null
         };
 
         IsSending = true;

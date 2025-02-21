@@ -111,7 +111,7 @@ public class EmailCampaignService(
                         string subject = campaign.SubjectLine ?? "No Subject";
                         string body = campaign.ContentHtml!;
 
-                        if (campaign.EmailTemplate == Template.ProgressReport && recipient.LearnerId.HasValue)
+                        if (campaign.EmailTemplate == Template.ProgressFeedback && recipient.LearnerId.HasValue)
                         {
                             body = await _emailRendererService.RenderProgressFeedbackAsync(recipient.LearnerId.Value);
                         }
@@ -244,32 +244,31 @@ public class EmailCampaignService(
     /// </summary>
     public async Task<EmailCampaign> CreateAsync(CommunicationCommand command)
     {
-        if (command is null) throw new ArgumentNullException(nameof(command));
+        ArgumentNullException.ThrowIfNull(command);
 
         var processor = _templateProcessors.FirstOrDefault(p => p.CanProcess(command.EmailTemplate))
-                        ?? throw new InvalidOperationException("No processor found for the given template.");
+            ?? throw new InvalidOperationException("No processor found for the given template.");
 
         var html = await processor.GenerateHtmlAsync(command);
         await processor.ProcessAdditionalActionsAsync(command);
 
         var utcNow = DateTime.UtcNow;
         var subjectLine = string.IsNullOrWhiteSpace(command.SubjectLine)
-            ? command.Target switch
+            ? command.EmailTemplate switch
             {
-                CommunicationTarget.Learner => "Personalized Update for Our Learner",
-                CommunicationTarget.School => "Important Announcement to the School Community",
-                CommunicationTarget.SchoolGrade => "Grade-Specific Update",
-                CommunicationTarget.Subject => "Subject Update from Your School",
+                Template.ProgressFeedback => "Progress Feedback",
+                Template.Newsletter => "Latest Newsletter",
                 _ => "Important Update from Your School"
             }
             : command.SubjectLine;
 
         List<EmailRecipient> recipients;
 
-        if (command.EmailTemplate == Template.ProgressReport)
+        if (command.EmailTemplate == Template.ProgressFeedback)
         {
             var progressRecipients = await GetProgressReportRecipientsAsync(command);
-            if (!progressRecipients.Any())
+
+            if (progressRecipients.Count == 0)
                 throw new ArgumentException("No recipients found for the progress report.", nameof(progressRecipients));
 
             recipients = progressRecipients.Select(r => new EmailRecipient

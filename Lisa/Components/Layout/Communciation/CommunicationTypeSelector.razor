@@ -2,34 +2,27 @@
 @inherits ComponentBase
 
 <div class="mb-3">
-    <label class="form-label">Send Communication Per:</label>
-
-    <div class="form-check form-check-inline">
-        <input class="form-check-input" type="radio" id="schoolOption" name="communicationTarget"
+    <label class="form-label"><strong>Send Communication Per:</strong></label>
+    <div class="btn-group" role="group">
+        <input type="radio" class="btn-check" name="communicationTarget" id="schoolOption"
             value="@CommunicationTarget.School" @onchange="HandleChange"
             checked="@(SelectedTarget == CommunicationTarget.School)">
-        <label class="form-check-label" for="schoolOption">School</label>
-    </div>
+        <label class="btn btn-outline-secondary" for="schoolOption">School</label>
 
-    <div class="form-check form-check-inline">
-        <input class="form-check-input" type="radio" id="gradeOption" name="communicationTarget"
+        <input type="radio" class="btn-check" name="communicationTarget" id="gradeOption"
             value="@CommunicationTarget.SchoolGrade" @onchange="HandleChange"
             checked="@(SelectedTarget == CommunicationTarget.SchoolGrade)">
-        <label class="form-check-label" for="gradeOption">Grade</label>
-    </div>
+        <label class="btn btn-outline-secondary" for="gradeOption">Grade</label>
 
-    <div class="form-check form-check-inline">
-        <input class="form-check-input" type="radio" id="subjectOption" name="communicationTarget"
+        <input type="radio" class="btn-check" name="communicationTarget" id="subjectOption"
             value="@CommunicationTarget.Subject" @onchange="HandleChange"
             checked="@(SelectedTarget == CommunicationTarget.Subject)">
-        <label class="form-check-label" for="subjectOption">Subject</label>
-    </div>
+        <label class="btn btn-outline-secondary" for="subjectOption">Subject</label>
 
-    <div class="form-check form-check-inline">
-        <input class="form-check-input" type="radio" id="learnerOption" name="communicationTarget"
+        <input type="radio" class="btn-check" name="communicationTarget" id="learnerOption"
             value="@CommunicationTarget.Learner" @onchange="HandleChange"
             checked="@(SelectedTarget == CommunicationTarget.Learner)">
-        <label class="form-check-label" for="learnerOption">Learner</label>
+        <label class="btn btn-outline-secondary" for="learnerOption">Learner</label>
     </div>
 </div>
 

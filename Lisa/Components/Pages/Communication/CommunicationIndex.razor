@@ -8,7 +8,6 @@
 @inject SubjectService SubjectService
 @inject LearnerService LearnerService
 @inject EmailCampaignService EmailCampaignService
-@inject EmailRendererService RendererService
 @inject NavigationManager NavigationManager
 
 @inherits EventAwareComponentBase
@@ -39,6 +38,17 @@
                             }
                         </InputSelect>
                     </div>
+
+                    <div class="mb-3">
+                        <label for="templateSelect">Select Template</label>
+                        <InputSelect id="templateSelect" class="form-select" TValue="Template" @bind-Value="_selectedTemplate">
+                            <option value="@Template.None">-- Select Template --</option>
+                            @foreach (Template t in Enum.GetValues(typeof(Template)))
+                            {
+                                <option value="@t">@t</option>
+                            }
+                        </InputSelect>
+                    </div>
                     break;
                 case CommunicationTarget.SchoolGrade:
                     <div class="mb-3">
@@ -48,6 +58,17 @@
                             @foreach (var grade in _schoolGrades)
                             {
                                 <option value="@grade.Id">@grade.SystemGrade.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="templateSelect">Select Template</label>
+                        <InputSelect id="templateSelect" class="form-select" TValue="Template" @bind-Value="_selectedTemplate">
+                            <option value="@Template.None">-- Select Template --</option>
+                            @foreach (Template t in Enum.GetValues(typeof(Template)))
+                            {
+                                <option value="@t">@t</option>
                             }
                         </InputSelect>
                     </div>
@@ -63,72 +84,95 @@
                             }
                         </InputSelect>
                     </div>
+
+                    <div class="mb-3">
+                        <label for="templateSelect">Select Template</label>
+                        <InputSelect id="templateSelect" class="form-select" TValue="Template" @bind-Value="_selectedTemplate">
+                            <option value="@Template.None">-- Select Template --</option>
+                            @foreach (Template t in Enum.GetValues(typeof(Template)))
+                            {
+                                <option value="@t">@t</option>
+                            }
+                        </InputSelect>
+                    </div>
                     break;
                 case CommunicationTarget.Learner:
+                    <!-- Move the template selector here -->
                     <div class="mb-3">
-                        <label for="learnerSearch">Search by Name:</label>
-                        <input id="learnerSearch" type="text" class="form-control" placeholder="Enter learner name..."
-                            @bind="SearchTerm" @bind:event="oninput" />
+                        <label for="templateSelect">Select Template</label>
+                        <InputSelect id="templateSelect" class="form-select" TValue="Template" @bind-Value="_selectedTemplate">
+                            <option value="@Template.None">-- Select Template --</option>
+                            @foreach (Template t in Enum.GetValues(typeof(Template)))
+                            {
+                                <option value="@t">@t</option>
+                            }
+                        </InputSelect>
                     </div>
 
-                    @if (IsLoading)
+                    @if (_selectedTemplate != Template.None)
                     {
-                        <div class="text-center">
-                            <i class="bi bi-hourglass-split text-primary"></i> Loading...
+                        <div class="mb-3">
+                            <label for="learnerSearch">Search by Name:</label>
+                            <input id="learnerSearch" type="text" class="form-control" placeholder="Enter learner name..."
+                                @bind="SearchTerm" @bind:event="oninput" />
                         </div>
-                    }
-                    else if (!FilteredLearners.Any())
-                    {
-                        <div class="text-center text-muted">No learners found.</div>
+
+                        @if (IsLoading)
+                        {
+                            <div class="text-center">
+                                <i class="bi bi-hourglass-split text-primary"></i> Loading...
+                            </div>
+                        }
+                        else if (!FilteredLearners.Any())
+                        {
+                            <div class="text-center text-muted">No learners found.</div>
+                        }
+                        else
+                        {
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Grade</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var learner in FilteredLearners)
+                                    {
+                                        <tr>
+                                            <td>@learner.Surname @learner.Name</td>
+                                            <td>@learner.RegisterClass?.SchoolGrade?.SystemGrade.Name</td>
+                                            <td>
+                                                <button class="btn btn-primary btn-sm"
+                                                    @onclick="async () => { SelectedLearner = learner; await SendCommunication(); }"
+                                                    disabled="@IsSending">
+                                                    @if (IsSending)
+                                                    {
+                                                        <i class="bi bi-hourglass-split">Sending...</i>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="bi bi-envelope-fill">Send Communication</i>
+                                                    }
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
                     }
                     else
                     {
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Grade</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var learner in FilteredLearners)
-                                {
-                                    <tr>
-                                        <td>@learner.Surname @learner.Name</td>
-                                        <td>@learner.RegisterClass?.SchoolGrade?.SystemGrade.Name</td>
-                                        <td>
-                                            <button class="btn btn-primary btn-sm"
-                                                @onclick="async () => { SelectedLearner = learner; await SendCommunication(); }"
-                                                disabled="@IsSending">
-                                                @if (IsSending)
-                                                {
-                                                    <i class="bi bi-hourglass-split">Sending...</i>
-                                                }
-                                                else
-                                                {
-                                                    <i class="bi bi-envelope-fill">Send Communication</i>
-                                                }
-                                            </button>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                        <div class="alert alert-info">
+                            Please select a template to view the student list.
+                        </div>
                     }
                     break;
             }
 
-            <div class="mb-3">
-                <label for="templateSelect">Select Template</label>
-                <InputSelect id="templateSelect" class="form-select" TValue="Template" @bind-Value="_selectedTemplate">
-                    <option value="@Template.None">-- Select Template --</option>
-                    @foreach (Template t in Enum.GetValues(typeof(Template)))
-                    {
-                        <option value="@t">@t</option>
-                    }
-                </InputSelect>
-            </div>
+
 
             @if (SelectedTarget != CommunicationTarget.Learner)
             {

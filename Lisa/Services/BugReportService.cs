@@ -20,9 +20,6 @@ public class BugReportService(
     private readonly EmailService _emailService = emailService;
     private readonly ILogger<BugReportService> _logger = logger;
 
-    /// <summary>
-    /// Retrieve all bug reports.
-    /// </summary>
     public async Task<List<BugReport>> GetAllAsync()
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -31,9 +28,6 @@ public class BugReportService(
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Log a new bug report.
-    /// </summary>
     public async Task LogBugAsync(BugReport bugReport)
     {
         bugReport.ReportedAt = DateTime.UtcNow;
@@ -62,9 +56,6 @@ public class BugReportService(
         }
     }
 
-    /// <summary>
-    /// Update the status of a bug report.
-    /// </summary>
     public async Task UpdateStatusAsync(Guid id, BugReportStatus status)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -76,31 +67,26 @@ public class BugReportService(
         }
 
         bugReport.Status = status;
-        switch (status)
+
+        if (bugReport.ResolvedAt == null && status == BugReportStatus.Resolved)
         {
-            case BugReportStatus.Resolved:
-                bugReport.ResolvedAt = DateTime.UtcNow;
-                break;
-            case BugReportStatus.Closed:
-                bugReport.ClosedAt = DateTime.UtcNow;
-                break;
+            bugReport.ResolvedAt = DateTime.UtcNow;
+        }
+
+        if (bugReport.ClosedAt == null && status == BugReportStatus.Closed)
+        {
+            bugReport.ClosedAt = DateTime.UtcNow;
         }
 
         await context.SaveChangesAsync();
     }
 
-    /// <summary>
-    /// Get the total count of bug reports.
-    /// </summary>
     public async Task<int> GetCountAsync()
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.BugReports.CountAsync();
     }
 
-    /// <summary>
-    /// Retrieve a specific bug report by ID.
-    /// </summary>
     public async Task<BugReport?> GetAsync(Guid id)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();

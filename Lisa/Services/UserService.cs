@@ -372,7 +372,10 @@ public class UserService(
                 .Where(t => t.Id == oldUserId || t.Id == newUserId)
                 .ToListAsync();
 
-            if (teachers.Count < 2) return false;
+            if (teachers.Count < 2)
+            {
+                return false;
+            }
 
             var registerClasses = context.RegisterClasses.Where(rc => rc.UserId == oldUserId);
             await registerClasses.ForEachAsync(rc => rc.UserId = newUserId);

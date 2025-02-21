@@ -81,7 +81,9 @@ public class UserService(
                 .FirstOrDefaultAsync(u => u.Id == id);
 
             if (user == null)
+            {
                 return null;
+            }
 
             var userRoles = await
                 (from userRole in context.UserRoles

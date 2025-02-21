@@ -16,7 +16,7 @@ public class UserService(
     /// <summary>
     /// Retrieves all users by role and school.
     /// </summary>
-    public async Task<List<User>> GetAllByRoleAndSchoolAsync(string[] roles, Guid? schoolId = null)
+    public async Task<List<User>> GetAllByRoleAndSchoolAsync(string[] roles, Guid? schoolId)
     {
         try
         {

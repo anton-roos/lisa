@@ -342,9 +342,13 @@ public class EmailCampaignService(
                     break;
                 case Audience.Grade:
                     if (command.GradeId.HasValue)
+                    {
                         learners = await _learnerService.GetLearnersByGradeAsync(command.GradeId.Value);
+                    }
                     else
-                        learners = new List<Learner>();
+                    {
+                        learners = [];
+                    }
                     break;
                 case Audience.Subject:
                     learners = await _learnerService.GetBySubjectIdAsync(command.SubjectId);

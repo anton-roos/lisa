@@ -7,11 +7,7 @@ namespace Lisa.Data;
 public class DatabaseSeed
 {
     private const string DefaultAdminEmail = "admin@dcegroup.co.za";
-    private static string _adminPassword = "Lis@Adm!n7Dc3Gr0up"; // Securely overridden
 
-    /// <summary>
-    /// Runs all seed methods in a single transaction for efficiency.
-    /// </summary>
     public static async Task Seed(IServiceProvider serviceProvider)
     {
         var logger = serviceProvider.GetRequiredService<ILogger<DatabaseSeed>>();
@@ -21,10 +17,8 @@ public class DatabaseSeed
         {
             using var dbContext = serviceProvider.GetRequiredService<LisaDbContext>();
 
-            // Apply Migrations First
             await ApplyMigrations(dbContext, logger);
 
-            // Seed Data in a Single Transaction
             using var transaction = await dbContext.Database.BeginTransactionAsync();
             await SeedRoles(serviceProvider, logger);
             await SeedAdmin(serviceProvider, logger);
@@ -43,9 +37,6 @@ public class DatabaseSeed
         }
     }
 
-    /// <summary>
-    /// Applies pending migrations only if required.
-    /// </summary>
     private static async Task ApplyMigrations(LisaDbContext dbContext, ILogger logger)
     {
         var pendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync()).Any();
@@ -61,9 +52,6 @@ public class DatabaseSeed
         }
     }
 
-    /// <summary>
-    /// Seeds system roles if they do not exist.
-    /// </summary>
     private static async Task SeedRoles(IServiceProvider serviceProvider, ILogger logger)
     {
         var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
@@ -94,16 +82,12 @@ public class DatabaseSeed
         var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
         var config = serviceProvider.GetRequiredService<IConfiguration>();
 
-        // Fetch Admin Password from Configuration (Environment Variables or appsettings.json)
-        var configuredPassword = config["AdminPassword"];
-        _adminPassword = !string.IsNullOrWhiteSpace(configuredPassword) ? configuredPassword : _adminPassword;
+        var configuredPassword = config["AdminPassword"] ?? string.Empty;
 
-        // Try retrieving the admin user from the database
         var adminUser = await userManager.FindByEmailAsync(DefaultAdminEmail);
 
         if (adminUser == null)
         {
-            // Create new admin user
             adminUser = new User
             {
                 UserName = DefaultAdminEmail,
@@ -114,17 +98,16 @@ public class DatabaseSeed
                 EmailConfirmed = true
             };
 
-            var result = await userManager.CreateAsync(adminUser, _adminPassword);
+            var result = await userManager.CreateAsync(adminUser, configuredPassword);
             if (!result.Succeeded)
             {
                 logger.LogError("Failed to create admin user: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));
-                return; // Exit if user creation failed
+                return;
             }
 
             logger.LogInformation("Admin user created successfully.");
         }
 
-        // Ensure the admin user is assigned to the SystemAdministrator role
         if (!await userManager.IsInRoleAsync(adminUser, Roles.SystemAdministrator))
         {
             await userManager.AddToRoleAsync(adminUser, Roles.SystemAdministrator);
@@ -132,9 +115,6 @@ public class DatabaseSeed
         }
     }
 
-    /// <summary>
-    /// Seeds school types.
-    /// </summary>
     private static async Task SeedSchoolTypes(LisaDbContext dbContext, ILogger logger)
     {
         if (!await dbContext.SchoolTypes.AnyAsync())
@@ -149,9 +129,6 @@ public class DatabaseSeed
         }
     }
 
-    /// <summary>
-    /// Seeds school curriculums.
-    /// </summary>
     private static async Task SeedSchoolCurriculum(LisaDbContext dbContext, ILogger logger)
     {
         if (!await dbContext.SchoolCurriculums.AnyAsync())
@@ -192,10 +169,6 @@ public class DatabaseSeed
         }
     }
 
-
-    /// <summary>
-    /// Seeds school subjects.
-    /// </summary>
     private static async Task SeedSchoolSubjects(LisaDbContext dbContext, ILogger logger)
     {
         if (!await dbContext.Subjects.AnyAsync())

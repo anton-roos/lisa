@@ -10,9 +10,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly ILogger<LearnerService> _logger = logger;
 
-    /// <summary>
-    /// Gets the total number of learners.
-    /// </summary>
     public async Task<int> GetCountAsync()
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -24,9 +21,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         return await context.Learners.Where(x => x.SchoolId == schoolId).CountAsync();
     }
 
-    /// <summary>
-    /// Retrieves a learner by ID, including related data.
-    /// </summary>
     public async Task<Learner?> GetByIdAsync(Guid id)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -46,9 +40,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             .FirstOrDefaultAsync(l => l.Id == id);
     }
 
-    /// <summary>
-    /// Retrieves a list of Learners by Subject Id
-    /// </summary>
     public async Task<List<Learner>> GetBySubjectIdAsync(int subjectId)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -64,9 +55,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         return await context.Learners.AnyAsync(l => l.Code == code);
     }
 
-    /// <summary>
-    /// Adds a new learner.
-    /// </summary>
     public async Task<bool> AddLearnerAsync(LearnerViewModel model, List<ParentViewModel> parents, Guid schoolId)
     {
         try
@@ -135,9 +123,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         }
     }
 
-    /// <summary>
-    /// Updates an existing learner.
-    /// </summary>
     public async Task<bool> UpdateLearnerAsync(LearnerViewModel model, List<ParentViewModel> parents)
     {
         try
@@ -293,9 +278,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Deletes a learner.
-    /// </summary>
     public async Task<bool> DeleteLearnerAsync(Guid learnerId)
     {
         try
@@ -328,7 +310,9 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             .FirstOrDefault(kvp => kvp.Value == subjectId);
 
         if (match.Key == Guid.Empty)
+        {
             return null;
+        }
 
         return match.Key;
     }

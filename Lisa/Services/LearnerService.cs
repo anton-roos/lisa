@@ -10,8 +10,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly ILogger<LearnerService> _logger = logger;
 
-    public event Action? LearnersUpdated;
-
     /// <summary>
     /// Gets the total number of learners.
     /// </summary>
@@ -126,7 +124,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
 
             await context.SaveChangesAsync();
 
-            LearnersUpdated?.Invoke();
             _logger.LogInformation("Added learner {LearnerId} successfully.", newLearnerId);
 
             return true;
@@ -232,7 +229,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
 
             await context.SaveChangesAsync();
 
-            LearnersUpdated?.Invoke();
             _logger.LogInformation("Updated learner {LearnerId} successfully.", model.Id);
 
             return true;
@@ -315,7 +311,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
 
             context.Learners.Remove(learner);
             await context.SaveChangesAsync();
-            LearnersUpdated?.Invoke();
             _logger.LogInformation("Deleted learner {LearnerId}.", learnerId);
 
             return true;

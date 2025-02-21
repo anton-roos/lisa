@@ -145,14 +145,13 @@
                                             continue;
                                         }
 
-                                        <div class="mt-3">
-                                            <div type="button" class="badge @GetResultSetStatusColor(set)"
-                                                @onclick="() => ViewResult(set.Id)">
+                                        <div class="me-1" type="button" @onclick="() => ViewResult(set.Id)">
+                                            <Pill Color="@GetResultSetStatusColor(set)">
                                                 @if (set.AssessmentDate.HasValue)
                                                 {
                                                     @set.AssessmentDate.Value.ToString("dd MMM")
                                                 }
-                                            </div>
+                                            </Pill>
                                         </div>
                                     }
                                 </div>
@@ -196,14 +195,13 @@
                                             continue;
                                         }
 
-                                        <div class="mt-3">
-                                            <div type="button" class="badge @GetResultSetStatusColor(set)"
-                                                @onclick="() => EditResult(set.Id)">
+                                        <div class="me-1" type="button" @onclick="() => ViewResult(set.Id)">
+                                            <Pill Color="@GetResultSetStatusColor(set)">
                                                 @if (set.AssessmentDate.HasValue)
                                                 {
                                                     @set.AssessmentDate.Value.ToString("dd MMM")
                                                 }
-                                            </div>
+                                            </Pill>
                                         </div>
                                     }
                                 </div>

@@ -436,9 +436,14 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
         foreach (var entry in ChangeTracker.Entries<Learner>())
         {
             if (entry.State == EntityState.Added)
+            {
                 entry.Entity.CreatedAt = DateTime.UtcNow;
+            }
+
             if (entry.State == EntityState.Modified)
+            {
                 entry.Entity.UpdatedAt = DateTime.UtcNow;
+            }
         }
     }
 

@@ -6,6 +6,7 @@
 @inject SubjectService SubjectService
 @inject NavigationManager Navigation
 @inject UserService UserService
+@inject LearnerService LearnerService
 
 @inherits EventAwareComponentBase
 
@@ -46,7 +47,6 @@
                 </div>
             </div>
 
-            <!-- Grade View -->
             @if (ViewMode == "Grade")
             {
                 <div class="mb-3">
@@ -75,7 +75,6 @@
                                         {
                                             continue;
                                         }
-
                                         <div class="me-1" type="button" @onclick="() => ViewResult(set.Id)">
                                             <Pill Color="@GetResultSetStatusColor(set)">
                                                 @if (set.AssessmentDate.HasValue)
@@ -96,7 +95,6 @@
                 </div>
             }
 
-            <!-- Subject View -->
             @if (ViewMode == "Subject")
             {
                 <div class="mb-3">
@@ -144,7 +142,6 @@
                                         {
                                             continue;
                                         }
-
                                         <div class="me-1" type="button" @onclick="() => ViewResult(set.Id)">
                                             <Pill Color="@GetResultSetStatusColor(set)">
                                                 @if (set.AssessmentDate.HasValue)
@@ -165,7 +162,6 @@
                 </div>
             }
 
-            <!-- Teacher View -->
             @if (ViewMode == "Teacher")
             {
                 <div class="mb-3">
@@ -194,7 +190,6 @@
                                         {
                                             continue;
                                         }
-
                                         <div class="me-1" type="button" @onclick="() => ViewResult(set.Id)">
                                             <Pill Color="@GetResultSetStatusColor(set)">
                                                 @if (set.AssessmentDate.HasValue)
@@ -217,7 +212,35 @@
 
             @if (ViewMode == "Learner")
             {
-                <div>Learner Search</div>
+                @if (_learnersLoading)
+                {
+                    <p>Loading learners...</p>
+                }
+                else
+                {
+                    <div class="mb-3">
+                        <label><strong>Search Learner:</strong></label>
+                        <InputText class="form-control" @oninput="OnInputChange" @bind-Value="_learnerSearchText"
+                            placeholder="Enter learner name..." />
+                    </div>
+                    <div class="d-flex flex-column">
+                        @if (FilteredLearners.Any())
+                        {
+                            @foreach (var learner in FilteredLearners)
+                            {
+                                <div class="card mb-2" style="cursor:pointer" @onclick="() => ViewLearner(learner.Id)">
+                                    <div class="card-body">
+                                        <h5 class="card-title">@learner.Name @learner.Surname</h5>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="alert alert-secondary">No Learners Found</div>
+                        }
+                    </div>
+                }
             }
         }
     </Authorized>
@@ -237,6 +260,16 @@
     private Guid? _gradeId, _teacherId;
     private int? _subjectId;
 
+    private List<Learner> _learners = new();
+    private bool _learnersLoading = false;
+    private string _learnerSearchText = "";
+    private Guid? _learnerGradeId;
+
+    private IEnumerable<Learner> FilteredLearners => _learners
+    .Where(u => string.IsNullOrWhiteSpace(_learnerSearchText) ||
+    ($"{u.Name} {u.Surname}".Contains(_learnerSearchText, StringComparison.OrdinalIgnoreCase)))
+    .Where(u => !_learnerGradeId.HasValue);
+
     protected override async Task OnInitializedAsync()
     {
         SubscribeToEvent(UiEvents.SchoolSelected);
@@ -254,26 +287,36 @@
                     _selectedSchool = school;
                     await LoadFilters();
                 }
-
                 break;
         }
-
         await base.HandleEventAsync(eventName, payload);
     }
 
     /// <summary>
-    /// Changes the view mode and clears out selections/results.
+    /// Changes the view mode, clears out selections/results, and—if switching to Learner mode—loads all learners for the
     /// </summary>
-    private void SetViewMode(string mode)
+    private async Task SetViewMode(string mode)
     {
         ViewMode = mode;
         _selectedGrades.Clear();
+        _gradeId = null;
+        _subjectId = null;
+        _teacherId = null;
+        _learnerSearchText = "";
+        _learnerGradeId = null;
+        GroupedResults.Clear();
+
+        if (mode == "Learner" && (_learners == null || !_learners.Any()))
+        {
+            _learnersLoading = true;
+            await LoadLearners();
+            _learnersLoading = false;
+        }
         StateHasChanged();
     }
 
     /// <summary>
-    /// Loads result sets from the service based on the current filters.
-    /// Uses a different overload for Subject view (with multi-grade filtering).
+    /// Loads result sets based on the current filters.
     /// </summary>
     private async Task LoadResults()
     {
@@ -284,7 +327,6 @@
             _loading = false;
             return;
         }
-
 
         switch (ViewMode)
         {
@@ -322,6 +364,17 @@
     }
 
     /// <summary>
+    /// Loads the list of learners for the selected school (only called once when switching to Learner view).
+    /// </summary>
+    private async Task LoadLearners()
+    {
+        if (_selectedSchool != null)
+        {
+            _learners = await LearnerService.GetLearnersBySchoolAsync(_selectedSchool.Id);
+        }
+    }
+
+    /// <summary>
     /// Loads filter options such as grades, subjects, and teachers.
     /// </summary>
     private async Task LoadFilters()
@@ -348,7 +401,7 @@
     }
 
     /// <summary>
-    /// Handles subject changes, ensuring the selected subject is stored and its available grades loaded.
+    /// Handles subject changes and loads available grades for that subject.
     /// </summary>
     private async Task OnSubjectChange(int? value)
     {
@@ -382,6 +435,11 @@
         await LoadResults();
     }
 
+    private void OnInputChange(ChangeEventArgs? e)
+    {
+        _learnerSearchText = e?.Value?.ToString() ?? string.Empty;
+    }
+
     /// <summary>
     /// Navigates to the edit page for the given result set.
     /// </summary>
@@ -393,6 +451,14 @@
     private void ViewResult(Guid resultSetId)
     {
         Navigation.NavigateTo($"results/{resultSetId}");
+    }
+
+    /// <summary>
+    /// Navigates to the learner details page for the given learner.
+    /// </summary>
+    private void ViewLearner(Guid learnerId)
+    {
+        Navigation.NavigateTo($"learners/{learnerId}");
     }
 
     /// <summary>
@@ -422,5 +488,4 @@
             return "secondary";
         }
     }
-
 }

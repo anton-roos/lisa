@@ -37,9 +37,6 @@ public class EmailCampaignService(
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Starts the email campaign and processes emails asynchronously using Hangfire.
-    /// </summary>
     [JobDisplayName("Email Campaign Processing")]
     public async Task StartCampaignAsync(Guid campaignId)
     {
@@ -85,68 +82,22 @@ public class EmailCampaignService(
                 .Include(c => c.EmailRecipients)
                 .FirstOrDefaultAsync(c => c.Id == campaignId);
 
-            if (campaign == null) return;
+            if (campaign == null)
+                return;
 
             int total = campaign.EmailRecipients?.Count ?? 0;
             int sent = 0;
 
-            await _uiEventService.PublishAsync(UiEvents.EmailCampaignProgressUpdated, new
-            {
-                campaign.Id,
-                Progress = 0,
-                Total = total,
-                Sent = sent
-            });
+            await PublishProgressAsync(campaign.Id, total, sent);
 
             foreach (var recipient in campaign.EmailRecipients!)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-
-                try
-                {
-                    if (!string.IsNullOrWhiteSpace(recipient.EmailAddress))
-                    {
-                        string subject = campaign.SubjectLine ?? "No Subject";
-                        string body = campaign.ContentHtml!;
-
-                        if (campaign.EmailTemplate == Template.ProgressFeedback && recipient.LearnerId.HasValue)
-                        {
-                            body = await _emailRendererService.RenderProgressFeedbackAsync(recipient.LearnerId.Value);
-                        }
-
-                        BackgroundJob.Enqueue(() =>
-                            SendEmailWithRetryAsync(recipient.EmailAddress, subject, body, campaign.SchoolId));
-                        await Task.Delay(2000, cancellationToken);
-
-                        recipient.Status = EmailRecipientStatus.Sent;
-                    }
-                    else
-                    {
-                        recipient.Status = EmailRecipientStatus.Bounced;
-                    }
-
-                    sent++;
-                    var progress = (int)((double)sent / total * 100);
-
-                    await _uiEventService.PublishAsync(UiEvents.EmailCampaignProgressUpdated, new
-                    {
-                        campaign.Id,
-                        Progress = progress,
-                        Total = total,
-                        Sent = sent
-                    });
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError("Error sending email to {recipientEmail}: {error}",
-                        recipient.EmailAddress, ex.Message);
-                    recipient.Status = EmailRecipientStatus.Bounced;
-                }
+                sent = await ProcessRecipientAsync(campaign, recipient, total, sent, cancellationToken);
             }
 
             campaign.Status = EmailCampaignStatus.Sent;
             await context.SaveChangesAsync(cancellationToken);
-
             await _uiEventService.PublishAsync(UiEvents.EmailCampaignCompleted, new { campaign.Id });
         }
         catch (OperationCanceledException)
@@ -164,9 +115,64 @@ public class EmailCampaignService(
         }
     }
 
-    /// <summary>
-    /// Sends an email with automatic retries using Hangfire.
-    /// </summary>
+    private async Task<int> ProcessRecipientAsync(EmailCampaign campaign, EmailRecipient recipient, int total, int sent, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(recipient.EmailAddress))
+            {
+                string subject = campaign.SubjectLine ?? "No Subject";
+                string body = campaign.ContentHtml!;
+
+                if (campaign.EmailTemplate == Template.ProgressFeedback && recipient.LearnerId.HasValue)
+                {
+                    body = await _emailRendererService.RenderProgressFeedbackAsync(recipient.LearnerId.Value);
+                }
+
+                BackgroundJob.Enqueue(() =>
+                    SendEmailWithRetryAsync(recipient.EmailAddress, subject, body, campaign.SchoolId));
+
+                await Task.Delay(2000, cancellationToken);
+                recipient.Status = EmailRecipientStatus.Sent;
+            }
+            else
+            {
+                recipient.Status = EmailRecipientStatus.Bounced;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Error sending email to {recipientEmail}: {error}",
+                recipient.EmailAddress, ex.Message);
+            recipient.Status = EmailRecipientStatus.Bounced;
+        }
+        finally
+        {
+            sent++;
+            int progress = (int)((double)sent / total * 100);
+            await _uiEventService.PublishAsync(UiEvents.EmailCampaignProgressUpdated, new
+            {
+                campaign.Id,
+                Progress = progress,
+                Total = total,
+                Sent = sent
+            });
+        }
+
+        return sent;
+    }
+
+    private Task PublishProgressAsync(Guid? campaignId, int total, int sent)
+    {
+        return _uiEventService.PublishAsync(UiEvents.EmailCampaignProgressUpdated, new
+        {
+            Id = campaignId,
+            Progress = 0,
+            Total = total,
+            Sent = sent
+        });
+    }
+
     [AutomaticRetry(Attempts = 3)]
     public async Task SendEmailWithRetryAsync(string? recipientEmailAddress, string subject, string body, Guid schoolId)
     {

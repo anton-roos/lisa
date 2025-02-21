@@ -41,27 +41,4 @@ public class EventLogRepository(IDbContextFactory<LisaDbContext> dbContextFactor
             _logger.LogError(ex, "Error logging event: {EventType}", eventType);
         }
     }
-
-    /// <summary>
-    /// Retrieves all event logs with pagination (default: 50 per page).
-    /// </summary>
-    public async Task<List<EventLog>> GetAllEventLogsAsync(int pageNumber = 1, int pageSize = 50)
-    {
-        try
-        {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
-
-            return await context.EventLogs
-                .AsNoTracking()
-                .OrderByDescending(e => e.CreatedAt)
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving event logs.");
-            return [];
-        }
-    }
 }

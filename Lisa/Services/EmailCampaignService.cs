@@ -375,7 +375,6 @@ public class EmailCampaignService(
         return recipients;
     }
 
-
     /// <summary>
     /// Gathers recipient emails based on the CommunicationRequest.
     /// </summary>

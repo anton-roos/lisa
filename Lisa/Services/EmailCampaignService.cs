@@ -23,7 +23,7 @@ public class EmailCampaignService
     private const string DefaultSubject = "No Subject";
     private const int BatchSize = 100;
     private const int ProgressComplete = 100;
-    private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled); // Basic email validation
+    private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled);
 
     public EmailCampaignService(
         IDbContextFactory<LisaDbContext> contextFactory,

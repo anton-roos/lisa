@@ -150,13 +150,6 @@ namespace Lisa.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ContentHtml")
-                        .HasMaxLength(8912)
-                        .HasColumnType("character varying(8912)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -164,35 +157,15 @@ namespace Lisa.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
-                    b.Property<int>("EmailTemplate")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Name")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<DateTime?>("ScheduledAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<int>("RecipientTemplate")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("SenderEmail")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("SenderName")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<int>("StatsClickCount")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("StatsOpenCount")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("StatsSentCount")
-                        .HasColumnType("integer");
 
                     b.Property<string>("Status")
                         .IsRequired()

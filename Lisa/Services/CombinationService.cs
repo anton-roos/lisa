@@ -9,9 +9,6 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
 
-    /// <summary>
-    /// Retrieve a Combination by ID.
-    /// </summary>
     public async Task<Combination?> GetByIdAsync(Guid id)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -25,9 +22,6 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
             .FirstOrDefaultAsync(sc => sc.Id == id);
     }
 
-    /// <summary>
-    /// Retrieve Combinations for a specific School ID.
-    /// </summary>
     public async Task<List<Combination>> GetCombinationsBySchoolId(Guid schoolId)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -40,9 +34,6 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Retrieve Subject Combinations for a specific School.
-    /// </summary>
     public async Task<IEnumerable<Combination>> GetSubjectCombinationsForSchool(School school)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -57,9 +48,6 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Delete a Combination by ID.
-    /// </summary>
     public async Task DeleteAsync(Guid id)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -74,9 +62,6 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
         await context.SaveChangesAsync();
     }
 
-    /// <summary>
-    /// Add a new Combination.
-    /// </summary>
     public async Task AddCombinationAsync(CombinationViewModel model, IEnumerable<Subject> selectedSubjects)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -103,9 +88,6 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
         await context.SaveChangesAsync();
     }
 
-    /// <summary>
-    /// Update an existing Combination.
-    /// </summary>
     public async Task UpdateCombinationAsync(CombinationViewModel model, List<Subject> selectedSubjects)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();

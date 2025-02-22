@@ -128,94 +128,21 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         try
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
-
-            var existing = await context.Learners
-                .Include(l => l.Parents)
-                .Include(l => l.LearnerSubjects)
-                .FirstOrDefaultAsync(l => l.Id == model.Id);
-
-            if (existing == null)
+            
+            var learner = await GetLearnerWithParentsAsync(context, model.Id);
+            
+            if (learner == null)
             {
                 _logger.LogWarning("Learner {LearnerId} not found for update.", model.Id);
                 return false;
             }
 
-            existing.Active = model.Active;
-            existing.CareGroupId = model.CareGroupId;
-            existing.CellNumber = model.CellNumber;
-            existing.Code = model.Code;
-            existing.Email = model.Email;
-            existing.Surname = model.Surname;
-            existing.IdNumber = model.IdNumber;
-            existing.Name = model.Name;
-            existing.RegisterClassId = model.RegisterClassId;
-
-            var existingParentIds = existing.Parents?.Select(p => p.Id).ToList() ?? new List<Guid>();
-            var updatedParentIds = parents.Where(p => p.Id.HasValue).Select(p => p.Id!.Value).ToList();
-
-            var parentsToRemove = existing.Parents?.Where(p => !updatedParentIds.Contains(p.Id)).ToList() ?? new List<Parent>();
-            context.Parents.RemoveRange(parentsToRemove);
-
-            foreach (var pm in parents)
-            {
-                if (pm.Id.HasValue && existingParentIds.Contains(pm.Id.Value))
-                {
-                    var parent = existing.Parents?.First(x => x.Id == pm.Id.Value);
-                    if (parent != null)
-                    {
-                        parent.Surname = pm.Surname;
-                        parent.Name = pm.Name;
-                        parent.Relationship = pm.Relationship;
-                        parent.PrimaryEmail = pm.PrimaryEmail;
-                        parent.SecondaryEmail = pm.SecondaryEmail;
-                        parent.PrimaryCellNumber = pm.PrimaryCellNumber;
-                        parent.SecondaryCellNumber = pm.SecondaryCellNumber;
-                        parent.WhatsAppNumber = pm.WhatsAppNumber;
-                    }
-                }
-                else
-                {
-                    var newParent = new Parent
-                    {
-                        Id = Guid.NewGuid(),
-                        LearnerId = existing.Id,
-                        Surname = pm.Surname,
-                        Name = pm.Name,
-                        Relationship = pm.Relationship,
-                        PrimaryEmail = pm.PrimaryEmail,
-                        SecondaryEmail = pm.SecondaryEmail,
-                        PrimaryCellNumber = pm.PrimaryCellNumber,
-                        SecondaryCellNumber = pm.SecondaryCellNumber,
-                        WhatsAppNumber = pm.WhatsAppNumber
-                    };
-                    await context.Parents.AddAsync(newParent);
-                }
-            }
-
-            if (existing.LearnerSubjects != null && existing.LearnerSubjects.Any())
-            {
-                context.LearnerSubjects.RemoveRange(existing.LearnerSubjects);
-            }
-
-            var newLearnerSubjects = new List<LearnerSubject>();
-            foreach (var sid in model.SubjectIds)
-            {
-                var combId = FindCombinationId(model.CombinationSelections, sid);
-
-                newLearnerSubjects.Add(new LearnerSubject
-                {
-                    LearnerId = existing.Id,
-                    SubjectId = sid,
-                    CombinationId = combId
-                });
-            }
-
-            await context.LearnerSubjects.AddRangeAsync(newLearnerSubjects);
+            UpdateLearnerProperties(learner, model);
+            await UpdateParentsAsync(context, learner, parents);
+            UpdateLearnerSubjects(context, learner, model);
 
             await context.SaveChangesAsync();
-
             _logger.LogInformation("Updated learner {LearnerId} successfully.", model.Id);
-
             return true;
         }
         catch (Exception ex)
@@ -223,6 +150,105 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             _logger.LogError(ex, "Error updating learner.");
             return false;
         }
+    }
+
+    private static async Task<Learner?> GetLearnerWithParentsAsync(LisaDbContext context, Guid? learnerId)
+    {
+        return await context.Learners
+            .Include(l => l.Parents)
+            .Include(l => l.LearnerSubjects)
+            .FirstOrDefaultAsync(l => l.Id == learnerId);
+    }
+
+    private static void UpdateLearnerProperties(Learner learner, LearnerViewModel model)
+    {
+        learner.Active = model.Active;
+        learner.CareGroupId = model.CareGroupId;
+        learner.CellNumber = model.CellNumber;
+        learner.Code = model.Code;
+        learner.Email = model.Email;
+        learner.Surname = model.Surname;
+        learner.IdNumber = model.IdNumber;
+        learner.Name = model.Name;
+        learner.RegisterClassId = model.RegisterClassId;
+    }
+
+    private static async Task UpdateParentsAsync(LisaDbContext context, Learner learner, List<ParentViewModel> parents)
+    {
+        var existingParentIds = learner.Parents?.Select(p => p.Id).ToList() ?? [];
+        var updatedParentIds = parents.Where(p => p.Id.HasValue)
+            .Select(p => p.Id!.Value)
+            .ToList();
+
+        var parentsToRemove = learner.Parents?.Where(p => !updatedParentIds.Contains(p.Id)).ToList() ?? [];
+        context.Parents.RemoveRange(parentsToRemove);
+
+        foreach (var pm in parents)
+        {
+            if (pm.Id.HasValue && existingParentIds.Contains(pm.Id.Value))
+            {
+                var parent = learner.Parents?.FirstOrDefault(x => x.Id == pm.Id.Value);
+                if (parent != null)
+                {
+                    UpdateParentProperties(parent, pm);
+                }
+            }
+            else
+            {
+                var newParent = CreateNewParent(learner.Id, pm);
+                await context.Parents.AddAsync(newParent);
+            }
+        }
+    }
+
+    private static void UpdateParentProperties(Parent parent, ParentViewModel pm)
+    {
+        parent.Surname = pm.Surname;
+        parent.Name = pm.Name;
+        parent.Relationship = pm.Relationship;
+        parent.PrimaryEmail = pm.PrimaryEmail;
+        parent.SecondaryEmail = pm.SecondaryEmail;
+        parent.PrimaryCellNumber = pm.PrimaryCellNumber;
+        parent.SecondaryCellNumber = pm.SecondaryCellNumber;
+        parent.WhatsAppNumber = pm.WhatsAppNumber;
+    }
+
+    private static Parent CreateNewParent(Guid learnerId, ParentViewModel pm)
+    {
+        return new Parent
+        {
+            Id = Guid.NewGuid(),
+            LearnerId = learnerId,
+            Surname = pm.Surname,
+            Name = pm.Name,
+            Relationship = pm.Relationship,
+            PrimaryEmail = pm.PrimaryEmail,
+            SecondaryEmail = pm.SecondaryEmail,
+            PrimaryCellNumber = pm.PrimaryCellNumber,
+            SecondaryCellNumber = pm.SecondaryCellNumber,
+            WhatsAppNumber = pm.WhatsAppNumber
+        };
+    }
+
+    private static void UpdateLearnerSubjects(LisaDbContext context, Learner learner, LearnerViewModel model)
+    {
+        if (learner.LearnerSubjects is not null && learner.LearnerSubjects.Count > 0)
+        {
+            context.LearnerSubjects.RemoveRange(learner.LearnerSubjects);
+        }
+
+        var newSubjects = model.SubjectIds.Select(sid =>
+        {
+            var combinationId = FindCombinationId(model.CombinationSelections, sid);
+            return new LearnerSubject
+            {
+                LearnerId = learner.Id,
+                SubjectId = sid,
+                CombinationId = combinationId
+            };
+        }).ToList();
+
+        context.LearnerSubjects.AddRange(newSubjects);
     }
 
     public async Task<List<Learner>> GetLearnersBySchoolAsync(Guid schoolId)

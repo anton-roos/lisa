@@ -1,0 +1,43 @@
+@using Lisa.Enums
+@inherits ComponentBase
+
+<div class="mb-3">
+    <label class="form-label"><strong>Communication Group:</strong></label>
+    <div class="btn-group" role="group">
+        <input type="radio" class="btn-check" name="recipientGroup" id="schoolOption"
+            value="@RecipientGroup.School" @onchange="HandleChange"
+            checked="@(SelectedGroup == RecipientGroup.School)">
+        <label class="btn btn-outline-secondary" for="schoolOption">School</label>
+
+        <input type="radio" class="btn-check" name="recipientGroup" id="gradeOption"
+            value="@RecipientGroup.SchoolGrade" @onchange="HandleChange"
+            checked="@(SelectedGroup == RecipientGroup.SchoolGrade)">
+        <label class="btn btn-outline-secondary" for="gradeOption">Grade</label>
+
+        <input type="radio" class="btn-check" name="recipientGroup" id="subjectOption"
+            value="@RecipientGroup.Subject" @onchange="HandleChange"
+            checked="@(SelectedGroup == RecipientGroup.Subject)">
+        <label class="btn btn-outline-secondary" for="subjectOption">Subject</label>
+
+        <input type="radio" class="btn-check" name="recipientGroup" id="learnerOption"
+            value="@RecipientGroup.Learner" @onchange="HandleChange"
+            checked="@(SelectedGroup == RecipientGroup.Learner)">
+        <label class="btn btn-outline-secondary" for="learnerOption">Learner</label>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public RecipientGroup SelectedGroup { get; set; }
+
+    [Parameter]
+    public EventCallback<RecipientGroup> OnGroupChanged { get; set; }
+
+    private async Task HandleChange(ChangeEventArgs e)
+    {
+        if (Enum.TryParse(e.Value?.ToString(), out RecipientGroup newGroup))
+        {
+            await OnGroupChanged.InvokeAsync(newGroup);
+        }
+    }
+}

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Hangfire;
 using Lisa.Data;
 using Lisa.Enums;
@@ -8,29 +9,43 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class EmailCampaignService(
-    IDbContextFactory<LisaDbContext> contextFactory,
-    UiEventService uiEventService,
-    ILogger<EmailCampaignService> logger,
-    EmailService emailService,
-    LearnerService learnerService,
-    UserService userService,
-    EmailRendererService emailRendererService
-)
+public class EmailCampaignService
 {
-    private readonly IDbContextFactory<LisaDbContext> _contextFactory = contextFactory;
-    private readonly UiEventService _uiEventService = uiEventService;
-    private readonly ILogger<EmailCampaignService> _logger = logger;
-    private static readonly ConcurrentDictionary<Guid, CancellationTokenSource> CampaignTokens = new();
-    private readonly EmailService _emailService = emailService;
-    private readonly LearnerService _learnerService = learnerService;
-    private readonly UserService _userService = userService;
-    private readonly EmailRendererService _emailRendererService = emailRendererService;
+    private readonly IDbContextFactory<LisaDbContext> _contextFactory;
+    private readonly UiEventService _uiEventService;
+    private readonly ILogger<EmailCampaignService> _logger;
+    private static readonly ConcurrentDictionary<Guid, CancellationTokenSource> _campaignIds = new();
+    private readonly EmailService _emailService;
+    private readonly LearnerService _learnerService;
+    private readonly UserService _userService;
+    private readonly EmailRendererService _emailRendererService;
+
+    private const string DefaultSubject = "No Subject";
+    private const int BatchSize = 100;
+    private const int ProgressComplete = 100;
+    private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled); // Basic email validation
+
+    public EmailCampaignService(
+        IDbContextFactory<LisaDbContext> contextFactory,
+        UiEventService uiEventService,
+        ILogger<EmailCampaignService> logger,
+        EmailService emailService,
+        LearnerService learnerService,
+        UserService userService,
+        EmailRendererService emailRendererService)
+    {
+        _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
+        _uiEventService = uiEventService ?? throw new ArgumentNullException(nameof(uiEventService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+        _learnerService = learnerService ?? throw new ArgumentNullException(nameof(learnerService));
+        _userService = userService ?? throw new ArgumentNullException(nameof(userService));
+        _emailRendererService = emailRendererService ?? throw new ArgumentNullException(nameof(emailRendererService));
+    }
 
     public async Task<List<EmailCampaign>> GetBySchoolIdAsync(Guid schoolId)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
-
         return await context.EmailCampaigns
             .Where(c => c.SchoolId == schoolId)
             .AsNoTracking()
@@ -40,62 +55,97 @@ public class EmailCampaignService(
     [JobDisplayName("Email Campaign Processing")]
     public async Task StartCampaignAsync(Guid campaignId)
     {
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var campaign = await context.EmailCampaigns
+            .Include(c => c.EmailRecipients)
+            .FirstOrDefaultAsync(c => c.Id == campaignId);
+
+        if (campaign == null)
+        {
+            _logger.LogWarning("Campaign {CampaignId} not found.", campaignId);
+            return;
+        }
+
+        if (campaign.Status == EmailCampaignStatus.Sent)
+        {
+            _logger.LogWarning("Campaign {CampaignId} already sent.", campaignId);
+            return;
+        }
+
+        var tokenSource = new CancellationTokenSource();
+        campaign.Status = EmailCampaignStatus.Sending;
+        await context.SaveChangesAsync();
+
+        if (_campaignIds.ContainsKey(campaignId))
+        {
+            _logger.LogWarning("Campaign {CampaignId} is already running.", campaignId);
+            tokenSource.Dispose();
+            return;
+        }
+        if (!_campaignIds.TryAdd(campaignId, tokenSource))
+        {
+            _logger.LogWarning("Campaign {CampaignId} is already running.", campaignId);
+            tokenSource.Dispose();
+            return;
+        }
+
         try
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
-            var campaign = await context.EmailCampaigns
-                .Include(c => c.EmailRecipients)
-                .FirstOrDefaultAsync(c => c.Id == campaignId);
-
-            if (campaign == null || campaign.Status == EmailCampaignStatus.Sent)
+            if (!ValidateCampaign(campaign))
             {
-                _logger.LogWarning("Campaign {campaignId} not found or already sent.", campaignId);
+                campaign.Status = EmailCampaignStatus.Failed;
+                await context.SaveChangesAsync();
                 return;
             }
-
-            campaign.Status = EmailCampaignStatus.Sending;
-            await context.SaveChangesAsync();
 
             await _uiEventService.PublishAsync(UiEvents.EmailCampaignStarted, new { campaign.Id });
-
-            var tokenSource = new CancellationTokenSource();
-            if (!CampaignTokens.TryAdd(campaignId, tokenSource))
-            {
-                _logger.LogError("Failed to add campaign {campaignId} to token dictionary.", campaignId);
-                return;
-            }
-
-            await ProcessEmailsAsync(campaignId, tokenSource.Token);
+            await ProcessEmailsAsync(context, campaign, tokenSource.Token);
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error starting campaign {campaignId}: {ex.Message}", campaignId, ex.Message);
+            _logger.LogError(ex, "Error starting campaign {CampaignId}", campaignId);
+            campaign.Status = EmailCampaignStatus.Failed;
+            await context.SaveChangesAsync();
+        }
+        finally
+        {
+            if (_campaignIds.TryRemove(campaignId, out var cts))
+            {
+                cts.Dispose();
+            }
         }
     }
 
-    private async Task ProcessEmailsAsync(Guid campaignId, CancellationToken cancellationToken)
+    private async Task ProcessEmailsAsync(LisaDbContext context, EmailCampaign campaign, CancellationToken cancellationToken)
     {
         try
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
-            var campaign = await context.EmailCampaigns
-                .Include(c => c.EmailRecipients)
-                .FirstOrDefaultAsync(c => c.Id == campaignId);
-
-            if (campaign == null)
+            var recipients = campaign.EmailRecipients?.ToList() ?? [];
+            if (recipients.Count == 0)
             {
+                _logger.LogWarning("No recipients found for campaign {CampaignId}", campaign.Id);
+                campaign.Status = EmailCampaignStatus.Sent;
+                await context.SaveChangesAsync(cancellationToken);
+                await PublishProgressAsync(campaign.Id, 0, 0, isEmpty: true);
                 return;
             }
 
-            int total = campaign.EmailRecipients?.Count ?? 0;
-            int sent = 0;
+            var grouped = recipients.GroupBy(r => r.EmailAddress);
+            var uniqueRecipients = grouped.Select(g => g.First()).ToList();
+            if (grouped.Any(g => g.Count() > 1))
+            {
+                _logger.LogInformation("Duplicate email addresses found in campaign {CampaignId}; using first occurrence.", campaign.Id);
+            }
 
+            int total = uniqueRecipients.Count;
+            int sent = 0;
             await PublishProgressAsync(campaign.Id, total, sent);
 
-            foreach (var recipient in campaign.EmailRecipients!)
+            var batches = uniqueRecipients.Chunk(BatchSize);
+            foreach (var batch in batches)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                sent = await ProcessRecipientAsync(campaign, recipient, total, sent, cancellationToken);
+                sent = await ProcessBatchAsync(context, campaign, batch, total, sent, cancellationToken);
             }
 
             campaign.Status = EmailCampaignStatus.Sent;
@@ -104,93 +154,122 @@ public class EmailCampaignService(
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation("Email campaign {campaignId} was cancelled.", campaignId);
+            _logger.LogInformation("Email campaign {CampaignId} was cancelled.", campaign.Id);
+            campaign.Status = EmailCampaignStatus.Cancelled;
+            await context.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError("Unexpected error in ProcessEmailsAsync for campaign {campaignId}: {error}",
-                campaignId, ex.Message);
-        }
-        finally
-        {
-            CampaignTokens.TryRemove(campaignId, out _);
+            _logger.LogError(ex, "Unexpected error in ProcessEmailsAsync for campaign {CampaignId}", campaign.Id);
+            campaign.Status = EmailCampaignStatus.Failed;
+            await context.SaveChangesAsync(cancellationToken);
         }
     }
 
-    private async Task<int> ProcessRecipientAsync(EmailCampaign campaign, EmailRecipient recipient, int total, int sent, CancellationToken cancellationToken)
+    private async Task<int> ProcessBatchAsync(
+        LisaDbContext context, EmailCampaign campaign, IEnumerable<EmailRecipient> batch,
+        int total, int processedCount, CancellationToken cancellationToken)
+    {
+        var tasks = batch.Select(async recipient =>
+        {
+            cancellationToken.ThrowIfCancellationRequested(); // Per-recipient cancellation check
+            await ProcessRecipientAsync(context, campaign, recipient, cancellationToken);
+        }).ToList();
+        await Task.WhenAll(tasks);
+
+        processedCount += batch.Count();
+        int progress = CalculateProgress(processedCount, total);
+        await _uiEventService.PublishAsync(UiEvents.EmailCampaignProgressUpdated, new
+        {
+            campaign.Id,
+            Progress = progress,
+            Total = total,
+            Sent = processedCount
+        });
+
+        await context.SaveChangesAsync(cancellationToken);
+        return processedCount;
+    }
+
+    private async Task ProcessRecipientAsync(
+        LisaDbContext context, EmailCampaign campaign, EmailRecipient recipient,
+        CancellationToken cancellationToken)
     {
         try
         {
-            if (!string.IsNullOrWhiteSpace(recipient.EmailAddress))
+            if (string.IsNullOrWhiteSpace(recipient.EmailAddress) || !EmailRegex.IsMatch(recipient.EmailAddress))
             {
-                string subject = campaign.SubjectLine ?? "No Subject";
-                string body = campaign.ContentHtml!;
-
-                if (campaign.EmailTemplate == Template.ProgressFeedback && recipient.LearnerId.HasValue)
-                {
-                    body = await _emailRendererService.RenderProgressFeedbackAsync(recipient.LearnerId.Value);
-                }
-
-                BackgroundJob.Enqueue(() =>
-                    SendEmailWithRetryAsync(recipient.EmailAddress, subject, body, campaign.SchoolId));
-
-                await Task.Delay(2000, cancellationToken);
-                recipient.Status = EmailRecipientStatus.Sent;
-            }
-            else
-            {
+                _logger.LogWarning("Recipient for campaign {CampaignId} has invalid email address: {Email}", campaign.Id, recipient.EmailAddress);
                 recipient.Status = EmailRecipientStatus.Bounced;
+                return;
             }
+
+            string subject = campaign.SubjectLine ?? DefaultSubject;
+            string body = campaign.RecipientTemplate switch
+            {
+                RecipientTemplate.ProgressFeedback when recipient.LearnerId.HasValue =>
+                    await _emailRendererService.RenderProgressFeedbackAsync(recipient.LearnerId.Value),
+                RecipientTemplate.Newsletter =>
+                    await _emailRendererService.RenderNewsletterAsync(campaign.SchoolId),
+                _ => throw new InvalidOperationException($"Unsupported recipient template: {campaign.RecipientTemplate}")
+            };
+
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                _logger.LogError("Failed to render email body for recipient {RecipientEmail} in campaign {CampaignId}", recipient.EmailAddress, campaign.Id);
+                recipient.Status = EmailRecipientStatus.Bounced;
+                return;
+            }
+
+            await _emailService.SendEmailAsync(recipient.EmailAddress, subject, body, campaign.SchoolId);
+            recipient.Status = EmailRecipientStatus.Sent;
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error sending email to {recipientEmail}: {error}",
-                recipient.EmailAddress, ex.Message);
+            _logger.LogError(ex, "Error sending email to {RecipientEmail}", recipient.EmailAddress);
             recipient.Status = EmailRecipientStatus.Bounced;
         }
-        finally
-        {
-            sent++;
-            int progress = (int)((double)sent / total * 100);
-            await _uiEventService.PublishAsync(UiEvents.EmailCampaignProgressUpdated, new
-            {
-                campaign.Id,
-                Progress = progress,
-                Total = total,
-                Sent = sent
-            });
-        }
-
-        return sent;
     }
 
-    private Task PublishProgressAsync(Guid? campaignId, int total, int sent)
+    private async Task PublishProgressAsync(Guid campaignId, int total, int sent, bool isEmpty = false)
     {
-        return _uiEventService.PublishAsync(UiEvents.EmailCampaignProgressUpdated, new
+        int progress = CalculateProgress(sent, total);
+        await _uiEventService.PublishAsync(UiEvents.EmailCampaignProgressUpdated, new
         {
             Id = campaignId,
-            Progress = 0,
+            Progress = progress,
             Total = total,
-            Sent = sent
+            Sent = sent,
+            IsEmpty = isEmpty
         });
     }
 
-    [AutomaticRetry(Attempts = 3)]
-    public async Task SendEmailWithRetryAsync(string? recipientEmailAddress, string subject, string body, Guid schoolId)
+    [AutomaticRetry(Attempts = 3, OnAttemptsExceeded = AttemptsExceededAction.Fail)]
+    public async Task SendEmailWithRetryAsync(string recipientEmailAddress, string subject, string body, Guid schoolId)
     {
+        if (string.IsNullOrWhiteSpace(recipientEmailAddress))
+        {
+            throw new ArgumentException("Recipient email address cannot be null or empty.", nameof(recipientEmailAddress));
+        }
+
+        if (string.IsNullOrWhiteSpace(subject))
+        {
+            throw new ArgumentException("Subject cannot be null or empty.", nameof(subject));
+        }
+
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            throw new ArgumentException("Body cannot be null or empty.", nameof(body));
+        }
+
         try
         {
-            if (!string.IsNullOrWhiteSpace(recipientEmailAddress))
-            {
-                await _emailService.SendEmailAsync(schoolId: schoolId, to: recipientEmailAddress, subject: subject,
-                    body: body);
-            }
+            await _emailService.SendEmailAsync(recipientEmailAddress, subject, body, schoolId);
         }
         catch (Exception ex)
         {
-            _logger.LogError("Failed to send email to {recipient.EmailAddress}: {ex.Message}", recipientEmailAddress,
-                ex.Message);
-            throw;
+            _logger.LogError(ex, "Failed to send email to {RecipientEmailAddress} after retries", recipientEmailAddress);
+            throw new EmailSendingException($"Failed to send email to {recipientEmailAddress} after 3 retries.", ex);
         }
     }
 
@@ -198,6 +277,7 @@ public class EmailCampaignService(
     {
         if (!TryCancelCampaign(campaignId))
         {
+            _logger.LogWarning("No active campaign found to pause for {CampaignId}", campaignId);
             return;
         }
 
@@ -207,15 +287,19 @@ public class EmailCampaignService(
         {
             campaign.Status = EmailCampaignStatus.Paused;
             await context.SaveChangesAsync();
+            await _uiEventService.PublishAsync(UiEvents.EmailCampaignPaused, new { Id = campaignId });
         }
-
-        await _uiEventService.PublishAsync(UiEvents.EmailCampaignPaused, new { Id = campaignId });
+        else
+        {
+            _logger.LogWarning("Campaign {CampaignId} not found during pause.", campaignId);
+        }
     }
 
     public async Task StopCampaignAsync(Guid campaignId)
     {
         if (!TryCancelCampaign(campaignId))
         {
+            _logger.LogWarning("No active campaign found to stop for {CampaignId}", campaignId);
             return;
         }
 
@@ -225,21 +309,32 @@ public class EmailCampaignService(
         {
             campaign.Status = EmailCampaignStatus.Cancelled;
             await context.SaveChangesAsync();
+            await _uiEventService.PublishAsync(UiEvents.EmailCampaignCancelled, new { Id = campaignId });
         }
-
-        await _uiEventService.PublishAsync(UiEvents.EmailCampaignCancelled, new { Id = campaignId });
+        else
+        {
+            _logger.LogWarning("Campaign {CampaignId} not found during stop.", campaignId);
+        }
     }
 
     private bool TryCancelCampaign(Guid campaignId)
     {
-        if (CampaignTokens.TryGetValue(campaignId, out var tokenSource))
+        if (_campaignIds.TryRemove(campaignId, out var tokenSource))
         {
-            tokenSource.Cancel();
-            CampaignTokens.TryRemove(campaignId, out _);
+            try
+            {
+                tokenSource.Cancel();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cancelling token for {CampaignId}", campaignId);
+            }
+            finally
+            {
+                tokenSource.Dispose();
+            }
             return true;
         }
-
-        _logger.LogWarning("Attempted to cancel campaign {campaignId}, but no active task was found.", campaignId);
         return false;
     }
 
@@ -251,329 +346,255 @@ public class EmailCampaignService(
 
     public async Task<EmailCampaign> CreateAsync(CommunicationCommand command)
     {
-        ArgumentNullException.ThrowIfNull(command);
-        var utcNow = DateTime.UtcNow;
-
-        var subjectLine = !string.IsNullOrWhiteSpace(command.SubjectLine)
-            ? command.SubjectLine
-            : command.EmailTemplate switch
-            {
-                Template.ProgressFeedback => "Progress Feedback",
-                Template.Newsletter => "Latest Newsletter",
-                _ => "Important Update from Your School"
-            };
-
-        var recipients = command.EmailTemplate == Template.ProgressFeedback
-            ? await GenerateProgressRecipientsAsync(command, utcNow)
-            : await GenerateStandardRecipientsAsync(command, utcNow);
-
-        var emailCampaign = new EmailCampaign
+        if (command == null)
         {
-            Id = Guid.NewGuid(),
-            Name = GenerateCampaignName(command),
-            Description = $"Automated notification for {command.Audience} via {command.Target}",
-            SubjectLine = subjectLine,
-            SenderName = string.IsNullOrWhiteSpace(command.SenderName) ? "School Admin" : command.SenderName,
-            SenderEmail = string.IsNullOrWhiteSpace(command.SenderEmail) ? "admin@school.com" : command.SenderEmail,
-            Status = EmailCampaignStatus.Draft,
-            ScheduledAt = utcNow.AddMinutes(1),
-            TrackOpens = true,
-            TrackClicks = true,
-            CreatedAt = utcNow,
-            UpdatedAt = utcNow,
-            EmailRecipients = recipients,
-            SchoolId = command.SchoolId,
-            EmailTemplate = command.EmailTemplate
-        };
+            throw new Exception("Command cannot be null.");
+        }
+
+        var subjectLine = GetSubjectLine(command.RecipientTemplate);
 
         using var context = await _contextFactory.CreateDbContextAsync();
-        context.EmailCampaigns.Add(emailCampaign);
-        await context.SaveChangesAsync();
-        return emailCampaign;
-    }
-
-    private async Task<List<EmailRecipient>> GenerateProgressRecipientsAsync(CommunicationCommand command, DateTime utcNow)
-    {
-        var progressRecipients = await GetProgressReportRecipientsAsync(command);
-
-        if (progressRecipients.Count == 0)
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        try
         {
-            _logger.LogWarning("No recipients found for the progress report.");
-        }
-
-        return [.. progressRecipients.Select(r => new EmailRecipient
-        {
-            Id = Guid.NewGuid(),
-            EmailAddress = r.Email,
-            LearnerId = r.LearnerId,
-            Status = EmailRecipientStatus.Pending,
-            CreatedAt = utcNow,
-            UpdatedAt = utcNow
-        })];
-    }
-
-    private async Task<List<EmailRecipient>> GenerateStandardRecipientsAsync(CommunicationCommand command, DateTime utcNow)
-    {
-        var recipientEmails = await GetRecipientEmailsAsync(command);
-        if (recipientEmails == null || recipientEmails.Count == 0)
-        {
-            throw new Exception("Recipient emails list cannot be empty or null.");
-        }
-        return [.. recipientEmails.Select(email => new EmailRecipient
-        {
-            Id = Guid.NewGuid(),
-            EmailAddress = email,
-            Status = EmailRecipientStatus.Pending,
-            CreatedAt = utcNow,
-            UpdatedAt = utcNow
-        })];
-    }
-
-    private async Task<List<(string Email, Guid LearnerId)>> GetProgressReportRecipientsAsync(CommunicationCommand command)
-    {
-        List<Learner> learners;
-
-        if (command.Target == CommunicationTarget.Learner && command.LearnerId.HasValue)
-        {
-            var learner = await _learnerService.GetByIdAsync(command.LearnerId.Value);
-            learners = learner != null ? [learner] : [];
-        }
-        else
-        {
-            switch (command.Audience)
+            var recipients = await GenerateRecipientsAsync(command);
+            var emailCampaign = new EmailCampaign
             {
-                case Audience.Parents:
-                case Audience.LearnersAndStaff:
-                    learners = await _learnerService.GetLearnersBySchoolAsync(command.SchoolId);
-                    break;
-                case Audience.Grade:
-                    if (command.GradeId.HasValue)
-                    {
-                        learners = await _learnerService.GetLearnersByGradeAsync(command.GradeId.Value);
-                    }
-                    else
-                    {
-                        learners = [];
-                    }
-                    break;
-                case Audience.Subject:
-                    learners = await _learnerService.GetBySubjectIdAsync(command.SubjectId);
-                    break;
-                default:
-                    learners = await _learnerService.GetLearnersBySchoolAsync(command.SchoolId);
-                    break;
-            }
+                Id = Guid.NewGuid(),
+                Name = GenerateCampaignName(command),
+                SubjectLine = subjectLine,
+                Status = EmailCampaignStatus.Draft,
+                TrackOpens = true,
+                TrackClicks = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                EmailRecipients = recipients,
+                SchoolId = command.SchoolId,
+                RecipientTemplate = command.RecipientTemplate
+            };
+
+            context.EmailCampaigns.Add(emailCampaign);
+            await context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return emailCampaign;
         }
-
-        var recipients = new List<(string Email, Guid LearnerId)>();
-
-        foreach (var learner in learners)
+        catch (Exception ex)
         {
-            if (learner.Parents != null)
-            {
-                foreach (var parent in learner.Parents)
-                {
-                    string? email = !string.IsNullOrWhiteSpace(parent.PrimaryEmail)
-                        ? parent.PrimaryEmail
-                        : parent.SecondaryEmail;
-                    if (!string.IsNullOrWhiteSpace(email))
-                    {
-                        recipients.Add((email, learner.Id));
-                    }
-                }
-            }
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Failed to create campaign for SchoolId {SchoolId}", command.SchoolId);
+            throw;
+        }
+    }
+
+    private async Task<List<EmailRecipient>> GenerateRecipientsAsync(CommunicationCommand command)
+    {
+        Func<CommunicationCommand, Task<List<EmailRecipient>>> strategy = command.RecipientTemplate switch
+        {
+            RecipientTemplate.ProgressFeedback => GenerateProgressRecipientsAsync,
+            RecipientTemplate.Newsletter => GenerateNewsletterRecipientsAsync,
+            RecipientTemplate.None => GenerateNewsletterRecipientsAsync,
+            _ => GenerateNewsletterRecipientsAsync
+        };
+
+        var recipients = await strategy(command);
+
+        if (!recipients.Any())
+        {
+            throw new InvalidOperationException("No valid recipients found for the campaign.");
         }
 
         return recipients;
     }
 
-    /// <summary>
-    /// Gathers recipient emails based on the CommunicationRequest.
-    /// </summary>
-    private async Task<List<string?>> GetRecipientEmailsAsync(CommunicationCommand command)
+    private async Task<List<EmailRecipient>> GenerateProgressRecipientsAsync(CommunicationCommand command)
     {
-        switch (command.Audience)
+        var progressRecipients = await GetProgressFeedbackRecipientsAsync(command);
+        return progressRecipients.Select(r => new EmailRecipient
         {
-            case Audience.Learners:
-                return await GetLearnerEmailsAsync(command.SchoolId);
-
-            case Audience.Staff:
-                return await GetStaffEmailsAsync(command.SchoolId);
-
-            case Audience.Parents:
-                return await GetParentEmailsAsync(command.SchoolId);
-
-            case Audience.LearnersAndStaff:
-                var learners = await GetLearnerEmailsAsync(command.SchoolId);
-                var staff = await GetStaffEmailsAsync(command.SchoolId);
-                return learners.Concat(staff).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-
-            case Audience.Grade:
-                if (command.GradeId.HasValue)
-                {
-                    return await GetGradeEmailsAsync(command.GradeId.Value);
-                }
-                else
-                {
-                    _logger.LogWarning("Grade ID is null when retrieving grade emails.");
-                    return [];
-                }
-
-            case Audience.Subject:
-                return await GetSubjectEmailsAsync(command.SubjectId);
-
-            default:
-                _logger.LogWarning("Unknown audience type: {Audience}", command.Audience);
-                return [];
-        }
+            Id = Guid.NewGuid(),
+            EmailAddress = r.Email,
+            LearnerId = r.LearnerId,
+            Status = EmailRecipientStatus.Pending,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        }).ToList();
     }
 
-    private async Task<List<string?>> GetLearnerEmailsAsync(Guid? schoolId)
+    private async Task<List<EmailRecipient>> GenerateNewsletterRecipientsAsync(CommunicationCommand command)
     {
-        if (!schoolId.HasValue)
+        var recipientEmails = await GetRecipientEmailsAsync(command);
+        return recipientEmails.Select(email => new EmailRecipient
         {
-            _logger.LogWarning("School ID is null when retrieving learner emails.");
-            return [];
+            Id = Guid.NewGuid(),
+            EmailAddress = email,
+            Status = EmailRecipientStatus.Pending,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        }).ToList();
+    }
+
+    private async Task<List<(string Email, Guid LearnerId)>> GetProgressFeedbackRecipientsAsync(CommunicationCommand command)
+    {
+        List<Learner> learners = await GetLearnersAsync(command);
+        return await MapRecipientsAsync(command.RecipientType, learners, command.SchoolId);
+    }
+
+    private async Task<List<string>> GetRecipientEmailsAsync(CommunicationCommand command)
+    {
+        return command.RecipientType switch
+        {
+            RecipientType.Learner => await GetLearnerEmailsAsync(command),
+            RecipientType.Staff => await GetStaffEmailsAsync(command),
+            RecipientType.Parent => await GetParentEmailsAsync(command),
+            _ => throw new ArgumentException($"Unknown recipient type: {command.RecipientType}", nameof(command.RecipientType))
+        };
+    }
+
+    private async Task<List<Learner>> GetLearnersAsync(CommunicationCommand command)
+    {
+        return command.RecipientGroup switch
+        {
+            RecipientGroup.Learner => await GetLearnerByIdAsync(command),
+            RecipientGroup.Subject => await _learnerService.GetBySubjectIdAsync(command.SubjectId),
+            RecipientGroup.SchoolGrade => await _learnerService.GetByGradeAsync(command.GradeId ?? throw new InvalidOperationException("Grade Id cannot be null for SchoolGrade recipient group.")),
+            RecipientGroup.School => await _learnerService.GetBySchoolAsync(command.SchoolId),
+            _ => throw new ArgumentException($"Unknown recipient group: {command.RecipientGroup}", nameof(command.RecipientGroup))
+        };
+    }
+
+    private async Task<List<Learner>> GetLearnerByIdAsync(CommunicationCommand command)
+    {
+        if (command.LearnerId == null)
+            throw new InvalidOperationException("Learner Id cannot be null for Learner recipient group.");
+        var learner = await _learnerService.GetByIdAsync(command.LearnerId.Value);
+        return learner != null ? [learner] : [];
+    }
+
+    private async Task<List<(string Email, Guid LearnerId)>> MapRecipientsAsync(RecipientType recipientType, List<Learner> learners, Guid schoolId)
+    {
+        List<(string Email, Guid LearnerId)> recipients = [];
+        switch (recipientType)
+        {
+            case RecipientType.Parent:
+                foreach (var l in learners)
+                {
+                    if (l.Parents?.Any() == true)
+                    {
+                        foreach (var parent in l.Parents)
+                        {
+                            var email = !string.IsNullOrWhiteSpace(parent.PrimaryEmail) ? parent.PrimaryEmail : parent.SecondaryEmail;
+                            if (!string.IsNullOrWhiteSpace(email))
+                            {
+                                recipients.Add((email, l.Id));
+                            }
+                        }
+                    }
+                }
+                break;
+
+            case RecipientType.Learner:
+                recipients = learners
+                    .Where(l => !string.IsNullOrWhiteSpace(l.Email))
+                    .Select(l => (l.Email!, l.Id))
+                    .ToList();
+                break;
+
+            case RecipientType.Staff:
+                var roles = new[] { Roles.Administrator, Roles.Principal, Roles.Teacher, Roles.SchoolManagement };
+                var staff = await _userService.GetAllByRoleAndSchoolAsync(roles, schoolId);
+                recipients = staff
+                    .Where(s => !string.IsNullOrWhiteSpace(s.Email))
+                    .Select(s => (s.Email!, Guid.Empty))
+                    .ToList();
+                break;
         }
 
-        var learners = await _learnerService.GetLearnersBySchoolAsync(schoolId.Value);
-        var emails = learners
-            .Select(l => l.Email)
-            .Where(email => !string.IsNullOrWhiteSpace(email))
+        if (recipients.Count == 0)
+        {
+            _logger.LogWarning("No valid recipients found for {RecipientType} in campaign for SchoolId {SchoolId}", recipientType, schoolId);
+        }
+        return recipients;
+    }
+
+    private async Task<List<string>> GetLearnerEmailsAsync(CommunicationCommand command)
+    {
+        var learners = await _learnerService.GetBySchoolAsync(command.SchoolId);
+        return learners
+            .Where(l => !string.IsNullOrWhiteSpace(l.Email))
+            .Select(l => l.Email!)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-
-        return emails;
     }
 
-    /// <summary>
-    /// Generates a campaign name based on the audience and current timestamp.
-    /// </summary>
-    private static string GenerateCampaignName(CommunicationCommand command)
+    private async Task<List<string?>> GetParentEmailsAsync(CommunicationCommand command)
     {
-        return $"{command.Target} - {command.Audience} Communication - {DateTime.UtcNow:yyyyMMddHHmmss}";
-    }
-
-    /// <summary>
-    /// Retrieves parent emails for learners in a specific school.
-    /// </summary>
-    private async Task<List<string?>> GetParentEmailsAsync(Guid? schoolId)
-    {
-        if (!schoolId.HasValue)
-        {
-            _logger.LogWarning("School ID is null when retrieving parent emails.");
-            return [];
-        }
-
-        var learners = await _learnerService.GetLearnersBySchoolWithParentsAsync(schoolId.Value);
-        var emails = learners
+        var learners = await _learnerService.GetLearnersBySchoolWithParentsAsync(command.SchoolId);
+        return learners
             .Where(l => l.Parents != null && l.Parents.Any())
-            .SelectMany(l => l.Parents ?? Enumerable.Empty<Parent>())
+            .SelectMany(l => l.Parents!)
             .SelectMany(p => new[] { p.PrimaryEmail, p.SecondaryEmail })
             .Where(email => !string.IsNullOrWhiteSpace(email))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-
-        return emails;
     }
 
-    /// <summary>
-    /// Retrieves learner emails for a specific grade.
-    /// </summary>
-    private async Task<List<string?>> GetGradeEmailsAsync(Guid gradeId)
+    private async Task<List<string>> GetStaffEmailsAsync(CommunicationCommand command)
     {
-        var learners = await _learnerService.GetLearnersByGradeAsync(gradeId);
-        var emails = learners
-            .Select(l => l.Email)
-            .Where(email => !string.IsNullOrWhiteSpace(email))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        return emails.Where(email => email != null).ToList()!;
-    }
-
-    /// <summary>
-    /// Retrieves learner emails for a specific subject.
-    /// </summary>
-    private async Task<List<string?>> GetSubjectEmailsAsync(int subjectId)
-    {
-        var learners = await _learnerService.GetBySubjectIdAsync(subjectId);
-        var emails = learners
-            .Select(l => l.Email)
-            .Where(email => !string.IsNullOrWhiteSpace(email))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        return emails.Where(email => email != null).ToList()!;
-    }
-
-    /// <summary>
-    /// Retrieves staff emails for a specific school.
-    /// </summary>
-    private async Task<List<string?>> GetStaffEmailsAsync(Guid? schoolId)
-    {
-        if (!schoolId.HasValue)
-        {
-            _logger.LogWarning("School ID is null when retrieving staff emails.");
-            return [];
-        }
-
         var roles = new[] { Roles.Administrator, Roles.Principal, Roles.Teacher, Roles.SchoolManagement };
-        var staff = await _userService.GetAllByRoleAndSchoolAsync(roles, schoolId.Value);
-        var emails = staff
-            .Select(s => s.Email)
-            .Where(email => !string.IsNullOrWhiteSpace(email))
+        var staff = await _userService.GetAllByRoleAndSchoolAsync(roles, command.SchoolId);
+        return staff
+            .Where(s => !string.IsNullOrWhiteSpace(s.Email))
+            .Select(s => s.Email!)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-
-        return emails.Where(email => email != null).ToList()!;
     }
 
-    /// <summary>
-    /// Sends a personalized progress report email to each parent of every learner.
-    /// Each email is rendered with a ProgressReportModel specific to the learner.
-    /// </summary>
-    /// <param name="schoolId">The school identifier.</param>
-    /// <param name="templateId">The template ID for the progress report email.</param>
-    /// <returns>A Task representing the asynchronous operation.</returns>
-    public async Task SendProgressReportsAsync(Guid schoolId)
+    private bool ValidateCampaign(EmailCampaign campaign)
     {
-        var learners = await _learnerService.GetLearnersBySchoolAsync(schoolId);
-        if (learners == null || learners.Count == 0)
+        if (string.IsNullOrWhiteSpace(campaign.Name))
         {
-            _logger.LogWarning("No learners found for school {SchoolId}.", schoolId);
-            return;
+            _logger.LogWarning("Campaign {CampaignId} has an invalid name.", campaign.Id);
+            return false;
         }
-
-        foreach (var learner in learners)
+        if (string.IsNullOrWhiteSpace(campaign.SubjectLine))
         {
-            if (learner.Parents == null || learner.Parents.Count == 0)
-            {
-                _logger.LogWarning("Learner {LearnerId} has no associated parents.", learner.Id);
-                continue;
-            }
-
-            // Render the personalized HTML content using the new Razor page renderer.
-            var renderedHtml = await _emailRendererService.RenderProgressFeedbackAsync(learner.Id);
-            var subject = "Progress Report";
-            foreach (var parent in learner.Parents)
-            {
-                if (string.IsNullOrWhiteSpace(parent.PrimaryEmail) && string.IsNullOrWhiteSpace(parent.SecondaryEmail))
-                {
-                    _logger.LogWarning("Parent for learner {LearnerId} does not have a valid email.", learner.Id);
-                    continue;
-                }
-
-                var recipientEmail = !string.IsNullOrWhiteSpace(parent.PrimaryEmail)
-                    ? parent.PrimaryEmail
-                    : parent.SecondaryEmail;
-
-                BackgroundJob.Enqueue(() =>
-                    SendEmailWithRetryAsync(recipientEmail, subject, renderedHtml, schoolId));
-
-                _logger.LogInformation("Scheduled progress report email for learner {LearnerId} to parent {ParentEmail}.",
-                    learner.Id, recipientEmail);
-            }
+            _logger.LogWarning("Campaign {CampaignId} has an invalid subject line.", campaign.Id);
+            return false;
         }
+        if (campaign.EmailRecipients == null || !campaign.EmailRecipients.Any())
+        {
+            _logger.LogWarning("Campaign {CampaignId} has no recipients.", campaign.Id);
+            return false;
+        }
+        return true;
+    }
+
+    private static string GenerateCampaignName(CommunicationCommand command)
+    {
+        return $"{command.RecipientGroup} - {command.RecipientType} - {command.RecipientTemplate} - {DateTime.UtcNow:yyyyMMddHHmmss}";
+    }
+
+    private static string GetSubjectLine(RecipientTemplate template)
+    {
+        return template switch
+        {
+            RecipientTemplate.ProgressFeedback => "Progress Feedback",
+            RecipientTemplate.Newsletter => "Latest Newsletter",
+            RecipientTemplate.None => "Important Update from Your School",
+            _ => "Important Update from Your School"
+        };
+    }
+
+    private static int CalculateProgress(int processedCount, int total)
+    {
+        return total > 0 ? (int)((double)processedCount / total * 100) : ProgressComplete;
+    }
+}
+
+public class EmailSendingException : Exception
+{
+    public EmailSendingException(string message, Exception innerException)
+        : base(message, innerException)
+    {
     }
 }

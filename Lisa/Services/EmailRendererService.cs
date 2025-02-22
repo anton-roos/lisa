@@ -38,5 +38,11 @@ namespace Lisa.Services
                 return string.Empty;
             }
         }
+
+        public async Task<string> RenderNewsletterAsync(Guid schoolId)
+        {
+            await Task.Delay(1000);
+            return string.Empty;
+        }
     }
 }

@@ -33,19 +33,17 @@
     <script src="@Assets["lib/chart/chartjs-plugin-datalabels.js"]"></script>
     <script src="@Assets["lib/chart/Sortable.js"]"></script>
     <script src="@Assets["_content/Blazor.Bootstrap/blazor.bootstrap.js"]"></script>
+    <script src="@Assets["js/mobile-nav.js"]"></script>
     <script>
         window.reloadToMainPage = () => {
             window.location.href = '/';
         };
 
         document.addEventListener('dragstart', function (e) {
-            // Check if the event target has the 'drag-handle' class.
             if (e.target && e.target.classList.contains('drag-handle')) {
-                // Set the allowed effect to "move"
                 if (e.dataTransfer) {
                     e.dataTransfer.effectAllowed = 'move';
 
-                    // Optionally, set the drag image to the full row with an anchor point
                     var subjectRow = e.target.closest('.subject-row');
                     if (subjectRow) {
                         var rect = subjectRow.getBoundingClientRect();
@@ -58,10 +56,8 @@
         });
 
         document.addEventListener('dragover', function (e) {
-            // Look for the nearest drop zone using the .subject-row class.
             var dropZone = e.target.closest('.subject-row');
             if (dropZone && e.dataTransfer) {
-                // Set dropEffect to "move" to indicate that dropping is allowed.
                 e.dataTransfer.dropEffect = 'move';
             }
         });

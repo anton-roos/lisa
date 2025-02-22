@@ -353,12 +353,6 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             entity.Property(ec => ec.SubjectLine)
                   .HasMaxLength(200)
                   .IsRequired(false);
-            entity.Property(ec => ec.SenderName)
-                  .HasMaxLength(100)
-                  .IsRequired(false);
-            entity.Property(ec => ec.SenderEmail)
-                  .HasMaxLength(255)
-                  .IsRequired(false);
             entity.Property(ec => ec.Status)
                   .HasConversion<string>()
                   .HasMaxLength(50);

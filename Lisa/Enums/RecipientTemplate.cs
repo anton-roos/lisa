@@ -1,6 +1,6 @@
 namespace Lisa.Enums;
 
-public enum Template
+public enum RecipientTemplate
 {
     None,
     ProgressFeedback,

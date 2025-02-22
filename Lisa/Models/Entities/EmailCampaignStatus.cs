@@ -7,5 +7,6 @@ public enum EmailCampaignStatus
     Scheduled,
     Sending,
     Sent,
-    Cancelled
+    Cancelled,
+    Failed
 }

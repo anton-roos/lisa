@@ -45,13 +45,40 @@
 
         <CustomErrorBoundary>
             <ChildContent>
-                <article class="content px-4">
+                <article class="content container">
                     @Body
                 </article>
             </ChildContent>
             <ErrorContent />
         </CustomErrorBoundary>
     </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const navWrapper = document.querySelector('.nav-wrapper');
+            const leftArrow = document.querySelector('.left-arrow');
+            const rightArrow = document.querySelector('.right-arrow');
+
+            function updateArrowsVisibility() {
+                leftArrow.style.display = navWrapper.scrollLeft <= 0 ? 'none' : 'block';
+                rightArrow.style.display = navWrapper.scrollLeft + navWrapper.clientWidth >= navWrapper.scrollWidth ? 'none' : 'block';
+            }
+
+            leftArrow.addEventListener('click', () => {
+                navWrapper.scrollBy({ left: -100, behavior: 'smooth' });
+                console.log("clicked the left arrow");
+            });
+
+            rightArrow.addEventListener('click', () => {
+                navWrapper.scrollBy({ left: 100, behavior: 'smooth' });
+                console.log("clicked the right arrow");
+            });
+
+            navWrapper.addEventListener('scroll', updateArrowsVisibility);
+
+            updateArrowsVisibility();
+        });
+    </script>
 </div>
 
 <div class="modal-backdrop fade show" style="display: @(_isBugReportModalVisible ? "block" : "none");"></div>

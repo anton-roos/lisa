@@ -1,46 +1,91 @@
 ﻿@inherits LayoutComponentBase
+@inject IJSRuntime JsRuntime
 
-<div class="top-row ps-3 navbar navbar-dark d-lg-none mobile-nav">
-    <nav class="nav d-flex justify-content-around w-100">
-        <AuthorizeView Context="_" Roles="@Roles.SystemAdministrator">
-            <NavLink class="nav-link" href="schools">
-                <span class="bi bi-mortarboard" aria-hidden="true"></span>
-            </NavLink>
-        </AuthorizeView>
-        <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
-            <NavLink class="nav-link" href="care-groups">
-                <span class="bi bi-heart" aria-hidden="true">care groups</span>
-            </NavLink>
-        </AuthorizeView>
-        <AuthorizeView Context="_"
-            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
-            <NavLink class="nav-link" href="learners">
-                <span class="bi bi-people" aria-hidden="true"></span>
-            </NavLink>
-        </AuthorizeView>
-        <AuthorizeView Context="_"
-            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
-            <NavLink class="nav-link" href="learners">
-                <span class="bi bi-people" aria-hidden="true"></span>
-            </NavLink>
-        </AuthorizeView>
-        <AuthorizeView Context="_"
-            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
-            <NavLink class="nav-link" href="learners">
-                <span class="bi bi-people" aria-hidden="true"></span>
-            </NavLink>
-        </AuthorizeView>
-        <AuthorizeView Context="_"
-            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
-            <NavLink class="nav-link" href="learners">
-                <span class="bi bi-people" aria-hidden="true"></span>
-            </NavLink>
-        </AuthorizeView>
-        <AuthorizeView Context="_"
-            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
-            <NavLink class="nav-link" href="results">
-                <span class="bi bi-award" aria-hidden="true"></span>
-            </NavLink>
-        </AuthorizeView>
-    </nav>
+<div class="top-row mobile-nav">
+    <button class="scroll-arrow left-arrow">&#9664;</button>
+    <div class="nav-wrapper">
+        <nav class="nav d-flex justify-content-around w-100">
+            <AuthorizeView Context="_" Roles="@Roles.SystemAdministrator">
+                <NavLink class="nav-link" href="schools">
+                    <span class="bi bi-mortarboard" aria-hidden="true"></span>
+                </NavLink>
+            </AuthorizeView>
+            <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+                <NavLink class="nav-link" href="care-groups">
+                    <span class="bi bi-heart" aria-hidden="true"></span>
+                </NavLink>
+            </AuthorizeView>
+            <AuthorizeView Context="_"
+                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+                <NavLink class="nav-link" href="users">
+                    <span class="bi bi-people" aria-hidden="true"></span>
+                </NavLink>
+            </AuthorizeView>
+            <AuthorizeView Context="_"
+                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+                <NavLink class="nav-link" href="grades">
+                    <span class="bi bi-people" aria-hidden="true"></span>
+                </NavLink>
+            </AuthorizeView>
+            <AuthorizeView Context="_"
+                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+                <NavLink class="nav-link" href="register-class">
+                    <span class="bi bi-people" aria-hidden="true"></span>
+                </NavLink>
+            </AuthorizeView>
+            <AuthorizeView Context="_"
+                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+                <NavLink class="nav-link" href="subjects">
+                    <span class="bi bi-people" aria-hidden="true"></span>
+                </NavLink>
+            </AuthorizeView>
+            <AuthorizeView Context="_"
+                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+                <NavLink class="nav-link" href="combinations">
+                    <span class="bi bi-award" aria-hidden="true"></span>
+                </NavLink>
+            </AuthorizeView>
+            <AuthorizeView Context="_"
+                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+                <NavLink class="nav-link" href="learners">
+                    <span class="bi bi-award" aria-hidden="true"></span>
+                </NavLink>
+            </AuthorizeView>
+            <AuthorizeView Context="_"
+                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+                <NavLink class="nav-link" href="results/manage">
+                    <span class="bi bi-award" aria-hidden="true"></span>
+                </NavLink>
+            </AuthorizeView>
+            <AuthorizeView Context="_"
+                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+                <NavLink class="nav-link" href="results">
+                    <span class="bi bi-award" aria-hidden="true"></span>
+                </NavLink>
+            </AuthorizeView>
+            <AuthorizeView Context="_"
+                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+                <NavLink class="nav-link" href="progress-feedback">
+                    <span class="bi bi-award" aria-hidden="true"></span>
+                </NavLink>
+            </AuthorizeView>
+            <AuthorizeView Context="_"
+                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+                <NavLink class="nav-link" href="email-campaigns">
+                    <span class="bi bi-award" aria-hidden="true"></span>
+                </NavLink>
+            </AuthorizeView>
+        </nav>
+    </div>
+    <button class="scroll-arrow right-arrow">&#9654;</button>
 </div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JsRuntime.InvokeVoidAsync("initializeMobileNav");
+        }
+    }
+}

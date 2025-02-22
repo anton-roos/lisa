@@ -370,7 +370,7 @@
     {
         if (_selectedSchool != null)
         {
-            _learners = await LearnerService.GetLearnersBySchoolAsync(_selectedSchool.Id);
+            _learners = await LearnerService.GetBySchoolAsync(_selectedSchool.Id);
         }
     }
 

@@ -51,7 +51,7 @@ main {
     text-overflow: ellipsis;
 }
 
-@media (max-width: 640.98px) {
+@media (max-width: 599px) {
     .top-row {
         justify-content: space-between;
     }
@@ -65,7 +65,7 @@ main {
     }
 }
 
-@media (min-width: 641px) {
+@media (min-width: 600px) {
     .page {
         flex-direction: row;
     }
@@ -116,8 +116,8 @@ main {
     top: 0.5rem;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 599px) {
     main {
-        padding-bottom: 60px; /* Ensure space for bottom navbar */
+        padding-bottom: 60px;
     }
 }

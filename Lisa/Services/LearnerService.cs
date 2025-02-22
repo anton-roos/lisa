@@ -251,7 +251,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         context.LearnerSubjects.AddRange(newSubjects);
     }
 
-    public async Task<List<Learner>> GetLearnersBySchoolAsync(Guid schoolId)
+    public async Task<List<Learner>> GetBySchoolAsync(Guid schoolId)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners
@@ -276,7 +276,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     }
 
 
-    public async Task<List<Learner>> GetLearnersByGradeAsync(Guid gradeId)
+    public async Task<List<Learner>> GetByGradeAsync(Guid gradeId)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
         var learners = await context.Learners

@@ -1,10 +1,9 @@
 namespace Lisa.Enums;
 
-public enum CommunicationTarget
+public enum RecipientGroup
 {
     School,
     SchoolGrade,
     Subject,
-    Learner,
-    Parent
+    Learner
 }

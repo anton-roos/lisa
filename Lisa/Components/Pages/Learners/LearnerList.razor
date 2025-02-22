@@ -5,7 +5,7 @@
 @inject NavigationManager NavigationManager
 @inherits EventAwareComponentBase
 
-<PageTitle>Learner Details</PageTitle>
+<PageTitle>Learners</PageTitle>
 <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
     <Authorized>
         @if (_selectedSchool != null)
@@ -74,10 +74,8 @@
                                 </div>
                             </div>
 
-                            <!-- Move Subjects into the footer, along with the action buttons -->
                             <div class="card-footer bg-transparent border-top-0 
                                         d-flex align-items-center justify-content-between flex-wrap">
-                                <!-- Left side: Subjects -->
                                 <div class="mb-2 mb-sm-0">
                                     <strong>Subjects:</strong>
                                     @if (learner.LearnerSubjects is not null && learner.LearnerSubjects.Any())
@@ -101,7 +99,6 @@
                                     }
                                 </div>
 
-                                <!-- Right side: Action buttons -->
                                 <div class="d-flex justify-content-end">
                                     <button class="btn btn-sm btn-outline-primary" 
                                             @onclick="() => ViewLearner(learner)">
@@ -177,7 +174,7 @@
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         if (_selectedSchool?.Id != null)
         {
-            _learners = await LearnerService.GetLearnersBySchoolAsync(_selectedSchool.Id);
+            _learners = await LearnerService.GetBySchoolAsync(_selectedSchool.Id);
             _learners.ForEach(l => l.LearnerSubjects = l.LearnerSubjects?.OrderBy(ls => ls.Subject.Order).ToList());
 
             AvailableGrades = _learners

@@ -1,9 +1,7 @@
-@media (max-width: 640px) {
+@media (max-width: 599px) {
     main {
         width: 100vw;
-        /* Make content take full width */
         padding-bottom: 60px;
-        /* Ensure space for bottom navbar */
     }
 
     .mobile-nav {
@@ -15,20 +13,58 @@
         padding: 10px 0;
         z-index: 1000;
         box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+        /* Hide arrows if they overflow */
+    }
+
+    /* Scrollable container */
+    .nav-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .mobile-nav .nav {
         display: flex;
-        justify-content: space-around;
+        flex-wrap: nowrap;
     }
 
     .mobile-nav .nav-link {
         color: white;
         font-size: 24px;
         padding: 10px;
+        white-space: nowrap;
+        /* Prevent line-breaks */
     }
 
     .mobile-nav .nav-link.active {
         color: #f39c12;
+    }
+
+    /* Arrow button styles */
+    .scroll-arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: white;
+        cursor: pointer;
+        padding: 10px;
+        z-index: 1010;
+    }
+
+    .left-arrow {
+        left: 0;
+    }
+
+    .right-arrow {
+        right: 0;
+    }
+}
+
+@media (min-width: 600px) {
+    .mobile-nav {
+        display: none;
     }
 }

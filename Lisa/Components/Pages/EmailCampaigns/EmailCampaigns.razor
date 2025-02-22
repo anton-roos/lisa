@@ -53,13 +53,7 @@
                                 <td>@campaign.SubjectLine</td>
                                 <td>@campaign.CreatedAt.ToLocalTime()</td>
                                 <td>
-                                    <button class="btn btn-sm btn-primary" @onclick="@(() =>
-                                                {
-                                                    if (campaign.Id != null)
-                                                    {
-                                                        ViewCampaign(campaign.Id.Value);
-                                                    }
-                                                })">
+                                    <button class="btn btn-sm btn-primary" @onclick="@(() => ViewCampaign(campaign.Id))">
                                     View
                                 </button>
                             </td>

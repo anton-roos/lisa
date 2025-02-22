@@ -3,6 +3,7 @@
 
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8" />
     <title>Progress Feedback</title>
@@ -15,15 +16,19 @@
             margin-right: auto;
             margin-left: auto;
         }
+
         .mt-4 {
             margin-top: 1.5rem !important;
         }
+
         .mb-4 {
             margin-bottom: 1.5rem !important;
         }
+
         .shadow-sm {
-            box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important;
+            box-shadow: 0 .125rem .25rem rgba(0, 0, 0, .075) !important;
         }
+
         .card {
             position: relative;
             display: flex;
@@ -32,49 +37,60 @@
             word-wrap: break-word;
             background-color: #fff;
             background-clip: border-box;
-            border: 1px solid rgba(0,0,0,.125);
+            border: 1px solid rgba(0, 0, 0, .125);
             border-radius: .25rem;
         }
+
         .card-header {
             padding: .5rem 1rem;
             margin-bottom: 0;
-            background-color: rgba(0,0,0,.03);
-            border-bottom: 1px solid rgba(0,0,0,.125);
+            background-color: rgba(0, 0, 0, .03);
+            border-bottom: 1px solid rgba(0, 0, 0, .125);
         }
+
         .card-body {
             flex: 1 1 auto;
             padding: 1rem;
         }
+
         .table {
             width: 100%;
             margin-bottom: 1rem;
             color: #212529;
             border-collapse: collapse;
         }
+
         .table th,
         .table td {
             padding: .75rem;
             vertical-align: top;
             border-top: 1px solid #dee2e6;
         }
+
         .table-striped tbody tr:nth-of-type(odd) {
-            background-color: rgba(0,0,0,.05);
+            background-color: rgba(0, 0, 0, .05);
         }
+
         .text-center {
             text-align: center !important;
         }
+
         .text-success {
             color: #198754 !important;
         }
+
         .text-danger {
             color: #dc3545 !important;
         }
+
         .text-warning {
             color: #ffc107 !important;
         }
+
         .fw-bold {
             font-weight: 700 !important;
         }
+
         .alert {
             position: relative;
             padding: .75rem 1.25rem;
@@ -82,6 +98,7 @@
             border: 1px solid transparent;
             border-radius: .25rem;
         }
+
         .alert-warning {
             color: #856404;
             background-color: #fff3cd;
@@ -89,22 +106,28 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container mt-4" style="max-width: 600px; margin: auto;">
         <h3>Progress Feedback</h3>
         <p>Dear Parent of <strong>@Model?.Feedback?.LearnerName</strong></p>
-        <p>Please find below the progress feedback on the tests or assignments your child has completed, expressed as percentages out of 100.</p>
-        <p>Kindly note that this is not a formal report card but rather a reflection of all assessments conducted throughout the term.</p>
+        <p>Please find below the progress feedback on the tests or assignments your child has completed, expressed as
+            percentages out of 100.</p>
+        <p>Kindly note that this is not a formal report card but rather a reflection of all assessments conducted
+            throughout the term.</p>
         <p>
             Regards,<br />
             @foreach (var principal in Model?.Principals!)
             {
-                @principal.Name @principal.Surname<br />
+                @principal.Name@principal.Surname
+            
+                <br />
             }
             Principal
         </p>
 
-        @if (Model?.Feedback?.ResultsBySubject != null && Model.Feedback.ResultsBySubject.Any(x => x.Value != null && x.Value.Any()))
+        @if (Model?.Feedback?.ResultsBySubject != null && Model.Feedback.ResultsBySubject.Any(x => x.Value != null &&
+                x.Value.Any()))
         {
             foreach (var subjectGroup in Model.Feedback.ResultsBySubject.Where(x => x.Value != null && x.Value.Any()))
             {
@@ -137,14 +160,18 @@
                                             if (index < totalResults)
                                             {
                                                 var result = subjectGroup.Value[index];
-                                                string markClass = !result.Score.HasValue 
-                                                    ? "text-warning fw-bold"
-                                                    : (result.Score.Value < 50 
-                                                        ? "text-danger fw-bold" 
-                                                        : "text-success fw-bold");
+                                                string markClass = !result.Score.HasValue
+                                                ? "text-warning fw-bold"
+                                                : (result.Score.Value < 50
+                                                ? "text-danger fw-bold"
+                                                : "text-success fw-bold");
+                                                
+                                                @if (result.ResultSet is not null && result.ResultSet.AssessmentDate is not null)
+                                                {
+                                                    <td>@result.ResultSet.AssessmentDate.Value.ToString("MM/dd")</td>
+                                                }
 
-                                                <td>@result.ResultSet?.AssessmentDate!.Value.ToString("MM/dd")</td>
-                                                <td class="@markClass">@(result.Score.HasValue ? result.Score.Value + "%" : "Absent")</td>
+                                                <td class="@markClass">@(result.Score.HasValue? result.Score.Value + "%" : "Absent")</td>
                                             }
                                             else
                                             {
@@ -166,4 +193,5 @@
         }
     </div>
 </body>
+
 </html>

@@ -361,24 +361,51 @@
             return;
         }
 
-        foreach (var entry in ViewModel.LearnerResults)
+        if (ViewModel.SchoolGrade!.SystemGrade.AchievementLevelRating)
         {
-            if (!entry.ResultViewModel.Absent)
+            foreach (var entry in ViewModel.LearnerResults)
             {
-                if (entry.ResultViewModel.Score == null)
+                if (!entry.ResultViewModel.Absent)
                 {
-                    _submitError = $"Score is required for {entry.Surname} {entry.Name} (if not absent).";
-                    return;
+                    if (entry.ResultViewModel.Score == null)
+                    {
+                        _submitError = $"Score is required for {entry.Surname} {entry.Name} (if not absent).";
+                        return;
+                    }
+                    if (entry.ResultViewModel.Score > 7)
+                    {
+                        _submitError = $"Achievement level for {entry.Surname} {entry.Name} cannot exceed 7.";
+                        return;
+                    }
+                    if (entry.ResultViewModel.Score < 0)
+                    {
+                        _submitError = $"Achievement level for {entry.Surname} {entry.Name} cannot be less than 0.";
+                        return;
+                    }
                 }
-                if (entry.ResultViewModel.Score > 100)
+            }
+        }
+        else
+        {
+            foreach (var entry in ViewModel.LearnerResults)
+            {
+                if (!entry.ResultViewModel.Absent)
                 {
-                    _submitError = $"Score for {entry.Surname} {entry.Name} cannot exceed 100.";
-                    return;
-                }
-                if (entry.ResultViewModel.Score < 0)
-                {
-                    _submitError = $"Score for {entry.Surname} {entry.Name} cannot be less than 0.";
-                    return;
+                    if (entry.ResultViewModel.Score == null)
+                    {
+                        _submitError = $"Score is required for {entry.Surname} {entry.Name} (if not absent).";
+                        return;
+                    }
+                    if (entry.ResultViewModel.Score > 100)
+                    {
+                        _submitError = $"Score for {entry.Surname} {entry.Name} cannot exceed 100.";
+                        return;
+                    }
+                    if (entry.ResultViewModel.Score < 0)
+                    {
+                        _submitError = $"Score for {entry.Surname} {entry.Name} cannot be less than 0.";
+                        return;
+                    }
                 }
             }
         }

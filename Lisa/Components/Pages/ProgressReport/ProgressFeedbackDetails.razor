@@ -80,7 +80,14 @@ else
                                                     markClass = "text-success fw-bold";
                                                 }
                                                 
-                                                <td>@result.ResultSet?.AssessmentDate!.Value.ToString("MM/dd")</td>
+                                                @if (result.ResultSet?.AssessmentDate is not null)
+                                                {
+                                                    <td>@result.ResultSet.AssessmentDate.Value.ToString("MM/dd")</td>
+                                                }
+                                                else
+                                                {
+                                                    <td>-</td>
+                                                }
                                                 <td class="@markClass">@(result.Score.HasValue ? result.Score.Value.ToString() + "%" : "Absent")</td>
                                             }
                                             else

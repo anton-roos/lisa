@@ -1,0 +1,48 @@
+@using Lisa.Models.Entities
+<div class="d-flex flex-column">
+    @if (GroupedResults != null && GroupedResults.Any())
+    {
+        @foreach (var group in GroupedResults)
+        {
+            <div class="mb-2">
+                <h5>@group.Key</h5>
+                <div class="d-flex flex-wrap">
+                    @foreach (var set in group.Value)
+                    {
+                        if (set is null)
+                        {
+                            continue;
+                        }
+                        <div class="me-1" type="button" @onclick="() => OnResultClick.InvokeAsync(set.Id)">
+                            <Pill Color="@GetResultSetStatusColor(set)">
+                                @if (set.AssessmentDate.HasValue)
+                                {
+                                    @set.AssessmentDate.Value.ToString("dd MMM")
+                                }
+                                else
+                                {
+                                    <div>No Date</div>
+                                }
+                            </Pill>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="alert alert-secondary">No Results</div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public Dictionary<string, List<ResultSet?>> GroupedResults { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<Guid> OnResultClick { get; set; }
+
+    [Parameter]
+    public Func<ResultSet, string> GetResultSetStatusColor { get; set; } = _ => "secondary";
+}

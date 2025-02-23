@@ -345,11 +345,11 @@
 
     private async Task SaveResults()
     {
-        if (ViewModel.AssessmentDate == null)
+        @* if (ViewModel.AssessmentDate == null)
         {
             _submitError = "Assessment date is required.";
             return;
-        }
+        } *@
         if (string.IsNullOrWhiteSpace(ViewModel.AssessmentType))
         {
             _submitError = "Assessment type is required.";

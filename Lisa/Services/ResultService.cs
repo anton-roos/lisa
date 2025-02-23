@@ -18,11 +18,17 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
         try
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
+            
+            DateTime? assessmentDate = null;
+            if (viewModel.AssessmentDate is not null)
+            {
+                assessmentDate = DateTime.SpecifyKind(viewModel.AssessmentDate!.Value, DateTimeKind.Utc);
+            }
 
             var resultSet = new ResultSet
             {
                 Id = Guid.NewGuid(),
-                AssessmentDate = DateTime.SpecifyKind(viewModel.AssessmentDate!.Value, DateTimeKind.Utc),
+                AssessmentDate = assessmentDate,
                 AssessmentType = viewModel.AssessmentType,
                 AssessmentTopic = viewModel.AssessmentTopic,
                 SubjectId = int.Parse(viewModel.SubjectId),

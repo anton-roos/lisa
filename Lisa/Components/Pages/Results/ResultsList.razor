@@ -81,6 +81,10 @@
                                                 {
                                                     @set.AssessmentDate.Value.ToString("dd MMM")
                                                 }
+                                                else
+                                                {
+                                                    <div>No Date</div>
+                                                }
                                             </Pill>
                                         </div>
                                     }
@@ -475,7 +479,12 @@
 
     private static string GetResultSetStatusColor(ResultSet set)
     {
-        if (set.Status == ResultSetStatus.Draft)
+        
+        if (set.AssessmentDate is null)
+        {
+            return "warning";
+        }
+        else if (set.Status == ResultSetStatus.Draft)
         {
             return "danger";
         }

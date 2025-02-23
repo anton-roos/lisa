@@ -148,21 +148,21 @@ public class DatabaseSeed
         if (!await dbContext.SystemGrades.AnyAsync())
         {
             await dbContext.SystemGrades.AddRangeAsync([
-                new SystemGrade { SequenceNumber = -2, Name = "Gr RRR", MathGrade = false, CombinationGrade = false},
-                new SystemGrade { SequenceNumber = -1, Name = "Gr RR", MathGrade = false, CombinationGrade = false},
-                new SystemGrade { SequenceNumber = -0, Name = "Gr R", MathGrade = false, CombinationGrade = false},
-                new SystemGrade { SequenceNumber = 1, Name = "Gr 1", MathGrade = false, CombinationGrade = false},
-                new SystemGrade { SequenceNumber = 2, Name = "Gr 2", MathGrade = false, CombinationGrade = false},
-                new SystemGrade { SequenceNumber = 3, Name = "Gr 3", MathGrade = false, CombinationGrade = false},
-                new SystemGrade { SequenceNumber = 4, Name = "Gr 4", MathGrade = false, CombinationGrade = false},
-                new SystemGrade { SequenceNumber = 5, Name = "Gr 5", MathGrade = false, CombinationGrade = false},
-                new SystemGrade { SequenceNumber = 6, Name = "Gr 6", MathGrade = false, CombinationGrade = false},
-                new SystemGrade { SequenceNumber = 7, Name = "Gr 7", MathGrade = false, CombinationGrade = false},
-                new SystemGrade { SequenceNumber = 8, Name = "Gr 8", MathGrade = false, CombinationGrade = false},
-                new SystemGrade { SequenceNumber = 9, Name = "Gr 9", MathGrade = false, CombinationGrade = false},
-                new SystemGrade { SequenceNumber = 10, Name = "Gr 10", MathGrade = true, CombinationGrade = true},
-                new SystemGrade { SequenceNumber = 11, Name = "Gr 11", MathGrade = true, CombinationGrade = true},
-                new SystemGrade { SequenceNumber = 12, Name = "Gr 12", MathGrade = true, CombinationGrade = true},
+                new SystemGrade { SequenceNumber = -2, Name = "Gr RRR", MathGrade = false, CombinationGrade = false, AchievementLevelRating = true},
+                new SystemGrade { SequenceNumber = -1, Name = "Gr RR", MathGrade = false, CombinationGrade = false, AchievementLevelRating = true},
+                new SystemGrade { SequenceNumber = -0, Name = "Gr R", MathGrade = false, CombinationGrade = false, AchievementLevelRating = true},
+                new SystemGrade { SequenceNumber = 1, Name = "Gr 1", MathGrade = false, CombinationGrade = false, AchievementLevelRating = true},
+                new SystemGrade { SequenceNumber = 2, Name = "Gr 2", MathGrade = false, CombinationGrade = false, AchievementLevelRating = true},
+                new SystemGrade { SequenceNumber = 3, Name = "Gr 3", MathGrade = false, CombinationGrade = false, AchievementLevelRating = true},
+                new SystemGrade { SequenceNumber = 4, Name = "Gr 4", MathGrade = false, CombinationGrade = false, AchievementLevelRating = false},
+                new SystemGrade { SequenceNumber = 5, Name = "Gr 5", MathGrade = false, CombinationGrade = false, AchievementLevelRating = false},
+                new SystemGrade { SequenceNumber = 6, Name = "Gr 6", MathGrade = false, CombinationGrade = false, AchievementLevelRating = false},
+                new SystemGrade { SequenceNumber = 7, Name = "Gr 7", MathGrade = false, CombinationGrade = false,  AchievementLevelRating = false},
+                new SystemGrade { SequenceNumber = 8, Name = "Gr 8", MathGrade = false, CombinationGrade = false, AchievementLevelRating = false},
+                new SystemGrade { SequenceNumber = 9, Name = "Gr 9", MathGrade = false, CombinationGrade = false, AchievementLevelRating = false},
+                new SystemGrade { SequenceNumber = 10, Name = "Gr 10", MathGrade = true, CombinationGrade = true, AchievementLevelRating = false},
+                new SystemGrade { SequenceNumber = 11, Name = "Gr 11", MathGrade = true, CombinationGrade = true, AchievementLevelRating = false},
+                new SystemGrade { SequenceNumber = 12, Name = "Gr 12", MathGrade = true, CombinationGrade = true, AchievementLevelRating = false},
             ]);
             await dbContext.SaveChangesAsync();
             logger.LogInformation("Seeded System Grades.");

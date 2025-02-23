@@ -78,6 +78,20 @@
                                 }
                             </InputSelect>
                         </div>
+
+                        @if (_gradeId != null)
+                        {
+                            <div class="mb-3">
+                                <label for="audienceSelect">Select Audience</label>
+                                <InputSelect id="audienceSelect" class="form-select" TValue="RecipientType" @bind-Value="_recipientType">
+                                    <option value="@RecipientType.None">-- Select Audience --</option>
+                                    @foreach (RecipientType audience in Enum.GetValues(typeof(RecipientType)))
+                                    {
+                                        <option value="@audience">@audience</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        }
                     }
                     break;
                 case RecipientGroup.Subject:

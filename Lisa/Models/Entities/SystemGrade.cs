@@ -10,4 +10,5 @@ public class SystemGrade
     public string? Name { get; set; }
     public bool MathGrade { get; set; }
     public bool CombinationGrade { get; set; }
+    public bool AchievementLevelRating { get; set; }
 }

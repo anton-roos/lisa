@@ -286,6 +286,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             .ThenInclude(sg => sg.SystemGrade)
             .Include(l => l.LearnerSubjects!)
             .ThenInclude(ls => ls.Subject)
+            .Include(l => l.Parents)
             .ToListAsync();
         return learners;
     }

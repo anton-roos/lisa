@@ -767,6 +767,9 @@ namespace Lisa.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("AchievementLevelRating")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("CombinationGrade")
                         .HasColumnType("boolean");
 

@@ -5,8 +5,9 @@
 @inject ProgressFeedbackService ProgressFeedbackService
 @inject NavigationManager NavigationManager
 @inject UserService UserService
+@inject EmailRendererService RenderService
 
-@if (feedback == null)
+@if (html == null)
 {
     <div class="d-flex justify-content-center align-items-center" style="height: 100vh;">
         <p class="text-muted">Loading...</p>
@@ -14,117 +15,20 @@
 }
 else
 {
-    <div class="container mt-4" style="max-width: 600px; margin: auto;">
-        <h3>Progress Feedback</h3>
-        <p>Dear Parent of <strong>@feedback.LearnerName</strong></p>
-        <p>Please find below the progress feedback on the tests or assignments your child has completed, expressed as percentages out of 100.</p>
-        <p>Kindly note that this is not a formal report card but rather a reflection of all assessments conducted throughout the term.</p>
-        <p>
-            Regards,<br>
-            @if (principals is not null)
-            {
-                @foreach (var principal in principals)
-                {
-                    @principal.Name
-                    <span> </span>
-                    @principal.Surname<br>
-                }
-            }
-        Principal
-        </p>
-
-        @if (feedback.ResultsBySubject != null && feedback.ResultsBySubject.Any(x => x.Value != null && x.Value.Any()))
-        {
-            @foreach (var subjectGroup in feedback.ResultsBySubject.Where(x => x.Value != null && x.Value.Any()))
-            {
-                <div class="card mb-4 shadow-sm">
-                    <div class="card-header">
-                        <h4 class="mb-0">@subjectGroup.Key</h4>
-                    </div>
-                    <div class="card-body">
-                        <table class="table table-striped text-center">
-                            <thead class="table">
-                                <tr>
-                                    @for (int i = 0; i < 3; i++)
-                                    {
-                                        <th>Date</th>
-                                        <th>Mark</th>
-                                    }
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @{
-                                    int totalResults = Math.Min(subjectGroup.Value.Count, 6);
-                                    int rows = (int)Math.Ceiling(totalResults / 3.0);
-                                }
-                                @for (int row = 0; row < rows; row++)
-                                {
-                                    <tr>
-                                        @for (int col = 0; col < 3; col++)
-                                        {
-                                            int index = row * 3 + col;
-                                            if (index < totalResults)
-                                            {
-                                                var result = subjectGroup.Value[index];
-                                                string markClass;
-                                                if (!result.Score.HasValue)
-                                                {
-                                                    markClass = "text-warning fw-bold";
-                                                }
-                                                else if (result.Score.Value < 50)
-                                                {
-                                                    markClass = "text-danger fw-bold";
-                                                }
-                                                else
-                                                {
-                                                    markClass = "text-success fw-bold";
-                                                }
-                                                
-                                                @if (result.ResultSet?.AssessmentDate is not null)
-                                                {
-                                                    <td>@result.ResultSet.AssessmentDate.Value.ToString("MM/dd")</td>
-                                                }
-                                                else
-                                                {
-                                                    <td>-</td>
-                                                }
-                                                <td class="@markClass">@(result.Score.HasValue ? result.Score.Value.ToString() + "%" : "Absent")</td>
-                                            }
-                                            else
-                                            {
-                                                <td>&nbsp;</td>
-                                                <td>&nbsp;</td>
-                                            }
-                                        }
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            }
-        }
-        else
-        {
-            <p class="alert alert-warning text-center">No results available for this student.</p>
-        }
-
-        <div class="text-center mt-4">
-            <button class="btn btn-secondary btn-lg" @onclick="GoBack">Back</button>
-        </div>
-    </div>
+    <div>@((MarkupString)html)</div>
 }
+<div class="text-center mt-4">
+    <button class="btn btn-secondary btn-lg" @onclick="GoBack">Back</button>
+</div>
 
 @code {
     [Parameter]
     public Guid LearnerId { get; set; }
-    private ProgressFeedback? feedback;
-    private List<User>? principals = [];
+    private string html = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        feedback = await ProgressFeedbackService.GetProgressFeedbackAsync(LearnerId);
-        principals = await UserService.GetLearnerPrincipal(LearnerId);
+        html = await RenderService.RenderProgressFeedbackAsync(LearnerId);
     }
 
     private void GoBack()

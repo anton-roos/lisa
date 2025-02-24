@@ -1,6 +1,12 @@
 @using Lisa.Models.ViewModels
 @model ProgressFeedbackViewModel
 
+@{
+    var firstResult = Model?.Feedback?.ResultsBySubject?
+                         .SelectMany(x => x.Value)?.FirstOrDefault();
+    bool isAchievementRating = firstResult?.Learner?.RegisterClass?.SchoolGrade?.SystemGrade.AchievementLevelRating ?? false;
+}
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -14,10 +20,20 @@
             <td style="vertical-align: top;">
                 <h3 style="margin: 0 0 1rem 0;">Progress Feedback</h3>
                 <p style="margin: 0 0 1rem 0;">Dear Parent of <strong>@Model?.Feedback?.LearnerName</strong></p>
-                <p style="margin: 0 0 1rem 0;">
-                    Please find below the progress feedback on the tests or assignments your child has completed,
-                    expressed as percentages out of 100.
-                </p>
+                @if (isAchievementRating)
+                {
+                    <p style="margin: 0 0 1rem 0;">
+                        Please find below the progress feedback on the tests or assignments your child has completed,
+                        expressed as an achievement level.
+                    </p>
+                }
+                else
+                {
+                    <p style="margin: 0 0 1rem 0;">
+                        Please find below the progress feedback on the tests or assignments your child has completed,
+                        expressed as percentages out of 100.
+                    </p>
+                }
                 <p style="margin: 0 0 1rem 0;">
                     Kindly note that this is not a formal report card but rather a reflection of all assessments
                     conducted throughout the term.
@@ -49,7 +65,14 @@
                                                 @for (int i = 0; i < 3; i++)
                                                 {
                                                     <th style="padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6;">Date</th>
-                                                    <th style="padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6;">Mark</th>
+                                                    @if (isAchievementRating)
+                                                    {
+                                                        <th style="padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6;">Achievement</th>
+                                                    }
+                                                    else
+                                                    {
+                                                        <th style="padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6;">Mark</th>
+                                                    }
                                                 }
                                             </tr>
                                         </thead>
@@ -68,7 +91,6 @@
                                                         if (index < totalResults)
                                                         {
                                                             var result = subjectGroup.Value[index];
-                                                            var isAchievementRating = result.Learner?.RegisterClass?.SchoolGrade?.SystemGrade.AchievementLevelRating ?? false;
                                                             <td style="padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6;">
                                                                 @if (result.ResultSet?.AssessmentDate != null)
                                                                 {
@@ -128,67 +150,6 @@
                     <p style="position: relative; padding: 0.75rem 1.25rem; margin-bottom: 1rem; border: 1px solid transparent; border-radius: 0.25rem; color: #856404; background-color: #fff3cd; border-color: #ffeeba; text-align: center;">
                         No results available for this learner.
                     </p>
-                }
-
-                @if (Model?.Feedback?.ResultsBySubject != null &&
-                     Model.Feedback.ResultsBySubject.Any(subjectGroup =>
-                         subjectGroup.Value != null &&
-                         subjectGroup.Value.Any(result => result.Learner?.RegisterClass?.SchoolGrade?.SystemGrade.AchievementLevelRating ?? false)))
-                {
-                    <table class="content-table content-table--full-width" role="table" style="margin-top: 1rem;">
-                        <thead>
-                            <tr role="row">
-                                <th scope="col" role="columnheader">In numbers</th>
-                                <th scope="col" role="columnheader">In percentages</th>
-                                <th scope="col" role="columnheader">Description</th>
-                                <th scope="col" role="columnheader">Meaning</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr role="row">
-                                <td role="cell"><span class="">In numbers</span>7</td>
-                                <td role="cell"><span class="">In percentages</span>80-100%</td>
-                                <td role="cell"><span class="">Description</span>Outstanding achievement</td>
-                                <td role="cell"><span class="">Meaning</span>Outstanding</td>
-                            </tr>
-                            <tr role="row">
-                                <td role="cell"><span class="">In numbers</span>6</td>
-                                <td role="cell"><span class="">In percentages</span>70-79%</td>
-                                <td role="cell"><span class="">Description</span>Meritorious achievement</td>
-                                <td role="cell"><span class="">Meaning</span>Very good</td>
-                            </tr>
-                            <tr role="row">
-                                <td role="cell"><span class="">In numbers</span>5</td>
-                                <td role="cell"><span class="">In percentages</span>60-69%</td>
-                                <td role="cell"><span class="">Description</span>Substantial achievement</td>
-                                <td role="cell"><span class="">Meaning</span>Good</td>
-                            </tr>
-                            <tr role="row">
-                                <td role="cell"><span class="">In numbers</span>4</td>
-                                <td role="cell"><span class="">In percentages</span>50-59%</td>
-                                <td role="cell"><span class="">Description</span>Adequate achievement</td>
-                                <td role="cell"><span class="">Meaning</span>More than satisfactory</td>
-                            </tr>
-                            <tr role="row">
-                                <td role="cell"><span class="">In numbers</span>3</td>
-                                <td role="cell"><span class="">In percentages</span>40-49%</td>
-                                <td role="cell"><span class="">Description</span>Moderate achievement</td>
-                                <td role="cell"><span class="">Meaning</span>Satisfactory</td>
-                            </tr>
-                            <tr role="row">
-                                <td role="cell"><span class="">In numbers</span>2</td>
-                                <td role="cell"><span class="">In percentages</span>30-39%</td>
-                                <td role="cell"><span class="">Description</span>Elementary achievement</td>
-                                <td role="cell"><span class="">Meaning</span>Poor</td>
-                            </tr>
-                            <tr role="row">
-                                <td role="cell"><span class="">In numbers</span>1</td>
-                                <td role="cell"><span class="">In percentages</span>0-29%</td>
-                                <td role="cell"><span class="">Description</span>Not achieved</td>
-                                <td role="cell"><span class="">Meaning</span>Fail</td>
-                            </tr>
-                        </tbody>
-                    </table>
                 }
             </td>
         </tr>

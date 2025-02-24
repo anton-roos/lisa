@@ -57,6 +57,7 @@ public class EmailCampaignService
     {
         using var context = await _contextFactory.CreateDbContextAsync();
         var campaign = await context.EmailCampaigns
+            .AsNoTracking()
             .Include(c => c.EmailRecipients)
             .FirstOrDefaultAsync(c => c.Id == campaignId);
 
@@ -130,12 +131,10 @@ public class EmailCampaignService
                 return;
             }
 
-            var grouped = recipients.GroupBy(r => r.EmailAddress);
-            var uniqueRecipients = grouped.Select(g => g.First()).ToList();
-            if (grouped.Any(g => g.Count() > 1))
-            {
-                _logger.LogInformation("Duplicate email addresses found in campaign {CampaignId}; using first occurrence.", campaign.Id);
-            }
+            var uniqueRecipients = recipients
+                .GroupBy(r => new { r.EmailAddress, r.LearnerId })
+                .Select(g => g.First())
+                .ToList();
 
             int total = uniqueRecipients.Count;
             int sent = 0;
@@ -170,12 +169,15 @@ public class EmailCampaignService
         LisaDbContext context, EmailCampaign campaign, IEnumerable<EmailRecipient> batch,
         int total, int processedCount, CancellationToken cancellationToken)
     {
-        var tasks = batch.Select(async recipient =>
+        int delayInterval = 0;
+
+        foreach (var recipient in batch)
         {
-            cancellationToken.ThrowIfCancellationRequested(); // Per-recipient cancellation check
+            cancellationToken.ThrowIfCancellationRequested();
+            await Task.Delay(TimeSpan.FromSeconds(delayInterval), cancellationToken);
             await ProcessRecipientAsync(context, campaign, recipient, cancellationToken);
-        }).ToList();
-        await Task.WhenAll(tasks);
+            delayInterval += 5;
+        }
 
         processedCount += batch.Count();
         int progress = CalculateProgress(processedCount, total);
@@ -187,7 +189,6 @@ public class EmailCampaignService
             Sent = processedCount
         });
 
-        await context.SaveChangesAsync(cancellationToken);
         return processedCount;
     }
 
@@ -482,10 +483,17 @@ public class EmailCampaignService
                     {
                         foreach (var parent in l.Parents)
                         {
-                            var email = !string.IsNullOrWhiteSpace(parent.PrimaryEmail) ? parent.PrimaryEmail : parent.SecondaryEmail;
-                            if (!string.IsNullOrWhiteSpace(email))
+                            bool hasPrimary = !string.IsNullOrWhiteSpace(parent.PrimaryEmail);
+                            bool hasSecondary = !string.IsNullOrWhiteSpace(parent.SecondaryEmail);
+
+                            if (hasPrimary)
                             {
-                                recipients.Add((email, l.Id));
+                                recipients.Add((parent.PrimaryEmail, l.Id));
+                            }
+
+                            if (hasSecondary)
+                            {
+                                recipients.Add((parent.SecondaryEmail, l.Id));
                             }
                         }
                     }

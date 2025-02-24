@@ -15,7 +15,6 @@ using Lisa.Events;
 using Hangfire.Dashboard;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Lisa.Models.EmailModels;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -109,8 +108,8 @@ builder.Services.AddHangfire(config =>
     config.UsePostgreSqlStorage(options =>
     {
         options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("Lisa"));
-    }));
-builder.Services.AddHangfireServer();
+    })
+    .WithJobExpirationTimeout(TimeSpan.FromDays(7)));
 
 builder.Services.AddHangfireServer(options => { options.WorkerCount = 1; });
 

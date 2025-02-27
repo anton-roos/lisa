@@ -18,7 +18,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
         try
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
-            
+
             DateTime? assessmentDate = null;
             if (viewModel.AssessmentDate is not null)
             {
@@ -36,14 +36,14 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
                 UpdatedAt = DateTime.UtcNow,
                 CapturedById = capturedById,
                 Status = ResultSetStatus.Submitted,
-                Results = [.. viewModel.LearnerResults.Select(entry => new Result
+                Results = viewModel.LearnerResults.Select(entry => new Result
                 {
                     Id = Guid.NewGuid(),
                     LearnerId = entry.LearnerId,
                     Score = entry.ResultViewModel.Score,
                     Absent = entry.ResultViewModel.Absent,
                     AbsentReason = entry.ResultViewModel.AbsentReason
-                })]
+                }).ToList()
             };
 
             if (viewModel.Teacher is not null)
@@ -71,6 +71,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             throw;
         }
     }
+
     /// <summary>
     /// Gets the total count of results.
     /// </summary>
@@ -79,6 +80,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Results.CountAsync();
     }
+
     public async Task<int> GetCountAsync(Guid schoolId)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -105,7 +107,10 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
                 return false;
             }
 
-            existingResultSet.AssessmentDate = DateTime.SpecifyKind(viewModel.AssessmentDate!.Value, DateTimeKind.Utc);
+            if (viewModel.AssessmentDate is not null)
+            {
+                existingResultSet.AssessmentDate = DateTime.SpecifyKind(viewModel.AssessmentDate!.Value, DateTimeKind.Utc);
+            }
             existingResultSet.AssessmentType = viewModel.AssessmentType;
             existingResultSet.AssessmentTopic = viewModel.AssessmentTopic;
             existingResultSet.UpdatedAt = DateTime.UtcNow;
@@ -143,6 +148,33 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating ResultSet with ID: {ResultSetId}", resultSetId);
+            return false;
+        }
+    }
+
+    public async Task<bool> DeleteAsync(Guid resultSetId)
+    {
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+            var resultSet = await context.ResultSets
+                .Include(rs => rs.Results)
+                .FirstOrDefaultAsync(rs => rs.Id == resultSetId);
+
+            if (resultSet == null)
+            {
+                _logger.LogWarning("ResultSet with ID {ResultSetId} not found.", resultSetId);
+                return false;
+            }
+
+            context.ResultSets.Remove(resultSet);
+            await context.SaveChangesAsync();
+            _logger.LogInformation("Deleted ResultSet {ResultSetId} with {ResultCount} results.", resultSetId, resultSet.Results?.Count ?? 0);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting ResultSet with ID: {ResultSetId}", resultSetId);
             return false;
         }
     }
@@ -189,11 +221,11 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
     /// Retrieves results based on filters.
     /// </summary>
     public async Task<List<ResultSet?>> GetResultsByFiltersAsync(
-    Guid schoolId,
-    Guid? gradeId,
-    int? subjectId,
-    Guid? teacherId,
-    Guid? learnerId
+        Guid schoolId,
+        Guid? gradeId,
+        int? subjectId,
+        Guid? teacherId,
+        Guid? learnerId
     )
     {
         try
@@ -243,7 +275,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             _logger.LogError(ex,
                 "Error fetching result sets for SchoolId: {SchoolId}, GradeId: {GradeId}, SubjectId: {SubjectId}, TeacherId: {TeacherId}",
                 schoolId, gradeId, subjectId, teacherId);
-            return [];
+            return new List<ResultSet?>();
         }
     }
 
@@ -258,5 +290,41 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             .FirstOrDefaultAsync(l => l.Id == id);
 
         return learner?.Results?.ToList()!;
+    }
+
+    /// <summary>
+    /// Removes learner results from an existing ResultSet based on the provided list of learner IDs.
+    /// </summary>
+    public async Task RemoveLearnerResultsAsync(Guid resultSetId, List<Guid> removedLearnerIds)
+    {
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+            var resultSet = await context.ResultSets
+                .Include(rs => rs.Results)
+                .FirstOrDefaultAsync(rs => rs.Id == resultSetId);
+
+            if (resultSet == null)
+            {
+                _logger.LogWarning("ResultSet with ID {ResultSetId} not found.", resultSetId);
+                return;
+            }
+
+            var resultsToRemove = resultSet.Results
+                .Where(r => removedLearnerIds.Contains(r.LearnerId))
+                .ToList();
+
+            if (resultsToRemove.Any())
+            {
+                context.Results.RemoveRange(resultsToRemove);
+                await context.SaveChangesAsync();
+                _logger.LogInformation("Removed {RemovedCount} learner results from ResultSet {ResultSetId}.", resultsToRemove.Count, resultSetId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing learner results from ResultSet {ResultSetId}.", resultSetId);
+            throw;
+        }
     }
 }

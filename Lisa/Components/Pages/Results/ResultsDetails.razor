@@ -31,6 +31,9 @@
                     <button type="button" class="btn btn-secondary btn-sm" @onclick="() => GoBack()">
                         <i class="bi bi-arrow-left"></i>
                     </button>
+                    <button type="button" class="btn btn-danger btn-sm" @onclick="() => Delete()">
+                        <i class="bi bi-trash3-fill"></i>
+                    </button>
                 </div>
                 <p><strong>Assessment Topic:</strong> @_resultSet.AssessmentTopic</p>
                 <p><strong>Assessment Type:</strong> @_resultSet.AssessmentType</p>
@@ -94,4 +97,9 @@
 
     private void GoBack() => Navigation.NavigateTo("/results");
     private void Edit() => Navigation.NavigateTo($"/results/manage/{ResultSetId}");
+    private async Task Delete()
+    {
+        await ResultService.DeleteAsync(ResultSetId);
+        Navigation.NavigateTo("/results");
+    }
 }

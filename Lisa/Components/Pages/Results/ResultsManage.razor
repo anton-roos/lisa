@@ -103,6 +103,7 @@
                                 <th>Score</th>
                                 <th>Absent?</th>
                                 <th>Reason</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -129,6 +130,9 @@
                                         {
                                             <InputText @bind-Value="entry.ResultViewModel.AbsentReason" class="form-control" />
                                         }
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-danger" @onclick="(() => RemoveLearner(entry))">Remove</button>
                                     </td>
                                 </tr>
                             }
@@ -164,6 +168,9 @@
     private bool IsEdit => ResultSetId.HasValue;
     private string _submitError = string.Empty;
     [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
+
+    // New list to track removed learner IDs
+    private List<Guid> _removedLearnerIds = new List<Guid>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -417,6 +424,10 @@
         {
             if (ResultSetId != null)
             {
+                if (_removedLearnerIds.Any())
+                {
+                    await ResultService.RemoveLearnerResultsAsync(ResultSetId.Value, _removedLearnerIds);
+                }
                 await ResultService.UpdateAsync(ResultSetId.Value, ViewModel);
                 Navigation.NavigateTo($"/results/{ResultSetId}");
             }
@@ -438,5 +449,17 @@
     {
         int.TryParse(value.ToString(), out var score);
         entry.ResultViewModel.Score = score;
+    }
+
+    // Updated method to remove a learner.
+    // It now tracks the learner's ID for removal from the persisted result set.
+    private void RemoveLearner(LearnerResultViewModel entry)
+    {
+        // If the learner was part of an existing result set, track the removal.
+        if (entry.LearnerId != Guid.Empty)
+        {
+            _removedLearnerIds.Add(entry.LearnerId);
+        }
+        ViewModel.LearnerResults.Remove(entry);
     }
 }

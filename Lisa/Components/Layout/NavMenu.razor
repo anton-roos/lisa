@@ -115,7 +115,7 @@
             </Authorized>
         </AuthorizeView>
         
-        <AuthorizeView Context="_" Roles="@Roles.SystemAdministrator">
+        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="communication">
                     <span class="bi communication-icon" aria-hidden="true"></span> Communication
@@ -123,7 +123,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="_" Roles="@Roles.SystemAdministrator">
+        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="email-campaigns">
                     <span class="bi communication-icon" aria-hidden="true"></span> Email Campaigns

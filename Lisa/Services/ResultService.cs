@@ -10,9 +10,6 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly ILogger<ResultService> _logger = logger;
 
-    /// <summary>
-    /// Creates a new ResultSet entry along with its associated Results.
-    /// </summary>
     public async Task<ResultSet> CreateAsync(ResultsCaptureViewModel viewModel, Guid capturedById)
     {
         try
@@ -72,9 +69,6 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
         }
     }
 
-    /// <summary>
-    /// Gets the total count of results.
-    /// </summary>
     public async Task<int> GetCountAsync()
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -89,9 +83,6 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             .CountAsync();
     }
 
-    /// <summary>
-    /// Updates an existing ResultSet and its associated results.
-    /// </summary>
     public async Task<bool> UpdateAsync(Guid resultSetId, ResultsCaptureViewModel viewModel)
     {
         try
@@ -115,7 +106,8 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             existingResultSet.AssessmentTopic = viewModel.AssessmentTopic;
             existingResultSet.UpdatedAt = DateTime.UtcNow;
 
-            var existingResults = existingResultSet.Results?.ToDictionary(r => r.LearnerId) ?? [];
+            var existingResults = existingResultSet.Results?.ToDictionary(r => r.LearnerId)
+                                  ?? new Dictionary<Guid, Result>();
 
             foreach (var entry in viewModel.LearnerResults)
             {
@@ -138,6 +130,37 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
                         ResultSetId = resultSetId
                     };
                     context.Results.Add(newResult);
+                }
+            }
+
+            if (existingResultSet.SchoolGradeId != null)
+            {
+                var gradeLearnerIds = await context.Learners
+                    .Where(l => l.RegisterClass != null && l.RegisterClass.SchoolGradeId == existingResultSet.SchoolGradeId)
+                    .Select(l => l.Id)
+                    .ToListAsync();
+
+                var currentResultLearnerIds = await context.Results
+                    .Where(r => r.ResultSetId == resultSetId)
+                    .Select(r => r.LearnerId)
+                    .ToListAsync();
+
+                foreach (var learnerId in gradeLearnerIds)
+                {
+                    if (!currentResultLearnerIds.Contains(learnerId))
+                    {
+                        var newResult = new Result
+                        {
+                            Id = Guid.NewGuid(),
+                            LearnerId = learnerId,
+                            Score = null, 
+                            Absent = false,
+                            AbsentReason = null,
+                            ResultSetId = resultSetId,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        context.Results.Add(newResult);
+                    }
                 }
             }
 
@@ -179,9 +202,6 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
         }
     }
 
-    /// <summary>
-    /// Retrieves a result set by ID, including related data.
-    /// </summary>
     public async Task<ResultSet?> GetByIdAsync(Guid id)
     {
         try
@@ -199,7 +219,6 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
                 .Include(rs => rs.SchoolGrade)
                 .FirstOrDefaultAsync(rs => rs.Id == id);
 
-            // Assign the sorted list back to Results
             if (resultSet?.Results != null)
             {
                 resultSet.Results = resultSet.Results
@@ -217,9 +236,6 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
         }
     }
 
-    /// <summary>
-    /// Retrieves results based on filters.
-    /// </summary>
     public async Task<List<ResultSet?>> GetResultsByFiltersAsync(
         Guid schoolId,
         Guid? gradeId,
@@ -279,22 +295,6 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
         }
     }
 
-    public async Task<List<Result?>> GetByLearnerIdAsync(Guid id)
-    {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
-
-        var learner = await context.Learners
-            .AsNoTracking()
-            .Include(l => l.Results!)
-            .ThenInclude(r => r.ResultSet)
-            .FirstOrDefaultAsync(l => l.Id == id);
-
-        return learner?.Results?.ToList()!;
-    }
-
-    /// <summary>
-    /// Removes learner results from an existing ResultSet based on the provided list of learner IDs.
-    /// </summary>
     public async Task RemoveLearnerResultsAsync(Guid resultSetId, List<Guid> removedLearnerIds)
     {
         try
@@ -310,7 +310,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
                 return;
             }
 
-            var resultsToRemove = resultSet.Results
+            var resultsToRemove = resultSet.Results!
                 .Where(r => removedLearnerIds.Contains(r.LearnerId))
                 .ToList();
 

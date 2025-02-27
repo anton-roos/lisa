@@ -133,37 +133,6 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
                 }
             }
 
-            if (existingResultSet.SchoolGradeId != null)
-            {
-                var gradeLearnerIds = await context.Learners
-                    .Where(l => l.RegisterClass != null && l.RegisterClass.SchoolGradeId == existingResultSet.SchoolGradeId)
-                    .Select(l => l.Id)
-                    .ToListAsync();
-
-                var currentResultLearnerIds = await context.Results
-                    .Where(r => r.ResultSetId == resultSetId)
-                    .Select(r => r.LearnerId)
-                    .ToListAsync();
-
-                foreach (var learnerId in gradeLearnerIds)
-                {
-                    if (!currentResultLearnerIds.Contains(learnerId))
-                    {
-                        var newResult = new Result
-                        {
-                            Id = Guid.NewGuid(),
-                            LearnerId = learnerId,
-                            Score = null, 
-                            Absent = false,
-                            AbsentReason = null,
-                            ResultSetId = resultSetId,
-                            UpdatedAt = DateTime.UtcNow
-                        };
-                        context.Results.Add(newResult);
-                    }
-                }
-            }
-
             await context.SaveChangesAsync();
             _logger.LogInformation("Updated ResultSet {ResultSetId} with {ResultCount} results.", resultSetId, viewModel.LearnerResults.Count);
             return true;
@@ -173,6 +142,43 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             _logger.LogError(ex, "Error updating ResultSet with ID: {ResultSetId}", resultSetId);
             return false;
         }
+    }
+
+    public async Task SyncLearnerResultsAsync(Guid resultSetId)
+    {
+        using var context = await _dbContextFactory.CreateDbContextAsync();
+        var resultSet = await context.ResultSets
+            .Include(rs => rs.Results)
+            .FirstOrDefaultAsync(rs => rs.Id == resultSetId);
+
+        if (resultSet == null || resultSet.SchoolGradeId == null)
+            return;
+
+        var gradeLearnerIds = await context.Learners
+            .Where(l => l.RegisterClass != null && l.RegisterClass.SchoolGradeId == resultSet.SchoolGradeId)
+            .Select(l => l.Id)
+            .ToListAsync();
+
+        var currentLearnerIds = resultSet.Results!.Select(r => r.LearnerId).ToList();
+        foreach (var learnerId in gradeLearnerIds)
+        {
+            if (!currentLearnerIds.Contains(learnerId))
+            {
+                var newResult = new Result
+                {
+                    Id = Guid.NewGuid(),
+                    LearnerId = learnerId,
+                    Score = null,
+                    Absent = false,
+                    AbsentReason = null,
+                    ResultSetId = resultSetId,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                context.Results.Add(newResult);
+            }
+        }
+
+        await context.SaveChangesAsync();
     }
 
     public async Task<bool> DeleteAsync(Guid resultSetId)

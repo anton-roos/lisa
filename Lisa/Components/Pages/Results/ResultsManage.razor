@@ -168,8 +168,6 @@
     private bool IsEdit => ResultSetId.HasValue;
     private string _submitError = string.Empty;
     [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
-
-    // New list to track removed learner IDs
     private List<Guid> _removedLearnerIds = new List<Guid>();
 
     protected override async Task OnInitializedAsync()
@@ -178,8 +176,13 @@
         {
             await LoadExistingResultSet();
 
-            _selectedSchool ??= await SchoolService.GetSelectedSchoolAsync();
+            if (ResultSetId != null)
+            {
+                await ResultService.SyncLearnerResultsAsync(ResultSetId.Value);
+                await LoadExistingResultSet();
+            }
 
+            _selectedSchool ??= await SchoolService.GetSelectedSchoolAsync();
             await LoadDropdowns();
 
             if (!string.IsNullOrEmpty(ViewModel.SubjectId))

@@ -126,7 +126,7 @@
                                         <InputCheckbox @bind-Value="entry.ResultViewModel.Absent" />
                                     </td>
                                     <td>
-                                        @if (entry.ResultViewModel.Absent)
+                                        @if (entry.ResultViewModel.Absent || entry.ResultViewModel.Score == 0)
                                         {
                                             <InputText @bind-Value="entry.ResultViewModel.AbsentReason" class="form-control" />
                                         }

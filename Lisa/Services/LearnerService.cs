@@ -64,6 +64,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             var newLearnerId = Guid.NewGuid();
 
             var learnerSubjects = new List<LearnerSubject>();
+
             foreach (var sid in model.SubjectIds)
             {
                 var combId = FindCombinationId(model.CombinationSelections, sid);
@@ -72,7 +73,18 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
                 {
                     LearnerId = newLearnerId,
                     SubjectId = sid,
-                    CombinationId = combId
+                    CombinationId = combId,
+                    LearnerSubjectType = LearnerSubjectType.Combination
+                });
+            }
+
+            foreach (var extraSubjectId in model.ExtraSubjectIds)
+            {
+                learnerSubjects.Add(new LearnerSubject
+                {
+                    LearnerId = newLearnerId,
+                    SubjectId = extraSubjectId,
+                    LearnerSubjectType = LearnerSubjectType.Additional
                 });
             }
 
@@ -128,9 +140,9 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         try
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
-            
+
             var learner = await GetLearnerWithParentsAsync(context, model.Id);
-            
+
             if (learner == null)
             {
                 _logger.LogWarning("Learner {LearnerId} not found for update.", model.Id);
@@ -232,11 +244,13 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
 
     private static void UpdateLearnerSubjects(LisaDbContext context, Learner learner, LearnerViewModel model)
     {
+        // Remove all existing learner subjects
         if (learner.LearnerSubjects is not null && learner.LearnerSubjects.Count > 0)
         {
             context.LearnerSubjects.RemoveRange(learner.LearnerSubjects);
         }
 
+        // Re-add regular subjects
         var newSubjects = model.SubjectIds.Select(sid =>
         {
             var combinationId = FindCombinationId(model.CombinationSelections, sid);
@@ -244,12 +258,23 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             {
                 LearnerId = learner.Id,
                 SubjectId = sid,
-                CombinationId = combinationId
+                CombinationId = combinationId,
+                LearnerSubjectType = LearnerSubjectType.Combination
             };
         }).ToList();
 
+        var extraSubjects = model.ExtraSubjectIds.Select(extraSid => new LearnerSubject
+        {
+            LearnerId = learner.Id,
+            SubjectId = extraSid,
+            LearnerSubjectType = LearnerSubjectType.Additional
+        }).ToList();
+
+        newSubjects.AddRange(extraSubjects);
+
         context.LearnerSubjects.AddRange(newSubjects);
     }
+
 
     public async Task<List<Learner>> GetBySchoolAsync(Guid schoolId)
     {
@@ -275,7 +300,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             .ToListAsync();
     }
 
-
     public async Task<List<Learner>> GetByGradeAsync(Guid gradeId)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -289,20 +313,6 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             .Include(l => l.Parents)
             .ToListAsync();
         return learners;
-    }
-
-    public async Task<List<Learner>> GetLearnersWithTheirSubjectsByGradeAsync(Guid gradeId)
-    {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.Learners
-            .Where(l => l.RegisterClass != null && l.RegisterClass.SchoolGradeId == gradeId)
-            .Include(l => l.LearnerSubjects!)
-            .ThenInclude(ls => ls.Subject)
-            .Include(l => l.RegisterClass!)
-            .ThenInclude(rc => rc.CompulsorySubjects!)
-            .Include(l => l.Combination!)
-            .ThenInclude(c => c.Subjects!)
-            .ToListAsync();
     }
 
     public async Task<bool> DeleteLearnerAsync(Guid learnerId)

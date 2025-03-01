@@ -1,4 +1,4 @@
-@page "/learners/edit/{LearnerId:guid?}"
+@page "/learners/manage/{LearnerId:guid?}"
 
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
@@ -16,14 +16,6 @@
 <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
     <Authorized>
         <h3>@(IsEdit ? "Edit Learner" : "Add Learner")</h3>
-
-        @if (!string.IsNullOrEmpty(_alertMessage))
-        {
-        <div class="alert alert-@_alertType alert-dismissible fade show" role="alert">
-            @_alertMessage
-            <button type="button" class="btn-close" aria-label="Close" @onclick="ClearAlert"></button>
-        </div>
-        }
 
         <EditForm Context="_" Model="_learnerModel" OnValidSubmit="HandleValidSubmit">
             <DataAnnotationsValidator/>
@@ -230,6 +222,14 @@
                 }
             </div>
 
+            @if (!string.IsNullOrEmpty(_alertMessage))
+            {
+                <div class="alert alert-@_alertType alert-dismissible fade show" role="alert">
+                    @_alertMessage
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="ClearAlert"></button>
+                </div>
+            }
+
             <button type="button" class="btn btn-secondary mb-3" @onclick="AddParent">
                 <i class="bi bi-person-plus me-1"></i> Add Parent
             </button>
@@ -248,9 +248,9 @@
     [Parameter] public Guid? LearnerId { get; set; }
     private bool IsEdit => LearnerId.HasValue;
     private LearnerViewModel _learnerModel = new();
-    private List<ParentViewModel> _parents = [];
-    private List<RegisterClass> _registerClasses = [];
-    private List<CareGroup> _careGroups = [];
+    private List<ParentViewModel> _parents = new();
+    private List<RegisterClass> _registerClasses = new();
+    private List<CareGroup> _careGroups = new();
     private IEnumerable<Combination>? _allCombinations;
     private List<Subject>? _mathSubjects;
     private RegisterClass? _currentRegisterClass;
@@ -327,7 +327,7 @@
         else
         {
             _registerClasses.Clear();
-            _allCombinations = [];
+            _allCombinations = new List<Combination>();
         }
     }
 
@@ -515,6 +515,12 @@
         if (_selectedSchool == null)
         {
             SetAlert("danger", "Please select a school before saving.");
+            return;
+        }
+
+        if (MathSelection == 0)
+        {
+            SetAlert("danger", "Please select either Mathematics or Maths Literacy.");
             return;
         }
 

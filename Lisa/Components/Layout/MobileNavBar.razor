@@ -52,27 +52,26 @@
                 </NavLink>
             </AuthorizeView>
             <AuthorizeView Context="_"
-                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
                 <NavLink class="nav-link" href="results/manage">
-                    <span class="bi bi-award" aria-hidden="true"></span>
+                    <img src="images/capture.svg" style="height: 32px" />
                 </NavLink>
             </AuthorizeView>
             <AuthorizeView Context="_"
-                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
                 <NavLink class="nav-link" href="results">
-                    <span class="bi bi-award" aria-hidden="true"></span>
+                    <img src="images/results.svg" style="height: 32px" />
                 </NavLink>
             </AuthorizeView>
             <AuthorizeView Context="_"
-                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
                 <NavLink class="nav-link" href="progress-feedback">
-                    <span class="bi bi-award" aria-hidden="true"></span>
+                    <img src="images/progress-feedback.svg" style="height: 32px" />
                 </NavLink>
             </AuthorizeView>
             <AuthorizeView Context="_"
                 Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
                 <NavLink class="nav-link" href="email-campaigns">
-                    <span class="bi bi-award" aria-hidden="true"></span>
                 </NavLink>
             </AuthorizeView>
         </nav>

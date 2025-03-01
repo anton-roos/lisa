@@ -91,10 +91,6 @@
 
                     <hr />
 
-                    @if (!string.IsNullOrEmpty(_submitError))
-                    {
-                        <div class="alert alert-danger">@_submitError</div>
-                    }
 
                     <table class="table table-striped">
                         <thead>
@@ -113,11 +109,11 @@
                                     <td>@entry.Surname @entry.Name</td>
                                     <td>
                                         <InputNumber TValue="int?" Value="entry.ResultViewModel.Score" ValueChanged="@(EventCallback.Factory.Create<int?>(this, value => {
-                                                                            if (value != null)
-                                                                            {
-                                                                                        OnScoreChanged(value, entry);
-                                                                            }
-                                                                    }))" class="form - control" min="0" max="100" step="1"
+                                            if (value != null)
+                                            {
+                                                                OnScoreChanged(value, entry);
+                                            }
+                            }))" class="form - control" min="0" max="100" step="1"
                                     ValueExpression="@(() => entry.ResultViewModel.Score)" />
                             </td>
                             <td>
@@ -136,6 +132,11 @@
                         }
                     </tbody>
                 </table>
+
+                @if (!string.IsNullOrEmpty(_submitError))
+                {
+                    <div class="alert alert-danger">@_submitError</div>
+                }
 
                 <div class="mb-3">
                     <button class="btn btn-secondary" @onclick="SaveDraft">Save Draft</button>
@@ -232,6 +233,7 @@
         await LoadSubjectsForGrade();
         await InvokeAsync(StateHasChanged);
     }
+
     private async Task LoadTeacher()
     {
         ViewModel.Teacher = null;

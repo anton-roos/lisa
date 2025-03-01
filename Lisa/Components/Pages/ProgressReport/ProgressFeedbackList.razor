@@ -11,7 +11,7 @@
 <PageTitle>Progress Feedback List</PageTitle>
 <h3>Progress Feedback List</h3>
 
-<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
     <Authorized>
         @if (_selectedSchool != null)
         {

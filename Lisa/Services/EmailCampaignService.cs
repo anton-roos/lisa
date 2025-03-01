@@ -488,12 +488,12 @@ public class EmailCampaignService
 
                             if (hasPrimary)
                             {
-                                recipients.Add((parent.PrimaryEmail, l.Id));
+                                recipients.Add((parent.PrimaryEmail!, l.Id));
                             }
 
                             if (hasSecondary)
                             {
-                                recipients.Add((parent.SecondaryEmail, l.Id));
+                                recipients.Add((parent.SecondaryEmail!, l.Id));
                             }
                         }
                     }
@@ -534,7 +534,7 @@ public class EmailCampaignService
             .ToList();
     }
 
-    private async Task<List<string?>> GetParentEmailsAsync(CommunicationCommand command)
+    private async Task<List<string>> GetParentEmailsAsync(CommunicationCommand command)
     {
         var learners = await _learnerService.GetLearnersBySchoolWithParentsAsync(command.SchoolId);
         return learners
@@ -543,6 +543,7 @@ public class EmailCampaignService
             .SelectMany(p => new[] { p.PrimaryEmail, p.SecondaryEmail })
             .Where(email => !string.IsNullOrWhiteSpace(email))
             .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(email => email!)
             .ToList();
     }
 

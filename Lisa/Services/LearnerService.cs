@@ -135,6 +135,20 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         }
     }
 
+    public async Task<List<Learner>> GetLearnersWithTheirSubjectsByGradeAsync(Guid gradeId)
+    {
+        using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Learners
+            .Where(l => l.RegisterClass != null && l.RegisterClass.SchoolGradeId == gradeId)
+            .Include(l => l.LearnerSubjects!)
+            .ThenInclude(ls => ls.Subject)
+            .Include(l => l.RegisterClass!)
+            .ThenInclude(rc => rc.CompulsorySubjects!)
+            .Include(l => l.Combination!)
+            .ThenInclude(c => c.Subjects!)
+            .ToListAsync();
+    }
+
     public async Task<bool> UpdateLearnerAsync(LearnerViewModel model, List<ParentViewModel> parents)
     {
         try

@@ -60,6 +60,29 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         }
     }
 
+    public async Task<ICollection<Subject>> GetSubjectsForGradeAsync(Guid gradeId)
+    {
+        try
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+            var grade = await context.SchoolGrades.FindAsync(gradeId);
+
+            return await context.Subjects
+                .Where(s => grade != null && s.GradesApplicable != null && s.GradesApplicable.Any(g => g == grade.SystemGrade.SequenceNumber))
+                .OrderBy(s => s.Order)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching subjects for grade: {GradeId}", gradeId);
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Creates a new subject.
+    /// </summary>
     public async Task<bool> CreateAsync(Subject subject)
     {
         try
@@ -77,6 +100,9 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         }
     }
 
+    /// <summary>
+    /// Retrieves a subject by ID.
+    /// </summary>
     public async Task<Subject?> GetByIdAsync(int id)
     {
         try
@@ -93,6 +119,9 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         }
     }
 
+    /// <summary>
+    /// Updates an existing subject.
+    /// </summary>
     public async Task<bool> UpdateAsync(Subject subject)
     {
         try
@@ -122,6 +151,9 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         }
     }
 
+    /// <summary>
+    /// Retrieves all math-related subjects.
+    /// </summary>
     public async Task<List<Subject>> GetMathSubjectsAsync()
     {
         try
@@ -140,6 +172,9 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         }
     }
 
+    /// <summary>
+    /// Deletes a subject by ID.
+    /// </summary>
     public async Task<bool> DeleteAsync(int id)
     {
         try
@@ -175,3 +210,4 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         await context.SaveChangesAsync();
     }
 }
+

@@ -354,6 +354,12 @@ public class EmailCampaignService
 
         var subjectLine = GetSubjectLine(command.RecipientTemplate);
 
+        if (command.LearnerId is not null)
+        {
+            var learner = await _learnerService.GetByIdAsync(command.LearnerId.Value);
+            subjectLine += learner?.Name + " " + learner?.Surname;
+        }
+
         using var context = await _contextFactory.CreateDbContextAsync();
         await using var transaction = await context.Database.BeginTransactionAsync();
         try
@@ -589,6 +595,7 @@ public class EmailCampaignService
         {
             RecipientTemplate.ProgressFeedback => "Progress Feedback",
             RecipientTemplate.Newsletter => "Latest Newsletter",
+            RecipientTemplate.Test => "Progress Feedback Confirmation Email",
             RecipientTemplate.None => "Important Update from Your School",
             _ => "Important Update from Your School"
         };

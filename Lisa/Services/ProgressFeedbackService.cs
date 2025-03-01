@@ -56,12 +56,9 @@ public class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextF
                 .Take(6)
                 .ToList();
 
-            // Use the subject name as the key. If there are no results, an empty list is stored.
             resultsBySubject[subject.Name!] = subjectResults;
         }
 
-        // Optionally, if you want to include subjects that may not be in LearnerSubjects
-        // but exist in Results, you could also group those separately.
         string learnerName = $"{learner.Name} {learner.Surname}";
         TextInfo textInfo = CultureInfo.CurrentCulture.TextInfo;
 

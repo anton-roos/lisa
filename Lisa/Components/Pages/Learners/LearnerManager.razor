@@ -160,10 +160,11 @@
                                 @foreach (var extra in _extraSubjects)
                                 {
                                     var isChecked = _learnerModel.ExtraSubjectIds.Contains(extra.Id);
+                                    var isDisabled = _learnerModel.CombinationSelections.Values.Contains(extra.Id);
                                     <div>
-                                        <input type="checkbox" checked="@isChecked" 
+                                        <input type="checkbox" checked="@isChecked" disabled="@isDisabled" 
                                             @onchange="e => ToggleExtraSubject(extra.Id, e.Value)" />
-                                        <label>@extra.Name</label>
+                                        <label class="@(isDisabled ? "text-muted" : "")">@extra.Name</label>
                                     </div>
                                 }
                             }
@@ -511,6 +512,12 @@
 
     private void ToggleExtraSubject(int subjectId, object? value)
     {
+        if (_learnerModel.CombinationSelections.Values.Contains(subjectId))
+        {
+            SetAlert("danger", "This subject is already selected in the combination subjects and cannot be added as an extra subject.");
+            return;
+        }
+        
         if (value is bool isChecked && isChecked)
         {
             if (_learnerModel.ExtraSubjectIds.Count < 2)

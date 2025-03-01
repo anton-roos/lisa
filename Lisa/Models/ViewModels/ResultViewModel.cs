@@ -46,6 +46,7 @@ public class ResultsCaptureViewModel
     [Required(ErrorMessage = "Assessment type is required.")]
     public string? AssessmentType { get; set; }
     public DateTime? AssessmentDate { get; set; }
+    public ResultSetStatus Status { get; set; }
 }
 
 public class LearnerResultViewModel

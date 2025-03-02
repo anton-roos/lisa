@@ -312,6 +312,7 @@
             if (_gradeId != null && _combinationId != null && _subjectId != null)
             {
                 _learners = await LearnerService.GetByCombinationAndSubjectAsync(_combinationId.Value, _subjectId.Value);
+                _learners = _learners.OrderBy(l => l.Surname).ThenBy(l => l.Name).ToList();
             }
             else
             {
@@ -323,6 +324,7 @@
             if (_registerClassId != null)
             {
                 _learners = await LearnerService.GetByRegisterClassAsync(_registerClassId.Value);
+                _learners = _learners.OrderBy(l => l.Surname).ThenBy(l => l.Name).ToList();
             }
             else
             {
@@ -334,6 +336,7 @@
             if (_careGroupId != null)
             {
                 _learners = await LearnerService.GetByCareGroupAsync(_careGroupId.Value);
+                _learners = _learners.OrderBy(l => l.Surname).ThenBy(l => l.Name).ToList();
             }
             else
             {

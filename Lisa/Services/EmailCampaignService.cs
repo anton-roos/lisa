@@ -302,11 +302,11 @@ public class EmailCampaignService(
             string subject = campaign.RecipientTemplate switch
             {
                 RecipientTemplate.ProgressFeedback when recipient.LearnerId.HasValue =>
-                    await GetSubjectLine(recipient.LearnerId.Value),
+                    await GetSubjectLine(recipient.LearnerId.Value, campaign),
                 RecipientTemplate.Newsletter =>
                     GetSubjectLine(campaign),
-                RecipientTemplate.Test =>
-                    GetSubjectLine(campaign),
+                RecipientTemplate.Test when recipient.LearnerId.HasValue =>
+                    await GetSubjectLine(recipient.LearnerId.Value, campaign),
                 _ => throw new InvalidOperationException($"Unsupported recipient template: {campaign.RecipientTemplate}")
             };
 
@@ -314,8 +314,8 @@ public class EmailCampaignService(
             {
                 RecipientTemplate.ProgressFeedback when recipient.LearnerId.HasValue =>
                     await _emailRendererService.RenderProgressFeedbackAsync(recipient.LearnerId.Value),
-                RecipientTemplate.Test =>
-                    await _emailRendererService.RenderTestAsync(campaign.SchoolId),
+                RecipientTemplate.Test when recipient.LearnerId.HasValue =>
+                    await _emailRendererService.RenderTestAsync(recipient.LearnerId.Value),
                 RecipientTemplate.Newsletter =>
                     await _emailRendererService.RenderNewsletterAsync(campaign.SchoolId),
                 _ => throw new InvalidOperationException($"Unsupported recipient template: {campaign.RecipientTemplate}")
@@ -357,7 +357,7 @@ public class EmailCampaignService(
         {
             RecipientTemplate.ProgressFeedback => GenerateProgressRecipientsAsync,
             RecipientTemplate.Newsletter => GenerateNewsletterRecipientsAsync,
-            RecipientTemplate.Test => GenerateTestRecipientsAsync,
+            RecipientTemplate.Test => GenerateProgressRecipientsAsync,
             RecipientTemplate.None => GenerateNewsletterRecipientsAsync,
             _ => GenerateNewsletterRecipientsAsync
         };
@@ -380,19 +380,6 @@ public class EmailCampaignService(
             Id = Guid.NewGuid(),
             EmailAddress = r.Email,
             LearnerId = r.LearnerId,
-            Status = EmailRecipientStatus.Pending,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        }).ToList();
-    }
-
-    private async Task<List<EmailRecipient>> GenerateTestRecipientsAsync(CommunicationCommand command)
-    {
-        var recipientEmails = await GetRecipientEmailsAsync(command);
-        return recipientEmails.Select(email => new EmailRecipient
-        {
-            Id = Guid.NewGuid(),
-            EmailAddress = email,
             Status = EmailRecipientStatus.Pending,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -572,10 +559,17 @@ public class EmailCampaignService(
         }
     }
 
-    private async Task<string> GetSubjectLine(Guid learnerId)
+    private async Task<string> GetSubjectLine(Guid learnerId, EmailCampaign command)
     {
         var learner = await _learnerService.GetByIdAsync(learnerId);
-        return $"Progress Feedback - {learner?.Name} {learner?.Surname}";
+        if (command.RecipientTemplate == RecipientTemplate.Test)
+        {
+            return $"Progress Feedback Confirmation - {learner?.Name} {learner?.Surname}";
+        }
+        else
+        {
+            return $"Progress Feedback - {learner?.Name} {learner?.Surname}";
+        }
     }
 
     private static int CalculateProgress(int processedCount, int total)

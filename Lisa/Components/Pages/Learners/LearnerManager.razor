@@ -612,7 +612,7 @@
             return;
         }
 
-        if (MathSelection == 0)
+        if (_currentRegisterClass?.SchoolGrade is { SystemGrade.MathGrade: true } && MathSelection == 0)
         {
             SetAlert("danger", "Please select either Mathematics or Maths Literacy.");
             return;

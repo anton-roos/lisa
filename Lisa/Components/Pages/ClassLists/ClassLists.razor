@@ -6,6 +6,7 @@
 @inject SubjectService SubjectService
 @inject CareGroupService CareGroupService
 @inject LearnerService LearnerService
+@inject RegisterClassService RegisterClassService
 
 @inherits EventAwareComponentBase
 
@@ -43,7 +44,7 @@
             {
                 <div class="mb-3">
                     <label><strong>Select Grade:</strong></label>
-                    <InputSelect class="form-select" TValue="Guid ?" Value="@_gradeId" ValueChanged="OnGradeChange"
+                    <InputSelect class="form-select" TValue="Guid?" Value="@_gradeId" ValueChanged="OnGradeChange"
                         ValueExpression="() => _gradeId">
                         <option value="">-- Select Grade --</option>
                         @foreach (var grade in _schoolGrades)
@@ -57,7 +58,7 @@
                 {
                     <div class="mb-3">
                         <label><strong>Select Combination:</strong></label>
-                        <InputSelect class="form-select" TValue="Guid ?" Value="@_combinationId" ValueChanged="OnCombinationChange"
+                        <InputSelect class="form-select" TValue="Guid?" Value="@_combinationId" ValueChanged="OnCombinationChange"
                             ValueExpression="() => _combinationId">
                             <option value="">-- Select Combination --</option>
                             @foreach (var combination in _filteredCombinations)
@@ -95,7 +96,7 @@
                 <!-- Register Class: Display Grade Dropdown -->
                 <div class="mb-3">
                     <label><strong>Select Grade:</strong></label>
-                    <InputSelect class="form-select" TValue="Guid ?" Value="@_gradeId" ValueChanged="OnGradeChange"
+                    <InputSelect class="form-select" TValue="Guid?" Value="@_gradeId" ValueChanged="OnGradeChange"
                         ValueExpression="() => _gradeId">
                         <option value="">-- Select Grade --</option>
                         @foreach (var grade in _schoolGrades)
@@ -107,6 +108,21 @@
 
                 @if (_gradeId != null)
                 {
+                    <div class="mb-3">
+                        <label><strong>Select Register Class:</strong></label>
+                        <InputSelect class="form-select" TValue="Guid?" Value="@_registerClassId" ValueChanged="OnRegisterClassChange"
+                            ValueExpression="() => _registerClassId">
+                            <option value="">-- Select Register Class --</option>
+                            @foreach (var regClass in _registerClasses)
+                            {
+                                <option value="@regClass.Id">@regClass.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+                }
+
+                @if (_registerClassId != null)
+                {
                     <div>
                         <LearnerListComponent Learners="@_learners" />
                     </div>
@@ -116,7 +132,7 @@
             {
                 <div class="mb-3">
                     <label><strong>Select Care Group:</strong></label>
-                    <InputSelect class="form-select" TValue="Guid ?" Value="@_careGroupId" ValueChanged="OnCareGroupChange"
+                    <InputSelect class="form-select" TValue="Guid?" Value="@_careGroupId" ValueChanged="OnCareGroupChange"
                         ValueExpression="() => _careGroupId">
                         <option value="">-- Select Care Group --</option>
                         @foreach (var careGroup in _careGroups)
@@ -145,7 +161,7 @@
     private School? _selectedSchool;
     private string ViewMode = "Combination";
 
-    // Filters for grades, combinations, subjects, care groups and learners
+    // Filters for grades, combinations, subjects, care groups, register classes and learners
     private List<SchoolGrade> _schoolGrades = new();
     private Guid? _gradeId;
 
@@ -158,6 +174,9 @@
 
     private List<CareGroup> _careGroups = new();
     private Guid? _careGroupId;
+
+    private List<RegisterClass> _registerClasses = new();
+    private Guid? _registerClassId;
 
     private List<Learner> _learners = new();
 
@@ -190,7 +209,8 @@
             _subjects = await SubjectService.GetAllAsync();
             _careGroups = await CareGroupService.GetBySchoolAsync(_selectedSchool.Id);
 
-            // Filter grades that have associated combinations
+            _registerClasses = await RegisterClassService.GetBySchoolIdAsync(_selectedSchool.Id);
+
             var validGradeIds = _combinations.Select(c => c.SchoolGradeId).Distinct().ToHashSet();
             _schoolGrades = _schoolGrades.Where(g => validGradeIds.Contains(g.Id)).ToList();
         }
@@ -203,6 +223,7 @@
         _combinationId = null;
         _subjectId = null;
         _careGroupId = null;
+        _registerClassId = null;
         _learners.Clear();
         StateHasChanged();
     }
@@ -245,6 +266,13 @@
         StateHasChanged();
     }
 
+    private async Task OnRegisterClassChange(Guid? value)
+    {
+        _registerClassId = value;
+        await LoadLearners();
+        StateHasChanged();
+    }
+
     private async Task LoadLearners()
     {
         if (_selectedSchool == null)
@@ -263,9 +291,9 @@
         }
         else if (ViewMode == "RegisterClass")
         {
-            if (_gradeId != null)
+            if (_registerClassId != null)
             {
-                _learners = await LearnerService.GetByGradeAsync(_gradeId.Value);
+                _learners = await LearnerService.GetByRegisterClassAsync(_registerClassId.Value);
             }
             else
             {

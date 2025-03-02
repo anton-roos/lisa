@@ -1,12 +1,16 @@
 @using Lisa.Models.Entities
 @using Microsoft.AspNetCore.Components
+@inject IJSRuntime JsRuntime
 
-<table class="table table-striped">
+<button class="btn btn-outline-danger" @onclick="DownloadPDF">
+    <i class="bi bi-file-earmark-pdf"></i> Download PDF
+</button>
+<table id="learner-list" class="table">
     <thead>
         <tr>
             <th>Name</th>
             <th>Surname</th>
-            <th>Grade</th>
+            <th>Register Class</th>
         </tr>
     </thead>
     <tbody>
@@ -23,7 +27,7 @@
                 <tr>
                     <td>@learner.Name</td>
                     <td>@learner.Surname</td>
-                    <td>@learner.RegisterClass?.SchoolGrade?.SystemGrade.Name</td>
+                    <td>@learner.RegisterClass?.Name</td>
                 </tr>
             }
         }
@@ -33,4 +37,9 @@
 @code {
     [Parameter]
     public List<Learner> Learners { get; set; } = new List<Learner>();
+
+    private async Task DownloadPDF()
+    {
+        await JsRuntime.InvokeVoidAsync("downloadLearnerListPDF");
+    }
 }

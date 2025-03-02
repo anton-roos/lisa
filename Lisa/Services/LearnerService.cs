@@ -179,18 +179,17 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             .ToListAsync();
     }
 
-    public async Task<List<Learner>> GetByCombinationAsync(Guid gradeId, Guid combinationId, int subjectId)
+    public async Task<List<Learner>> GetByCombinationAndSubjectAsync(Guid combinationId, int subjectId)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners
-            .Where(l => l.RegisterClass != null && l.RegisterClass.SchoolGradeId == gradeId)
             .Include(l => l.LearnerSubjects!)
-            .ThenInclude(ls => ls.Subject)
+                .ThenInclude(ls => ls.Subject)
             .Include(l => l.RegisterClass!)
-            .ThenInclude(rc => rc.CompulsorySubjects!)
+                .ThenInclude(rc => rc.CompulsorySubjects!)
             .Include(l => l.Combination!)
-            .ThenInclude(c => c.Subjects!)
-            .Where(l => l.CombinationId == combinationId && l.LearnerSubjects.Any(ls => ls.SubjectId == subjectId))
+                .ThenInclude(c => c.Subjects!)
+            .Where(l => l.LearnerSubjects!.Any(ls => ls.CombinationId == combinationId && ls.SubjectId == subjectId))
             .ToListAsync();
     }
 

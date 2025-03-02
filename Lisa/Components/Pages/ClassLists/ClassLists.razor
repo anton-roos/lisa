@@ -86,8 +86,12 @@
 
                 @if (_subjectId != null)
                 {
+                    var subject = _combinationSubjects.FirstOrDefault(s => s.Id == _subjectId);
+                    var grade = _schoolGrades.FirstOrDefault(g => g.Id == _gradeId);
+                    var combination = _combinations.FirstOrDefault(c => c.Id == _combinationId);
+                    var title = $"{grade?.SystemGrade.Name} - {combination?.Name} - {subject?.Name}";
                     <div>
-                        <LearnerListComponent Learners="@_learners" />
+                        <LearnerListComponent Learners="@_learners" Title="@title" />
                     </div>
                 }
             }
@@ -122,8 +126,9 @@
 
                 @if (_registerClassId != null)
                 {
+                    var registerClass = _registerClasses.FirstOrDefault(c => c.Id == _registerClassId);
                     <div>
-                        <LearnerListComponent Learners="@_learners" />
+                        <LearnerListComponent Learners="@_learners" Title="@registerClass.Name" />
                     </div>
                 }
             }
@@ -143,8 +148,9 @@
 
                 @if (_careGroupId != null)
                 {
+                    var careGroup = _careGroups.FirstOrDefault(c => c.Id == _careGroupId);
                     <div>
-                        <LearnerListComponent Learners="@_learners" />
+                        <LearnerListComponent Learners="@_learners" Title="@careGroup.Name" />
                     </div>
                 }
             }

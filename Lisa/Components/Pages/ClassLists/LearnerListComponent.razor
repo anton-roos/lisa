@@ -7,6 +7,14 @@
 </button>
 <table id="learner-list" class="table">
     <thead>
+        @if (!string.IsNullOrWhiteSpace(Title))
+        {
+            <h3>@Title</h3>
+        }
+        else
+        {
+            <h3>Learner List</h3>
+        }
         <tr>
             <th>Name</th>
             <th>Surname</th>
@@ -37,6 +45,8 @@
 @code {
     [Parameter]
     public List<Learner> Learners { get; set; } = new List<Learner>();
+    [Parameter]
+    public string? Title { get; set; }
 
     private async Task DownloadPDF()
     {

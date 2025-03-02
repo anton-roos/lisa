@@ -41,7 +41,6 @@
 
             @if (ViewMode == "Combination")
             {
-                <!-- Combination: Display Grade Dropdown -->
                 <div class="mb-3">
                     <label><strong>Select Grade:</strong></label>
                     <InputSelect class="form-select" TValue="Guid ?" Value="@_gradeId" ValueChanged="OnGradeChange"
@@ -56,10 +55,10 @@
 
                 @if (_gradeId != null)
                 {
-                    <!-- Combination: Display Combination Dropdown -->
                     <div class="mb-3">
                         <label><strong>Select Combination:</strong></label>
-                        <InputSelect class="form-select" TValue="Guid?" Value="@_combinationId" ValueChanged="OnCombinationChange" ValueExpression="() => _combinationId">
+                        <InputSelect class="form-select" TValue="Guid ?" Value="@_combinationId" ValueChanged="OnCombinationChange"
+                            ValueExpression="() => _combinationId">
                             <option value="">-- Select Combination --</option>
                             @foreach (var combination in _filteredCombinations)
                             {
@@ -71,7 +70,6 @@
 
                 @if (_combinationId != null)
                 {
-                    <!-- Combination: Display Subject Dropdown -->
                     <div class="mb-3">
                         <label><strong>Select Subject:</strong></label>
                         <InputSelect class="form-select" TValue="int?" Value="@_subjectId" ValueChanged="OnSubjectChange"
@@ -87,9 +85,7 @@
 
                 @if (_subjectId != null)
                 {
-                    <!-- Display Class List for Combination -->
                     <div>
-                        @* This could be a dedicated learner list component or inline markup *@
                         <LearnerListComponent Learners="@_learners" />
                     </div>
                 }
@@ -111,7 +107,6 @@
 
                 @if (_gradeId != null)
                 {
-                    <!-- Display Class List for Register Class -->
                     <div>
                         <LearnerListComponent Learners="@_learners" />
                     </div>
@@ -119,7 +114,6 @@
             }
             else if (ViewMode == "CareGroup")
             {
-                <!-- Care Group: Display Care Group Dropdown -->
                 <div class="mb-3">
                     <label><strong>Select Care Group:</strong></label>
                     <InputSelect class="form-select" TValue="Guid ?" Value="@_careGroupId" ValueChanged="OnCareGroupChange"
@@ -134,7 +128,6 @@
 
                 @if (_careGroupId != null)
                 {
-                    <!-- Display Class List for Care Group -->
                     <div>
                         <LearnerListComponent Learners="@_learners" />
                     </div>
@@ -203,11 +196,7 @@
         }
     }
 
-
-    /// <summary>
-    /// Changes the view mode and clears previous selections.
-    /// </summary>
-    private async Task SetViewMode(string mode)
+    private void SetViewMode(string mode)
     {
         ViewMode = mode;
         _gradeId = null;
@@ -222,7 +211,6 @@
     {
         _gradeId = value;
 
-        // Filter combinations based on the selected grade.
         if (_gradeId != null)
         {
             _filteredCombinations = _combinations.Where(c => c.SchoolGradeId == _gradeId).ToList();
@@ -257,9 +245,6 @@
         StateHasChanged();
     }
 
-    /// <summary>
-    /// Loads learners based on the selected filters and view mode.
-    /// </summary>
     private async Task LoadLearners()
     {
         if (_selectedSchool == null)
@@ -267,7 +252,6 @@
 
         if (ViewMode == "Combination")
         {
-            // Only load learners when all three filters are selected.
             if (_gradeId != null && _combinationId != null && _subjectId != null)
             {
                 _learners = await LearnerService.GetByCombinationAsync(_gradeId.Value, _combinationId.Value, _subjectId.Value);

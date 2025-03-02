@@ -1,0 +1,36 @@
+@using Lisa.Models.Entities
+@using Microsoft.AspNetCore.Components
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Surname</th>
+            <th>Grade</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Learners == null || !Learners.Any())
+        {
+            <tr>
+                <td colspan="3">No learners available.</td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var learner in Learners)
+            {
+                <tr>
+                    <td>@learner.Name</td>
+                    <td>@learner.Surname</td>
+                    <td>@learner.RegisterClass?.SchoolGrade?.SystemGrade.Name</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter]
+    public List<Learner> Learners { get; set; } = new List<Learner>();
+}

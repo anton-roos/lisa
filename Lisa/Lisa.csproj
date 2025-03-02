@@ -46,6 +46,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Components\Pages\Shared\_ProgressFeedback.cshtml" />
+    <EmbeddedResource Include="Components\Pages\Shared\_TestEmail.cshtml" />
   </ItemGroup>
 
 </Project>

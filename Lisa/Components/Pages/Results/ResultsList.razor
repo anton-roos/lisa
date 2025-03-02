@@ -40,10 +40,6 @@
                     <input type="radio" class="btn-check" name="viewMode" id="viewByTeacher" value="Teacher"
                         checked="@(ViewMode == "Teacher")" @onchange="@(_ => SetViewMode("Teacher"))" />
                     <label class="btn btn-outline-secondary" for="viewByTeacher">Teacher</label>
-
-                    <input type="radio" class="btn-check" name="viewMode" id="viewByLearner" value="Learner"
-                        checked="@(ViewMode == "Learner")" @onchange="@(_ => SetViewMode("Learner"))" />
-                    <label class="btn btn-outline-secondary" for="viewByLearner">Learner</label>
                 </div>
             </div>
 
@@ -386,13 +382,13 @@
     private static string GetResultSetStatusColor(ResultSet set)
     {
 
-        if (set.AssessmentDate is null)
+        if (set.Status == ResultSetStatus.Draft)
+        {
+            return "secondary";
+        }
+        else if (set.AssessmentDate is null)
         {
             return "warning";
-        }
-        else if (set.Status == ResultSetStatus.Draft)
-        {
-            return "danger";
         }
         else if (set.Status == ResultSetStatus.Submitted)
         {

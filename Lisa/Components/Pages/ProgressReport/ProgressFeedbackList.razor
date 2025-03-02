@@ -94,9 +94,7 @@
 </AuthorizeView>
 
 @code {
-    // The complete list loaded from the service
     private List<ProgressFeedbackListItem> _allFeedbackList = new();
-    // The filtered list displayed on the UI
     private List<ProgressFeedbackListItem>? _progressFeedbackList;
     private School? _selectedSchool;
     private bool _isLoading;
@@ -132,9 +130,6 @@
         await base.HandleEventAsync(eventName, payload);
     }
 
-    /// <summary>
-    /// Loads the full list of progress feedback items for the selected school from the server.
-    /// </summary>
     private async Task LoadProgressFeedbackListFromService()
     {
         if (_selectedSchool == null)
@@ -150,9 +145,6 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    /// <summary>
-    /// Filters the in-memory list based on the selected grade, subject, and search term.
-    /// </summary>
     private void FilterFeedbackInMemory()
     {
         IEnumerable<ProgressFeedbackListItem> filtered = _allFeedbackList;

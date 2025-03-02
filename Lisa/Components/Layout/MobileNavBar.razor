@@ -53,6 +53,12 @@
             </AuthorizeView>
             <AuthorizeView Context="_"
                 Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
+                <NavLink class="nav-link" href="class-lists">
+                    <img src="images/class-list.svg" style="height: 32px" />
+                </NavLink>
+            </AuthorizeView>
+            <AuthorizeView Context="_"
+                Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
                 <NavLink class="nav-link" href="results/manage">
                     <img src="images/capture.svg" style="height: 32px" />
                 </NavLink>

@@ -86,6 +86,17 @@
             Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
             <Authorized>
                 <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="class-lists" Match="NavLinkMatch.All">
+                        <span class="bi class-list-icon" aria-hidden="true"></span> Class Lists
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Context="_"
+            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
+            <Authorized>
+                <div class="nav-item px-3">
                     <NavLink class="nav-link" href="results/manage" Match="NavLinkMatch.All">
                         <span class="bi marks-icon" aria-hidden="true"></span> Capture Results
                     </NavLink>
@@ -114,8 +125,9 @@
                 </div>
             </Authorized>
         </AuthorizeView>
-        
-        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
+
+        <AuthorizeView Context="authContext"
+            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="communication">
                     <span class="bi communication-icon" aria-hidden="true"></span> Communication
@@ -123,7 +135,8 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
+        <AuthorizeView Context="authContext"
+            Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="email-campaigns">
                     <span class="bi communication-icon" aria-hidden="true"></span> Email Campaigns

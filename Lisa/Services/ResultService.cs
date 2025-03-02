@@ -32,7 +32,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 CapturedById = capturedById,
-                Status = ResultSetStatus.Submitted,
+                Status = viewModel.Status,
                 Results = viewModel.LearnerResults.Select(entry => new Result
                 {
                     Id = Guid.NewGuid(),
@@ -105,6 +105,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             existingResultSet.AssessmentType = viewModel.AssessmentType;
             existingResultSet.AssessmentTopic = viewModel.AssessmentTopic;
             existingResultSet.UpdatedAt = DateTime.UtcNow;
+            existingResultSet.Status = viewModel.Status;
 
             var existingResults = existingResultSet.Results?.ToDictionary(r => r.LearnerId)
                                   ?? new Dictionary<Guid, Result>();

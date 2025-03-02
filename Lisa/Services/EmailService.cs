@@ -73,9 +73,12 @@ namespace Lisa.Services
                 smtpClient.Credentials = new NetworkCredential(school.SmtpEmail, school.SmtpPassword);
                 smtpClient.EnableSsl = true;
 
+                //var senderName = $"DCEG LEARN - {school.LongName}";
+                var senderName = school.SmtpEmail;
+
                 var mailMessage = new MailMessage
                 {
-                    From = new MailAddress(school.SmtpEmail ?? throw new Exception("SMTP email not set.")),
+                    From = new MailAddress(school.SmtpEmail ?? throw new Exception("SMTP email not set."), senderName),
                     Subject = subject,
                     Body = body,
                     IsBodyHtml = true

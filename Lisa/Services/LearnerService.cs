@@ -101,7 +101,15 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
                 Name = model.Name,
                 RegisterClassId = model.RegisterClassId,
                 SchoolId = schoolId,
-                LearnerSubjects = learnerSubjects
+                LearnerSubjects = learnerSubjects,
+                MedicalAidName = model.MedicalAidName,
+                MedicalAidNumber = model.MedicalAidNumber,
+                MedicalAidPlan = model.MedicalAidPlan,
+                Allergies = model.Allergies,
+                MedicalAilments = model.MedicalAilments,
+                MedicalInstructions = model.MedicalInstructions,
+                DietaryRequirements = model.DietaryRequirements,
+                MedicalTransport = model.MedicalTransport
             };
 
             await context.Learners.AddAsync(learner);
@@ -230,6 +238,14 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         learner.IdNumber = model.IdNumber;
         learner.Name = model.Name;
         learner.RegisterClassId = model.RegisterClassId;
+        learner.MedicalAidName = model.MedicalAidName;
+        learner.MedicalAidNumber = model.MedicalAidNumber;
+        learner.MedicalAidPlan = model.MedicalAidPlan;
+        learner.Allergies = model.Allergies;
+        learner.MedicalAilments = model.MedicalAilments;
+        learner.MedicalInstructions = model.MedicalInstructions;
+        learner.DietaryRequirements = model.DietaryRequirements;
+        learner.MedicalTransport = model.MedicalTransport;
     }
 
     private static async Task UpdateParentsAsync(LisaDbContext context, Learner learner, List<ParentViewModel> parents)

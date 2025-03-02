@@ -314,6 +314,9 @@ namespace Lisa.Migrations
                     b.Property<bool>("Active")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Allergies")
+                        .HasColumnType("text");
+
                     b.Property<Guid?>("CareGroupId")
                         .HasColumnType("uuid");
 
@@ -331,6 +334,9 @@ namespace Lisa.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DietaryRequirements")
+                        .HasColumnType("text");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -338,6 +344,24 @@ namespace Lisa.Migrations
                     b.Property<string>("IdNumber")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<string>("MedicalAidName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MedicalAidNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MedicalAidPlan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MedicalAilments")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MedicalInstructions")
+                        .HasColumnType("text");
+
+                    b.Property<int>("MedicalTransport")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Name")
                         .HasMaxLength(30)

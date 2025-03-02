@@ -176,7 +176,56 @@
                     }
                 }
             </div>
+            <h4 class="mt-4">Medical Information</h4>
+            
+            <div class="mb-3">
+                <label>Medical Aid Name<span class="text-muted">(Optional)</span></label>
+                <InputText class="form-control" @bind-Value="_learnerModel.MedicalAidName" />
+            </div>
+           
+            <div class="mb-3">
+                <label>Medical Aid Number<span class="text-muted">(Optional)</span></label>
+                <InputText class="form-control" @bind-Value="_learnerModel.MedicalAidNumber" />
+            </div>
+           
+            <div class="mb-3">
+                <label>Medical Aid Plan<span class="text-muted">(Optional)</span></label>
+                <InputText class="form-control" @bind-Value="_learnerModel.MedicalAidPlan" />
+            </div>
+           
+            <div class="mb-3">
+                <label>Allergies<span class="text-muted">(Optional)</span></label>
+                <InputText class="form-control" @bind-Value="_learnerModel.Allergies" />
+            </div>
+           
+            <div class="mb-3">
+                <label>Medical Ailments<span class="text-muted">(Optional)</span></label>
+                <InputText class="form-control" @bind-Value="_learnerModel.MedicalAilments" />
+            </div>
+            
+            <div class="mb-3">
+                <label>Medical Instructions<span class="text-muted">Specific Instructions input specific medical instances</span></label>
+                <InputText class="form-control" @bind-Value="_learnerModel.MedicalInstructions" />
+            </div>
+            
+            <div class="mb-3">
+                <label>Dietary Requirements<span class="text-muted">(Optional)</span></label>
+                <InputText class="form-control" @bind-Value="_learnerModel.DietaryRequirements" />
+            </div>
 
+            <div class="mb-3">
+                <label>Medical Transport</label>
+                @foreach (var transport in Enum.GetValues(typeof(MedicalTransport)).Cast<MedicalTransport>())
+                {
+                    <div>
+                        <input type="radio" id="transport-@transport" name="medicalTransport" value="@transport"
+                               @onchange="@(() => _learnerModel.MedicalTransport = transport)"
+                               checked="@(_learnerModel.MedicalTransport == transport)" />
+                        <label for="transport-@transport">@transport</label>
+                    </div>
+                }
+            </div>
+            
             <h4 class="mt-4">Parent Information</h4>
             <div class="row">
                 @foreach (var parent in _parents)
@@ -370,7 +419,15 @@
                                 .Where(ls => ls.LearnerSubjectType == LearnerSubjectType.Additional)
                                 .Select(ls => ls.SubjectId)
                                 .ToList(),
-                MathSelection = 0
+                MathSelection = 0,
+                Allergies = existingLearner.Allergies,
+                MedicalAidName = existingLearner.MedicalAidName,
+                MedicalAidNumber = existingLearner.MedicalAidNumber,
+                MedicalAidPlan = existingLearner.MedicalAidPlan,
+                MedicalAilments = existingLearner.MedicalAilments,
+                MedicalInstructions = existingLearner.MedicalInstructions,
+                DietaryRequirements = existingLearner.DietaryRequirements,
+                MedicalTransport = existingLearner.MedicalTransport
             };
 
             if (existingLearner.Parents != null)

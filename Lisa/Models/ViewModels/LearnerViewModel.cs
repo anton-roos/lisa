@@ -35,10 +35,24 @@ public class LearnerViewModel
     public List<int> SubjectIds { get; set; } = new();
 
     public Dictionary<Guid, int> CombinationSelections { get; set; } = new();
-
+    
     public int MathSelection { get; set; }
-
+    
     public List<int> ExtraSubjectIds { get; set; } = new();
-
-    public ICollection<Parent>? Parents { get; set; }
+    
+    public string? MedicalAidName { get; set; }
+    
+    public string? MedicalAidNumber { get; set; }
+    
+    public string? MedicalAidPlan { get; set; }
+    
+    public string? Allergies { get; set; }
+    
+    public string? MedicalAilments { get; set; }
+    
+    public string? MedicalInstructions { get; set; }
+    
+    public string? DietaryRequirements { get; set; }
+    
+    public MedicalTransport MedicalTransport { get; set; }
 }

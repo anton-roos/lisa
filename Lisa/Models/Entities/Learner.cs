@@ -31,4 +31,19 @@ public class Learner
     public School? School { get; set; }
     public ICollection<LearnerSubject>? LearnerSubjects { get; set; }
     public ICollection<EmailRecipient>? EmailReceipts { get; set; }
+    public string? MedicalAidName { get; set; }
+    public string? MedicalAidNumber { get; set; }
+    public string? MedicalAidPlan { get; set; }
+    public string? Allergies { get; set; }
+    public string? MedicalAilments { get; set; }
+    public string? MedicalInstructions { get; set; }
+    public string? DietaryRequirements { get; set; }
+    public MedicalTransport MedicalTransport { get; set; }
+}
+
+public enum MedicalTransport
+{
+    None,
+    PrivateAmbulance,
+    PublicAmbulance,
 }

@@ -66,6 +66,32 @@
                     <p>@ls.Subject.Name</p>
                 }
             }
+            <h4>Medical Deatails</h4>
+            <dl class="row">
+                <dt class="col-sm-2">Medical Aid Name</dt>
+                <dd class="col-sm-10">@_learner.MedicalAidName</dd>
+            
+                <dt class="col-sm-2">Medical Aid Number</dt>
+                <dd class="col-sm-10">@_learner.MedicalAidNumber</dd>
+
+                <dt class="col-sm-2">Medical Aid Plan</dt>
+                <dd class="col-sm-10">@_learner.MedicalAidPlan</dd>
+
+                <dt class="col-sm-2">Allergies</dt>
+                <dd class="col-sm-10">@_learner.Allergies</dd>
+
+                <dt class="col-sm-2">Medical Ailments</dt>
+                <dd class="col-sm-10">@_learner.MedicalAilments</dd>
+
+                <dt class="col-sm-2">Medical Instructions</dt>
+                <dd class="col-sm-10">@_learner.MedicalInstructions</dd>
+
+                <dt class="col-sm-2">Dietary Requirements</dt>
+                <dd class="col-sm-10">@_learner.DietaryRequirements</dd>
+
+                <dt class="col-sm-2">Medical Transport</dt>
+                <dd class="col-sm-10">@_learner.MedicalTransport</dd>
+            </dl>
 
             <h4>Parents</h4>
             @if (_learner.Parents == null || !_learner.Parents.Any())
@@ -99,34 +125,6 @@
                                 <td>@(lp.PrimaryCellNumber ?? "Unknown")</td>
                                 <td>@(lp.SecondaryCellNumber ?? "Unknown")</td>
                                 <td>@(lp.WhatsAppNumber ?? "Unknown")</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
-
-            <h4>Results</h4>
-            @if (_learner.Results == null || !_learner.Results.Any())
-            {
-                <p>No results recorded.</p>
-            }
-            else
-            {
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Subject</th>
-                            <th>Score</th>
-                            <th>Absent?</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var result in _learner.Results)
-                        {
-                            <tr>
-                                <td>@result.ResultSet?.Subject?.Name</td>
-                                <td>@result.Score</td>
-                                <td>@(result.Absent ? "Yes" : "No")</td>
                             </tr>
                         }
                     </tbody>

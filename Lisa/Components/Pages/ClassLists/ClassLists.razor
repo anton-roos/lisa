@@ -11,7 +11,7 @@
 @inherits EventAwareComponentBase
 
 <PageTitle>Class Lists</PageTitle>
-<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.Teacher},{Roles.Administrator},{Roles.SchoolManagement}")">
     <Authorized>
         <h3>Class Lists</h3>
 

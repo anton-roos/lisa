@@ -433,4 +433,20 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
 
         return match.Key;
     }
+
+    public async Task<List<Learner>> GetByGradeAndSubjectAsync(Guid gradeId, int subjectId)
+    {
+        using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Learners
+            .Where(l => l.RegisterClass != null
+                        && l.RegisterClass.SchoolGradeId == gradeId
+                        && l.LearnerSubjects!.Any(ls => ls.SubjectId == subjectId))
+            .Include(l => l.RegisterClass!)
+                .ThenInclude(rc => rc.SchoolGrade!)
+                    .ThenInclude(sg => sg.SystemGrade)
+            .Include(l => l.LearnerSubjects!)
+                .ThenInclude(ls => ls.Subject)
+            .Include(l => l.Parents)
+            .ToListAsync();
+    }
 }

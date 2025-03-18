@@ -11,7 +11,8 @@
 @inherits EventAwareComponentBase
 
 <PageTitle>Class Lists</PageTitle>
-<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.Teacher},{Roles.Administrator},{Roles.SchoolManagement}")">
+<AuthorizeView Context="_"
+    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.Teacher},{Roles.Administrator},{Roles.SchoolManagement}")">
     <Authorized>
         <h3>Class Lists</h3>
 
@@ -58,18 +59,21 @@
                 {
                     <div class="mb-3">
                         <label><strong>Select Combination:</strong></label>
-                        <InputSelect class="form-select" TValue="Guid ?" Value="@_combinationId" ValueChanged="OnCombinationChange"
+                        <InputSelect class="form-select" TValue="string" Value="@_combinationId" ValueChanged="OnCombinationChange"
                             ValueExpression="() => _combinationId">
                             <option value="">-- Select Combination --</option>
                             @foreach (var combination in _filteredCombinations)
                             {
                                 <option value="@combination.Id">@combination.Name</option>
                             }
+                            <option value="Math">Math</option>
+                            <option value="MathLit">Math Literacy</option>
                         </InputSelect>
                     </div>
                 }
 
-                @if (_combinationId != null)
+                <!-- Only show the subject dropdown if a standard combination is selected -->
+                @if (!string.IsNullOrEmpty(_combinationId) && _combinationId != "Math" && _combinationId != "MathLit")
                 {
                     <div class="mb-3">
                         <label><strong>Select Subject:</strong></label>
@@ -86,10 +90,25 @@
 
                 @if (_subjectId != null)
                 {
-                    var subject = _combinationSubjects.FirstOrDefault(s => s.Id == _subjectId);
                     var grade = _schoolGrades.FirstOrDefault(g => g.Id == _gradeId);
-                    var combination = _combinations.FirstOrDefault(c => c.Id == _combinationId);
-                    var title = $"{grade?.SystemGrade.Name} - {combination?.Name} - {subject?.Name}";
+                    string subjectName = "";
+                    if (_combinationId == "Math")
+                    {
+                        subjectName = "Math";
+                    }
+                    else if (_combinationId == "MathLit")
+                    {
+                        subjectName = "Math Literacy";
+                    }
+                    else
+                    {
+                        var subject = _combinationSubjects.FirstOrDefault(s => s.Id == _subjectId);
+                        subjectName = subject?.Name ?? "";
+                    }
+                    var combinationName = _combinationId == "Math" || _combinationId == "MathLit"
+                    ? subjectName
+                    : _combinations.FirstOrDefault(c => c.Id == Guid.Parse(_combinationId))?.Name;
+                    var title = $"{grade?.SystemGrade.Name} - {combinationName} - {subjectName}";
                     <div>
                         <LearnerListComponent Learners="@_learners" Title="@title" />
                     </div>
@@ -170,7 +189,7 @@
 
     private List<Combination> _combinations = new();
     private List<Combination> _filteredCombinations = new();
-    private Guid? _combinationId;
+    private string? _combinationId;
 
     private List<Subject> _subjects = new();
     private int? _subjectId;
@@ -222,7 +241,6 @@
             _combinations = await CombinationService.GetCombinationsBySchoolId(_selectedSchool.Id);
             _subjects = await SubjectService.GetAllAsync();
             _careGroups = await CareGroupService.GetBySchoolAsync(_selectedSchool.Id);
-
             _registerClasses = await RegisterClassService.GetBySchoolIdAsync(_selectedSchool.Id);
 
             var validGradeIds = _combinations.Select(c => c.SchoolGradeId).Distinct().ToHashSet();
@@ -261,21 +279,34 @@
         StateHasChanged();
     }
 
-    private async Task OnCombinationChange(Guid? value)
+    private async Task OnCombinationChange(string? value)
     {
         _combinationId = value;
         _subjectId = null;
 
-        if (_combinationId != null)
+        if (!string.IsNullOrEmpty(value))
         {
-            var selectedCombination = _combinations.FirstOrDefault(c => c.Id == _combinationId.Value);
-            if (selectedCombination != null && selectedCombination.Subjects != null)
+            if (value == "Math" || value == "MathLit")
             {
-                _combinationSubjects = selectedCombination.Subjects.ToList();
-            }
-            else
-            {
+                string subjectName = value == "Math" ? "Mathematics" : "Mathematical Literacy";
+                var mathSubject = _subjects.FirstOrDefault(s => s.Name.Equals(subjectName, StringComparison.OrdinalIgnoreCase) && s.SubjectType == SubjectType.MathCombination);
+                if (mathSubject != null)
+                {
+                    _subjectId = mathSubject.Id;
+                }
                 _combinationSubjects.Clear();
+            }
+            else if (Guid.TryParse(value, out Guid combId))
+            {
+                var selectedCombination = _combinations.FirstOrDefault(c => c.Id == combId);
+                if (selectedCombination != null && selectedCombination.Subjects != null)
+                {
+                    _combinationSubjects = selectedCombination.Subjects.ToList();
+                }
+                else
+                {
+                    _combinationSubjects.Clear();
+                }
             }
         }
         else
@@ -315,9 +346,18 @@
 
         if (ViewMode == "Combination")
         {
-            if (_gradeId != null && _combinationId != null && _subjectId != null)
+            // For math selections, load learners based on grade and subject.
+            if (_gradeId != null && !string.IsNullOrEmpty(_combinationId) && _subjectId != null)
             {
-                _learners = await LearnerService.GetByCombinationAndSubjectAsync(_combinationId.Value, _subjectId.Value);
+                if (_combinationId == "Math" || _combinationId == "MathLit")
+                {
+                    // Use a method that loads by grade and subject (adjust as needed)
+                    _learners = await LearnerService.GetByGradeAndSubjectAsync(_gradeId.Value, _subjectId.Value);
+                }
+                else if (Guid.TryParse(_combinationId, out Guid combId))
+                {
+                    _learners = await LearnerService.GetByCombinationAndSubjectAsync(combId, _subjectId.Value);
+                }
                 _learners = _learners.OrderBy(l => l.Surname).ThenBy(l => l.Name).ToList();
             }
             else

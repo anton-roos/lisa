@@ -109,7 +109,8 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
                 MedicalAilments = model.MedicalAilments,
                 MedicalInstructions = model.MedicalInstructions,
                 DietaryRequirements = model.DietaryRequirements,
-                MedicalTransport = model.MedicalTransport
+                MedicalTransport = model.MedicalTransport,
+                Gender = model.Gender
             };
 
             await context.Learners.AddAsync(learner);
@@ -263,6 +264,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         learner.MedicalInstructions = model.MedicalInstructions;
         learner.DietaryRequirements = model.DietaryRequirements;
         learner.MedicalTransport = model.MedicalTransport;
+        learner.Gender = model.Gender;
     }
 
     private static async Task UpdateParentsAsync(LisaDbContext context, Learner learner, List<ParentViewModel> parents)

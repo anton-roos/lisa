@@ -48,18 +48,36 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
             .ToListAsync();
     }
 
-    public async Task DeleteAsync(Guid id)
+    public async Task<bool> DeleteAsync(Guid combinationId)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
-        var subjectCombination = await context.Combinations.FindAsync(id);
-
-        if (subjectCombination == null)
+        var combination = await context.Combinations.FindAsync(combinationId);
+        if (combination == null)
         {
-            return;
+            return false;
         }
 
-        context.Combinations.Remove(subjectCombination);
+        combination.IsDeleted = true;
+        combination.DeletedAt = DateTime.UtcNow;
+
         await context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> RestoreAsync(Guid combinationId)
+    {
+        using var context = await _dbContextFactory.CreateDbContextAsync();
+        var combination = await context.Combinations.FindAsync(combinationId);
+        if (combination == null)
+        {
+            return false;
+        }
+
+        combination.IsDeleted = false;
+        combination.DeletedAt = DateTime.UtcNow;
+
+        await context.SaveChangesAsync();
+        return true;
     }
 
     public async Task AddCombinationAsync(CombinationViewModel model, IEnumerable<Subject> selectedSubjects)
@@ -108,7 +126,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
         var newSubjectIds = selectedSubjects
             .Select(s => s.Id)
             .ToList();
-        
+
 
         var subjectsToRemove = existingCombination.Subjects?
             .Where(s => !newSubjectIds.Contains(s.Id))

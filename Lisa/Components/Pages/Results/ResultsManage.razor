@@ -9,10 +9,10 @@
 @inject SubjectService SubjectService
 @inject UserService UserService
 @inject ResultService ResultService
+@inject AssessmentTypeService AssessmentTypeService
 @inherits EventAwareComponentBase
 
-<AuthorizeView
-    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
     <Authorized>
         <PageTitle>@(IsEdit ? "Edit Result Set" : "Capture Results")</PageTitle>
         <h3>@(IsEdit ? "Edit Result Set" : "Capture Results")</h3>
@@ -65,10 +65,18 @@
                         <InputDate @bind-Value="ViewModel.AssessmentDate" class="form-control" id="resultDate" />
                     </div>
 
-                    <div class="mt-2">
-                        <label>Assessment Type</label>
-                        <InputText class="form-control" @bind-Value="ViewModel.AssessmentType" />
+                    <div class="mb-3">
+                        <label for="assessmentTypeSelect"><strong>Select Assessment Type:</strong></label>
+                        <InputSelect id="assessmentTypeSelect" class="form-select"
+                            @bind-Value="SelectedAssessmentTypeId">
+                            <option value="">-- Select Assessment Type --</option>
+                            @foreach (var type in AssessmentTypes)
+                            {
+                                <option value="@type.Id">@type.Name</option>
+                            }
+                        </InputSelect>
                     </div>
+
                     <div class="mt-2">
                         <label>Assessment Topic</label>
                         <InputText class="form-control" @bind-Value="ViewModel.AssessmentTopic" />
@@ -91,7 +99,6 @@
 
                     <hr />
 
-
                     <table class="table table-striped">
                         <thead>
                             <tr>
@@ -108,55 +115,59 @@
                                 <tr>
                                     <td>@entry.Surname @entry.Name</td>
                                     <td>
-                                        <InputNumber TValue="int?" Value="entry.ResultViewModel.Score" ValueChanged="@(EventCallback.Factory.Create<int?>(this, value => {
-                                            if (value != null)
-                                            {
-                                                                OnScoreChanged(value, entry);
-                                            }
-                            }))" class="form - control" min="0" max="100" step="1"
-                                    ValueExpression="@(() => entry.ResultViewModel.Score)" />
-                            </td>
-                            <td>
-                                <InputCheckbox @bind-Value="entry.ResultViewModel.Absent" />
-                            </td>
-                            <td>
-                        @if (entry.ResultViewModel.Absent || entry.ResultViewModel.Score <= 20)
-                                    {
-                                        <InputText @bind-Value="entry.ResultViewModel.AbsentReason" class="form-control" />
-                                    }
-                                </td>
-                                <td>
-                                    <button class="btn btn-danger" @onclick="(() => RemoveLearner(entry))">Remove</button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                                        <InputNumber TValue="int?" Value="entry.ResultViewModel.Score"
+                                            ValueChanged="@(EventCallback.Factory.Create<int?>(this, value => {
+                                                if (value != null)
+                                                {
+                                                    OnScoreChanged(value, entry);
+                                                }
+                                            }))"
+                                            class="form-control" min="0" max="100" step="1"
+                                            ValueExpression="@(() => entry.ResultViewModel.Score)" />
+                                    </td>
+                                    <td>
+                                        <InputCheckbox @bind-Value="entry.ResultViewModel.Absent" />
+                                    </td>
+                                    <td>
+                                        @if (entry.ResultViewModel.Absent || entry.ResultViewModel.Score <= 20)
+                                        {
+                                            <InputText @bind-Value="entry.ResultViewModel.AbsentReason" class="form-control" />
+                                        }
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-danger" @onclick="(() => RemoveLearner(entry))">
+                                            Remove
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
 
-                @if (!string.IsNullOrEmpty(_submitError))
-                {
-                    <div class="alert alert-danger">@_submitError</div>
+                    @if (!string.IsNullOrEmpty(_submitError))
+                    {
+                        <div class="alert alert-danger">@_submitError</div>
+                    }
+
+                    <div class="mb-3">
+                        <button class="btn btn-secondary" @onclick="SaveDraft">Save Draft</button>
+                        <button class="btn btn-primary" @onclick="SubmitResults">Submit Results</button>
+                    </div>
                 }
-
-                <div class="mb-3">
-                    <button class="btn btn-secondary" @onclick="SaveDraft">Save Draft</button>
-                    <button class="btn btn-primary" @onclick="SubmitResults">Submmit Results</button>
-                </div>
+                else
+                {
+                    <div class="alert alert-info">
+                        No Learners found for the selected filters.
+                    </div>
+                }
             }
             else
             {
                 <div class="alert alert-info">
-                    No Learners found for the selected filters.
+                    Please select a grade and subject to capture results.
                 </div>
             }
         }
-                else
-        {
-            <div class="alert alert-info">
-                Please select a grade and subject to capture results.
-            </div>
-        }
-                }
     </Authorized>
     <NotAuthorized>
         <Unauthorized />
@@ -171,9 +182,12 @@
     private string _submitError = string.Empty;
     [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
     private List<Guid> _removedLearnerIds = new List<Guid>();
+    private List<AssessmentType> AssessmentTypes { get; set; } = new();
+    private int? SelectedAssessmentTypeId { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadAssessmentTypes();
         if (IsEdit)
         {
             await LoadExistingResultSet();
@@ -191,6 +205,8 @@
             {
                 await OnSubjectChange(ViewModel.SubjectId);
             }
+            // Sync the assessment type dropdown with the existing result set.
+            SelectedAssessmentTypeId = ViewModel.AssessmentType?.Id;
         }
         else
         {
@@ -198,6 +214,11 @@
             _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
             await LoadDropdowns();
         }
+    }
+
+    private async Task LoadAssessmentTypes()
+    {
+        AssessmentTypes = await AssessmentTypeService.GetAssessmentTypesAsync();
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
@@ -240,8 +261,8 @@
         if (!string.IsNullOrEmpty(ViewModel.GradeId) && !string.IsNullOrEmpty(ViewModel.SubjectId))
         {
             ViewModel.Teacher = await UserService.GetTeacherForGradeAndSubjectAsync(
-            _selectedSchool?.Id,
-            Guid.Parse(ViewModel.GradeId), int.Parse(ViewModel.SubjectId));
+                _selectedSchool?.Id,
+                Guid.Parse(ViewModel.GradeId), int.Parse(ViewModel.SubjectId));
         }
         await InvokeAsync(StateHasChanged);
     }
@@ -267,17 +288,17 @@
         {
             var learners = await LearnerService.GetLearnersWithTheirSubjectsByGradeAsync(Guid.Parse(ViewModel.GradeId));
             ViewModel.LearnerResults = learners
-            .Where(learner => learner.LearnerSubjects != null &&
-            learner.LearnerSubjects.Any(subject => subject.SubjectId == int.Parse(ViewModel.SubjectId)))
-            .OrderBy(learner => learner.Surname)
-            .Select(learner => new LearnerResultViewModel
-            {
-                LearnerId = learner.Id,
-                Surname = learner.Surname ?? string.Empty,
-                Name = learner.Name ?? string.Empty,
-                ResultViewModel = new ResultViewModel()
-            })
-            .ToList();
+                .Where(learner => learner.LearnerSubjects != null &&
+                                  learner.LearnerSubjects.Any(subject => subject.SubjectId == int.Parse(ViewModel.SubjectId)))
+                .OrderBy(learner => learner.Surname)
+                .Select(learner => new LearnerResultViewModel
+                {
+                    LearnerId = learner.Id,
+                    Surname = learner.Surname ?? string.Empty,
+                    Name = learner.Name ?? string.Empty,
+                    ResultViewModel = new ResultViewModel()
+                })
+                .ToList();
         }
     }
 
@@ -322,7 +343,7 @@
             if (resultSet.Results != null)
             {
                 ViewModel.GradeId = resultSet.Results.FirstOrDefault()?.Learner?.RegisterClass?.SchoolGrade?.Id.ToString()
-                ?? string.Empty;
+                    ?? string.Empty;
                 ViewModel.Teacher = resultSet.Teacher;
 
                 ViewModel.LearnerResults = resultSet.Results.Select(r => new LearnerResultViewModel
@@ -365,7 +386,6 @@
 
     private void RemoveLearner(LearnerResultViewModel entry)
     {
-        // If the learner was part of an existing result set, track the removal.
         if (entry.LearnerId != Guid.Empty)
         {
             _removedLearnerIds.Add(entry.LearnerId);
@@ -373,12 +393,24 @@
         ViewModel.LearnerResults.Remove(entry);
     }
 
+    // Helper to ensure our viewmodel is populated with the selected assessment type.
+    private void UpdateAssessmentType()
+    {
+        // If nothing selected in the dropdown, default to 0 which indicates 'unknown'.
+        if (!SelectedAssessmentTypeId.HasValue)
+        {
+            SelectedAssessmentTypeId = 0;
+        }
+        ViewModel.AssessmentType = AssessmentTypes.FirstOrDefault(at => at.Id == SelectedAssessmentTypeId)
+            ?? new AssessmentType { Id = 0, Name = "Unknown" };
+    }
+
     private async Task SaveDraft()
     {
         _submitError = "";
         ViewModel.Status = ResultSetStatus.Draft;
 
-        // set status as draft
+        UpdateAssessmentType();
 
         if (IsEdit)
         {
@@ -414,16 +446,13 @@
             _submitError = "Assessment date is required.";
             return;
         }
-        if (string.IsNullOrWhiteSpace(ViewModel.AssessmentType))
-        {
-            _submitError = "Assessment type is required.";
-            return;
-        }
         if (string.IsNullOrWhiteSpace(ViewModel.AssessmentTopic))
         {
             _submitError = "Assessment topic is required.";
             return;
         }
+
+        UpdateAssessmentType();
 
         if (ViewModel.SchoolGrade!.SystemGrade.AchievementLevelRating)
         {

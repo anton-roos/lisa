@@ -33,6 +33,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
     public DbSet<EmailRecipient> EmailRecipients { get; set; } = null!;
     public DbSet<TeacherSubject> TeacherSubjects { get; set; } = null!;
     public DbSet<ResultSet> ResultSets { get; set; } = null!;
+    public DbSet<AssessmentType> AssessmentTypes { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -243,6 +244,8 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
             .HasForeignKey(sc => sc.SchoolGradeId)
             .OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<Combination>()
+            .HasQueryFilter(c => !c.IsDeleted);
+        modelBuilder.Entity<Combination>()
             .HasMany(c => c.Subjects)
             .WithMany()
             .UsingEntity<Dictionary<string, object>>(
@@ -337,6 +340,16 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
                   .HasForeignKey(rs => rs.TeacherId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
+
+        modelBuilder.Entity<ResultSet>()
+        .Property(rs => rs.AssessmentTypeId)
+        .HasDefaultValue(0);
+
+        modelBuilder.Entity<ResultSet>()
+        .HasOne(rs => rs.AssessmentType)
+        .WithMany()
+        .HasForeignKey(rs => rs.AssessmentTypeId)
+        .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<EmailCampaign>(entity =>
         {

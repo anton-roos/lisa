@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Lisa.Enums;
 
 namespace Lisa.Models.Entities;
 
@@ -39,6 +40,7 @@ public class Learner
     public string? MedicalInstructions { get; set; }
     public string? DietaryRequirements { get; set; }
     public MedicalTransport MedicalTransport { get; set; }
+    public Gender Gender { get; set; }
 }
 
 public enum MedicalTransport

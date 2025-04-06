@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Lisa.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Lisa.Migrations
 {
     [DbContext(typeof(LisaDbContext))]
-    partial class LisaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250405120550_Gender")]
+    partial class Gender
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -51,23 +54,6 @@ namespace Lisa.Migrations
                     b.HasIndex("SubjectId");
 
                     b.ToTable("CombinationSubject");
-                });
-
-            modelBuilder.Entity("Lisa.Models.Entities.AssessmentType", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("AssessmentTypes");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.BugReport", b =>
@@ -623,14 +609,10 @@ namespace Lisa.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("AssessmentTopic")
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
-                    b.Property<int>("AssessmentTypeId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
-
-                    b.Property<string>("AssessmentTypeName")
+                    b.Property<string>("AssessmentType")
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
@@ -656,8 +638,6 @@ namespace Lisa.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AssessmentTypeId");
 
                     b.HasIndex("CapturedById");
 
@@ -1334,12 +1314,6 @@ namespace Lisa.Migrations
 
             modelBuilder.Entity("Lisa.Models.Entities.ResultSet", b =>
                 {
-                    b.HasOne("Lisa.Models.Entities.AssessmentType", "AssessmentType")
-                        .WithMany()
-                        .HasForeignKey("AssessmentTypeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("Lisa.Models.Entities.User", "CapturedByUser")
                         .WithMany()
                         .HasForeignKey("CapturedById")
@@ -1360,8 +1334,6 @@ namespace Lisa.Migrations
                         .WithMany()
                         .HasForeignKey("TeacherId")
                         .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("AssessmentType");
 
                     b.Navigation("CapturedByUser");
 

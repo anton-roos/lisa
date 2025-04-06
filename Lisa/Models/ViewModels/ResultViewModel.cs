@@ -42,9 +42,7 @@ public class ResultsCaptureViewModel
     // Assessment fields
     [Required(ErrorMessage = "Assessment topic is required.")]
     public string? AssessmentTopic { get; set; }
-
-    [Required(ErrorMessage = "Assessment type is required.")]
-    public string? AssessmentType { get; set; }
+    public AssessmentType? AssessmentType { get; set; }
     public DateTime? AssessmentDate { get; set; }
     public ResultSetStatus Status { get; set; }
 }

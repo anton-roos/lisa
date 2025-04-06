@@ -26,7 +26,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             {
                 Id = Guid.NewGuid(),
                 AssessmentDate = assessmentDate,
-                AssessmentType = viewModel.AssessmentType,
+                AssessmentTypeId = viewModel.AssessmentType?.Id ?? 0,
                 AssessmentTopic = viewModel.AssessmentTopic,
                 SubjectId = int.Parse(viewModel.SubjectId),
                 CreatedAt = DateTime.UtcNow,
@@ -102,7 +102,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             {
                 existingResultSet.AssessmentDate = DateTime.SpecifyKind(viewModel.AssessmentDate!.Value, DateTimeKind.Utc);
             }
-            existingResultSet.AssessmentType = viewModel.AssessmentType;
+            existingResultSet.AssessmentTypeId = viewModel.AssessmentType?.Id ?? 0;
             existingResultSet.AssessmentTopic = viewModel.AssessmentTopic;
             existingResultSet.UpdatedAt = DateTime.UtcNow;
             existingResultSet.Status = viewModel.Status;
@@ -217,6 +217,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
             var resultSet = await context.ResultSets
                 .AsNoTracking()
                 .Include(rs => rs.Teacher)
+                .Include(r => r.AssessmentType)
                 .Include(rs => rs.Results!)
                     .ThenInclude(r => r.Learner!)
                         .ThenInclude(l => l.RegisterClass!)
@@ -248,7 +249,9 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
         Guid? gradeId,
         int? subjectId,
         Guid? teacherId,
-        Guid? learnerId
+        Guid? learnerId,
+        DateTime? fromDate,
+        DateTime? toDate
     )
     {
         try
@@ -257,6 +260,7 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
 
             var query = context.ResultSets
                 .AsNoTracking()
+                .Include(r => r.AssessmentType)
                 .Include(rs => rs.Results!)
                 .ThenInclude(r => r.Learner!)
                 .ThenInclude(l => l.RegisterClass!)
@@ -291,7 +295,19 @@ public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, IL
                 query = query.Where(rs => rs.Results!.Any(r => r.LearnerId == learnerId));
             }
 
-            return (await query.ToListAsync())!;
+            if (fromDate.HasValue)
+            {
+                var fromUtc = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
+                query = query.Where(rs => rs.AssessmentDate != null && rs.AssessmentDate >= fromUtc);
+            }
+
+            if (toDate.HasValue)
+            {
+                var toUtc = DateTime.SpecifyKind(toDate.Value, DateTimeKind.Utc);
+                query = query.Where(rs => rs.AssessmentDate != null && rs.AssessmentDate <= toUtc);
+            }
+
+            return await query.ToListAsync();
         }
         catch (Exception ex)
         {

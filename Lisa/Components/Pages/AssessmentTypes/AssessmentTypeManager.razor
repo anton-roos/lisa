@@ -1,0 +1,64 @@
+@page "/assessment-types/manage/{assessmentTypeId:int?}"
+@using Lisa.Models.Entities
+@inject AssessmentTypeService AssessmentTypeService
+@inject NavigationManager Navigation
+
+<PageTitle>Assessment Type Manager</PageTitle>
+<h3>@(IsEdit ? "Edit Assessment Type" : "Create Assessment Type")</h3>
+
+@if (loading)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <EditForm Model="assessmentType" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label for="name" class="form-label">Name</label>
+            <InputText id="name" class="form-control" @bind-Value="assessmentType.Name" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">@(IsEdit ? "Update" : "Create")</button>
+        <button type="button" class="btn btn-secondary ms-2" @onclick="Cancel">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public int? assessmentTypeId { get; set; }
+
+    private bool IsEdit => assessmentTypeId.HasValue;
+    private bool loading = false;
+    private AssessmentType assessmentType = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEdit)
+        {
+            loading = true;
+            assessmentType = await AssessmentTypeService.GetAssessmentTypeByIdAsync(assessmentTypeId.Value);
+            loading = false;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (IsEdit)
+        {
+            await AssessmentTypeService.UpdateAssessmentTypeAsync(assessmentType);
+        }
+        else
+        {
+            await AssessmentTypeService.CreateAssessmentTypeAsync(assessmentType);
+        }
+        Navigation.NavigateTo("/assessment-types");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/assessment-types");
+    }
+}

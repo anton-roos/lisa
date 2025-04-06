@@ -20,12 +20,21 @@
         {
             <div class="alert alert-info">Please select a school to view results.</div>
         }
-        else if (_loading)
-        {
-            <p>Loading results...</p>
-        }
         else
         {
+            @* Date Range Filter - Only visible when a school is selected *@
+            <div class="mb-3">
+                <label><strong>Filter by Date Range:</strong></label>
+                <div class="d-flex align-items-center">
+                    <InputDate class="form-control me-2" TValue="DateTime ?" Value="_fromDate"
+                        ValueChanged="OnFromDateChanged" ValueExpression="() => _fromDate" placeholder="From Date" />
+                    <button class="btn btn-secondary me-2" @onclick="ClearFromDate">Clear</button>
+                    <InputDate class="form-control me-2" TValue="DateTime ?" Value="_toDate" ValueChanged="OnToDateChanged"
+                        ValueExpression="() => _toDate" placeholder="To Date" />
+                    <button class="btn btn-secondary" @onclick="ClearToDate">Clear</button>
+                </div>
+            </div>
+
             <div class="mb-3">
                 <label><strong>View Results by:</strong></label>
                 <div class="btn-group" role="group">
@@ -42,6 +51,8 @@
                     <label class="btn btn-outline-secondary" for="viewByTeacher">Teacher</label>
                 </div>
             </div>
+
+            @* The rest of your filtering and result display UI remains unchanged *@
 
             @if (ViewMode == "Grade")
             {
@@ -166,6 +177,10 @@
     private Guid? _gradeId, _teacherId;
     private int? _subjectId;
 
+    // New date filter properties
+    private DateTime? _fromDate;
+    private DateTime? _toDate;
+
     private List<Learner> _learners = new();
     private bool _learnersLoading = false;
     private string _learnerSearchText = "";
@@ -185,22 +200,14 @@
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        switch (eventName)
+        if (eventName == UiEvents.SchoolSelected && payload is School school)
         {
-            case UiEvents.SchoolSelected:
-                if (payload is School school)
-                {
-                    _selectedSchool = school;
-                    await LoadFilters();
-                }
-                break;
+            _selectedSchool = school;
+            await LoadFilters();
         }
         await base.HandleEventAsync(eventName, payload);
     }
 
-    /// <summary>
-    /// Changes the view mode, clears out selections/results, and—if switching to Learner mode—loads all learners for the
-    /// </summary>
     private async Task SetViewMode(string mode)
     {
         ViewMode = mode;
@@ -222,7 +229,7 @@
     }
 
     /// <summary>
-    /// Loads result sets based on the current filters.
+    /// Loads result sets based on the current filters including date range.
     /// </summary>
     private async Task LoadResults()
     {
@@ -237,16 +244,30 @@
         switch (ViewMode)
         {
             case "Subject":
-                _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, null, _subjectId, null, null))
+                _resultsSet = (await ResultService.GetResultsByFiltersAsync(
+                _selectedSchool.Id,
+                null,
+                _subjectId,
+                null,
+                null,
+                _fromDate,
+                _toDate))
                 .OrderBy(r => r!.AssessmentDate)
                 .ToList();
 
                 GroupedResults = _resultsSet
                 .GroupBy(r => $"{r!.Subject!.Name!} - {r.SchoolGrade!.SystemGrade.Name!}")
-                .ToDictionary(g => $"{g.Key}", g => g.ToList());
+                .ToDictionary(g => g.Key, g => g.ToList());
                 break;
             case "Grade":
-                _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, _gradeId, null, null, null))
+                _resultsSet = (await ResultService.GetResultsByFiltersAsync(
+                _selectedSchool.Id,
+                _gradeId,
+                null,
+                null,
+                null,
+                _fromDate,
+                _toDate))
                 .OrderBy(r => r?.AssessmentDate)
                 .ToList();
 
@@ -255,7 +276,14 @@
                 .ToDictionary(g => g.Key!, g => g.ToList());
                 break;
             case "Teacher":
-                _resultsSet = (await ResultService.GetResultsByFiltersAsync(_selectedSchool.Id, null, null, _teacherId, null))
+                _resultsSet = (await ResultService.GetResultsByFiltersAsync(
+                _selectedSchool.Id,
+                null,
+                null,
+                _teacherId,
+                null,
+                _fromDate,
+                _toDate))
                 .OrderBy(r => r!.AssessmentDate)
                 .ToList();
 
@@ -269,9 +297,6 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    /// <summary>
-    /// Loads the list of learners for the selected school (only called once when switching to Learner view).
-    /// </summary>
     private async Task LoadLearners()
     {
         if (_selectedSchool != null)
@@ -280,42 +305,38 @@
         }
     }
 
-    /// <summary>
-    /// Loads filter options such as grades, subjects, and teachers.
-    /// </summary>
     private async Task LoadFilters()
     {
         if (_selectedSchool != null)
         {
             _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
             _subjects = await SubjectService.GetAllAsync();
-            _teachers = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], _selectedSchool.Id);
+            _teachers = await UserService.GetAllByRoleAndSchoolAsync(new[] { Roles.Teacher }, _selectedSchool.Id);
         }
     }
 
-    /// <summary>
-    /// Toggles the selected grade for multi-grade filtering.
-    /// </summary>
     private async Task ToggleGradeSelection(int gradeId)
     {
         if (_selectedGrades.Contains(gradeId))
+        {
             _selectedGrades.Remove(gradeId);
+        }
         else
+        {
             _selectedGrades.Add(gradeId);
+        }
 
         await LoadResults();
     }
 
-    /// <summary>
-    /// Handles subject changes and loads available grades for that subject.
-    /// </summary>
     private async Task OnSubjectChange(int? value)
     {
         _subjectId = value;
         if (value.HasValue)
         {
             var subject = await SubjectService.GetByIdAsync(value.Value);
-            if (subject != null) _availableGradesForSubject = subject.GradesApplicable;
+            if (subject != null)
+                _availableGradesForSubject = subject.GradesApplicable;
         }
         else
         {
@@ -332,12 +353,26 @@
         await LoadResults();
     }
 
-    /// <summary>
-    /// Handles teacher selection changes.
-    /// </summary>
     private async Task OnTeacherChange(Guid? value)
     {
         _teacherId = value;
+        await LoadResults();
+    }
+
+    private async Task OnDateChanged(ChangeEventArgs? e)
+    {
+        await LoadResults();
+    }
+
+    private async Task ClearFromDate()
+    {
+        _fromDate = null;
+        await LoadResults();
+    }
+
+    private async Task ClearToDate()
+    {
+        _toDate = null;
         await LoadResults();
     }
 
@@ -346,9 +381,6 @@
         _learnerSearchText = e?.Value?.ToString() ?? string.Empty;
     }
 
-    /// <summary>
-    /// Navigates to the edit page for the given result set.
-    /// </summary>
     private void EditResult(Guid resultSetId)
     {
         Navigation.NavigateTo($"results/manage/{resultSetId}");
@@ -359,17 +391,11 @@
         Navigation.NavigateTo($"results/{resultSetId}");
     }
 
-    /// <summary>
-    /// Navigates to the learner details page for the given learner.
-    /// </summary>
     private void ViewLearner(Guid learnerId)
     {
         Navigation.NavigateTo($"learners/{learnerId}");
     }
 
-    /// <summary>
-    /// Formats the grade value for display.
-    /// </summary>
     private string FormatGrade(int grade) =>
     grade switch
     {
@@ -379,24 +405,20 @@
         _ => $"Gr {grade}"
     };
 
-    private static string GetResultSetStatusColor(ResultSet set)
-    {
+    private static string GetResultSetStatusColor(ResultSet set) =>
+    set.Status == ResultSetStatus.Draft ? "secondary" :
+    set.AssessmentDate is null ? "warning" :
+    set.Status == ResultSetStatus.Submitted ? "success" : "secondary";
 
-        if (set.Status == ResultSetStatus.Draft)
-        {
-            return "secondary";
-        }
-        else if (set.AssessmentDate is null)
-        {
-            return "warning";
-        }
-        else if (set.Status == ResultSetStatus.Submitted)
-        {
-            return "success";
-        }
-        else
-        {
-            return "secondary";
-        }
+    private async Task OnFromDateChanged(DateTime? value)
+    {
+        _fromDate = value;
+        await LoadResults();
+    }
+
+    private async Task OnToDateChanged(DateTime? value)
+    {
+        _toDate = value;
+        await LoadResults();
     }
 }

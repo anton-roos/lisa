@@ -1,5 +1,6 @@
 @page "/learners/manage/{LearnerId:guid?}"
 
+@using Lisa.Enums
 @using Lisa.Models.Entities
 @using Lisa.Models.ViewModels
 @inject NavigationManager NavigationManager
@@ -51,6 +52,19 @@
                 <label>Email Address <span class="text-muted">(Optional)</span></label>
                 <InputText class="form-control" @bind-Value="_learnerModel.Email" />
             </div>
+
+             <div class="mb-3"></div>
+                <label>Gender</label>
+                @foreach (var gender in Enum.GetValues(typeof(Gender)).Cast<Gender>())
+                {
+                    <div>
+                        <input type="radio" id="gender-@gender" name="gender" value="@gender"
+                               @onchange="@(() => _learnerModel.Gender = gender)"
+                               checked="@(_learnerModel.Gender == gender)" />
+                        <label for="gender-@gender">@gender</label>
+                    </div>
+                }
+        
 
             <div class="mb-3">
                 <label for="Active">Active</label>
@@ -225,7 +239,7 @@
                     </div>
                 }
             </div>
-            
+
             <h4 class="mt-4">Parent Information</h4>
             <div class="row">
                 @foreach (var parent in _parents)
@@ -427,7 +441,8 @@
                 MedicalAilments = existingLearner.MedicalAilments,
                 MedicalInstructions = existingLearner.MedicalInstructions,
                 DietaryRequirements = existingLearner.DietaryRequirements,
-                MedicalTransport = existingLearner.MedicalTransport
+                MedicalTransport = existingLearner.MedicalTransport,
+                Gender = existingLearner.Gender
             };
 
             if (existingLearner.Parents != null)

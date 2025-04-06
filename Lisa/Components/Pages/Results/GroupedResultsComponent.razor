@@ -1,4 +1,5 @@
 @using Lisa.Models.Entities
+
 <div class="d-flex flex-column">
     @if (GroupedResults != null && GroupedResults.Any())
     {
@@ -14,16 +15,32 @@
                             continue;
                         }
                         <div class="me-1" type="button" @onclick="() => OnResultClick.InvokeAsync(set.Id)">
-                            <Pill Color="@GetResultSetStatusColor(set)">
-                                @if (set.AssessmentDate.HasValue)
-                                {
-                                    @set.AssessmentDate.Value.ToString("dd MMM")
-                                }
-                                else
-                                {
-                                    <div>No Date</div>
-                                }
-                            </Pill>
+                            <div class="result-pill">
+                                <Pill Color="@GetResultSetStatusColor(set)">
+                                    <div class="text-center">
+                                        <div>
+                                            @if (set.AssessmentDate.HasValue)
+                                            {
+                                                @set.AssessmentDate.Value.ToString("dd MMM")
+                                            }
+                                            else
+                                            {
+                                                <span>No Date</span>
+                                            }
+                                        </div>
+                                        <div class="assessment-type">
+                                            @if (set.AssessmentType == null || set.AssessmentType.Id == 0)
+                                            {
+                                                <span>Unknown</span>
+                                            }
+                                            else
+                                            {
+                                                <span>@set.AssessmentType.Name</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </Pill>
+                            </div>
                         </div>
                     }
                 </div>

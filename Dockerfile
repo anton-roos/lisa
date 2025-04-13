@@ -1,5 +1,5 @@
 # Use the SDK image for building the app
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
 
 # Set the working directory inside the container for the build stage
 WORKDIR /src
@@ -34,7 +34,7 @@ RUN dotnet publish -c Release -o /app/publish
 RUN ls -al /app/publish
 
 # Use the ASP.NET runtime image for the final stage
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS final
 
 # Set the working directory inside the container for the runtime stage
 WORKDIR /app

@@ -15,8 +15,6 @@ using Lisa.Events;
 using Hangfire.Dashboard;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -160,8 +158,6 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();
 builder.Services.AddControllers();
 
-builder.Services.AddHealthChecks();
-
 var app = builder.Build();
 
 try
@@ -236,8 +232,6 @@ catch (Exception ex)
 {
     Log.Fatal(ex, "Error publishing application started event.");
 }
-
-app.MapHealthChecks("/healthz");
 
 try
 {

@@ -12,12 +12,6 @@ services:
         condition: service_healthy
     networks:
       - lisa-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/healthz" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 5s
     volumes:
       - data-protection-keys:/root/.aspnet/DataProtection-Keys
 
@@ -35,12 +29,6 @@ services:
       - postgres-data:/var/lib/postgresql/data
     networks:
       - lisa-network
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "lisauser"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 10s
 
 volumes:
   postgres-data:

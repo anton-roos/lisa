@@ -19,6 +19,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS final
 WORKDIR /app
 EXPOSE 80
 
+RUN apt-get update && apt-get install -y curl
+
 COPY --from=publish /app/publish .
 
 ENTRYPOINT ["dotnet", "Lisa.dll"]

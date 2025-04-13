@@ -18,6 +18,8 @@ services:
       timeout: 10s
       retries: 5
       start_period: 5s
+    volumes:
+      - data-protection-keys:/root/.aspnet/DataProtection-Keys
 
   db:
     image: postgres:15
@@ -42,6 +44,7 @@ services:
 
 volumes:
   postgres-data:
+  data-protection-keys:
 
 networks:
   lisa-network:

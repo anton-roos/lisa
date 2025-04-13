@@ -159,8 +159,8 @@ builder.Services.AddScoped<AssessmentTypeService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();
 builder.Services.AddControllers();
-builder.Services.AddHealthChecks()
-    .AddCheck("self", () => HealthCheckResult.Healthy("The application is running"));
+
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
@@ -237,7 +237,7 @@ catch (Exception ex)
     Log.Fatal(ex, "Error publishing application started event.");
 }
 
-app.UseHealthChecks("/health", new HealthCheckOptions(){});
+app.MapHealthChecks("/healthz");
 
 try
 {

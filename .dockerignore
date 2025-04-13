@@ -1,0 +1,6 @@
+Lisa.Test/
+*.md
+.git/
+.gitignore
+Dockerfile
+docker-compose.yml

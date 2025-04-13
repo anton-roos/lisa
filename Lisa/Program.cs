@@ -157,7 +157,9 @@ builder.Services.AddScoped<AssessmentTypeService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();
 builder.Services.AddControllers();
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<LisaDbContext>()
+    .AddCheck("self", () => HealthCheckResult.Healthy("The application is running"));
 
 var app = builder.Build();
 
@@ -234,7 +236,10 @@ catch (Exception ex)
     Log.Fatal(ex, "Error publishing application started event.");
 }
 
-app.UseHealthChecks("/health"); 
+app.UseHealthChecks("/health", new HealthCheckOptions()
+{
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
 
 try
 {

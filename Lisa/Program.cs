@@ -15,6 +15,8 @@ using Lisa.Events;
 using Hangfire.Dashboard;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -158,7 +160,6 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<LisaDbContext>("Database")
     .AddCheck("self", () => HealthCheckResult.Healthy("The application is running"));
 
 var app = builder.Build();
@@ -168,11 +169,11 @@ try
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
     dbContext.Database.Migrate();
-    Log.Information("Database migrated successfully.");
+    Log.Information("Database migratued successfully.");
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "Database migration failed. Exiting...");
+    Log.Fatal(ex, "Database migration failued. Exiting...");
     return;
 }
 
@@ -236,10 +237,7 @@ catch (Exception ex)
     Log.Fatal(ex, "Error publishing application started event.");
 }
 
-app.UseHealthChecks("/health", new HealthCheckOptions()
-{
-    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-});
+app.UseHealthChecks("/health", new HealthCheckOptions(){});
 
 try
 {

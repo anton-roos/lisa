@@ -25,6 +25,7 @@ RUN dotnet build -c Release -o /app/build
 # Stage 2: Publish
 # =====================================
 FROM build AS publish
+
 RUN dotnet publish -c Release -o /app/publish
 
 # =====================================
@@ -35,11 +36,11 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS final
 WORKDIR /app
 EXPOSE 80
 
-# (Optional) Set environment for production
-# ENV ASPNETCORE_ENVIRONMENT=Production
+# Set environment for production (recommended)
+ENV ASPNETCORE_ENVIRONMENT=Production
 
 # Copy published app
 COPY --from=publish /app/publish .
 
-# Entry point
+# Define the entry point
 ENTRYPOINT ["dotnet", "Lisa.dll"]

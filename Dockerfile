@@ -1,46 +1,24 @@
-# =====================================
-# Stage 1: Build
-# =====================================
 FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
 
 WORKDIR /src
-
-# Copy solution and project files
-COPY Lisa.sln ./
 COPY Lisa/*.csproj ./Lisa/
-COPY Lisa.Test/*.csproj ./Lisa.Test/
 
-# Restore dependencies
+WORKDIR /src/Lisa
 RUN dotnet restore
 
-# Copy the rest of the source code
-COPY Lisa/ ./Lisa/
-COPY Lisa.Test/ ./Lisa.Test/
+COPY Lisa/. ./
 
-# Build the application
-WORKDIR /src/Lisa
 RUN dotnet build -c Release -o /app/build
 
-# =====================================
-# Stage 2: Publish
-# =====================================
 FROM build AS publish
 
 RUN dotnet publish -c Release -o /app/publish
 
-# =====================================
-# Stage 3: Final Runtime
-# =====================================
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS final
 
 WORKDIR /app
 EXPOSE 80
 
-# Set environment for production (recommended)
-ENV ASPNETCORE_ENVIRONMENT=Production
-
-# Copy published app
 COPY --from=publish /app/publish .
 
-# Define the entry point
 ENTRYPOINT ["dotnet", "Lisa.dll"]

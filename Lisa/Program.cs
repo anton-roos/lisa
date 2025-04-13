@@ -109,7 +109,7 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
 builder.Services.AddHangfire(config =>
     config.UsePostgreSqlStorage(options =>
     {
-        options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("Lisa"));
+        options.UseNpgsqlConnection("Host=db;Port=5432;Database=lisadb;Username=lisauser;Password=strongpassword");
     })
     .WithJobExpirationTimeout(TimeSpan.FromDays(7)));
 

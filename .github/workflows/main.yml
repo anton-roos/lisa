@@ -18,18 +18,10 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             set -e
-
             cd /root/lisa || exit
             git pull origin main
-
-            # Build the Docker image locally on the server.
             docker build -t anton-roos/lisa:latest .
-
-            # Bring down the existing containers.
             docker-compose down
-
             docker-compose up -d --no-deps
-
-            # Remove unused images and containers.
             docker image prune -af
             docker container prune -f

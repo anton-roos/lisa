@@ -21,8 +21,10 @@ EXPOSE 80
 
 RUN apt-get update && apt-get install -y curl
 
-COPY --from=publish /app/publish .
+# Ensure the publish directory exists
+COPY --from=publish /app/publish /app/publish
 
-RUN ls /app/publish
+# List the files to verify
+RUN ls -al /app/publish
 
 ENTRYPOINT ["dotnet", "Lisa.dll"]

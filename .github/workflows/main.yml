@@ -35,8 +35,7 @@ jobs:
       - name: Push Docker image to GHCR
         run: |
           docker push ghcr.io/${{ github.repository }}:latest
-
-      # SSH into the server and pull the Docker image (optional)
+      
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v0.1.6
         with:
@@ -44,6 +43,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            # Navigate to the folder containing docker-compose.yml
             # Pull the image from GHCR
             docker pull ghcr.io/${{ github.repository }}:latest
             # Bring the container down, if it's running
@@ -53,3 +53,4 @@ jobs:
             # Clean up unused images and containers
             docker image prune -af
             docker container prune -f
+

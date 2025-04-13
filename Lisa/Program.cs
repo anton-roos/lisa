@@ -158,7 +158,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<LisaDbContext>()
+    .AddDbContextCheck<LisaDbContext>("Database")
     .AddCheck("self", () => HealthCheckResult.Healthy("The application is running"));
 
 var app = builder.Build();

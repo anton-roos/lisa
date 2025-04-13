@@ -52,4 +52,4 @@ COPY --from=publish /app/publish /app/publish
 RUN ls -al /app/publish
 
 # Set the entry point to run the application
-ENTRYPOINT ["dotnet", "Lisa.dll"]
+ENTRYPOINT ["dotnet", "/app/publish/Lisa.dll"]

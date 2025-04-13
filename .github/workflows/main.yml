@@ -23,10 +23,11 @@ jobs:
         username: ${{ secrets.GHCR_USERNAME }}
         password: ${{ secrets.GHCR_PASSWORD }}
 
-    - name: Build and Push Docker Image
+    - name: Build and Push and Test Docker Image
       run: |
         docker build -t ghcr.io/${{ github.repository_owner }}/lisa:latest .
         docker push ghcr.io/${{ github.repository_owner }}/lisa:latest
+        docker pull ghcr.io/${{ github.repository_owner }}/lisa:latest
 
     - name: SSH into server and deploy
       uses: appleboy/ssh-action@v0.1.6
@@ -41,7 +42,7 @@ jobs:
           
           echo "${{ secrets.GHCR_PASSWORD }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
           
-          docker-compose pull app
+          docker-compose pull --no-cache app
           docker-compose up -d --no-deps app
 
           docker image prune -af

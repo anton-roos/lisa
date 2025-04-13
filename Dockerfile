@@ -23,4 +23,6 @@ RUN apt-get update && apt-get install -y curl
 
 COPY --from=publish /app/publish .
 
+RUN ls /app/publish
+
 ENTRYPOINT ["dotnet", "Lisa.dll"]

@@ -42,9 +42,6 @@ WORKDIR /app
 # Expose port 80 for the app
 EXPOSE 80
 
-# Install curl (optional, based on your needs)
-RUN apt-get update && apt-get install -y curl
-
 # Copy the publish directory from the build stage
 COPY --from=publish /app/publish /app/publish
 

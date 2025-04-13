@@ -1,4 +1,4 @@
-name: Deploy to IIS
+name: Deploy to Server
 
 on:
   push:
@@ -7,51 +7,23 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted  # Use self-hosted runner
+    runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-    - name: Restore NuGet Packages
-      run: dotnet restore
-
-    - name: Build Application
-      run: dotnet build --configuration Release
-
-    - name: IIS Application Pool Stop
-      uses: 1k-off/iis-apppool-action@1.0.0
+    - name: Deploy over SSH
+      uses: appleboy/ssh-action@v0.1.6
       with:
-        action: stop
-        appPoolName: lis
-        siteName: lis
-
-    - name: Publish Application
-      run: dotnet publish --configuration Release --output "C:\actions-runner\temp"
-
-    - name: Deploy to IIS
-      run: |
-        try {
-          # Deploy the application to IIS
-          Copy-Item -Path "C:\actions-runner\temp\*" -Destination "C:\Sites\lis" -Recurse -Force -Exclude "appsettings.json", "web.config"
-        } catch {
-          # Handle the error (e.g., logging, sending notifications, etc.)
-          Write-Host "Error during deployment: $_"
-          throw $_  # Rethrow the error to ensure the step fails
-        } finally {
-          # Clean up the temp folder regardless of success or failure
-          Write-Host "Cleaning up the temp folder..."
-          Remove-Item -Path "C:\actions-runner\temp\*" -Recurse -Force
-        }
-
-    - name: Clean Temp Folder
-      run: |
-        # This is just an additional safety measure in case of failures
-        Remove-Item -Path "C:\actions-runner\temp\*" -Recurse -Force
-
-    - name: IIS Application Pool Start
-      uses: 1k-off/iis-apppool-action@1.0.0
-      with:
-        action: start
-        appPoolName: lis 
-        siteName: lis
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        script: |
+          cd /root/Lisa
+          git pull origin main
+          docker-compose down
+          docker-compose build
+          docker-compose up -d
+          docker image prune -af
+          docker container prune -f

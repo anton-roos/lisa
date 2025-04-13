@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:15
+    container_name: lisa-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: lisauser
+      POSTGRES_PASSWORD: strongpassword
+      POSTGRES_DB: lisadb
+    ports:
+      - "5432:5432"
+    volumes:
+      - lisa-db-data:/var/lib/postgresql/data
+    networks:
+      - lisa-network
+
+  app:
+    image: lisa-app:latest
+    container_name: lisa-app
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=lisadb;Username=lisauser;Password=strongpassword
+    depends_on:
+      - db
+    networks:
+      - lisa-network
+
+volumes:
+  lisa-db-data:
+
+networks:
+  lisa-network:
+    driver: bridge

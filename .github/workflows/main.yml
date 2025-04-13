@@ -28,7 +28,7 @@ jobs:
           git pull origin main || exit
 
           # Build the Docker image on the server (no registry required)
-          docker build -t anton-roos/lisa:latest ./Lisa || exit
+          docker build -t anton-roos/lisa:latest . || exit
 
           docker-compose down || exit
 

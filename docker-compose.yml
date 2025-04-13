@@ -34,7 +34,7 @@ services:
     networks:
       - lisa-network
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
+      test: ["CMD", "pg_isready", "-U", "lisauser"]
       interval: 30s
       timeout: 10s
       retries: 5

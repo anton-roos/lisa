@@ -48,7 +48,7 @@ builder.Services.AddRazorComponents(options =>
     .AddInteractiveServerComponents();
 
 builder.Services.AddDbContextFactory<LisaDbContext>(options =>
-    options.UseNpgsql("Host=db;Port=5432;Database=lisadb;Username=lisauser;Password=strongpassword");
+    options.UseNpgsql("Host=db;Port=5432;Database=lisadb;Username=lisauser;Password=strongpassword"));
 
 builder.Services.AddAuthentication(options =>
     {

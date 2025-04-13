@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/anton-roos/lisa:latest
+    image: anton-roos/lisa:latest
     container_name: lisa-app
     restart: always
     ports:

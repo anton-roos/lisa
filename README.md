@@ -6,6 +6,7 @@
  - School Management
  - Administrator
  - Teacher
+ - S
 
 ## User Type Priveleges
 ### Super Admin

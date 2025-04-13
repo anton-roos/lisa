@@ -18,9 +18,9 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             set -e
-            cd /root/lisa || exit
-            git pull origin main
-            docker build -t anton-roos/lisa:latest .
+            cd /root/lisa
+            git pull
+            docker build -t lisa:latest .
             docker-compose down
             docker-compose up -d --no-deps
             docker image prune -af

@@ -1,6 +1,6 @@
 services:
   app:
-    image: anton-roos/lisa:latest
+    image: lisa:latest
     container_name: lisa-app
     restart: always
     ports:

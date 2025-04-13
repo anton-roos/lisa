@@ -7,6 +7,7 @@ namespace Lisa.Data;
 public class DatabaseSeed
 {
     private const string DefaultAdminEmail = "admin@dcegroup.co.za";
+    private const string DefaultAdminPassword = "Hexagoon@1995!";
 
     public static async Task Seed(IServiceProvider serviceProvider)
     {
@@ -82,7 +83,7 @@ public class DatabaseSeed
         var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
         var config = serviceProvider.GetRequiredService<IConfiguration>();
 
-        var configuredPassword = config["AdminPassword"] ?? string.Empty;
+        var configuredPassword = DefaultAdminPassword;
 
         var adminUser = await userManager.FindByEmailAsync(DefaultAdminEmail);
 

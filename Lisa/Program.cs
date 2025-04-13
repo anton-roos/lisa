@@ -157,6 +157,7 @@ builder.Services.AddScoped<AssessmentTypeService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();
 builder.Services.AddControllers();
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 

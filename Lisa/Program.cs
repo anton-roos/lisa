@@ -233,6 +233,8 @@ catch (Exception ex)
     Log.Fatal(ex, "Error publishing application started event.");
 }
 
+app.UseHealthChecks("/health"); 
+
 try
 {
     app.Run();

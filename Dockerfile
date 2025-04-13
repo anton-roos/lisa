@@ -10,6 +10,9 @@ COPY Lisa/*.csproj ./Lisa/
 # Set the correct working directory for the Lisa project
 WORKDIR /src/Lisa
 
+# Verify the SDK is installed and print the .NET SDK version
+RUN dotnet --version
+
 # Run dotnet restore to restore dependencies
 RUN dotnet restore
 
@@ -19,9 +22,16 @@ COPY Lisa/. ./
 # Build the application in release mode
 RUN dotnet build -c Release -o /app/build
 
+# Check if Lisa.dll exists in the build directory
+RUN ls -al /app/build
+
 # Publish the application
 FROM build AS publish
+
 RUN dotnet publish -c Release -o /app/publish
+
+# Check if Lisa.dll exists in the publish directory
+RUN ls -al /app/publish
 
 # Use the ASP.NET runtime image for the final stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS final

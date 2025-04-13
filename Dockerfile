@@ -10,9 +10,6 @@ COPY Lisa/*.csproj ./Lisa/
 # Set the correct working directory for the Lisa project
 WORKDIR /src/Lisa
 
-# Verify the SDK is installed and print the .NET SDK version
-RUN dotnet --version
-
 # Run dotnet restore to restore dependencies
 RUN dotnet restore
 
@@ -30,23 +27,20 @@ FROM build AS publish
 
 RUN dotnet publish -c Release -o /app/publish
 
-# Check if Lisa.dll exists in the publish directory
-RUN ls -al /app/publish
 
 # Use the ASP.NET runtime image for the final stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS final
 
-# Set the working directory inside the container for the runtime stage
-WORKDIR /app
+# Set the working directory to the folder where your app is published
+WORKDIR /app/publish
 
-# Expose port 80 for the app
 EXPOSE 80
 
-# Copy the publish directory from the build stage
-COPY --from=publish /app/publish /app/publish
+# Copy the published output directly into the current working directory
+COPY --from=publish /app/publish .
 
 # List the files to verify the publish directory contents (for debugging)
-RUN ls -al /app/publish
+RUN ls -al
 
 # Set the entry point to run the application
-ENTRYPOINT ["dotnet", "/app/publish/Lisa.dll"]
+ENTRYPOINT ["dotnet", "Lisa.dll"]

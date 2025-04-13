@@ -36,16 +36,13 @@ jobs:
         key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
           set -e
-
           cd /root/lisa
-
           git pull origin main
-
+          
           echo "${{ secrets.GHCR_PASSWORD }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
-
-          docker-compose pull
-          docker-compose down
-          docker-compose up -d
+          
+          docker-compose pull app
+          docker-compose up -d --no-deps app
 
           docker image prune -af
           docker container prune -f

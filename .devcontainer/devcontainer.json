@@ -1,0 +1,37 @@
+{
+  "name": "Lisa DevContainer",
+  "dockerFile": "Dockerfile",
+  "context": "..",
+  "portsAttributes": {
+    "80": {
+      "label": "Lisa Web App",
+      "onAutoForward": "notify"
+    }
+  },
+  "forwardPorts": [
+    8080,
+    5432
+  ],
+  "runArgs": [
+    "--network=lisa_lisa-network"
+  ],
+  "initializeCommand": "docker compose up -d db",
+  "postCreateCommand": "dotnet tool install --global dotnet-ef && dotnet restore",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "editor.formatOnSave": true,
+        "editor.tabSize": 4
+      },
+      "extensions": [
+        "ms-dotnettools.csharp",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  },
+  "remoteEnv": {
+    "ASPNETCORE_ENVIRONMENT": "Development"
+  },
+  "remoteUser": "root"
+}

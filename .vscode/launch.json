@@ -2,10 +2,22 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Lisa",
-      "type": "dotnet",
+      "name": "Launch Lisa (DevContainer)",
+      "type": "coreclr",
       "request": "launch",
-      "projectPath": "${workspaceFolder}/Lisa/Lisa.csproj"
+      "preLaunchTask": "Run Lisa",
+      "program": "${workspaceFolder}/Lisa/bin/Debug/net9.0/Lisa.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/Lisa",
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+        "uriFormat": "http://localhost:8080",
+        "action": "openExternally"
+      },
+      "sourceFileMap": {
+        "/workspace": "${workspaceFolder}"
+      }
     }
   ]
 }

@@ -1,8 +1,13 @@
+version: "3.8"
+
 services:
   app:
     image: lisa:latest
     container_name: lisa-app
     restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8080:80"
     environment:
@@ -30,7 +35,7 @@ services:
     networks:
       - lisa-network
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "lisauser"]
+      test: [ "CMD", "pg_isready", "-U", "lisauser" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -39,6 +44,7 @@ services:
 volumes:
   postgres-data:
   data-protection-keys:
+
 
 networks:
   lisa-network:

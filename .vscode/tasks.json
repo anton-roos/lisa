@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Lisa",
+      "type": "shell",
+      "command": "dotnet build Lisa/Lisa.csproj",
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Run Lisa",
+      "type": "shell",
+      "command": "dotnet watch run --project Lisa/Lisa.csproj --no-launch-profile --urls http://0.0.0.0:80",
+      "dependsOn": "Build Lisa",
+      "problemMatcher": [],
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
+    }
+  ]
+}

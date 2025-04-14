@@ -159,18 +159,36 @@ builder.Services.AddBlazorBootstrap();
 builder.Services.AddControllers();
 
 var app = builder.Build();
+var retryCount = 0;
+var maxRetries = 10;
+var delay = TimeSpan.FromSeconds(3);
 
-try
+while (true)
 {
-    using var scope = app.Services.CreateScope();
-    var dbContext = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
-    dbContext.Database.Migrate();
-    Log.Information("Database migratued successfully.");
-}
-catch (Exception ex)
-{
-    Log.Fatal(ex, "Database migration failued. Exiting...");
-    return;
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
+
+        app.Logger.LogInformation("Attempting database migration...");
+        db.Database.Migrate();
+        app.Logger.LogInformation("Database migration successful!");
+
+        break; // Success, break out of retry loop
+    }
+    catch (Exception ex)
+    {
+        retryCount++;
+        app.Logger.LogWarning(ex, "Database not ready yet. Retrying ({RetryCount}/{MaxRetries}) in {DelaySeconds}s...", retryCount, maxRetries, delay.TotalSeconds);
+
+        if (retryCount >= maxRetries)
+        {
+            app.Logger.LogCritical(ex, "Database migration failed after {MaxRetries} retries. Exiting application...", maxRetries);
+            throw;
+        }
+
+        await Task.Delay(delay);
+    }
 }
 
 if (!app.Environment.IsDevelopment())

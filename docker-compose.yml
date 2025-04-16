@@ -21,7 +21,7 @@ services:
       - data-protection-keys:/root/.aspnet/DataProtection-Keys
 
   db:
-    image: postgres:15
+    image: postgres:17
     container_name: lisa-postgres
     restart: always
     ports:

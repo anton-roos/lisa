@@ -18,23 +18,15 @@
                             <div class="result-pill">
                                 <Pill Color="@GetResultSetStatusColor(set)">
                                     <div class="text-center">
-                                        <div class="d-flex">
-                                            <div>
-                                                @if (set.AssessmentDate.HasValue)
-                                                {
-                                                    @set.AssessmentDate.Value.ToString("dd MMM")
-                                                }
-                                                else
-                                                {
-                                                    <span>No Date</span>
-                                                }
-                                            </div>
-                                            <div class="assessment-type">
-                                                @if (set.SchoolGrade is not null)
-                                                {
-                                                    <span>&nbsp;@set.SchoolGrade.SystemGrade.Name</span>
-                                                }
-                                            </div>
+                                        <div>
+                                            @if (set.AssessmentDate.HasValue)
+                                            {
+                                                @set.AssessmentDate.Value.ToString("dd MMM")
+                                            }
+                                            else
+                                            {
+                                                <span>No Date</span>
+                                            }
                                         </div>
                                         <div class="assessment-type">
                                             @if (set.AssessmentType == null || set.AssessmentType.Id == 0)
@@ -44,6 +36,12 @@
                                             else
                                             {
                                                 <span>@set.AssessmentType.Name</span>
+                                            }
+                                        </div>
+                                        <div class="assessment-type">
+                                            @if (set.SchoolGrade is not null)
+                                            {
+                                                <span>&nbsp;@set.SchoolGrade.SystemGrade.Name</span>
                                             }
                                         </div>
                                     </div>

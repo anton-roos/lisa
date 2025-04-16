@@ -24,6 +24,21 @@
         else
         {
             <h3>Send Communication</h3>
+
+            <div class="row mb-3">
+
+                <div class="col-md-4">
+                    <label for="fromDate" class="form-label">From Date</label>
+                    <input id="fromDate" type="date" class="form-control" @bind="_fromDate"
+                        @oninput="async (e) => await OnDateRangeChange()" />
+                </div>
+
+                <div class="col-md-4">
+                    <label for="toDate" class="form-label">To Date</label>
+                    <input id="toDate" type="date" class="form-control" @bind="_toDate"
+                        @oninput="async (e) => await OnDateRangeChange()" />
+                </div>
+            </div>
             <RecipientGroupSelector SelectedGroup="@_recipientGroup" OnGroupChanged="OnOptionChanged" />
 
             @switch (_recipientGroup)
@@ -261,6 +276,8 @@
     private bool _isLoading { get; set; } = false;
     public IEnumerable<Learner> Learners { get; set; } = Enumerable.Empty<Learner>();
     public Learner? SelectedLearner { get; set; }
+    private DateTime? _fromDate = null;
+    private DateTime? _toDate = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -373,5 +390,10 @@
     private void NavigateToCampaign(Guid campaignId)
     {
         NavigationManager.NavigateTo($"/email-campaign/{campaignId}");
+    }
+
+    private async Task OnDateRangeChange()
+    {
+        await InvokeAsync(StateHasChanged);
     }
 }

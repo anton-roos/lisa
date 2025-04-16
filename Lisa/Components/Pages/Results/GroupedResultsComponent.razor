@@ -18,15 +18,23 @@
                             <div class="result-pill">
                                 <Pill Color="@GetResultSetStatusColor(set)">
                                     <div class="text-center">
-                                        <div>
-                                            @if (set.AssessmentDate.HasValue)
-                                            {
-                                                @set.AssessmentDate.Value.ToString("dd MMM")
-                                            }
-                                            else
-                                            {
-                                                <span>No Date</span>
-                                            }
+                                        <div class="d-flex">
+                                            <div>
+                                                @if (set.AssessmentDate.HasValue)
+                                                {
+                                                    @set.AssessmentDate.Value.ToString("dd MMM")
+                                                }
+                                                else
+                                                {
+                                                    <span>No Date</span>
+                                                }
+                                            </div>
+                                            <div class="assessment-type">
+                                                @if (set.SchoolGrade is not null)
+                                                {
+                                                    <span>&nbsp;@set.SchoolGrade.SystemGrade.Name</span>
+                                                }
+                                            </div>
                                         </div>
                                         <div class="assessment-type">
                                             @if (set.AssessmentType == null || set.AssessmentType.Id == 0)
@@ -39,6 +47,7 @@
                                             }
                                         </div>
                                     </div>
+
                                 </Pill>
                             </div>
                         </div>

@@ -129,4 +129,53 @@ public class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextF
 
         return list;
     }
+
+    public async Task<List<ProgressFeedbackListItem>> GetProgressFeedbackListAsync
+    (
+        Guid schoolId, Guid? gradeId, int? subjectId, DateTime? fromDate, DateTime? toDate
+    )
+    {
+        using var context = await _dbContextFactory.CreateDbContextAsync();
+
+        // Start with the base query for learners in the selected school that have results.
+        var query = context.Learners
+            .AsNoTracking()
+            .Where(l => l.Results!.Any() && l.SchoolId == schoolId);
+
+        // Filter by grade if provided.
+        if (gradeId is not null)
+        {
+            query = query.Where(l => l.RegisterClass!.SchoolGradeId == gradeId);
+        }
+
+        // Filter by subject if provided.
+        if (subjectId is not null)
+        {
+            query = query.Where(l => l.LearnerSubjects!.Any(s => s.SubjectId == subjectId));
+        }
+
+        // Filter by date range if provided.
+        if (fromDate is not null)
+        {
+            query = query.Where(l => l.Results!.Any(r => r.UpdatedAt >= fromDate));
+        }
+
+        if (toDate is not null)
+        {
+            query = query.Where(l => l.Results!.Any(r => r.UpdatedAt <= toDate));
+        }
+
+        // Order the results by surname, then select the desired fields.
+        var list = await query
+            .OrderBy(l => l.Surname)
+            .Select(l => new ProgressFeedbackListItem
+            {
+                LearnerId = l.Id,
+                Surname = l.Surname!,
+                Name = l.Name!
+            })
+            .ToListAsync();
+
+        return list;
+    }
 }

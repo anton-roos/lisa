@@ -11,15 +11,27 @@
 <PageTitle>Progress Feedback List</PageTitle>
 <h3>Progress Feedback List</h3>
 
-<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
+<AuthorizeView
+    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
     <Authorized>
         @if (_selectedSchool != null)
         {
             <div class="row mb-3">
                 <div class="col-md-4">
+                    <label for="fromDate" class="form-label">From Date</label>
+                    <input id="fromDate" type="date" class="form-control" @bind="_fromDate"
+                        @oninput="async (e) => await OnDateRangeChange()" />
+                </div>
+
+                <div class="col-md-4">
+                    <label for="toDate" class="form-label">To Date</label>
+                    <input id="toDate" type="date" class="form-control" @bind="_toDate"
+                        @oninput="async (e) => await OnDateRangeChange()" />
+                </div>
+                <div class="col-md-4">
                     <label for="gradeDropdown" class="form-label">Grade</label>
-                    <InputSelect id="gradeDropdown" class="form-select" TValue="Guid?" Value="_selectedGradeId"
-                                 ValueChanged="OnGradeChange" ValueExpression="() => _selectedGradeId">
+                    <InputSelect id="gradeDropdown" class="form-select" TValue="Guid ?" Value="@_selectedGradeId"
+                        ValueChanged="@OnGradeChange" ValueExpression="@(() => _selectedGradeId)">
                         <option value="">-- Select Grade --</option>
                         @foreach (var grade in _grades)
                         {
@@ -30,8 +42,8 @@
 
                 <div class="col-md-4">
                     <label for="subjectDropdown" class="form-label">Subject</label>
-                    <InputSelect id="subjectDropdown" class="form-select" TValue="int?" Value="_selectedSubjectId"
-                                 ValueChanged="OnSubjectChange" ValueExpression="() => _selectedSubjectId">
+                    <InputSelect id="subjectDropdown" class="form-select" TValue="int?" Value="@_selectedSubjectId"
+                        ValueChanged="@OnSubjectChange" ValueExpression="@(() => _selectedSubjectId)">
                         <option value="">-- Select Subject --</option>
                         @foreach (var subject in _subjects)
                         {
@@ -43,7 +55,7 @@
                 <div class="col-md-4">
                     <label for="searchStudent" class="form-label">Search Learner</label>
                     <input id="searchStudent" type="text" class="form-control" placeholder="Enter learner name..."
-                           @bind="_searchTerm" @oninput="FilterChanged" />
+                        @bind="_searchTerm" @oninput="FilterChanged" />
                 </div>
             </div>
 
@@ -71,7 +83,7 @@
                                 <td>@feedback.Surname, @feedback.Name</td>
                                 <td>
                                     <button type="button" class="btn btn-primary btn-sm"
-                                            @onclick="() => NavigateToDetails(feedback.LearnerId)">
+                                        @onclick="() => NavigateToDetails(feedback.LearnerId)">
                                         <i class="bi bi-eye"></i>
                                     </button>
                                 </td>
@@ -103,6 +115,8 @@
     private string _searchTerm = "";
     private List<Subject> _subjects = new();
     private List<SchoolGrade> _grades = new();
+    private DateTime? _fromDate = null;
+    private DateTime? _toDate = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -127,6 +141,7 @@
                 await LoadProgressFeedbackListFromService();
             }
         }
+
         await base.HandleEventAsync(eventName, payload);
     }
 
@@ -138,7 +153,18 @@
         _isLoading = true;
         await InvokeAsync(StateHasChanged);
 
-        _allFeedbackList = await ProgressFeedbackService.GetProgressFeedbackListAsync(_selectedSchool.Id, _selectedGradeId, _selectedSubjectId);
+        // Ensure dates are converted to UTC
+        var fromDateUtc = _fromDate?.ToUniversalTime();
+        var toDateUtc = _toDate?.ToUniversalTime();
+
+        _allFeedbackList = await ProgressFeedbackService
+        .GetProgressFeedbackListAsync(
+        _selectedSchool.Id,
+        _selectedGradeId,
+        _selectedSubjectId,
+        fromDateUtc,
+        toDateUtc);
+
         FilterFeedbackInMemory();
 
         _isLoading = false;
@@ -147,16 +173,18 @@
 
     private void FilterFeedbackInMemory()
     {
-        IEnumerable<ProgressFeedbackListItem> filtered = _allFeedbackList;
+        var filtered = _allFeedbackList.AsEnumerable();
 
         if (!string.IsNullOrWhiteSpace(_searchTerm))
         {
             filtered = filtered.Where(item =>
-                item.Name.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                item.Surname.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase));
+            item.Name.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+            item.Surname.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase));
         }
 
-        _progressFeedbackList = filtered.OrderBy(item => item.Surname).ToList();
+        _progressFeedbackList = filtered
+        .OrderBy(item => item.Surname)
+        .ToList();
     }
 
     private async Task FilterChanged(ChangeEventArgs e)
@@ -176,6 +204,12 @@
     private async Task OnSubjectChange(int? value)
     {
         _selectedSubjectId = value;
+        await LoadProgressFeedbackListFromService();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnDateRangeChange()
+    {
         await LoadProgressFeedbackListFromService();
         await InvokeAsync(StateHasChanged);
     }

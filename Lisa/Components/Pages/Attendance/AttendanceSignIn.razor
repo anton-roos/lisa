@@ -56,25 +56,28 @@
                                     {
                                         <div class="mb-4">
                                             <h4>Gr @registerClass</h4>
-                                            <div class="d-flex flex-wrap">
+                                            <div class="d-flex flex-column">
                                                 @foreach (var learner in _registerClassLearners[registerClass]
                                                     .Where(l => string.IsNullOrEmpty(_searchText) || 
                                                         $"{l.Name} {l.Surname}".ToLower().Contains(_searchText.ToLower())))
                                                 {
-                                                    <div class="m-1" @onclick="() => ToggleAttendance(learner)">
-                                                        @{
-                                                            string pillColor = GetPillColor(learner);
-                                                            string pillClass = $"pill {pillColor}";
-                                                        }
-                                                        <div class="@pillClass">
-                                                            @if (pillColor == "absent")
-                                                            {
-                                                                @learner.Surname
+                                                    <div class="d-flex align-items-center mb-2">
+                                                        <div class="me-3" style="min-width: 150px;">@learner.Name @learner.Surname</div>
+                                                        <div @onclick="() => ToggleAttendance(learner)">
+                                                            @{
+                                                                string pillColor = GetPillColor(learner);
+                                                                string pillClass = $"pill {pillColor}";
                                                             }
-                                                            else
-                                                            {
-                                                                @_attendanceData[learner.Id].SignInTime.ToString("HH:mm")
-                                                            }
+                                                            <div class="@pillClass">
+                                                                @if (pillColor == "absent")
+                                                                {
+                                                                    <span>Absent</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    @_attendanceData[learner.Id].SignInTime.ToString("HH:mm")
+                                                                }
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 }

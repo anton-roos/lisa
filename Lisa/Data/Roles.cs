@@ -7,4 +7,5 @@ static class Roles
     public const string Administrator = "Administrator";
     public const string SchoolManagement = "School Management";
     public const string Teacher = "Teacher";
+    public const string Attendance = "Attendance";
 }

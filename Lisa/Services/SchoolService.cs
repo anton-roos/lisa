@@ -68,6 +68,7 @@ public class SchoolService(
     /// <summary>
     /// Retrieves the currently selected school.
     /// For non-system administrator users, a valid selected school is expected.
+    /// Uses guard clauses to ensure that the user is authenticated and has a valid school ID.
     /// </summary>
     /// <returns>The selected <see cref="School"/>, or null for system administrators.</returns>
     public async Task<School?> GetSelectedSchoolAsync()

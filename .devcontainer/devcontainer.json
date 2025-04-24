@@ -1,22 +1,19 @@
 {
   "name": "Lisa DevContainer",
-  "dockerFile": "Dockerfile",
-  "context": "..",
+  "dockerComposeFile": [
+    "../docker-compose.yml",
+    "../docker-compose.override.yml"
+  ],
+  "service": "app",
+  "workspaceFolder": "/src",
+  "forwardPorts": [8080, 5432],
   "portsAttributes": {
-    "80": {
+    "8080": {
       "label": "Lisa Web App",
       "onAutoForward": "notify"
     }
   },
-  "forwardPorts": [
-    8080,
-    5432
-  ],
-  "runArgs": [
-    "--network=lisa_lisa-network"
-  ],
-  "initializeCommand": "docker compose up -d db",
-  "postCreateCommand": "dotnet tool install --global dotnet-ef && dotnet restore",
+  "postCreateCommand": "dotnet restore && dotnet tool install --global dotnet-ef || echo 'dotnet-ef already installed'",
   "customizations": {
     "vscode": {
       "settings": {

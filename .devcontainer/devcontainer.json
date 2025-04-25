@@ -13,7 +13,7 @@
       "onAutoForward": "notify"
     }
   },
-  "postCreateCommand": "dotnet restore && dotnet tool install --global dotnet-ef || echo 'dotnet-ef already installed'",
+  "postCreateCommand": "dotnet restore && dotnet tool install --global dotnet-ef || echo \"dotnet-ef already installed\"",
   "customizations": {
     "vscode": {
       "settings": {

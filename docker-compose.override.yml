@@ -1,0 +1,10 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/src:cached
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    command: sleep infinity

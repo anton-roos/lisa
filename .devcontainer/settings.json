@@ -1,7 +1,0 @@
-{
-  "remote.containers.defaultExtensions": [
-    "ms-dotnettools.csharp",
-    "ms-azuretools.vscode-docker"
-  ],
-  "remote.containers.autoReload": true
-}

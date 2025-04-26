@@ -170,3 +170,24 @@
         overflow-y: auto;
     }
 }
+
+.attendance-icon::before {
+    content: "\f784";
+    /* Bootstrap Icons code for calendar-check */
+    font-family: "bootstrap-icons";
+}
+
+.leave-early-icon::before {
+    content: "\f62c";
+    /* Bootstrap Icons code for "door-open" */
+    font-family: "bootstrap-icons";
+}
+
+.bi {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25em;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+}

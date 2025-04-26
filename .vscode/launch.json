@@ -5,18 +5,18 @@
       "name": "Launch Lisa (DevContainer)",
       "type": "coreclr",
       "request": "launch",
-      "preLaunchTask": "Run Lisa",
+      "preLaunchTask": "Build Lisa",
       "program": "${workspaceFolder}/Lisa/bin/Debug/net9.0/Lisa.dll",
       "args": [],
       "cwd": "${workspaceFolder}/Lisa",
       "stopAtEntry": false,
       "serverReadyAction": {
         "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
-        "uriFormat": "http://localhost:8080",
+        "uriFormat": "%s",
         "action": "openExternally"
       },
       "sourceFileMap": {
-        "/workspace": "${workspaceFolder}"
+        "/src": "${workspaceFolder}"
       }
     }
   ]

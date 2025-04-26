@@ -138,6 +138,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ResultService>();
 builder.Services.AddScoped<UiEventService>();
 builder.Services.AddScoped<SchoolService>();
+builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<ProtectedSessionStorage>();
 builder.Services.AddScoped<BugReportService>();
 builder.Services.AddScoped<VersionService>();
@@ -153,6 +154,7 @@ builder.Services.AddScoped<EmailRendererService>();
 builder.Services.AddScoped<ProgressFeedbackService>();
 builder.Services.AddScoped<RazorLightViewToStringRenderer>();
 builder.Services.AddScoped<AssessmentTypeService>();
+builder.Services.AddScoped<AuditService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();

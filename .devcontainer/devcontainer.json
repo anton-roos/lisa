@@ -6,7 +6,10 @@
   ],
   "service": "app",
   "workspaceFolder": "/src",
-  "forwardPorts": [8080, 5432],
+  "forwardPorts": [
+    8080,
+    5432
+  ],
   "portsAttributes": {
     "8080": {
       "label": "Lisa Web App",
@@ -19,10 +22,20 @@
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash",
         "editor.formatOnSave": true,
-        "editor.tabSize": 4
+        "editor.tabSize": 4,
+        "omnisharp.useModernNet": true,
+        "omnisharp.enableEditorConfigSupport": true,
+        "omnisharp.enableRoslynAnalyzers": true,
+        "dotnet.defaultSolution": "Lisa.sln",
+        "csharp.format.enable": true,
+        "csharp.format.indentationSize": 4,
+        "csharp.referencesCodeLens.enabled": true,
+        "csharp.testsCodeLens.enabled": true
       },
       "extensions": [
-        "ms-dotnettools.csharp",
+        "ms-dotnettools.csharp", // Core C# extension (OmniSharp/Roslyn LSP switcher)
+        "ms-dotnettools.csdevkit", // C# Dev Kit (for Roslyn LSP and better experience)
+        "ms-dotnettools.csharp-lsp-preview", // C# LSP Preview (Roslyn LSP direct support)
         "ms-azuretools.vscode-docker"
       ]
     }

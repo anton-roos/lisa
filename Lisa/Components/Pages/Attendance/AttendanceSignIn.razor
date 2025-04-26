@@ -1,10 +1,17 @@
 @page "/attendance/sign-in"
+@page "/attendance/sign-in/{AttendanceSessionId:guid}"
 @using Lisa.Models.Entities
 @using System.Text.Json
+@using Microsoft.AspNetCore.Components.Authorization
 @inject SchoolService SchoolService
 @inject RegisterClassService RegisterClassService
 @inject LearnerService LearnerService
 @inject IJSRuntime JSRuntime
+@inject AttendanceService AttendanceService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+@using System.Security.Claims
+
 @inherits EventAwareComponentBase
 
 <PageTitle>Attendance Sign In</PageTitle>
@@ -63,7 +70,7 @@
                                                 {
                                                     <div class="d-flex align-items-center mb-2">
                                                         <div class="me-3" style="min-width: 150px;">@learner.Name @learner.Surname</div>
-                                                        <div @onclick="() => ToggleAttendance(learner)">
+                                                        <div @onclick="() => ToggleAttendance(learner, registerClass)">
                                                             @{
                                                                 string pillColor = GetPillColor(learner);
                                                                 string pillClass = $"pill {pillColor}";
@@ -130,6 +137,9 @@
 </AuthorizeView>
 
 @code {
+    [Parameter]
+    public Guid? AttendanceSessionId { get; set; }
+    
     private School? _selectedSchool;
     private List<RegisterClass> _registerClasses = new();
     private Dictionary<string, List<Learner>> _registerClassLearners = new();
@@ -140,6 +150,9 @@
     private List<string> _registerClassFilters = new() { "All" };
     private string _selectedFilter = "All";
     private string _searchText = "";
+    private Dictionary<string, Guid> _registerClassNameToIdMap = new();
+    private Guid? _currentUserId;
+    private AttendanceSession? _currentSession;
 
     private class AttendanceData
     {
@@ -153,51 +166,164 @@
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         SubscribeToEvent(UiEvents.SchoolSelected);
 
+        // Get the current user ID
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                _currentUserId = Guid.Parse(userId);
+            }
+        }
+
         if (_selectedSchool != null)
         {
             await LoadRegisterClasses();
+            await CheckForExistingSession();
         }
     }
 
+    // Add this method to properly handle school selection events
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
         if (eventName == UiEvents.SchoolSelected && payload is School school)
         {
+            // Log selection to help debug
+            Console.WriteLine($"School selected: {school.LongName} (ID: {school.Id})");
+            
+            // Update selected school
             _selectedSchool = school;
+            
+            // Reset state when school changes
+            _isStartTimeConfirmed = false;
+            _currentSession = null;
+            _registerClassLearners.Clear();
+            _attendanceData.Clear();
+            
+            // Load new data for selected school
             await LoadRegisterClasses();
+            await CheckForExistingSession();
+            
+            // Force UI update
+            StateHasChanged();
         }
+        
         await base.HandleEventAsync(eventName, payload);
     }
 
     private async Task LoadRegisterClasses()
     {
         if (_selectedSchool == null) return;
-
         _registerClasses = await RegisterClassService.GetBySchoolIdAsync(_selectedSchool.Id);
-        
-        // Reset everything when school changes
-        _registerClassLearners.Clear();
-        _attendanceData.Clear();
-        _registerClassFilters = new() { "All" };
-        _isStartTimeConfirmed = false;
     }
 
-    private void ConfirmStartTime()
+    protected override async Task OnParametersSetAsync()
     {
+        // If we have an AttendanceSessionId, load that session
+        if (AttendanceSessionId.HasValue)
+        {
+            await LoadAttendanceSession(AttendanceSessionId.Value);
+        }
+        else if (_selectedSchool != null)
+        {
+            // Otherwise check if there's an existing session for today
+            await CheckForExistingSession();
+        }
+    }
+
+    private async Task CheckForExistingSession()
+    {
+        if (_selectedSchool == null) return;
+
+        // Check if there's an active session for today for this school
+        var existingSession = await AttendanceService.GetActiveSessionForSchoolAsync(_selectedSchool.Id, DateTime.Today);
+        
+        if (existingSession != null)
+        {
+            // Redirect to that session
+            NavigationManager.NavigateTo($"/attendance/sign-in/{existingSession.Id}");
+        }
+    }
+
+    private async Task LoadAttendanceSession(Guid sessionId)
+    {
+        _currentSession = await AttendanceService.GetAttendanceSessionAsync(sessionId);
+        
+        if (_currentSession == null)
+        {
+            // Session not found, go back to main page
+            NavigationManager.NavigateTo("/attendance/sign-in");
+            return;
+        }
+
+        // Set start time from session
+        _startTime = _currentSession.StartTime.ToLocalTime();
         _startTimeDateTime = _startTime;
         _isStartTimeConfirmed = true;
         
-        // Load students after confirming start time
-        LoadLearners();
+        // If school changed, update it
+        if (_selectedSchool?.Id != _currentSession.SchoolId)
+        {
+            _selectedSchool = await SchoolService.GetSchoolAsync(_currentSession.SchoolId);
+            await LoadRegisterClasses();
+        }
+        
+        // Load students and attendance data
+        await LoadLearners();
+        await LoadAttendanceData();
     }
 
-    private async void LoadLearners()
+    private async Task LoadAttendanceData()
+    {
+        if (_currentSession == null) return;
+        
+        // Load attendance data for this session
+        var attendances = await AttendanceService.GetAttendancesForSessionAsync(_currentSession.Id);
+        
+        foreach (var attendance in attendances)
+        {
+            if (_attendanceData.ContainsKey(attendance.LearnerId))
+            {
+                _attendanceData[attendance.LearnerId].IsPresent = attendance.IsPresent;
+                if (attendance.SignInTime.HasValue)
+                {
+                    _attendanceData[attendance.LearnerId].SignInTime = attendance.SignInTime.Value.ToLocalTime();
+                }
+            }
+        }
+    }
+
+    private async Task ConfirmStartTime()
+    {
+        if (_selectedSchool == null) return;
+        
+        _startTimeDateTime = _startTime;
+        _isStartTimeConfirmed = true;
+        
+        // Create attendance session
+        _currentSession = await AttendanceService.CreateAttendanceSessionAsync(
+            _selectedSchool.Id,
+            _startTime.ToUniversalTime(),
+            _currentUserId
+        );
+        
+        // Navigate to the session URL
+        NavigationManager.NavigateTo($"/attendance/sign-in/{_currentSession.Id}");
+        
+        // Load students for this session
+        await LoadLearners();
+    }
+
+    private async Task LoadLearners()
     {
         if (_selectedSchool == null) return;
 
         _registerClassLearners.Clear();
         _attendanceData.Clear();
         _registerClassFilters = new() { "All" };
+        _registerClassNameToIdMap.Clear();
 
         foreach (var registerClass in _registerClasses)
         {
@@ -215,6 +341,7 @@
                 if (learners.Any())
                 {
                     _registerClassLearners[className] = learners;
+                    _registerClassNameToIdMap[className] = registerClass.Id;
                     
                     // Initialize attendance data for all learners as absent
                     foreach (var learner in learners)
@@ -233,8 +360,10 @@
         _selectedFilter = filter;
     }
 
-    private void ToggleAttendance(Learner learner)
+    private async Task ToggleAttendance(Learner learner, string registerClassName)
     {
+        if (_currentSession == null) return;
+        
         if (!_attendanceData.ContainsKey(learner.Id))
         {
             _attendanceData[learner.Id] = new AttendanceData();
@@ -247,6 +376,35 @@
         {
             data.SignInTime = DateTime.Now;
         }
+
+        // Get the register class ID
+        if (_registerClassNameToIdMap.TryGetValue(registerClassName, out var registerClassId))
+        {
+            // Save the attendance to the database
+            await SaveAttendance(learner.Id, registerClassId, data.IsPresent);
+        }
+    }
+
+    private async Task SaveAttendance(Guid learnerId, Guid registerClassId, bool isPresent)
+    {
+        if (_selectedSchool == null || _currentSession == null) return;
+        
+        string notes = isPresent 
+            ? $"Signed in at {DateTime.Now:HH:mm}" 
+            : "Marked as absent";
+            
+        await AttendanceService.RecordAttendanceAsync(
+            learnerId,
+            _selectedSchool.Id,
+            registerClassId,
+            isPresent,
+            notes,
+            _currentUserId,
+            _currentSession.Id
+        );
+
+        // Optionally show a success message
+        await JSRuntime.InvokeVoidAsync("console.log", $"Attendance saved for {learnerId}");
     }
 
     private string GetPillColor(Learner learner)

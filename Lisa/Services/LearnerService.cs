@@ -451,4 +451,18 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             .Include(l => l.Parents)
             .ToListAsync();
     }
+
+    public async Task<List<Learner>> SearchLearnersAsync(Guid schoolId, string searchTerm)
+    {
+        using var context = await _dbContextFactory.CreateDbContextAsync();
+        return await context.Learners
+            .Where(l => l.SchoolId == schoolId && (l.Name.Contains(searchTerm) || l.Surname.Contains(searchTerm)))
+            .Include(l => l.RegisterClass!)
+                .ThenInclude(rc => rc.SchoolGrade!)
+                    .ThenInclude(sg => sg.SystemGrade)
+            .Include(l => l.LearnerSubjects!)
+                .ThenInclude(ls => ls.Subject)
+            .Include(l => l.Parents)
+            .ToListAsync();
+    }
 }

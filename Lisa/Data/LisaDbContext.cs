@@ -34,6 +34,9 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
     public DbSet<TeacherSubject> TeacherSubjects { get; set; } = null!;
     public DbSet<ResultSet> ResultSets { get; set; } = null!;
     public DbSet<AssessmentType> AssessmentTypes { get; set; } = null!;
+    public DbSet<Attendance> Attendances { get; set; } = null!;
+    public DbSet<AttendanceSession> AttendanceSessions { get; set; } = null!;
+    public DbSet<AuditLog> AuditLogs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -421,6 +424,62 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
 
             entity.Property(r => r.UpdatedAt)
                 .IsRequired();
+        });
+
+        // Configure AttendanceSession entity
+        modelBuilder.Entity<AttendanceSession>(entity =>
+        {
+            entity.HasKey(s => s.Id);
+            entity.HasIndex(s => new { s.SchoolId, s.Date });
+
+            entity.HasOne(s => s.School)
+                  .WithMany()
+                  .HasForeignKey(s => s.SchoolId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(s => s.CreatedByUser)
+                  .WithMany()
+                  .HasForeignKey(s => s.CreatedByUserId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.Property(s => s.Date)
+                  .IsRequired();
+
+            entity.Property(s => s.StartTime)
+                  .IsRequired();
+        });
+
+        // Configure Attendance entity with relation to AttendanceSession
+        modelBuilder.Entity<Attendance>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+            entity.HasIndex(a => new { a.LearnerId, a.Date });
+
+            entity.HasOne(a => a.Learner)
+                  .WithMany()
+                  .HasForeignKey(a => a.LearnerId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(a => a.School)
+                  .WithMany()
+                  .HasForeignKey(a => a.SchoolId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(a => a.RegisterClass)
+                  .WithMany()
+                  .HasForeignKey(a => a.RegisterClassId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(a => a.RecordedByUser)
+                  .WithMany()
+                  .HasForeignKey(a => a.RecordedByUserId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            // Add relation to AttendanceSession
+            entity.HasOne(a => a.AttendanceSession)
+                  .WithMany(s => s.Attendances)
+                  .HasForeignKey(a => a.AttendanceSessionId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
     }
 

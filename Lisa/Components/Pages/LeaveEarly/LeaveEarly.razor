@@ -1,0 +1,647 @@
+@page "/leave-early"
+@page "/leave-early/{LearnerId:guid?}"
+@using Lisa.Models.Entities
+@using Microsoft.AspNetCore.Authorization
+@using Lisa.Models
+@using System.ComponentModel.DataAnnotations
+@using System.Security.Claims
+@inject LearnerService LearnerService
+@inject AttendanceService AttendanceService
+@inject SchoolService SchoolService 
+@inject EmailService EmailService
+@inject AuditService AuditService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inherits EventAwareComponentBase
+
+<PageTitle>Leave Early</PageTitle>
+
+@if (_selectedSchool == null)
+{
+    <div class="alert alert-warning">
+        <h4><i class="oi oi-warning"></i> No School Selected</h4>
+        <p>Please select a school from the dropdown at the top of the page before proceeding.</p>
+    </div>
+}
+else
+{
+<div class="container">
+    <h1>Leave Early</h1>
+    <h4>@CurrentDate.ToString("d/M")</h4>
+    
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label>School End Time</label>
+            <div class="d-flex align-items-center">
+                <input type="time" @bind="EndTime" class="form-control w-auto me-2" />
+                <button class="btn btn-primary" @onclick="ConfirmEndTime">Confirm</button>
+            </div>
+        </div>
+    </div>
+    
+    @if (!LearnerSelected)
+    {   
+        <div class="row mb-3">
+            <div class="col">
+                <div class="d-flex mb-3">
+                    @foreach (var grade in RegisterClassFilters)
+                    {
+                        <button class="btn @(grade == SelectedClass ? "btn-primary" : "btn-secondary") me-2"
+                                @onclick="() => FilterByClass(grade)">
+                            @(grade == "All" ? "All" : $"Gr {grade}")
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Search Learner" 
+                           @bind="SearchTerm" @bind:event="oninput" @onkeyup="SearchLearners" />
+                </div>
+            </div>
+        </div>
+        
+        @if (IsLoading)
+        {
+            <div class="text-center p-3">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>Loading learners...</p>
+            </div>
+        }
+        else if (AllLearners.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Class</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var learner in FilteredLearners)
+                        {
+                            <tr>
+                                <td>@learner.Name @learner.Surname</td>
+                                <td>@(learner.RegisterClass?.Name ?? "Unknown")</td>
+                                <td>
+                                    <button class="btn btn-primary btn-sm" @onclick="() => SelectLearner(learner)">
+                                        Process Leave Early
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            
+            @if (!FilteredLearners.Any())
+            {
+                <div class="alert alert-info">No learners match your current filters.</div>
+            }
+        }
+        else if (!string.IsNullOrEmpty(SearchTerm))
+        {
+            <div class="alert alert-info">No learners found matching your search.</div>
+        }
+        else
+        {
+            <div class="alert alert-info">No learners found for this school.</div>
+        }
+    }
+    else
+    {
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5>@SelectedLearner?.Name</h5>
+                
+                <h5 class="mt-4">Contact Details</h5>
+                @if (ParentContacts.Any())
+                {
+                    @foreach (var contact in ParentContacts)
+                    {
+                        <div class="bg-light p-3 mb-2">
+                            <div><strong>@contact.Name</strong> (@contact.Relationship)</div>
+                            <div>WhatsApp: @contact.WhatsAppNumber</div>
+                            <div>Telephone: @contact.PrimaryCellNumber</div>
+                            <div>Email: @contact.PrimaryEmail</div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="alert alert-warning">No contact details found</div>
+                }
+                
+                <h5 class="mt-4">Permission</h5>
+                <div class="mb-3">
+                    <select class="form-select" @bind="SelectedPermissionMethod">
+                        <option value="">-- Select Permission --</option>
+                        <option value="Letter">Letter From Parent</option>
+                        <option value="Email">Email From Parent</option>
+                        <option value="WhatsApp">WhatsApp From Parent</option>
+                        <option value="Telephonic">Telephonic Confirmation</option>
+                    </select>
+                    <div class="invalid-feedback @(ShowPermissionValidation ? "d-block" : "")">
+                        Permission method is required
+                    </div>
+                </div>
+                
+                <h5 class="mt-4">Telephonic Confirmation</h5>
+                <div class="mb-3">
+                    <label class="form-label">Notes:</label>
+                    <textarea class="form-control" @bind="Notes" rows="3" 
+                              placeholder="Enter confirmation details, reference numbers, etc."></textarea>
+                </div>
+                
+                <h5 class="mt-4">Pick up details:</h5>
+                <div class="mb-3">
+                    <select class="form-select" @bind="SelectedPickupOption">
+                        <option value="">-- Select Person Responsible --</option>
+                        <option value="Parent">Parent / Guardian (as per contract)</option>
+                        <option value="Family">Designated Family Member / Person</option>
+                        <option value="Uber">Uber / Transport Driver</option>
+                        <option value="Walk">Learner Must Walk Home</option>
+                    </select>
+                    <div class="invalid-feedback @(ShowPickupValidation ? "d-block" : "")">
+                        Pick up method is required
+                    </div>
+                </div>
+                
+                @if (!string.IsNullOrEmpty(SelectedPickupOption))
+                {
+                    <div class="mb-3">
+                        @switch (SelectedPickupOption)
+                        {
+                            case "Parent":
+                                <div>
+                                    <select class="form-select" @bind="SelectedParentId">
+                                        <option value="">-- Select Parent / Guardian --</option>
+                                        @foreach (var contact in ParentContacts)
+                                        {
+                                            <option value="@contact.Id">@contact.Name</option>
+                                        }
+                                    </select>
+                                    <div class="mt-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   @bind="IdProvidedByParent" id="idProvided" />
+                                            <label class="form-check-label" for="idProvided">
+                                                Id No Provided by Parent
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   @bind="IdConfirmedAtPickup" id="idConfirmed" />
+                                            <label class="form-check-label" for="idConfirmed">
+                                                Id No Confirmed at Pick up
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                break;
+                            case "Family":
+                                <div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               @bind="IdProvidedByParent" id="idProvided" />
+                                        <label class="form-check-label" for="idProvided">
+                                            Id No Provided by Parent
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               @bind="IdConfirmedAtPickup" id="idConfirmed" />
+                                        <label class="form-check-label" for="idConfirmed">
+                                            Id No Confirmed at Pick up
+                                        </label>
+                                    </div>
+                                </div>
+                                break;
+                            case "Uber":
+                                <div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               @bind="IdProvidedByParent" id="regProvided" />
+                                        <label class="form-check-label" for="regProvided">
+                                            Registration Provided by Parent
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               @bind="IdConfirmedAtPickup" id="regConfirmed" />
+                                        <label class="form-check-label" for="regConfirmed">
+                                            Registration Confirmed at Pick up
+                                        </label>
+                                    </div>
+                                    
+                                    @if (IdConfirmedAtPickup)
+                                    {
+                                        <div class="mt-2">
+                                            <label class="form-label">Registration Number:</label>
+                                            <input type="text" class="form-control" @bind="RegistrationNumber" />
+                                        </div>
+                                    }
+                                </div>
+                                break;
+                            case "Walk":
+                                <div class="alert alert-info">
+                                    Walking Home
+                                </div>
+                                break;
+                        }
+                    </div>
+                }
+                
+                <div class="text-center mt-4">
+                    <p class="text-muted">Submit as soon as learner left school.</p>
+                    <button class="btn btn-lg btn-primary mb-2" @onclick="ProcessLearnerLeft">
+                        Learner Left School @CurrentTime
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+}
+@code {
+    [Parameter]
+    public Guid? LearnerId { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthState { get; set; } = default!;
+    private DateTime CurrentDate { get; set; } = DateTime.Today;
+
+    private School? _selectedSchool; 
+    
+    private string CurrentTime => DateTime.Now.ToString("HH:mm");
+    private TimeOnly? EndTime { get; set; } = new TimeOnly(14, 0);
+    private bool EndTimeConfirmed { get; set; } = false;
+    
+    private string SearchTerm { get; set; } = "";
+    private string SelectedClass { get; set; } = "All";
+    private List<Learner> SearchResults { get; set; } = new();
+    private List<Learner> AllLearners { get; set; } = new();
+    private List<string> RegisterClassFilters { get; set; } = new() { "All" };
+    private bool IsLoading { get; set; } = false;
+    
+    private IEnumerable<Learner> FilteredLearners => AllLearners
+        .Where(l => (SelectedClass == "All" || 
+                   (l.RegisterClass != null && l.RegisterClass.Name == SelectedClass)) &&
+                  (string.IsNullOrEmpty(SearchTerm) || 
+                   $"{l.Name} {l.Surname}".ToLower().Contains(SearchTerm.ToLower())))
+        .ToList();
+    
+    private Learner? SelectedLearner { get; set; }
+    private bool LearnerSelected => SelectedLearner != null;
+    
+    private List<Parent> ParentContacts { get; set; } = new();
+    
+    private string SelectedPermissionMethod { get; set; } = "";
+    private bool ShowPermissionValidation { get; set; } = false;
+    
+    private string SelectedPickupOption { get; set; } = "";
+    private bool ShowPickupValidation { get; set; } = false;
+    
+    private string SelectedParentId { get; set; } = "";
+    private bool IdProvidedByParent { get; set; } = false;
+    private bool IdConfirmedAtPickup { get; set; } = false;
+    private string RegistrationNumber { get; set; } = "";
+    
+    private string Notes { get; set; } = "";
+    
+    private Guid? CurrentUserId { get; set; }
+    private Guid? CurrentRegisterClassId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get current user ID from authentication state
+        var authState = await AuthState;
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                CurrentUserId = userId;
+            }
+        }
+        
+        // Subscribe to school selection event
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        
+        // Get selected school
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        
+        if (_selectedSchool != null)
+        {
+            // Load all learners for the current school
+            await LoadAllLearnersForCurrentSchool();
+        }
+    }
+    
+    protected override async Task OnParametersSetAsync()
+    {
+        // If LearnerId is provided in the route, select that learner directly
+        if (LearnerId.HasValue)
+        {
+            var learner = await LearnerService.GetByIdAsync(LearnerId.Value);
+            if (learner != null)
+            {
+                await SelectLearner(learner);
+            }
+        }
+    }
+    
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected && payload is School school)
+        {
+            // Log selection to help with debugging
+            Console.WriteLine($"School selected in LeaveEarly: {school.LongName} (ID: {school.Id})");
+            
+            // Update selected school
+            _selectedSchool = school;
+            
+            // Reset filters and reload learners
+            await ClearFilters();
+            await LoadAllLearnersForCurrentSchool();
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private void ConfirmEndTime()
+    {
+        EndTimeConfirmed = true;
+    }
+    
+    private async Task ClearFilters()
+    {
+        SearchTerm = "";
+        SelectedClass = "All";
+        SelectedLearner = null;
+        ParentContacts.Clear();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadAllLearnersForCurrentSchool()
+    {
+        if (_selectedSchool == null)
+        {
+            return;
+        }
+            
+        IsLoading = true;
+        await InvokeAsync(StateHasChanged);
+        
+        try
+        {
+            // Get all learners for the current school
+            AllLearners = await LearnerService.GetBySchoolAsync(_selectedSchool.Id);
+            
+            // Log the count of learners loaded
+            Console.WriteLine($"Loaded {AllLearners.Count} learners for school {_selectedSchool.LongName}");
+            
+            // Extract unique register class names for filtering
+            RegisterClassFilters = new List<string> { "All" };
+            var classNames = AllLearners
+                .Where(l => l.RegisterClass?.Name != null)
+                .Select(l => l.RegisterClass!.Name!)
+                .Distinct()
+                .OrderBy(n => n)
+                .ToList();
+                
+            RegisterClassFilters.AddRange(classNames);
+            
+            Console.WriteLine($"Found {classNames.Count} unique register classes for filtering");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading learners: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("console.error", "Error loading learners:", ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task SearchLearners()
+    {
+        if (string.IsNullOrWhiteSpace(SearchTerm) || SearchTerm.Length < 2)
+        {
+            SearchResults = new List<Learner>();
+            return;
+        }
+        
+        if (_selectedSchool == null)
+        {
+            return;
+        }
+        
+        // Get learners filtered by class and search term
+        SearchResults = await LearnerService.SearchLearnersAsync(
+            _selectedSchool.Id,
+            SearchTerm
+        );
+    }
+
+    private async Task FilterByClass(string className)
+    {
+        SelectedClass = className;
+        // No need to call SearchLearners here as we're using the FilteredLearners property
+        // which already filters based on SelectedClass
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SelectLearner(Learner learner)
+    {
+        SelectedLearner = learner;
+        
+        ParentContacts = learner.Parents?.ToList() ?? new List<Parent>();
+        
+        var registerClass = learner.RegisterClass;
+        if (registerClass != null)
+        {
+            CurrentRegisterClassId = registerClass.Id;
+        }
+        
+        await Task.CompletedTask; // To make the method properly async
+    }
+
+    private async Task ProcessLearnerLeft()
+    {
+        if (SelectedLearner == null || _selectedSchool == null)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please select a learner and school first");
+            return;
+        }
+        
+        bool isValid = true;
+        
+        if (string.IsNullOrEmpty(SelectedPermissionMethod))
+        {
+            ShowPermissionValidation = true;
+            isValid = false;
+        }
+        else
+        {
+            ShowPermissionValidation = false;
+        }
+        
+        if (string.IsNullOrEmpty(SelectedPickupOption))
+        {
+            ShowPickupValidation = true;
+            isValid = false;
+        }
+        else
+        {
+            ShowPickupValidation = false;
+        }
+        
+        if (!isValid)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please fill in all required fields");
+            return;
+        }
+        
+        if (!EndTimeConfirmed)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please confirm the school end time first");
+            return;
+        }
+        
+        if (!CurrentRegisterClassId.HasValue)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Unable to determine register class for learner");
+            return;
+        }
+
+        try
+        {
+            // Get current time for accurate recording
+            var currentTime = DateTime.Now;
+            
+            // Check if there's an attendance record for today
+            var attendance = await AttendanceService.GetAttendanceAsync(
+                SelectedLearner.Id, 
+                CurrentRegisterClassId.Value, 
+                CurrentDate
+            );
+
+            // Determine if this is an early leave based on end time
+            if (EndTime.HasValue)
+            {
+                DateTime endTimeDateTime = CurrentDate.Add(EndTime.Value.ToTimeSpan());
+                bool isEarlyLeave = currentTime < endTimeDateTime;
+                
+                // Format notes for the attendance record
+                string leaveNotes = $"Left early at {currentTime:HH:mm}. " +
+                                    $"Permission: {SelectedPermissionMethod}. " +
+                                    $"Pickup: {SelectedPickupOption}. " +
+                                    $"{Notes}";
+                
+                if (!string.IsNullOrEmpty(RegistrationNumber))
+                {
+                    leaveNotes += $" Registration: {RegistrationNumber}";
+                }
+
+                if (attendance != null)
+                {
+                    // Update existing attendance record
+                    await AttendanceService.RecordSignOutAsync(
+                        attendance.Id,
+                        isEarlyLeave,
+                        leaveNotes
+                    );
+                }
+                else
+                {
+                    // Create a new attendance record with sign-out info
+                    attendance = await AttendanceService.RecordAttendanceAsync(
+                        SelectedLearner.Id,
+                        _selectedSchool.Id,
+                        CurrentRegisterClassId.Value,
+                        true,
+                        leaveNotes,
+                        CurrentUserId
+                    );
+                    
+                    // Now record sign-out for the new attendance
+                    if (attendance != null)
+                    {
+                        await AttendanceService.RecordSignOutAsync(
+                            attendance.Id,
+                            isEarlyLeave,
+                            leaveNotes
+                        );
+                    }
+                }
+                
+                // Send email notification to parents
+                await SendEmailNotification(isEarlyLeave);
+                
+                // Log to audit trail
+                await AuditService.LogActivityAsync(
+                    "Learner Left Early",
+                    $"Learner {SelectedLearner.Name} left school at {currentTime:HH:mm}" +
+                    $"{(isEarlyLeave ? " (early leave)" : "")}",
+                    SelectedLearner.Id,
+                    CurrentUserId
+                );
+                
+                // Show success message and navigate back
+                await JSRuntime.InvokeVoidAsync("alert", "Leave early process completed successfully");
+                NavigationManager.NavigateTo("/attendance");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Invalid end time format");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", ex.Message);
+            await JSRuntime.InvokeVoidAsync("alert", "An error occurred while processing the leave early request");
+        }
+    }
+
+    private async Task SendEmailNotification(bool isEarlyLeave)
+    {
+        if (SelectedLearner == null || _selectedSchool == null)
+        {
+            return;
+        }
+        
+        if (ParentContacts.Any())
+        {
+            foreach (var contact in ParentContacts.Where(c => !string.IsNullOrEmpty(c.PrimaryEmail)))
+            {
+                await EmailService.SendEmailAsync(
+                    contact.PrimaryEmail!,
+                    $"School Notification: {SelectedLearner.Name} Left School",
+                    $@"Dear {contact.Name},
+
+This is to inform you that {SelectedLearner.Name} left school at {DateTime.Now:HH:mm} on {CurrentDate:d MMMM yyyy}.
+
+Permission method: {SelectedPermissionMethod}
+Pickup arrangement: {SelectedPickupOption}
+
+{Notes}
+
+Regards,
+{_selectedSchool.LongName}",
+                    _selectedSchool.Id
+                );
+            }
+        }
+    }
+}

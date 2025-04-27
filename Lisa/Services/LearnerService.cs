@@ -361,12 +361,16 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     public async Task<List<Learner>> GetBySchoolAsync(Guid schoolId)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
+
+        context.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
+
         return await context.Learners
+            .AsSplitQuery()
             .Include(l => l.RegisterClass!)
-            .ThenInclude(rc => rc.SchoolGrade!)
-            .ThenInclude(sg => sg.SystemGrade)
+                .ThenInclude(rc => rc.SchoolGrade!)
+                    .ThenInclude(sg => sg.SystemGrade)
             .Include(l => l.LearnerSubjects!)
-            .ThenInclude(ls => ls.Subject)
+                .ThenInclude(ls => ls.Subject)
             .Include(l => l.CareGroup!)
             .Include(l => l.Parents!)
             .Where(l => l.SchoolId == schoolId)

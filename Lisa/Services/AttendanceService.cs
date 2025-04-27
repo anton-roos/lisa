@@ -4,53 +4,44 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class AttendanceService
+public partial class AttendanceService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<AttendanceService> logger)
 {
-    private readonly LisaDbContext _dbContext;
-    private readonly ILogger<AttendanceService> _logger;
-
-    public AttendanceService(LisaDbContext dbContext, ILogger<AttendanceService> logger)
-    {
-        _dbContext = dbContext;
-        _logger = logger;
-    }
+    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
+    private readonly ILogger<AttendanceService> _logger = logger;
 
     public async Task<Attendance> RecordAttendanceAsync(Guid learnerId, Guid schoolId, Guid registerClassId,
         bool isPresent, string? notes = null, Guid? recordedByUserId = null, Guid? sessionId = null)
     {
-        // Check if attendance already exists for today
         var today = DateTime.UtcNow.Date;
-        var existingAttendance = await _dbContext.Attendances
+        
+        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var existingAttendance = await dbContext.Attendances
             .FirstOrDefaultAsync(a => a.LearnerId == learnerId &&
                                     a.RegisterClassId == registerClassId &&
                                     a.Date.Date == today);
 
         if (existingAttendance != null)
         {
-            // Update existing attendance
             existingAttendance.IsPresent = isPresent;
             existingAttendance.Notes = notes;
             existingAttendance.UpdatedAt = DateTime.UtcNow;
             existingAttendance.UpdatedBy = recordedByUserId;
 
-            // If marking present and no sign-in time, update it
             if (isPresent && existingAttendance.SignInTime == null)
             {
                 existingAttendance.SignInTime = DateTime.UtcNow;
             }
 
-            // Update session ID if provided
             if (sessionId.HasValue && existingAttendance.AttendanceSessionId != sessionId)
             {
                 existingAttendance.AttendanceSessionId = sessionId;
             }
 
-            await _dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync();
             _logger.LogInformation("Updated attendance for learner {LearnerId}", learnerId);
             return existingAttendance;
         }
 
-        // Create new attendance record
         var attendance = new Attendance
         {
             Id = Guid.NewGuid(),
@@ -69,8 +60,8 @@ public class AttendanceService
             UpdatedBy = recordedByUserId
         };
 
-        await _dbContext.Attendances.AddAsync(attendance);
-        await _dbContext.SaveChangesAsync();
+        await dbContext.Attendances.AddAsync(attendance);
+        await dbContext.SaveChangesAsync();
 
         _logger.LogInformation("Created new attendance record for learner {LearnerId}", learnerId);
         return attendance;
@@ -78,16 +69,22 @@ public class AttendanceService
 
     public async Task<Attendance?> GetAttendanceAsync(Guid learnerId, Guid registerClassId, DateTime date)
     {
-        return await _dbContext.Attendances
+        var utcDate = date.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
+            : date.ToUniversalTime();
+
+        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        return await dbContext.Attendances
             .FirstOrDefaultAsync(a => a.LearnerId == learnerId &&
                                      a.RegisterClassId == registerClassId &&
-                                     a.Date.Date == date.Date);
+                                     a.Date.Date == utcDate.Date);
     }
 
     public async Task<Attendance> UpdateAttendanceAsync(Guid attendanceId, bool isPresent,
         bool isEarlyLeave = false, string? notes = null)
     {
-        var attendance = await _dbContext.Attendances.FindAsync(attendanceId)
+        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var attendance = await dbContext.Attendances.FindAsync(attendanceId)
             ?? throw new KeyNotFoundException($"Attendance record with ID {attendanceId} not found");
 
         attendance.IsPresent = isPresent;
@@ -98,9 +95,10 @@ public class AttendanceService
             attendance.Notes = notes;
         }
 
+        // Ensure we're using UTC time for updates
         attendance.UpdatedAt = DateTime.UtcNow;
 
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
         _logger.LogInformation("Updated attendance {AttendanceId}", attendanceId);
 
         return attendance;
@@ -108,7 +106,8 @@ public class AttendanceService
 
     public async Task<bool> RecordSignOutAsync(Guid attendanceId)
     {
-        var attendance = await _dbContext.Attendances.FindAsync(attendanceId);
+        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var attendance = await dbContext.Attendances.FindAsync(attendanceId);
 
         if (attendance == null)
         {
@@ -119,7 +118,7 @@ public class AttendanceService
         attendance.SignOutTime = DateTime.UtcNow;
         attendance.UpdatedAt = DateTime.UtcNow;
 
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
         _logger.LogInformation("Recorded sign-out for attendance {AttendanceId}", attendanceId);
 
         return true;
@@ -127,6 +126,11 @@ public class AttendanceService
 
     public async Task<AttendanceSession> CreateAttendanceSessionAsync(Guid schoolId, DateTime startTime, Guid? createdByUserId)
     {
+        // Ensure startTime is in UTC
+        startTime = startTime.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(startTime, DateTimeKind.Utc)
+            : startTime.ToUniversalTime();
+
         // Check if there's already a session for this school and date
         var existingSession = await GetActiveSessionForSchoolAsync(schoolId, startTime.Date);
         if (existingSession != null)
@@ -134,6 +138,7 @@ public class AttendanceService
             return existingSession;
         }
 
+        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
         var session = new AttendanceSession
         {
             Id = Guid.NewGuid(),
@@ -146,8 +151,8 @@ public class AttendanceService
             CreatedBy = createdByUserId
         };
 
-        await _dbContext.AttendanceSessions.AddAsync(session);
-        await _dbContext.SaveChangesAsync();
+        await dbContext.AttendanceSessions.AddAsync(session);
+        await dbContext.SaveChangesAsync();
 
         _logger.LogInformation("Created new attendance session {SessionId} for school {SchoolId}",
             session.Id, schoolId);
@@ -157,7 +162,8 @@ public class AttendanceService
 
     public async Task<AttendanceSession?> GetAttendanceSessionAsync(Guid sessionId)
     {
-        return await _dbContext.AttendanceSessions
+        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        return await dbContext.AttendanceSessions
             .Include(s => s.School)
             .FirstOrDefaultAsync(s => s.Id == sessionId);
     }
@@ -169,7 +175,8 @@ public class AttendanceService
             ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
             : date.ToUniversalTime();
 
-        return await _dbContext.AttendanceSessions
+        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        return await dbContext.AttendanceSessions
             .FirstOrDefaultAsync(s => s.SchoolId == schoolId &&
                                       s.Date.Date == utcDate.Date &&
                                       s.EndTime == null);
@@ -177,14 +184,16 @@ public class AttendanceService
 
     public async Task<List<Attendance>> GetAttendancesForSessionAsync(Guid sessionId)
     {
-        return await _dbContext.Attendances
+        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        return await dbContext.Attendances
             .Where(a => a.AttendanceSessionId == sessionId)
             .ToListAsync();
     }
 
     public async Task<bool> EndSessionAsync(Guid sessionId)
     {
-        var session = await _dbContext.AttendanceSessions.FindAsync(sessionId);
+        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var session = await dbContext.AttendanceSessions.FindAsync(sessionId);
 
         if (session == null)
         {
@@ -192,10 +201,11 @@ public class AttendanceService
             return false;
         }
 
+        // Ensure we're using UTC time for session end
         session.EndTime = DateTime.UtcNow;
         session.UpdatedAt = DateTime.UtcNow;
 
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
 
         _logger.LogInformation("Ended attendance session {SessionId}", sessionId);
         return true;
@@ -203,7 +213,8 @@ public class AttendanceService
 
     public async Task<bool> RecordSignOutAsync(Guid attendanceId, bool isEarlyLeave, string? notes = null)
     {
-        var attendance = await _dbContext.Attendances.FindAsync(attendanceId);
+        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var attendance = await dbContext.Attendances.FindAsync(attendanceId);
 
         if (attendance == null)
         {
@@ -220,7 +231,7 @@ public class AttendanceService
             attendance.Notes = notes;
         }
 
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
         _logger.LogInformation("Recorded sign-out for attendance {AttendanceId}", attendanceId);
 
         return true;
@@ -228,7 +239,8 @@ public class AttendanceService
 
     public async Task<bool> ClearSignOutAsync(Guid attendanceId)
     {
-        var attendance = await _dbContext.Attendances.FindAsync(attendanceId);
+        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var attendance = await dbContext.Attendances.FindAsync(attendanceId);
 
         if (attendance == null)
         {
@@ -240,7 +252,7 @@ public class AttendanceService
         attendance.IsEarlyLeave = false;
         attendance.UpdatedAt = DateTime.UtcNow;
 
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
         _logger.LogInformation("Cleared sign-out for attendance {AttendanceId}", attendanceId);
 
         return true;
@@ -248,17 +260,22 @@ public class AttendanceService
 
     public async Task<AttendanceSession> UpdateSessionEndTimeAsync(Guid sessionId, DateTime endTime)
     {
-        var session = await _dbContext.AttendanceSessions.FindAsync(sessionId);
+        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var session = await dbContext.AttendanceSessions.FindAsync(sessionId);
 
         if (session == null)
         {
             throw new KeyNotFoundException($"Attendance session with ID {sessionId} not found");
         }
 
+        endTime = endTime.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(endTime, DateTimeKind.Utc)
+            : endTime.ToUniversalTime();
+
         session.EndTime = endTime;
         session.UpdatedAt = DateTime.UtcNow;
 
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
         _logger.LogInformation("Updated end time for session {SessionId}", sessionId);
 
         return session;
@@ -266,12 +283,12 @@ public class AttendanceService
 
     public async Task<AttendanceSession?> GetCompletedSessionForSchoolAsync(Guid schoolId, DateTime date)
     {
-        // Convert input date to UTC before querying
         var utcDate = date.Kind == DateTimeKind.Unspecified
             ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
             : date.ToUniversalTime();
 
-        return await _dbContext.AttendanceSessions
+        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        return await dbContext.AttendanceSessions
             .FirstOrDefaultAsync(s => s.SchoolId == schoolId &&
                                     s.Date.Date == utcDate.Date &&
                                     s.EndTime != null);

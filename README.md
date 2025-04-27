@@ -148,5 +148,16 @@ Extra subject for only 10, 11, 12
   --> SchoolGrade
   --> Physical Science -> Export
 --> Combination Class List
---> SchoolGrade 
 
+# Leave Early
+It integrates with the sign out module, if a learner is leaving early before the sign out record was created for the day it will confirm the school end time before continuing, here is the flow
+
+1. Select a school
+2. Check if a sign out record was created for the day
+3. If no sign out record it should create one with the confirmed end of day time -- this will pull throug when a user now goes and navigate to the sign out module
+4. If a sign out record was created before either through leave early or the sign out module the confirm time will be skipped on the leave early module
+5. You select a learner before you can continue
+6. Once a learner is selected the main flow will appear
+
+# Daily Register
+The daily register opens and check if there is a selected school like most pages, then a user selects a register class, after selecting the register class a list of learners in that register class will load with the default Abest pill. When clikcing on the abest button it tunrs to Present.

@@ -34,8 +34,11 @@
                     else
                     {
                         <div class="input-group mb-3">
-                            <input type="time" class="form-control" @bind="@_endTime" @bind:format="HH:mm" />
+                            <input type="time" class="form-control" @bind="_endTimeOnly" />
                             <button class="btn btn-primary" @onclick="ConfirmEndTime" disabled="@_isEndTimeConfirmed">Confirm</button>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">End time: @_endTimeOnly.ToString("HH:mm")</small>
                         </div>
                         
                         @if (_isEndTimeConfirmed)
@@ -149,6 +152,7 @@
     private Dictionary<string, List<Learner>> _registerClassLearners = new();
     private Dictionary<Guid, AttendanceData> _attendanceData = new();
     private DateTime _endTime = DateTime.Today.AddHours(14); // Default to 2:00 PM
+    private TimeOnly _endTimeOnly = new TimeOnly(14, 0); // Default to 2:00 PM for the input
     private bool _isEndTimeConfirmed = false;
     private DateTime _endTimeDateTime;
     private List<string> _registerClassFilters = new() { "All" };
@@ -247,6 +251,7 @@
         if (_currentSession.EndTime.HasValue)
         {
             _endTime = _currentSession.EndTime.Value.ToLocalTime();
+            _endTimeOnly = TimeOnly.FromDateTime(_endTime); // Update the time input control
             _endTimeDateTime = _endTime;
             _isEndTimeConfirmed = true;
         }
@@ -254,6 +259,7 @@
         {
             // Default end time 
             _endTime = DateTime.Today.AddHours(14);
+            _endTimeOnly = new TimeOnly(14, 0);
         }
         
         // If school changed, update it
@@ -308,12 +314,14 @@
             _registerClassLearners.Clear();
             _attendanceData.Clear();
             
+            // Keep the current time selection (don't reset it)
+            
             // Load new data for selected school
             await LoadRegisterClasses();
             await CheckForExistingSession();
             
             // Force UI update
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
         
         await base.HandleEventAsync(eventName, payload);
@@ -337,6 +345,8 @@
     {
         if (_selectedSchool == null) return;
         
+        // Convert TimeOnly to DateTime for our application logic
+        _endTime = DateTime.Today.Add(_endTimeOnly.ToTimeSpan());
         _endTimeDateTime = _endTime;
         _isEndTimeConfirmed = true;
         
@@ -451,8 +461,17 @@
             // Get the register class ID
             if (_registerClassNameToIdMap.TryGetValue(registerClassName, out var registerClassId))
             {
-                // Save the attendance to the database
-                await SaveSignOut(learner.Id, registerClassId, data.IsEarlyLeave(_endTimeDateTime));
+                bool isEarlyLeave = data.IsEarlyLeave(_endTimeDateTime);
+                
+                // If it's an early leave, redirect to the Leave Early page
+                if (isEarlyLeave)
+                {
+                    NavigationManager.NavigateTo($"/leave-early/{learner.Id}");
+                    return;
+                }
+                
+                // Otherwise, save the attendance to the database
+                await SaveSignOut(learner.Id, registerClassId, isEarlyLeave);
             }
         }
         else
@@ -476,7 +495,7 @@
             await AttendanceService.RecordSignOutAsync(
                 _attendanceData[learnerId].AttendanceId.Value, 
                 isEarlyLeave,
-                $"Signed out at {DateTime.Now:HH:mm}" + (isEarlyLeave ? " (early)" : "")
+                $"Signed out at {DateTime.Now:HH:mm}{(isEarlyLeave ? " (early)" : "")}"
             );
         }
         else
@@ -497,7 +516,7 @@
             await AttendanceService.RecordSignOutAsync(
                 attendance.Id,
                 isEarlyLeave,
-                $"Signed out at {DateTime.Now:HH:mm}" + (isEarlyLeave ? " (early)" : "")
+                $"Signed out at {DateTime.Now:HH:mm}{(isEarlyLeave ? " (early)" : "")}"
             );
         }
 

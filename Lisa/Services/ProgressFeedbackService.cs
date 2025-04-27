@@ -157,12 +157,14 @@ public class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextF
         // Filter by date range if provided.
         if (fromDate is not null)
         {
-            query = query.Where(l => l.Results!.Any(r => r.UpdatedAt >= fromDate));
+            var fromDateUtc = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
+            query = query.Where(l => l.Results!.Any(r => r.UpdatedAt >= fromDateUtc));
         }
 
         if (toDate is not null)
         {
-            query = query.Where(l => l.Results!.Any(r => r.UpdatedAt <= toDate));
+            var toDateUtc = DateTime.SpecifyKind(toDate.Value.AddDays(1).AddSeconds(-1), DateTimeKind.Utc);
+            query = query.Where(l => l.Results!.Any(r => r.UpdatedAt <= toDateUtc));
         }
 
         // Order the results by surname, then select the desired fields.
@@ -177,5 +179,80 @@ public class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextF
             .ToListAsync();
 
         return list;
+    }
+
+    public async Task<ProgressFeedback?> GetProgressFeedbackAsync(Guid id, DateTime? fromDate = null, DateTime? toDate = null)
+    {
+        using var context = await _dbContextFactory.CreateDbContextAsync();
+        var learner = await context.Learners
+            .AsNoTracking()
+            .Include(l => l.RegisterClass!)
+                .ThenInclude(rc => rc.SchoolGrade!)
+                    .ThenInclude(sg => sg!.SystemGrade!)
+            .Include(l => l.Combination!)
+                .ThenInclude(c => c!.Subjects!)
+            .Include(l => l.LearnerSubjects!)
+                .ThenInclude(ls => ls.Subject!)
+            .Include(l => l.CareGroup!)
+            .Include(l => l.Parents!)
+            .Include(l => l.School!)
+            .Include(l => l.Results!)
+                .ThenInclude(r => r.ResultSet)
+                    .ThenInclude(rs => rs!.Subject)
+            .FirstOrDefaultAsync(l => l.Id == id);
+
+        if (learner == null)
+        {
+            throw new Exception("No learner found.");
+        }
+
+        var subjects = learner.LearnerSubjects?
+            .Select(ls => ls.Subject)
+            .Where(s => s != null)
+            .Distinct()
+            .ToList() ?? new List<Subject>();
+
+        var resultsBySubject = new Dictionary<string, List<Result>>();
+
+        foreach (var subject in subjects)
+        {
+            var query = learner.Results!
+                .Where(r => r.ResultSet != null &&
+                           r.ResultSet.Subject != null &&
+                           r.ResultSet.Subject.Id == subject.Id);
+
+            if (fromDate.HasValue)
+            {
+                // Convert to UTC to ensure compatibility with PostgreSQL timestamp with time zone
+                var fromDateUtc = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
+                query = query.Where(r => r.UpdatedAt >= fromDateUtc);
+            }
+
+            if (toDate.HasValue)
+            {
+                var endDate = DateTime.SpecifyKind(toDate.Value.AddDays(1), DateTimeKind.Utc);
+                query = query.Where(r => r.UpdatedAt < endDate);
+            }
+
+            var subjectResults = query
+                .OrderByDescending(r => r.UpdatedAt)
+                .Take(6)
+                .ToList();
+
+            resultsBySubject[subject.Name!] = subjectResults;
+        }
+
+        string learnerName = $"{learner.Name} {learner.Surname}";
+        TextInfo textInfo = CultureInfo.CurrentCulture.TextInfo;
+
+        string learnerNamTitleCase = textInfo.ToTitleCase(learnerName.ToLower());
+
+        var progressFeedback = new ProgressFeedback
+        {
+            LearnerName = learnerNamTitleCase,
+            ResultsBySubject = resultsBySubject
+        };
+
+        return progressFeedback;
     }
 }

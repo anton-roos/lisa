@@ -17,4 +17,6 @@ public class EmailCampaign
     public ICollection<EmailRecipient>? EmailRecipients { get; set; }
     public Guid SchoolId { get; set; }
     public RecipientTemplate RecipientTemplate { get; set; }
+    public DateTime? FromDate { get; set; }
+    public DateTime? ToDate { get; set; }
 }

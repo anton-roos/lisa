@@ -358,7 +358,9 @@
             GradeId = _gradeId,
             SubjectId = _subjectId,
             SchoolId = _selectedSchool.Id,
-            LearnerId = _recipientGroup == RecipientGroup.Learner ? SelectedLearner?.Id : null
+            LearnerId = _recipientGroup == RecipientGroup.Learner ? SelectedLearner?.Id : null,
+            FromDate = _fromDate,
+            ToDate = _toDate
         };
 
         _isSending = true;

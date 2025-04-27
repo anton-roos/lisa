@@ -20,11 +20,14 @@ namespace Lisa.Services
         private readonly LearnerService _learnerService = learnerService;
         private readonly SchoolService _schoolService = schoolService;
 
-        public async Task<string> RenderProgressFeedbackAsync(Guid learnerId)
+        public async Task<string> RenderProgressFeedbackAsync(Guid learnerId, DateTime? fromDate = null, DateTime? toDate = null)
         {
             try
             {
-                var feedback = await _progressFeedbackService.GetProgressFeedbackAsync(learnerId);
+                var feedback = fromDate.HasValue || toDate.HasValue
+                    ? await _progressFeedbackService.GetProgressFeedbackAsync(learnerId, fromDate, toDate)
+                    : await _progressFeedbackService.GetProgressFeedbackAsync(learnerId);
+
                 var principals = await _userService.GetLearnerPrincipal(learnerId);
                 var model = new ProgressFeedbackViewModel
                 {

@@ -147,10 +147,22 @@ else
                     @foreach (var contact in ParentContacts)
                     {
                         <div class="bg-light p-3 mb-2">
-                            <div><strong>@contact.Name</strong> (@contact.Relationship)</div>
-                            <div>WhatsApp: @contact.WhatsAppNumber</div>
-                            <div>Telephone: @contact.PrimaryCellNumber</div>
-                            <div>Email: @contact.PrimaryEmail</div>
+                            <div>
+                                <strong>@(string.IsNullOrEmpty(contact.Name) ? "Unknown" : contact.Name)</strong>
+                                @(!string.IsNullOrEmpty(contact.Relationship) ? $"({contact.Relationship})" : "")
+                            </div>
+                            <div>
+                                <span class="fw-bold">WhatsApp:</span> 
+                                @(!string.IsNullOrEmpty(contact.WhatsAppNumber) ? contact.WhatsAppNumber : "Not provided")
+                            </div>
+                            <div>
+                                <span class="fw-bold">Telephone:</span> 
+                                @(!string.IsNullOrEmpty(contact.PrimaryCellNumber) ? contact.PrimaryCellNumber : "Not provided")
+                            </div>
+                            <div>
+                                <span class="fw-bold">Email:</span> 
+                                @(!string.IsNullOrEmpty(contact.PrimaryEmail) ? contact.PrimaryEmail : "Not provided")
+                            </div>
                         </div>
                     }
                 }
@@ -177,7 +189,7 @@ else
                 <div class="mb-3">
                     <label class="form-label">Notes:</label>
                     <textarea class="form-control" @bind="Notes" rows="3" 
-                              placeholder="Enter confirmation details, reference numbers, etc."></textarea>
+                              placeholder="Enter permission details, telephone numbers called, reason for leaving early and transport details."></textarea>
                 </div>
                 
                 <h5 class="mt-4">Pick up details:</h5>
@@ -265,6 +277,10 @@ else
                                     {
                                         <div class="mt-2">
                                             <label class="form-label">Registration Number:</label>
+                                            <input type="text" class="form-control" @bind="RegistrationNumber" />
+                                        </div>
+                                        <div class="mt-2">
+                                            <label class="form-label">ID Number:</label>
                                             <input type="text" class="form-control" @bind="RegistrationNumber" />
                                         </div>
                                     }
@@ -541,11 +557,25 @@ else
 
     private async Task SelectLearner(Learner learner)
     {
-        SelectedLearner = learner;
+        // Get the full learner details with all related data
+        var fullLearner = await LearnerService.GetByIdAsync(learner.Id);
         
-        ParentContacts = learner.Parents?.ToList() ?? new List<Parent>();
+        // If we successfully got the full details, use those
+        if (fullLearner != null)
+        {
+            SelectedLearner = fullLearner;
+            ParentContacts = fullLearner.Parents?.ToList() ?? new List<Parent>();
+            Console.WriteLine($"Loaded {ParentContacts.Count} parent contacts for learner {fullLearner.Name} {fullLearner.Surname}");
+        }
+        else
+        {
+            // Fall back to the original learner object
+            SelectedLearner = learner;
+            ParentContacts = learner.Parents?.ToList() ?? new List<Parent>();
+            Console.WriteLine($"Warning: Could not load full learner details. Using limited data.");
+        }
         
-        var registerClass = learner.RegisterClass;
+        var registerClass = SelectedLearner.RegisterClass;
         if (registerClass != null)
         {
             CurrentRegisterClassId = registerClass.Id;
@@ -725,10 +755,9 @@ This is to inform you that {SelectedLearner.Name} left school at {DateTime.Now:H
 Permission method: {SelectedPermissionMethod}
 Pickup arrangement: {SelectedPickupOption}
 
-{Notes}
-
 Regards,
-{_selectedSchool.LongName}",
+{_selectedSchool.LongName}
+",
                     _selectedSchool.Id
                 );
             }
@@ -742,73 +771,41 @@ Regards,
 
     protected override async Task OnParametersSetAsync()
     {
+        // If a LearnerId is provided in the URL, load that specific learner
         if (LearnerId.HasValue)
         {
-            Console.WriteLine($"LearnerId parameter found: {LearnerId.Value}");
-            
-            if (_selectedSchool == null)
-            {
-                _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
-                if (_selectedSchool == null)
-                {
-                    Console.WriteLine("No school selected, can't process learner yet");
-                    return;
-                }
-                
-                await CheckForExistingSession();
-                await LoadAllLearnersForCurrentSchool();
-            }
-            
+            // Load the learner with all related data including parents
             var learner = await LearnerService.GetByIdAsync(LearnerId.Value);
+            
             if (learner != null)
             {
-                Console.WriteLine($"Learner found: {learner.Name} {learner.Surname}");
-                await SelectLearner(learner);
+                SelectedLearner = learner;
                 
-                if (!EndTimeConfirmed && CurrentUserId.HasValue)
+                // Load the parent contacts
+                ParentContacts = learner.Parents?.ToList() ?? new List<Parent>();
+                
+                // Set the register class ID
+                if (learner.RegisterClass != null)
                 {
-                    if (_currentSession != null && _currentSession.EndTime.HasValue)
-                    {
-                        EndTime = TimeOnly.FromDateTime(_currentSession.EndTime.Value.ToLocalTime());
-                        EndTimeConfirmed = true;
-                        Console.WriteLine($"Using end time from existing session: {EndTime}");
-                    }
-                    else if (_currentSession != null && EndTime.HasValue)
-                    {
-                        DateTime endTimeDateTime = DateTime.SpecifyKind(DateTime.Today.Add(EndTime.Value.ToTimeSpan()), DateTimeKind.Utc);
-                        await AttendanceService.UpdateSessionEndTimeAsync(
-                            _currentSession.Id,
-                            endTimeDateTime
-                        );
-                        EndTimeConfirmed = true;
-                        Console.WriteLine($"Updated session with default end time: {EndTime}");
-                    }
-                    else if (_currentSession == null && _selectedSchool != null && EndTime.HasValue)
-                    {
-                        var startTime = DateTime.SpecifyKind(DateTime.Today.AddHours(7), DateTimeKind.Utc); // Default start time
-                        DateTime endTimeDateTime = DateTime.SpecifyKind(DateTime.Today.Add(EndTime.Value.ToTimeSpan()), DateTimeKind.Utc);
-                        
-                        _currentSession = await AttendanceService.CreateAttendanceSessionAsync(
-                            _selectedSchool.Id,
-                            startTime,
-                            CurrentUserId
-                        );
-                        
-                        await AttendanceService.UpdateSessionEndTimeAsync(
-                            _currentSession.Id,
-                            endTimeDateTime
-                        );
-                        
-                        EndTimeConfirmed = true;
-                        Console.WriteLine($"Created new session with start time {startTime.ToLocalTime():HH:mm} and end time {EndTime.Value:HH:mm}");
-                    }
-                    await InvokeAsync(StateHasChanged);
+                    CurrentRegisterClassId = learner.RegisterClass.Id;
                 }
+                
+                // If school is different, update it
+                if (_selectedSchool?.Id != learner.SchoolId)
+                {
+                    _selectedSchool = await SchoolService.GetSchoolAsync(learner.SchoolId);
+                    await CheckForExistingSession();
+                }
+                
+                await LoadAllLearnersForCurrentSchool();
             }
             else
             {
-                Console.WriteLine($"No learner found with ID: {LearnerId.Value}");
+                // Learner not found, navigate back to the main page
+                NavigationManager.NavigateTo("/leave-early");
             }
         }
+        
+        await base.OnParametersSetAsync();
     }
 }

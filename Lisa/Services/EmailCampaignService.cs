@@ -53,7 +53,9 @@ public class EmailCampaignService(
                 UpdatedAt = DateTime.UtcNow,
                 EmailRecipients = recipients,
                 SchoolId = command.SchoolId,
-                RecipientTemplate = command.RecipientTemplate
+                RecipientTemplate = command.RecipientTemplate,
+                FromDate = command.FromDate,
+                ToDate = command.ToDate,
             };
 
             context.EmailCampaigns.Add(emailCampaign);
@@ -308,12 +310,13 @@ public class EmailCampaignService(
                 RecipientTemplate.Test when recipient.LearnerId.HasValue =>
                     await GetSubjectLine(recipient.LearnerId.Value, campaign),
                 _ => throw new InvalidOperationException($"Unsupported recipient template: {campaign.RecipientTemplate}")
-            };
+            };            // Get campaign-specific data like date range
 
             string body = campaign.RecipientTemplate switch
             {
                 RecipientTemplate.ProgressFeedback when recipient.LearnerId.HasValue =>
-                    await _emailRendererService.RenderProgressFeedbackAsync(recipient.LearnerId.Value),
+                    await _emailRendererService.RenderProgressFeedbackAsync(recipient.LearnerId.Value,
+                        campaign?.FromDate, campaign?.ToDate),
                 RecipientTemplate.Test when recipient.LearnerId.HasValue =>
                     await _emailRendererService.RenderTestAsync(recipient.LearnerId.Value),
                 RecipientTemplate.Newsletter =>
@@ -398,11 +401,22 @@ public class EmailCampaignService(
             UpdatedAt = DateTime.UtcNow
         }).ToList();
     }
-
     private async Task<List<(string Email, Guid LearnerId)>> GetProgressFeedbackRecipientsAsync(CommunicationCommand command)
     {
-        List<Learner> learners = await GetLearnersAsync(command);
-        return await MapRecipientsAsync(command.RecipientType, learners, command.SchoolId);
+        // If this is a progress feedback template and dates are specified, use the specialized method
+        if (command.RecipientTemplate == RecipientTemplate.ProgressFeedback &&
+            (command.FromDate.HasValue || command.ToDate.HasValue))
+        {
+            // Use the specialized method that supports date filtering
+            List<Learner> filteredLearners = await GetLearnersWithDateFilterAsync(command);
+            return await MapRecipientsAsync(command.RecipientType, filteredLearners, command.SchoolId);
+        }
+        else
+        {
+            // Use the standard approach if no date filtering is needed
+            List<Learner> learners = await GetLearnersAsync(command);
+            return await MapRecipientsAsync(command.RecipientType, learners, command.SchoolId);
+        }
     }
 
     private async Task<List<string>> GetRecipientEmailsAsync(CommunicationCommand command)
@@ -575,6 +589,40 @@ public class EmailCampaignService(
     private static int CalculateProgress(int processedCount, int total)
     {
         return total > 0 ? (int)((double)processedCount / total * 100) : ProgressComplete;
+    }
+
+    private async Task<List<Learner>> GetLearnersWithDateFilterAsync(CommunicationCommand command)
+    {
+        // For a specific learner, just get that specific learner
+        if (command.RecipientGroup == RecipientGroup.Learner && command.LearnerId.HasValue)
+        {
+            var learner = await _learnerService.GetByIdAsync(command.LearnerId.Value);
+            return learner != null ? new List<Learner> { learner } : new List<Learner>();
+        }        // Get a progress feedback service directly to use the date-filtered method
+        using var context = await _contextFactory.CreateDbContextAsync();
+
+        var progressService = new ProgressFeedbackService(_contextFactory, _logger as ILogger<LearnerService>);
+
+        var progressItems = await progressService.GetProgressFeedbackListAsync(
+            command.SchoolId,
+            command.RecipientGroup == RecipientGroup.SchoolGrade ? command.GradeId : null,
+            command.RecipientGroup == RecipientGroup.Subject ? command.SubjectId : null,
+            command.FromDate,
+            command.ToDate
+        );
+
+        // Get the full learner data for each ID in the list
+        List<Learner> learners = new();
+        foreach (var item in progressItems)
+        {
+            var learner = await _learnerService.GetByIdAsync(item.LearnerId);
+            if (learner != null)
+            {
+                learners.Add(learner);
+            }
+        }
+
+        return learners;
     }
 }
 

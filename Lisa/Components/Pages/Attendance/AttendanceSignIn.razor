@@ -217,7 +217,7 @@
             await CheckForExistingSession();
 
             // Force UI update
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
 
         await base.HandleEventAsync(eventName, payload);

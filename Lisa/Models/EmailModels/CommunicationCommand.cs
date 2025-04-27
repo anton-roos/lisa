@@ -11,4 +11,7 @@ public class CommunicationCommand
     public Guid? GradeId { get; set; }
     public int SubjectId { get; set; }
     public Guid? LearnerId { get; set; }
+    public DateTime? FromDate { get; set; }
+    public DateTime? ToDate { get; set; }
+    public Guid? CampaignId { get; set; }
 }

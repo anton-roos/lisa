@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Ardalis.GuardClauses;
 using Lisa.Data;
 using Lisa.Models.Entities;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -77,7 +78,6 @@ public class SchoolService(
         {
             return _selectedSchool;
         }
-
         var currentUser = await GetCurrentUserAsync();
         if (currentUser == null)
         {
@@ -108,12 +108,9 @@ public class SchoolService(
         _selectedSchool = await context.Schools
             .AsNoTracking().Include(school => school.Learners)
             .FirstOrDefaultAsync(s => s.Id == user.SchoolId);
-
-        if (_selectedSchool == null)
-        {
-            _logger.LogError("School not found for non-system administrator user {UserId} with SchoolId: {SchoolId}", user.Id, user.SchoolId);
-            throw new InvalidOperationException("Non-system administrator user must have a valid associated school.");
-        }
+        Guard.Against.Null(_selectedSchool, nameof(_selectedSchool),
+        $"School not found for non-system administrator user {user.Id} with SchoolId: {user.SchoolId}. " +
+        "Non-system administrator user must have a valid associated school.");
 
         _logger.LogError("Main return returned school as {school} ", _selectedSchool.Learners);
         return _selectedSchool;
@@ -153,7 +150,7 @@ public class SchoolService(
 
     /// <summary>
     /// Updates the persistent store with the current selected school ID for the logged-in user.
-    /// </summary>
+    /// </summary>    
     private async Task UpdateUserSelectedSchoolAsync()
     {
         var currentUser = await GetCurrentUserAsync();

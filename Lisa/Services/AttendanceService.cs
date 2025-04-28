@@ -1,3 +1,4 @@
+using Ardalis.GuardClauses;
 using Lisa.Data;
 using Lisa.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +14,7 @@ public partial class AttendanceService(IDbContextFactory<LisaDbContext> dbContex
         bool isPresent, string? notes = null, Guid? recordedByUserId = null, Guid? sessionId = null)
     {
         var today = DateTime.UtcNow.Date;
-        
+
         using var dbContext = await _dbContextFactory.CreateDbContextAsync();
         var existingAttendance = await dbContext.Attendances
             .FirstOrDefaultAsync(a => a.LearnerId == learnerId &&

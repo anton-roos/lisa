@@ -1,3 +1,4 @@
+using Ardalis.GuardClauses;
 using Lisa.Data;
 using Lisa.Models.Entities;
 using Lisa.Models.ViewModels;
@@ -105,6 +106,8 @@ public class UserService(
 
     public async Task<User?> GetTeacherForGradeAndSubjectAsync(Guid? schoolId, Guid gradeId, int subjectId)
     {
+        Guard.Against.Default(gradeId, nameof(gradeId), "Grade ID cannot be an empty GUID");
+
         try
         {
             using var context = await dbContextFactory.CreateDbContextAsync();
@@ -143,6 +146,8 @@ public class UserService(
                 return;
             }
 
+            Guard.Against.Null(user, nameof(user));
+
             existing.SchoolId = user.SchoolId;
 
             await context.SaveChangesAsync();
@@ -156,6 +161,8 @@ public class UserService(
 
     public async Task<bool> UpdateAsync(UserViewModel user, string? newPassword)
     {
+        Guard.Against.Null(user, nameof(user));
+
         try
         {
             using var context = await dbContextFactory.CreateDbContextAsync();
@@ -200,21 +207,13 @@ public class UserService(
 
             if (!string.IsNullOrWhiteSpace(newPassword))
             {
-                if (existing is not null)
-                {
-                    existing.PasswordHash = passwordHasher.HashPassword(existing, newPassword);
-                }
-
+                existing.PasswordHash = passwordHasher.HashPassword(existing, newPassword);
                 logger.LogInformation("Updated password for teacher: {TeacherId}", user.Id);
             }
 
             await context.SaveChangesAsync();
 
-            if (existing is null)
-            {
-                logger.LogWarning("Attempted to update roles for non-existent user. UserId: {UserId}", user.Id);
-                return false;
-            }
+            Guard.Against.Null(existing, nameof(existing), $"User no longer exists after save. UserId: {user.Id}");
 
             var currentRoles = await userManager.GetRolesAsync(existing);
 
@@ -256,6 +255,8 @@ public class UserService(
 
     public async Task<bool> DeleteAsync(Guid id)
     {
+        Guard.Against.Default(id, nameof(id), "User ID cannot be an empty GUID");
+
         try
         {
             using var context = await dbContextFactory.CreateDbContextAsync();
@@ -303,6 +304,8 @@ public class UserService(
 
     public async Task<List<User>> GetAvailableTeachersAsync(Guid userId)
     {
+        Guard.Against.Default(userId, nameof(userId), "User ID cannot be an empty GUID");
+
         try
         {
             using var context = await dbContextFactory.CreateDbContextAsync();
@@ -310,6 +313,7 @@ public class UserService(
 
             if (teacher == null)
             {
+                logger.LogWarning("Teacher with ID {TeacherId} not found", userId);
                 return [];
             }
 
@@ -327,6 +331,9 @@ public class UserService(
 
     public async Task<bool> TransferRegisterClassesAsync(Guid oldUserId, Guid newUserId)
     {
+        Guard.Against.Default(oldUserId, nameof(oldUserId), "Old user ID cannot be an empty GUID");
+        Guard.Against.Default(newUserId, nameof(newUserId), "New user ID cannot be an empty GUID");
+
         try
         {
             using var context = await dbContextFactory.CreateDbContextAsync();
@@ -358,6 +365,8 @@ public class UserService(
 
     public async Task<List<User>?> GetLearnerPrincipal(Guid LearnerId)
     {
+        Guard.Against.Default(LearnerId, nameof(LearnerId), "Learner ID cannot be an empty GUID");
+
         try
         {
             using var context = await dbContextFactory.CreateDbContextAsync();

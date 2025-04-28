@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using Ardalis.GuardClauses;
 using Hangfire;
 using Lisa.Data;
 using Lisa.Enums;
@@ -28,14 +29,9 @@ public class EmailCampaignService(
     private readonly EmailRendererService _emailRendererService = emailRendererService;
     private const int BatchSize = 100;
     private const int ProgressComplete = 100;
-    private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled);
-
-    public async Task<EmailCampaign> CreateAsync(CommunicationCommand command)
+    private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled); public async Task<EmailCampaign> CreateAsync(CommunicationCommand command)
     {
-        if (command == null)
-        {
-            throw new Exception("Command cannot be null.");
-        }
+        Guard.Against.Null(command, nameof(command));
 
         using var context = await _contextFactory.CreateDbContextAsync();
         await using var transaction = await context.Database.BeginTransactionAsync();
@@ -89,8 +85,7 @@ public class EmailCampaignService(
     [JobDisplayName("Email Campaign Processing")]
     public async Task StartCampaignAsync(Guid campaignId)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
-        var campaign = await context.EmailCampaigns
+        using var context = await _contextFactory.CreateDbContextAsync(); var campaign = await context.EmailCampaigns
             .AsNoTracking()
             .Include(c => c.EmailRecipients)
             .FirstOrDefaultAsync(c => c.Id == campaignId);
@@ -536,9 +531,11 @@ public class EmailCampaignService(
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
-
     private bool ValidateCampaign(EmailCampaign campaign)
     {
+        // Guard against null parameter
+        Guard.Against.Null(campaign, nameof(campaign));
+
         if (string.IsNullOrWhiteSpace(campaign.Name))
         {
             _logger.LogWarning("Campaign {CampaignId} has an invalid name.", campaign.Id);

@@ -72,30 +72,29 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Attendance}")">
+        @* <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Attendance}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="attendance">
                     <span class="bi attendance-icon" aria-hidden="true"></span> Attendance
                 </NavLink>
             </div>
-        </AuthorizeView>
+        </AuthorizeView> *@
 
-        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher},{Roles.Attendance}")">
+        @* <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher},{Roles.Attendance}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="daily-register">
                     <span class="bi daily-register-icon" aria-hidden="true"></span> Daily Register
                 </NavLink>
             </div>
-        </AuthorizeView>
+        </AuthorizeView> *@
 
-        <!-- Add the new Leave Early menu item here -->
-        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Attendance}")">
+        @* <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Attendance}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="leave-early">
                     <span class="bi leave-early-icon" aria-hidden="true"></span> Leave Early
                 </NavLink>
             </div>
-        </AuthorizeView>
+        </AuthorizeView> *@
 
         <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
             <div class="nav-item px-3">

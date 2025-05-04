@@ -18,9 +18,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Get the URLs from configuration or use a default for development
-var urls = builder.Configuration["Kestrel:Endpoints:Http:Url"] ?? "http://0.0.0.0:5000";
-builder.WebHost.UseUrls(urls);
+builder.WebHost.UseUrls("http://localhost:5000");
 
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)

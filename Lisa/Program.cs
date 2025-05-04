@@ -174,6 +174,9 @@ while (true)
         var db = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
 
         app.Logger.LogInformation("Attempting database migration...");
+
+Console.WriteLine(">>> DB CONNECTION STRING: " + builder.Configuration.GetConnectionString("Lisa"));
+
         db.Database.Migrate();
         app.Logger.LogInformation("Database migration successful!");
 

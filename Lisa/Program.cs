@@ -18,7 +18,9 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls("http://0.0.0.0:80");
+// Get the URLs from configuration or use a default for development
+var urls = builder.Configuration["Kestrel:Endpoints:Http:Url"] ?? "http://0.0.0.0:5000";
+builder.WebHost.UseUrls(urls);
 
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
@@ -48,7 +50,7 @@ builder.Services.AddRazorComponents(options =>
     .AddInteractiveServerComponents();
 
 builder.Services.AddDbContextFactory<LisaDbContext>(options =>
-    options.UseNpgsql("Host=db;Port=5432;Database=lisadb;Username=lisauser;Password=strongpassword"));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Lisa")));
 
 builder.Services.AddAuthentication(options =>
     {
@@ -109,7 +111,7 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
 builder.Services.AddHangfire(config =>
     config.UsePostgreSqlStorage(options =>
     {
-        options.UseNpgsqlConnection("Host=db;Port=5432;Database=lisadb;Username=lisauser;Password=strongpassword");
+        options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("Lisa"));
     })
     .WithJobExpirationTimeout(TimeSpan.FromDays(7)));
 

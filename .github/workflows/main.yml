@@ -19,7 +19,7 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Publish .NET app
-        run: dotnet publish src/Lisa/Lisa.csproj -c Release -o publish
+        run: dotnet publish Lisa/Lisa.csproj -c Release -o publish
 
       - name: Upload published files to server
         uses: appleboy/scp-action@v0.1.7

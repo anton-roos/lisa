@@ -6,7 +6,6 @@
  - School Management
  - Administrator
  - Teacher
- - Swedelaar
 
 ## User Type Priveleges
 ### Super Admin

@@ -7,13 +7,13 @@
  - Administrator
  - Teacher
 
-## User Type Priveleges
+## User Type Privileges
 ### Super Admin
  - Do what Principals does at every school.
  - Add or Remove Other Super Admins.
  - Configure Communication Templates
  - Change School Information
-   - Add Cirriculum Information
+   - Add Curriculum Information
    - Add School Color
    - Add Care Groups to School
  - Add Teachers
@@ -162,25 +162,25 @@ When selecting Telephonic, notes needs to be mandatory
 When selecting Letter, email or whatsapp it should expose a dragover and paste box where the user needs to paste evidence of the permission.
 
 # Sign In / Sign Out
-Configure at school level what the start time is (7:30) will pull through on the cofirmation.
+Configure at school level what the start time is (7:30) will pull through on the confirmation.
 Attendance roles can't sign out learners before school end time.
-If a learner left early for the instead of 'Abesnt' 'Left Early'
+If a learner left early for the instead of 'Absent' 'Left Early'
 Cellphone handed in on sign in cellphone retreived at sign out or leave early.
 
 # Daily Register
-The daily register opens and check if there is a selected school like most pages, then a user selects a register class, after selecting the register class a list of learners in that register class will load with the default Abest pill. When clikcing on the abest button it tunrs to Present.
+The daily register opens and check if there is a selected school like most pages, then a user selects a register class, after selecting the register class a list of learners in that register class will load with the default Absent pill. When clikcing on the Absent button it tunrs to Present.
 
 # Communication
 If the email is not sucessfully authenticated, a error must go to the user.
 
 # Per Period Attendance
-If a learner left early for the instead of 'Abesnt' 'Left Early'
+If a learner left early for the instead of 'Absent' 'Left Early'
 If a leaner is clicked you will see the time of when he arrived.
 Lock in
 Then if you come in after lock in it will show late with red border
 
 !SignenIn && !Registered == Show Absent [Not Signed In]
-SignedIn && !Reigtered == Show Absent [Not Registered]
+SignedIn && !Registered == Show Absent [Not Registered]
 SignedIn && Registered == Show Absent
 
 After lock in all Present on Daily Register but not in class Shows Not Attending

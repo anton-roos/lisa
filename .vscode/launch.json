@@ -6,10 +6,16 @@
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "Build Lisa",
-      "program": "${workspaceFolder}/Lisa/bin/Debug/net9.0/Lisa.dll",
-      "args": [],
+      "program": "/home/anton/.dotnet/dotnet-9.0.203/dotnet",
+      "args": [
+        "${workspaceFolder}/Lisa/bin/Debug/net9.0/Lisa.dll"
+      ],
       "cwd": "${workspaceFolder}/Lisa",
       "stopAtEntry": false,
+      "env": {
+        "DOTNET_ROOT": "/home/anton/.dotnet/dotnet-9.0.203",
+        "PATH": "/home/anton/.dotnet/dotnet-9.0.203:${env:PATH}"
+      },
       "serverReadyAction": {
         "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
         "uriFormat": "%s",

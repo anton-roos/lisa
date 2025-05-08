@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# Drawio Backup files
+*.bkp
+
 # User-specific files
 *.rsuser
 *.suo

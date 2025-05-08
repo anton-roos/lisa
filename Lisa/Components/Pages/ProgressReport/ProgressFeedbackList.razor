@@ -19,14 +19,20 @@
             <div class="row mb-3">
                 <div class="col-md-4">
                     <label for="fromDate" class="form-label">From Date</label>
-                    <input id="fromDate" type="date" class="form-control" @bind="_fromDate"
-                        @oninput="async (e) => await OnDateRangeChange()" />
+                    <div class="d-flex align-items-center">
+                        <input id="fromDate" type="date" class="form-control me-2" @bind="_fromDate"
+                            @oninput="async (e) => await OnDateRangeChange()" />
+                        <button class="btn btn-secondary" @onclick="ClearFromDate">Clear</button>
+                    </div>
                 </div>
 
                 <div class="col-md-4">
                     <label for="toDate" class="form-label">To Date</label>
-                    <input id="toDate" type="date" class="form-control" @bind="_toDate"
-                        @oninput="async (e) => await OnDateRangeChange()" />
+                    <div class="d-flex align-items-center">
+                        <input id="toDate" type="date" class="form-control me-2" @bind="_toDate"
+                            @oninput="async (e) => await OnDateRangeChange()" />
+                        <button class="btn btn-secondary" @onclick="ClearToDate">Clear</button>
+                    </div>
                 </div>
                 <div class="col-md-4">
                     <label for="gradeDropdown" class="form-label">Grade</label>
@@ -216,7 +222,25 @@
 
     private void NavigateToDetails(Guid learnerId)
     {
-        NavigationManager.NavigateTo($"/progress-feedback-details/{learnerId}");
+        var queryParams = new List<string>();
+        
+        if (_fromDate.HasValue)
+        {
+            queryParams.Add($"fromDate={_fromDate.Value:yyyy-MM-dd}");
+        }
+        
+        if (_toDate.HasValue)
+        {
+            queryParams.Add($"toDate={_toDate.Value:yyyy-MM-dd}");
+        }
+        
+        var url = $"/progress-feedback-details/{learnerId}";
+        if (queryParams.Any())
+        {
+            url += $"?{string.Join("&", queryParams)}";
+        }
+        
+        NavigationManager.NavigateTo(url);
     }
 
     private async Task LoadDropdowns()
@@ -226,5 +250,19 @@
             _subjects = await SubjectService.GetAllAsync();
             _grades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
         }
+    }
+
+    private async Task ClearFromDate()
+    {
+        _fromDate = null;
+        await LoadProgressFeedbackListFromService();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ClearToDate()
+    {
+        _toDate = null;
+        await LoadProgressFeedbackListFromService();
+        await InvokeAsync(StateHasChanged);
     }
 }

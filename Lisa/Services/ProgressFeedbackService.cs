@@ -48,12 +48,12 @@ public class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextF
         // For each subject, filter learner.Results where the ResultSet's Subject matches.
         foreach (var subject in subjects)
         {
-            // Order descending by UpdatedAt (newest first), then take up to 6 results.
+            // Order descending by AssessmentDate (newest first), then take up to 6 results.
             var subjectResults = learner.Results!
                 .Where(r => r.ResultSet != null &&
                             r.ResultSet.Subject != null &&
                             r.ResultSet.Subject.Id == subject.Id)
-                .OrderByDescending(r => r.UpdatedAt)
+                .OrderByDescending(r => r.ResultSet!.AssessmentDate ?? DateTime.MinValue)
                 .Take(6)
                 .ToList();
 
@@ -141,6 +141,8 @@ public class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextF
         // Start with the base query for learners in the selected school that have results.
         var query = context.Learners
             .AsNoTracking()
+            .Include(l => l.Results!)
+                .ThenInclude(r => r.ResultSet)
             .Where(l => l.Results!.Any() && l.SchoolId == schoolId);
 
         // Filter by grade if provided.
@@ -159,13 +161,13 @@ public class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextF
         if (fromDate is not null)
         {
             var fromDateUtc = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
-            query = query.Where(l => l.Results!.Any(r => r.UpdatedAt >= fromDateUtc));
+            query = query.Where(l => l.Results!.Any(r => r.ResultSet != null && r.ResultSet.AssessmentDate >= fromDateUtc));
         }
 
         if (toDate is not null)
         {
             var toDateUtc = DateTime.SpecifyKind(toDate.Value.AddDays(1).AddSeconds(-1), DateTimeKind.Utc);
-            query = query.Where(l => l.Results!.Any(r => r.UpdatedAt <= toDateUtc));
+            query = query.Where(l => l.Results!.Any(r => r.ResultSet != null && r.ResultSet.AssessmentDate <= toDateUtc));
         }
 
         // Order the results by surname, then select the desired fields.
@@ -226,17 +228,17 @@ public class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextF
             {
                 // Convert to UTC to ensure compatibility with PostgreSQL timestamp with time zone
                 var fromDateUtc = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
-                query = query.Where(r => r.UpdatedAt >= fromDateUtc);
+                query = query.Where(r => r.ResultSet != null && r.ResultSet.AssessmentDate >= fromDateUtc);
             }
 
             if (toDate.HasValue)
             {
                 var endDate = DateTime.SpecifyKind(toDate.Value.AddDays(1), DateTimeKind.Utc);
-                query = query.Where(r => r.UpdatedAt < endDate);
+                query = query.Where(r => r.ResultSet != null && r.ResultSet.AssessmentDate < endDate);
             }
 
             var subjectResults = query
-                .OrderByDescending(r => r.UpdatedAt)
+                .OrderByDescending(r => r.ResultSet?.AssessmentDate ?? DateTime.MinValue)
                 .Take(6)
                 .ToList();
 

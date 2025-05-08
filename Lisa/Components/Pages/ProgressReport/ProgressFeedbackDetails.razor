@@ -39,14 +39,16 @@ else
         if (queryParams.TryGetValue("fromDate", out var fromDateParam) && 
             DateTime.TryParse(fromDateParam, out var parsedFromDate))
         {
-            FromDate = parsedFromDate;
+            // Convert to UTC to ensure compatibility with PostgreSQL
+            FromDate = DateTime.SpecifyKind(parsedFromDate, DateTimeKind.Utc);
         }
 
         // Extract to date parameter if present
         if (queryParams.TryGetValue("toDate", out var toDateParam) && 
             DateTime.TryParse(toDateParam, out var parsedToDate))
         {
-            ToDate = parsedToDate;
+            // Convert to UTC to ensure compatibility with PostgreSQL
+            ToDate = DateTime.SpecifyKind(parsedToDate, DateTimeKind.Utc);
         }
 
         // Pass date parameters to the renderer service

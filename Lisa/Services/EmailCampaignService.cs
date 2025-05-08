@@ -50,8 +50,8 @@ public class EmailCampaignService(
                 EmailRecipients = recipients,
                 SchoolId = command.SchoolId,
                 RecipientTemplate = command.RecipientTemplate,
-                FromDate = command.FromDate,
-                ToDate = command.ToDate,
+                FromDate = command.FromDate.HasValue ? DateTime.SpecifyKind(command.FromDate.Value, DateTimeKind.Utc) : null,
+                ToDate = command.ToDate.HasValue ? DateTime.SpecifyKind(command.ToDate.Value, DateTimeKind.Utc) : null,
             };
 
             context.EmailCampaigns.Add(emailCampaign);
@@ -598,14 +598,16 @@ public class EmailCampaignService(
         }        // Get a progress feedback service directly to use the date-filtered method
         using var context = await _contextFactory.CreateDbContextAsync();
 
-        var progressService = new ProgressFeedbackService(_contextFactory, _logger as ILogger<LearnerService>);
+        var progressService = new ProgressFeedbackService(_contextFactory, _logger as ILogger<LearnerService>);        // Ensure dates are in UTC format before passing to the service
+        DateTime? fromDateUtc = command.FromDate.HasValue ? DateTime.SpecifyKind(command.FromDate.Value, DateTimeKind.Utc) : null;
+        DateTime? toDateUtc = command.ToDate.HasValue ? DateTime.SpecifyKind(command.ToDate.Value, DateTimeKind.Utc) : null;
 
         var progressItems = await progressService.GetProgressFeedbackListAsync(
             command.SchoolId,
             command.RecipientGroup == RecipientGroup.SchoolGrade ? command.GradeId : null,
             command.RecipientGroup == RecipientGroup.Subject ? command.SubjectId : null,
-            command.FromDate,
-            command.ToDate
+            fromDateUtc,
+            toDateUtc
         );
 
         // Get the full learner data for each ID in the list

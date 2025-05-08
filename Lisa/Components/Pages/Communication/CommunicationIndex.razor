@@ -396,6 +396,17 @@
 
     private async Task OnDateRangeChange()
     {
+        // Ensure dates are properly handled when changed in the UI
+        if (_fromDate.HasValue)
+        {
+            _fromDate = DateTime.SpecifyKind(_fromDate.Value, DateTimeKind.Utc);
+        }
+        
+        if (_toDate.HasValue)
+        {
+            _toDate = DateTime.SpecifyKind(_toDate.Value, DateTimeKind.Utc);
+        }
+        
         await InvokeAsync(StateHasChanged);
     }
 }

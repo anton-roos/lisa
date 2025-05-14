@@ -1,98 +1,187 @@
 using System.Net;
 using System.Net.Mail;
+using System.Net.Sockets;
+using Ardalis.GuardClauses;
 using Lisa.Models.Entities;
 
 namespace Lisa.Services
 {
-    public class EmailService(SchoolService schoolService, ILogger<EmailService> logger)
+    public class EmailService
     {
-        private readonly SchoolService _schoolService = schoolService;
-        private readonly ILogger<EmailService> _logger = logger;
-        public async Task SendBugReportEmailAsync(BugReport bugReport)
+        private readonly SchoolService _schoolService;
+        private readonly ILogger<EmailService> _logger;
+        private const int DefaultRetryCount = 3;
+        private const int DefaultRetryDelayMs = 2000;
+        private const int DefaultTimeoutMs = 60000; // 60 seconds timeout
+
+        public EmailService(SchoolService schoolService, ILogger<EmailService> logger)
         {
-            using var smtpClient = new SmtpClient("smtp.office365.com");
-            smtpClient.Port = 587;
-            smtpClient.Credentials = new NetworkCredential("portalDCEG@dcegroup.co.za", "Portal@DCEG");
-            smtpClient.EnableSsl = true;
-
-            var mailMessage = new MailMessage
-            {
-                From = new MailAddress("portalDCEG@dcegroup.co.za"),
-                Subject = "Bug Report",
-                Body =
-                $@"
-                    <!DOCTYPE html>
-                    <html lang=""en"">
-                    <head>
-                        <meta charset=""UTF-8"">
-                        <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-                        <title>Bug Report</title>
-                        <style>
-                            body {{ font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; }}
-                            .container {{ max-width: 600px; margin: auto; background: #fff; border: 1px solid #ddd; padding: 20px; border-radius: 8px; }}
-                            .header {{ padding: 10px; text-align: center; }}
-                            .footer {{ text-align: center; font-size: 12px; color: #666; padding: 10px; }}
-                        </style>
-                    </head>
-                    <body>
-                        <div class=""container"">
-                            <div class=""header""><h1>Bug Report</h1></div>
-                            <p><strong>Reported At:</strong> {bugReport.ReportedAt}</p>
-                            <p><strong>Reported By:</strong> {bugReport.ReportedBy ?? "Anonymous"}</p>
-                            <p><strong>User Authenticated:</strong> {(bugReport.UserAuthenticated ? "Yes" : "No")}</p>
-                            <p><strong>Page URL:</strong> <a href=""{bugReport.PageUrl}"">{bugReport.PageUrl}</a></p>
-                            <p><strong>App Version:</strong> {bugReport.Version}</p>
-                            <hr>
-                            <p><strong>What Happened:</strong> {bugReport.WhatHappened}</p>
-                            <p><strong>What Was Tried:</strong> {bugReport.WhatTried}</p>
-                        </div>
-                    </body>
-                    </html>
-                ",
-                IsBodyHtml = true
-            };
-
-            mailMessage.To.Add("antonroos992@gmail.com");
-            await smtpClient.SendMailAsync(mailMessage);
+            _schoolService = Guard.Against.Null(schoolService, nameof(schoolService));
+            _logger = Guard.Against.Null(logger, nameof(logger));
         }
 
         public async Task SendEmailAsync(string to, string subject, string body, Guid schoolId)
         {
-            try
-            {
-                var school = await _schoolService.GetSchoolAsync(schoolId);
+            Guard.Against.NullOrEmpty(to, nameof(to), "Email recipient address cannot be empty");
+            Guard.Against.Null(schoolId, nameof(schoolId));
 
-                if (school == null)
+            var retryCount = 0;
+            Exception? lastException = null;
+
+            while (retryCount < DefaultRetryCount)
+            {
+                try
                 {
-                    _logger.LogError("School with ID {schoolId} not found.", schoolId);
-                    throw new Exception($"School with ID {schoolId} not found.");
+                    var school = await _schoolService.GetSchoolAsync(schoolId);
+                    Guard.Against.Null(school, nameof(school), $"School with ID {schoolId} not found");
+
+                    using var smtpClient = CreateSmtpClient(school);
+                    using var mailMessage = CreateMailMessage(to, subject, body, school);
+                    
+                    _logger.LogInformation(
+                        "Attempt {RetryCount}: Sending email from {Sender} ({SenderName}) to {Recipient} with subject '{Subject}' using SMTP server {SmtpHost}:{SmtpPort}", 
+                        retryCount + 1,
+                        mailMessage.From!.Address, 
+                        mailMessage.From.DisplayName, 
+                        to, 
+                        subject, 
+                        school.SmtpHost, 
+                        school.SmtpPort);
+
+                    using var cts = new CancellationTokenSource(DefaultTimeoutMs);
+                    await smtpClient.SendMailAsync(mailMessage, cts.Token);
+                    
+                    _logger.LogInformation("Email sent successfully to {Recipient}", to);
+                    return;
+                }
+                catch (OperationCanceledException ex)
+                {
+                    lastException = ex;
+                    _logger.LogWarning(ex, "Email sending timed out on attempt {RetryCount} to {Recipient}: {Message}", 
+                        retryCount + 1, to, ex.Message);
+                }
+                catch (SmtpException ex) when (IsTransientSmtpError(ex))
+                {
+                    lastException = ex;
+                    _logger.LogWarning(ex, "Transient SMTP error on attempt {RetryCount} sending email to {Recipient}: {Message}", 
+                        retryCount + 1, to, ex.Message);
+                }
+                catch (SmtpException ex)
+                {
+                    _logger.LogError(ex, "Non-transient SMTP error sending email to {Recipient}: {Message}", to, ex.Message);
+                    throw new EmailSendException($"Failed to send email: {ex.Message}", ex);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    _logger.LogError(ex, "Invalid SMTP configuration for email to {Recipient}: {Message}", to, ex.Message);
+                    throw new EmailConfigurationException($"Email configuration error: {ex.Message}", ex);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unexpected error sending email to {Recipient}: {Message}", to, ex.Message);
+                    throw new EmailSendException($"Unexpected error sending email: {ex.Message}", ex);
                 }
 
-                using var smtpClient = new SmtpClient("smtp.office365.com");
-                smtpClient.Port = school.SmtpPort;
-                smtpClient.Credentials = new NetworkCredential(school.SmtpEmail, school.SmtpPassword);
-                smtpClient.EnableSsl = true;
-
-                //var senderName = $"DCEG LEARN - {school.LongName}";
-                var senderName = school.SmtpEmail;
-
-                var mailMessage = new MailMessage
+                retryCount++;
+                if (retryCount < DefaultRetryCount)
                 {
-                    From = new MailAddress(school.SmtpEmail ?? throw new Exception("SMTP email not set."), senderName),
-                    Subject = subject,
-                    Body = body,
-                    IsBodyHtml = true
-                };
-
-                mailMessage.To.Add(to);
-                await smtpClient.SendMailAsync(mailMessage);
-
+                    await Task.Delay(DefaultRetryDelayMs * retryCount);
+                }
             }
-            catch (SmtpException ex)
-            {
-                _logger.LogError("Failed to send email to {to}: {ex.Message}", to, ex.Message);
-                throw;
-            }
+
+            _logger.LogError(lastException, "Failed to send email to {Recipient} after {RetryCount} attempts", 
+                to, DefaultRetryCount);
+            throw new EmailSendException($"Failed to send email after {DefaultRetryCount} attempts: {lastException?.Message}", lastException);
         }
+
+        private SmtpClient CreateSmtpClient(School school)
+        {
+            Guard.Against.Null(school, nameof(school));
+
+            var smtpClient = new SmtpClient
+            {
+                Host = school.SmtpHost ?? "smtp.office365.com",
+                Port = school.SmtpPort,
+                EnableSsl = true,
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                UseDefaultCredentials = false,
+                Timeout = DefaultTimeoutMs
+            };
+
+            var username = !string.IsNullOrEmpty(school.SmtpUsername)
+                ? school.SmtpUsername
+                : school.SmtpEmail;
+
+            Guard.Against.NullOrEmpty(username, nameof(username), 
+                "SMTP username/email not configured for this school");
+            Guard.Against.NullOrEmpty(school.SmtpPassword, nameof(school.SmtpPassword), 
+                "SMTP password not configured for this school");
+
+            smtpClient.Credentials = new NetworkCredential(username, school.SmtpPassword);
+            return smtpClient;
+        }
+
+        private MailMessage CreateMailMessage(string to, string subject, string body, School school)
+        {
+            Guard.Against.Null(school, nameof(school));
+            
+            var fromEmailAddress = !string.IsNullOrEmpty(school.FromEmail)
+                ? school.FromEmail
+                : school.SmtpEmail;
+
+            Guard.Against.NullOrEmpty(fromEmailAddress, nameof(fromEmailAddress), 
+                $"No from email address configured for school {school.Id}");
+
+            var senderName = !string.IsNullOrEmpty(school.LongName)
+                ? school.LongName
+                : fromEmailAddress;
+
+            var mailMessage = new MailMessage
+            {
+                From = new MailAddress(fromEmailAddress, senderName),
+                Subject = subject ?? "No Subject",
+                Body = body ?? string.Empty,
+                IsBodyHtml = true,
+                BodyEncoding = System.Text.Encoding.UTF8,
+                Priority = MailPriority.Normal
+            };
+
+            mailMessage.To.Add(to);
+            return mailMessage;
+        }
+
+        private bool IsTransientSmtpError(SmtpException ex)
+        {
+            if (ex.InnerException is SocketException)
+            {
+                return true;
+            }
+
+            if (ex.InnerException is IOException ioEx && 
+                (ioEx.Message.Contains("closed", StringComparison.OrdinalIgnoreCase) || 
+                 ioEx.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase) ||
+                 ioEx.Message.Contains("reset", StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+
+            return ex.StatusCode == SmtpStatusCode.ServiceNotAvailable ||
+                   ex.StatusCode == SmtpStatusCode.MailboxBusy ||
+                   ex.StatusCode == SmtpStatusCode.LocalErrorInProcessing ||
+                   ex.StatusCode == SmtpStatusCode.ExceededStorageAllocation ||
+                   ex.StatusCode == SmtpStatusCode.InsufficientStorage;
+        }
+    }
+
+    public class EmailSendException : Exception
+    {
+        public EmailSendException(string message) : base(message) { }
+        public EmailSendException(string message, Exception? innerException) : base(message, innerException) { }
+    }
+
+    public class EmailConfigurationException : Exception
+    {
+        public EmailConfigurationException(string message) : base(message) { }
+        public EmailConfigurationException(string message, Exception? innerException) : base(message, innerException) { }
     }
 }

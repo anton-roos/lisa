@@ -18,6 +18,10 @@ public class School
     public string? SmtpEmail { get; set; }
     [MaxLength(256)]
     public string? SmtpPassword { get; set; }
+    [MaxLength(256)]
+    public string? SmtpUsername { get; set; }
+    [MaxLength(256)]
+    public string? FromEmail { get; set; }
     public Guid SchoolTypeId { get; set; }
     public Guid SchoolCurriculumId { get; set; }
     public SchoolType? SchoolType { get; set; }

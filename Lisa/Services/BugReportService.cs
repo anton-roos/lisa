@@ -5,13 +5,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class BugReportService(
+public class BugReportService
+(
     IHttpContextAccessor httpContextAccessor,
     NavigationManager navigationManager,
     VersionService versionService,
     IDbContextFactory<LisaDbContext> dbContextFactory,
     EmailService emailService,
-    ILogger<BugReportService> logger)
+    ILogger<BugReportService> logger,
+    SchoolService schoolService
+)
 {
     private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
     private readonly NavigationManager _navigationManager = navigationManager;
@@ -19,6 +22,7 @@ public class BugReportService(
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly EmailService _emailService = emailService;
     private readonly ILogger<BugReportService> _logger = logger;
+    private readonly SchoolService _schoolService = schoolService;
 
     public async Task<List<BugReport>> GetAllAsync()
     {
@@ -48,7 +52,7 @@ public class BugReportService(
 
         try
         {
-            await _emailService.SendBugReportEmailAsync(bugReport);
+            await SendBugReportEmailAsync(bugReport);
         }
         catch (Exception ex)
         {
@@ -93,5 +97,53 @@ public class BugReportService(
         return await context.BugReports
             .AsNoTracking()
             .FirstOrDefaultAsync(b => b.Id == id);
+    }
+
+    public async Task SendBugReportEmailAsync(BugReport bugReport)
+    {
+        try
+        {
+            var selectedSchool = await _schoolService.GetSelectedSchoolAsync();
+            var htmlBody = $@"
+                    <!DOCTYPE html>
+                    <html lang=""en"">
+                    <head>
+                        <meta charset=""UTF-8"">
+                        <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+                        <title>Bug Report</title>
+                        <style>
+                            body {{ font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; }}
+                            .container {{ max-width: 600px; margin: auto; background: #fff; border: 1px solid #ddd; padding: 20px; border-radius: 8px; }}
+                            .header {{ padding: 10px; text-align: center; }}
+                            .footer {{ text-align: center; font-size: 12px; color: #666; padding: 10px; }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class=""container"">
+                            <div class=""header""><h1>Bug Report</h1></div>
+                            <p><strong>Reported At:</strong> {bugReport.ReportedAt}</p>
+                            <p><strong>Reported By:</strong> {bugReport.ReportedBy ?? "Anonymous"}</p>
+                            <p><strong>User Authenticated:</strong> {(bugReport.UserAuthenticated ? "Yes" : "No")}</p>
+                            <p><strong>Page URL:</strong> <a href=""{bugReport.PageUrl}"">{bugReport.PageUrl}</a></p>
+                            <p><strong>App Version:</strong> {bugReport.Version}</p>
+                            <hr>
+                            <p><strong>What Happened:</strong> {bugReport.WhatHappened}</p>
+                            <p><strong>What Was Tried:</strong> {bugReport.WhatTried}</p>
+                        </div>
+                    </body>
+                    </html>
+                ";
+            
+            await _emailService.SendEmailAsync(
+                "antonroos992@gmail.com",
+                "Bug Report",
+                htmlBody,
+                selectedSchool?.Id ?? Guid.Empty
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending bug report email: {Message}", ex.Message);
+        }
     }
 }

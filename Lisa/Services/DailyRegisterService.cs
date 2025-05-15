@@ -4,14 +4,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class DailyRegisterService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<DailyRegisterService> logger)
+public class DailyRegisterService
+(
+    IDbContextFactory<LisaDbContext> dbContextFactory,
+    ILogger<DailyRegisterService> logger
+)
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly ILogger<DailyRegisterService> _logger = logger;
 
-    /// <summary>
-    /// Gets register classes for a school.
-    /// </summary>
     public async Task<List<RegisterClass>> GetRegisterClassesBySchoolIdAsync(Guid schoolId)
     {
         try
@@ -20,7 +21,7 @@ public class DailyRegisterService(IDbContextFactory<LisaDbContext> dbContextFact
             return await context.RegisterClasses
                 .AsNoTracking()
                 .Include(rc => rc.SchoolGrade!)
-                    .ThenInclude(sg => sg.SystemGrade)
+                .ThenInclude(sg => sg.SystemGrade)
                 .Where(rc => rc.SchoolGrade != null && rc.SchoolGrade.SchoolId == schoolId)
                 .OrderBy(rc => rc.SchoolGrade!.SystemGrade.SequenceNumber)
                 .ThenBy(rc => rc.Name)
@@ -38,7 +39,7 @@ public class DailyRegisterService(IDbContextFactory<LisaDbContext> dbContextFact
     /// </summary>
     public async Task<List<Learner>> GetLearnersByRegisterClassAsync(Guid registerClassId)
     {
-        try 
+        try
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
             return await context.Learners
@@ -60,8 +61,8 @@ public class DailyRegisterService(IDbContextFactory<LisaDbContext> dbContextFact
     /// Gets attendance records for learners on a specific date.
     /// </summary>
     public async Task<Dictionary<Guid, Attendance>> GetAttendanceRecordsAsync(
-        Guid registerClassId, 
-        List<Guid> learnerIds, 
+        Guid registerClassId,
+        List<Guid> learnerIds,
         DateTime date)
     {
         try
@@ -71,21 +72,21 @@ public class DailyRegisterService(IDbContextFactory<LisaDbContext> dbContextFact
             var utcDate = date.Kind == DateTimeKind.Unspecified
                 ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
                 : date.ToUniversalTime();
-            
+
             // Get attendance records for the specified date
             var attendanceRecords = await context.Attendances
                 .AsNoTracking()
-                .Where(a => 
+                .Where(a =>
                     a.RegisterClassId == registerClassId &&
                     learnerIds.Contains(a.LearnerId) &&
                     a.Date.Date == utcDate.Date)
                 .ToListAsync();
-            
+
             return attendanceRecords.ToDictionary(a => a.LearnerId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting attendance records for register class {RegisterClassId} on {Date}", 
+            _logger.LogError(ex, "Error getting attendance records for register class {RegisterClassId} on {Date}",
                 registerClassId, date);
             return [];
         }
@@ -95,10 +96,10 @@ public class DailyRegisterService(IDbContextFactory<LisaDbContext> dbContextFact
     /// Records attendance for a learner.
     /// </summary>
     public async Task<Attendance> RecordAttendanceAsync(
-        Guid learnerId, 
-        Guid schoolId, 
-        Guid registerClassId, 
-        bool isPresent, 
+        Guid learnerId,
+        Guid schoolId,
+        Guid registerClassId,
+        bool isPresent,
         Guid? recordedByUserId = null)
     {
         try
@@ -108,32 +109,32 @@ public class DailyRegisterService(IDbContextFactory<LisaDbContext> dbContextFact
 
             // Check if attendance record already exists using ExecuteUpdateAsync for better performance
             var updatedCount = await context.Attendances
-                .Where(a => 
+                .Where(a =>
                     a.LearnerId == learnerId &&
                     a.RegisterClassId == registerClassId &&
                     a.Date.Date == today)
-                .ExecuteUpdateAsync(s => 
+                .ExecuteUpdateAsync(s =>
                     s.SetProperty(a => a.IsPresent, isPresent)
                      .SetProperty(a => a.UpdatedAt, DateTime.UtcNow)
                      .SetProperty(a => a.UpdatedBy, recordedByUserId));
-            
+
             if (updatedCount > 0)
             {
-                _logger.LogInformation("Updated attendance for learner {LearnerId} to {IsPresent}", 
+                _logger.LogInformation("Updated attendance for learner {LearnerId} to {IsPresent}",
                     learnerId, isPresent);
-                
+
                 // Fetch the updated record to return
                 var existingAttendance = await context.Attendances
-                    .FirstOrDefaultAsync(a => 
+                    .FirstOrDefaultAsync(a =>
                         a.LearnerId == learnerId &&
                         a.RegisterClassId == registerClassId &&
                         a.Date.Date == today);
-                
+
                 if (existingAttendance != null)
                 {
                     return existingAttendance;
                 }
-                
+
                 // This should not happen, but just in case
                 _logger.LogWarning("Failed to find attendance record after update for learner {LearnerId}", learnerId);
             }
@@ -156,10 +157,10 @@ public class DailyRegisterService(IDbContextFactory<LisaDbContext> dbContextFact
 
             await context.Attendances.AddAsync(attendance);
             await context.SaveChangesAsync();
-            
-            _logger.LogInformation("Created new attendance record for learner {LearnerId} with status {IsPresent}", 
+
+            _logger.LogInformation("Created new attendance record for learner {LearnerId} with status {IsPresent}",
                 learnerId, isPresent);
-                
+
             return attendance;
         }
         catch (Exception ex)

@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using Ardalis.GuardClauses;
 using Lisa.Data;
 using Lisa.Models.Entities;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -8,7 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class SchoolService(
+public class SchoolService
+(
     IDbContextFactory<LisaDbContext> dbContextFactory,
     UiEventService uiEventService,
     UserService userService,
@@ -23,12 +23,6 @@ public class SchoolService(
     private readonly AuthenticationStateProvider _authenticationStateProvider = authenticationStateProvider;
     private School? _selectedSchool;
 
-    /// <summary>
-    /// Sets the current selected school and persists the selection in the user's record.
-    /// For non-system administrators, the selected school must be valid.
-    /// </summary>
-    /// <param name="schoolId">The ID of the school to select, or null to clear the selection.</param>
-    /// <returns>The selected <see cref="School"/> or null.</returns>
     public async Task<School?> SetCurrentSchoolAsync(Guid? schoolId)
     {
         try
@@ -66,12 +60,6 @@ public class SchoolService(
         }
     }
 
-    /// <summary>
-    /// Retrieves the currently selected school.
-    /// For non-system administrator users, a valid selected school is expected.
-    /// Uses guard clauses to ensure that the user is authenticated and has a valid school ID.
-    /// </summary>
-    /// <returns>The selected <see cref="School"/>, or null for system administrators.</returns>
     public async Task<School?> GetSelectedSchoolAsync()
     {
         if (_selectedSchool != null)
@@ -116,9 +104,6 @@ public class SchoolService(
         return _selectedSchool;
     }
 
-    /// <summary>
-    /// Retrieves the current user using the AuthenticationStateProvider.
-    /// </summary>
     private async Task<IdentityUser<Guid>?> GetCurrentUserAsync()
     {
         var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
@@ -148,9 +133,6 @@ public class SchoolService(
         }
     }
 
-    /// <summary>
-    /// Updates the persistent store with the current selected school ID for the logged-in user.
-    /// </summary>    
     private async Task UpdateUserSelectedSchoolAsync()
     {
         var currentUser = await GetCurrentUserAsync();
@@ -170,19 +152,12 @@ public class SchoolService(
         await _userService.UpdateUserSelectedSchool(user);
     }
 
-
-    /// <summary>
-    /// Gets the total count of schools.
-    /// </summary>
     public async Task<int> GetCountAsync()
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Schools.CountAsync();
     }
 
-    /// <summary>
-    /// Retrieves all schools.
-    /// </summary>
     public async Task<List<School>> GetAllAsync()
     {
         try
@@ -199,18 +174,12 @@ public class SchoolService(
         }
     }
 
-    /// <summary>
-    /// Retrieves all school types.
-    /// </summary>
     public async Task<List<SchoolType>> GetSchoolTypesAsync()
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.SchoolTypes.AsNoTracking().ToListAsync();
     }
 
-    /// <summary>
-    /// Retrieves a school by ID with related entities.
-    /// </summary>
     public async Task<School?> GetSchoolAsync(Guid id)
     {
         try
@@ -234,18 +203,12 @@ public class SchoolService(
         }
     }
 
-    /// <summary>
-    /// Retrieves all school curriculums.
-    /// </summary>
     public async Task<List<SchoolCurriculum>> GetSchoolCurriculumsAsync()
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.SchoolCurriculums.AsNoTracking().ToListAsync();
     }
 
-    /// <summary>
-    /// Adds a new school.
-    /// </summary>
     public async Task<bool> AddSchoolAsync(School school)
     {
         return await ModifySchoolAsync(async context =>
@@ -254,9 +217,6 @@ public class SchoolService(
         });
     }
 
-    /// <summary>
-    /// Updates an existing school.
-    /// </summary>
     public async Task<bool> UpdateAsync(School school)
     {
         return await ModifySchoolAsync(context =>
@@ -266,9 +226,6 @@ public class SchoolService(
         });
     }
 
-    /// <summary>
-    /// Deletes a school.
-    /// </summary>
     public async Task<bool> DeleteSchoolAsync(School school)
     {
         return await ModifySchoolAsync(context =>
@@ -278,9 +235,6 @@ public class SchoolService(
         });
     }
 
-    /// <summary>
-    /// Modifies a school entity and triggers an event.
-    /// </summary>
     private async Task<bool> ModifySchoolAsync(Func<LisaDbContext, Task> action)
     {
         try

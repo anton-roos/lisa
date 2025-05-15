@@ -1,4 +1,3 @@
-using Ardalis.GuardClauses;
 using Lisa.Data;
 using Lisa.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -96,7 +95,6 @@ public partial class AttendanceService(IDbContextFactory<LisaDbContext> dbContex
             attendance.Notes = notes;
         }
 
-        // Ensure we're using UTC time for updates
         attendance.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync();
@@ -127,12 +125,10 @@ public partial class AttendanceService(IDbContextFactory<LisaDbContext> dbContex
 
     public async Task<AttendanceSession> CreateAttendanceSessionAsync(Guid schoolId, DateTime startTime, Guid? createdByUserId)
     {
-        // Ensure startTime is in UTC
         startTime = startTime.Kind == DateTimeKind.Unspecified
             ? DateTime.SpecifyKind(startTime, DateTimeKind.Utc)
             : startTime.ToUniversalTime();
 
-        // Check if there's already a session for this school and date
         var existingSession = await GetActiveSessionForSchoolAsync(schoolId, startTime.Date);
         if (existingSession != null)
         {
@@ -171,7 +167,6 @@ public partial class AttendanceService(IDbContextFactory<LisaDbContext> dbContex
 
     public async Task<AttendanceSession?> GetActiveSessionForSchoolAsync(Guid schoolId, DateTime date)
     {
-        // Convert input date to UTC before querying
         var utcDate = date.Kind == DateTimeKind.Unspecified
             ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
             : date.ToUniversalTime();
@@ -202,7 +197,6 @@ public partial class AttendanceService(IDbContextFactory<LisaDbContext> dbContex
             return false;
         }
 
-        // Ensure we're using UTC time for session end
         session.EndTime = DateTime.UtcNow;
         session.UpdatedAt = DateTime.UtcNow;
 

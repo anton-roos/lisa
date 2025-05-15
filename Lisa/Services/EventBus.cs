@@ -15,9 +15,6 @@ public class EventBus(IServiceProvider serviceProvider) : IEventBus
     private readonly ConcurrentDictionary<Type, List<Func<object, Task>>> _handlers = new();
     private readonly IServiceProvider _serviceProvider = serviceProvider;
 
-    /// <summary>
-    /// Publishes an event and notifies all subscribed handlers.
-    /// </summary>
     public async Task PublishAsync<TEvent>(TEvent @event) where TEvent : class
     {
         var eventType = typeof(TEvent).Name;
@@ -63,9 +60,6 @@ public class EventBus(IServiceProvider serviceProvider) : IEventBus
         }
     }
 
-    /// <summary>
-    /// Subscribes a handler to an event type.
-    /// </summary>
     public void Subscribe<TEvent>(Func<TEvent, Task> handler) where TEvent : class
     {
         var eventType = typeof(TEvent);

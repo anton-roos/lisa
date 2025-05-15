@@ -3,13 +3,12 @@ using Lisa.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
-public class SystemGradeService(IDbContextFactory<LisaDbContext> dbContextFactory)
+public class SystemGradeService(
+    IDbContextFactory<LisaDbContext> dbContextFactory
+)
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
 
-    /// <summary>
-    /// Retrieves all system grades.
-    /// </summary>
     public async Task<List<SystemGrade>> GetAllAsync()
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();

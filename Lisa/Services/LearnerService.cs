@@ -1,4 +1,3 @@
-using Ardalis.GuardClauses;
 using Lisa.Data;
 using Lisa.Models.Entities;
 using Lisa.Models.ViewModels;
@@ -16,16 +15,17 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners.CountAsync();
     }
+
     public async Task<int> GetCountAsync(Guid schoolId)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners.Where(x => x.SchoolId == schoolId).CountAsync();
     }
 
-    public async Task<Learner?> GetByIdAsync(Guid id)
+    public async Task<Learner?> GetByIdAsync(Guid id, bool activeOnly = false)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
-        return await context.Learners
+        var query = context.Learners
             .AsNoTracking()
             .Include(l => l.RegisterClass)
             .ThenInclude(rc => rc!.SchoolGrade)
@@ -37,8 +37,17 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             .Include(l => l.CareGroup)
             .Include(l => l.Parents!)
             .Include(l => l.School)
+            .Include(l => l.Results!)
+            .ThenInclude(r => r.ResultSet)
+            .ThenInclude(rs => rs!.Subject)
+            .AsQueryable();
 
-            .FirstOrDefaultAsync(l => l.Id == id);
+        if (activeOnly)
+        {
+            query = query.Where(l => l.Active);
+        }
+
+        return await query.FirstOrDefaultAsync(l => l.Id == id);
     }
 
     public async Task<List<Learner>> GetBySubjectIdAsync(int subjectId)
@@ -186,12 +195,13 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners
             .Include(l => l.LearnerSubjects!)
-                .ThenInclude(ls => ls.Subject)
+            .ThenInclude(ls => ls.Subject)
             .Include(l => l.RegisterClass!)
-                .ThenInclude(rc => rc.CompulsorySubjects!)
+            .ThenInclude(rc => rc.CompulsorySubjects!)
             .Include(l => l.Combination!)
-                .ThenInclude(c => c.Subjects!)
-            .Where(l => l.LearnerSubjects!.Any(ls => ls.CombinationId == combinationId && ls.SubjectId == subjectId))
+            .ThenInclude(c => c.Subjects!)
+            .Where(l => l.LearnerSubjects!.Any(ls => ls.CombinationId == combinationId
+                && ls.SubjectId == subjectId))
             .ToListAsync();
     }
 
@@ -327,13 +337,11 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
 
     private static void UpdateLearnerSubjects(LisaDbContext context, Learner learner, LearnerViewModel model)
     {
-        // Remove all existing learner subjects
         if (learner.LearnerSubjects is not null && learner.LearnerSubjects.Count > 0)
         {
             context.LearnerSubjects.RemoveRange(learner.LearnerSubjects);
         }
 
-        // Re-add regular subjects
         var newSubjects = model.SubjectIds.Select(sid =>
         {
             var combinationId = FindCombinationId(model.CombinationSelections, sid);
@@ -368,10 +376,10 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         return await context.Learners
             .AsSplitQuery()
             .Include(l => l.RegisterClass!)
-                .ThenInclude(rc => rc.SchoolGrade!)
-                    .ThenInclude(sg => sg.SystemGrade)
+            .ThenInclude(rc => rc.SchoolGrade!)
+            .ThenInclude(sg => sg.SystemGrade)
             .Include(l => l.LearnerSubjects!)
-                .ThenInclude(ls => ls.Subject)
+            .ThenInclude(ls => ls.Subject)
             .Include(l => l.CareGroup!)
             .Include(l => l.Parents!)
             .Where(l => l.SchoolId == schoolId)
@@ -449,10 +457,10 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
                         && l.RegisterClass.SchoolGradeId == gradeId
                         && l.LearnerSubjects!.Any(ls => ls.SubjectId == subjectId))
             .Include(l => l.RegisterClass!)
-                .ThenInclude(rc => rc.SchoolGrade!)
-                    .ThenInclude(sg => sg.SystemGrade)
+            .ThenInclude(rc => rc.SchoolGrade!)
+            .ThenInclude(sg => sg.SystemGrade)
             .Include(l => l.LearnerSubjects!)
-                .ThenInclude(ls => ls.Subject)
+            .ThenInclude(ls => ls.Subject)
             .Include(l => l.Parents)
             .ToListAsync();
     }
@@ -461,12 +469,14 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
         return await context.Learners
-            .Where(l => l.SchoolId == schoolId && (l.Name.Contains(searchTerm) || l.Surname.Contains(searchTerm)))
+            .Where(l => l.SchoolId == schoolId
+                && (l.Name!.Contains(searchTerm)
+                || l.Surname!.Contains(searchTerm)))
             .Include(l => l.RegisterClass!)
-                .ThenInclude(rc => rc.SchoolGrade!)
-                    .ThenInclude(sg => sg.SystemGrade)
+            .ThenInclude(rc => rc.SchoolGrade!)
+            .ThenInclude(sg => sg.SystemGrade)
             .Include(l => l.LearnerSubjects!)
-                .ThenInclude(ls => ls.Subject)
+            .ThenInclude(ls => ls.Subject)
             .Include(l => l.Parents)
             .ToListAsync();
     }

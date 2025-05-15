@@ -4,14 +4,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class SchoolGradeService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<SchoolGradeService> logger)
+public class SchoolGradeService
+(
+    IDbContextFactory<LisaDbContext> dbContextFactory,
+    ILogger<SchoolGradeService> logger
+)
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly ILogger<SchoolGradeService> _logger = logger;
 
-    /// <summary>
-    /// Creates a new grade.
-    /// </summary>
     public async Task<SchoolGrade> CreateAsync(SchoolGrade grade)
     {
         try
@@ -29,9 +30,6 @@ public class SchoolGradeService(IDbContextFactory<LisaDbContext> dbContextFactor
         }
     }
 
-    /// <summary>
-    /// Retrieves a grade by ID.
-    /// </summary>
     public async Task<SchoolGrade?> GetByIdAsync(Guid id)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -43,9 +41,6 @@ public class SchoolGradeService(IDbContextFactory<LisaDbContext> dbContextFactor
             .FirstOrDefaultAsync(grade => grade.Id == id);
     }
 
-    /// <summary>
-    /// Deletes a grade by ID.
-    /// </summary>
     public async Task<bool> DeleteAsync(Guid id)
     {
         try
@@ -70,9 +65,6 @@ public class SchoolGradeService(IDbContextFactory<LisaDbContext> dbContextFactor
         }
     }
 
-    /// <summary>
-    /// Retrieves all grades for a given school.
-    /// </summary>
     public async Task<List<SchoolGrade>> GetGradesForSchool(Guid schoolId)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -84,9 +76,6 @@ public class SchoolGradeService(IDbContextFactory<LisaDbContext> dbContextFactor
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Retrieves all combination grades for a given school.
-    /// </summary>
     public async Task<List<SchoolGrade>> GetCombinationGradesForSchool(Guid schoolId)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();

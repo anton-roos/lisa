@@ -4,7 +4,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class CareGroupService(IDbContextFactory<LisaDbContext> dbContextFactory)
+public class CareGroupService
+(
+    IDbContextFactory<LisaDbContext> dbContextFactory
+)
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
 
@@ -80,9 +83,6 @@ public class CareGroupService(IDbContextFactory<LisaDbContext> dbContextFactory)
         await context.SaveChangesAsync();
     }
 
-    /// <summary>
-    /// Retrieve all CareGroups with members
-    /// </summary>
     public async Task<IEnumerable<CareGroup>> GetAllAsync()
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -104,9 +104,6 @@ public class CareGroupService(IDbContextFactory<LisaDbContext> dbContextFactory)
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Retrieve a specific CareGroup by ID
-    /// </summary>
     public async Task<CareGroup?> GetByIdAsync(Guid id)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -116,10 +113,6 @@ public class CareGroupService(IDbContextFactory<LisaDbContext> dbContextFactory)
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 
-
-    /// <summary>
-    /// Delete a CareGroup
-    /// </summary>
     public async Task DeleteAsync(CareGroup careGroup)
     {
         using var context = await _dbContextFactory.CreateDbContextAsync();

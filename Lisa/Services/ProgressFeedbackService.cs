@@ -1,5 +1,4 @@
 using System.Globalization;
-using Ardalis.GuardClauses;
 using Lisa.Data;
 using Lisa.Models.EmailModels;
 using Lisa.Models.Entities;
@@ -7,255 +6,117 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class ProgressFeedbackService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<LearnerService> logger)
+public class ProgressFeedbackService
+(
+    LearnerService learnerService,
+    IDbContextFactory<LisaDbContext> dbContextFactory
+)
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-    private readonly ILogger<LearnerService> _logger = logger;
-    public async Task<ProgressFeedback?> GetProgressFeedbackAsync(Guid id)
+    private readonly LearnerService _learnerService = learnerService;
+
+    public async Task<ProgressFeedback?> GetProgressFeedbackAsync(Guid learnerId, DateTime? fromDate = null, DateTime? toDate = null)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
-        var learner = await context.Learners
-            .AsNoTracking()
-            .Include(l => l.RegisterClass!)
-                .ThenInclude(rc => rc.SchoolGrade!)
-                    .ThenInclude(sg => sg!.SystemGrade!)
-            .Include(l => l.Combination!)
-                .ThenInclude(c => c!.Subjects!)
-            .Include(l => l.LearnerSubjects!)
-                .ThenInclude(ls => ls.Subject!)
-            .Include(l => l.CareGroup!)
-            .Include(l => l.Parents!)
-            .Include(l => l.School!)
-            .Include(l => l.Results!)
-                .ThenInclude(r => r.ResultSet)
-                    .ThenInclude(rs => rs!.Subject)
-            .FirstOrDefaultAsync(l => l.Id == id);
+        var learner = await _learnerService.GetByIdAsync(learnerId, activeOnly: true);
 
-        if (learner == null)
-        {
-            throw new Exception("No learner found.");
-        }
-
-        // Get the subjects the learner is associated with (if any)
-        var subjects = learner.LearnerSubjects?
-            .Select(ls => ls.Subject)
-            .Where(s => s != null)
-            .Distinct()
-            .ToList() ?? new List<Subject>();
+        Guard.Against.Null(learner, nameof(learner), "Learner not found or inactive in get progress feedback.");
 
         var resultsBySubject = new Dictionary<string, List<Result>>();
 
-        // For each subject, filter learner.Results where the ResultSet's Subject matches.
-        foreach (var subject in subjects)
+        var resultsBySubjectId = learner.Results?
+            .Where(r => r.ResultSet?.Subject != null)
+            .GroupBy(r => r.ResultSet!.Subject!.Id)
+            .ToList() ?? [];
+
+        foreach (var group in resultsBySubjectId)
         {
-            // Order descending by AssessmentDate (newest first), then take up to 6 results.
-            var subjectResults = learner.Results!
-                .Where(r => r.ResultSet != null &&
-                            r.ResultSet.Subject != null &&
-                            r.ResultSet.Subject.Id == subject.Id)
-                .OrderByDescending(r => r.ResultSet!.AssessmentDate ?? DateTime.MinValue)
-                .Take(6)
-                .ToList();
-
-            resultsBySubject[subject.Name!] = subjectResults;
-        }
-
-        string learnerName = $"{learner.Name} {learner.Surname}";
-        TextInfo textInfo = CultureInfo.CurrentCulture.TextInfo;
-
-        string learnerNamTitleCase = textInfo.ToTitleCase(learnerName.ToLower());
-
-        var progressFeedback = new ProgressFeedback
-        {
-            LearnerName = learnerNamTitleCase,
-            ResultsBySubject = resultsBySubject
-        };
-
-        return progressFeedback;
-    }
-
-    public async Task<List<ProgressFeedbackListItem>> GetProgressFeedbackListAsync(Guid schoolId)
-    {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
-        var list = await context.Learners
-            .AsNoTracking()
-            .Where(l => l.Results!.Any() && l.SchoolId == schoolId)
-            .OrderBy(l => l.Name)
-            .Select(l => new ProgressFeedbackListItem
-            {
-                LearnerId = l.Id,
-                Surname = l.Surname!,
-                Name = l.Name!
-            })
-            .ToListAsync();
-
-        return list;
-    }
-
-    public async Task<List<ProgressFeedbackListItem>> GetProgressFeedbackListAsync
-    (
-        Guid schoolId, Guid? gradeId, int? subjectId
-    )
-    {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
-
-        // Start with the base query for learners in the selected school that have results.
-        var query = context.Learners
-            .AsNoTracking()
-            .Where(l => l.Results!.Any() && l.SchoolId == schoolId);
-
-        // Filter by grade if provided.
-        if (gradeId is not null)
-        {
-            query = query.Where(l => l.RegisterClass!.SchoolGradeId == gradeId);
-        }
-
-        // Filter by subject if provided.s
-        // Adjust the predicate according to your data model.
-        if (subjectId is not null)
-        {
-            query = query.Where(l => l.LearnerSubjects!.Any(s => s.SubjectId == subjectId));
-        }
-
-        // Order the results by surname, then select the desired fields.
-        var list = await query
-            .OrderBy(l => l.Surname)
-            .Select(l => new ProgressFeedbackListItem
-            {
-                LearnerId = l.Id,
-                Surname = l.Surname!,
-                Name = l.Name!
-            })
-            .ToListAsync();
-
-        return list;
-    }
-
-    public async Task<List<ProgressFeedbackListItem>> GetProgressFeedbackListAsync
-    (
-        Guid schoolId, Guid? gradeId, int? subjectId, DateTime? fromDate, DateTime? toDate
-    )
-    {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
-
-        // Start with the base query for learners in the selected school that have results.
-        var query = context.Learners
-            .AsNoTracking()
-            .Include(l => l.Results!)
-                .ThenInclude(r => r.ResultSet)
-            .Where(l => l.Results!.Any() && l.SchoolId == schoolId);
-
-        // Filter by grade if provided.
-        if (gradeId is not null)
-        {
-            query = query.Where(l => l.RegisterClass!.SchoolGradeId == gradeId);
-        }
-
-        // Filter by subject if provided.
-        if (subjectId is not null)
-        {
-            query = query.Where(l => l.LearnerSubjects!.Any(s => s.SubjectId == subjectId));
-        }
-
-        // Filter by date range if provided.
-        if (fromDate is not null)
-        {
-            var fromDateUtc = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
-            query = query.Where(l => l.Results!.Any(r => r.ResultSet != null && r.ResultSet.AssessmentDate >= fromDateUtc));
-        }
-
-        if (toDate is not null)
-        {
-            var toDateUtc = DateTime.SpecifyKind(toDate.Value.AddDays(1).AddSeconds(-1), DateTimeKind.Utc);
-            query = query.Where(l => l.Results!.Any(r => r.ResultSet != null && r.ResultSet.AssessmentDate <= toDateUtc));
-        }
-
-        // Order the results by surname, then select the desired fields.
-        var list = await query
-            .OrderBy(l => l.Surname)
-            .Select(l => new ProgressFeedbackListItem
-            {
-                LearnerId = l.Id,
-                Surname = l.Surname!,
-                Name = l.Name!
-            })
-            .ToListAsync();
-
-        return list;
-    }
-
-    public async Task<ProgressFeedback?> GetProgressFeedbackAsync(Guid id, DateTime? fromDate = null, DateTime? toDate = null)
-    {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
-        var learner = await context.Learners
-            .AsNoTracking()
-            .Include(l => l.RegisterClass!)
-                .ThenInclude(rc => rc.SchoolGrade!)
-                    .ThenInclude(sg => sg!.SystemGrade!)
-            .Include(l => l.Combination!)
-                .ThenInclude(c => c!.Subjects!)
-            .Include(l => l.LearnerSubjects!)
-                .ThenInclude(ls => ls.Subject!)
-            .Include(l => l.CareGroup!)
-            .Include(l => l.Parents!)
-            .Include(l => l.School!)
-            .Include(l => l.Results!)
-                .ThenInclude(r => r.ResultSet)
-                    .ThenInclude(rs => rs!.Subject)
-            .FirstOrDefaultAsync(l => l.Id == id);
-
-        if (learner == null)
-        {
-            throw new Exception("No learner found.");
-        }
-
-        var subjects = learner.LearnerSubjects?
-            .Select(ls => ls.Subject)
-            .Where(s => s != null)
-            .Distinct()
-            .ToList() ?? new List<Subject>();
-
-        var resultsBySubject = new Dictionary<string, List<Result>>();
-
-        foreach (var subject in subjects)
-        {
-            var query = learner.Results!
-                .Where(r => r.ResultSet != null &&
-                           r.ResultSet.Subject != null &&
-                           r.ResultSet.Subject.Id == subject.Id);
+            var subjectResults = group.AsEnumerable();
 
             if (fromDate.HasValue)
             {
-                // Convert to UTC to ensure compatibility with PostgreSQL timestamp with time zone
                 var fromDateUtc = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
-                query = query.Where(r => r.ResultSet != null && r.ResultSet.AssessmentDate >= fromDateUtc);
+                subjectResults = subjectResults
+                    .Where(r => r.ResultSet!.AssessmentDate >= fromDateUtc);
             }
 
             if (toDate.HasValue)
             {
                 var endDate = DateTime.SpecifyKind(toDate.Value.AddDays(1), DateTimeKind.Utc);
-                query = query.Where(r => r.ResultSet != null && r.ResultSet.AssessmentDate < endDate);
+                subjectResults = subjectResults
+                    .Where(r => r.ResultSet!.AssessmentDate < endDate);
             }
 
-            var subjectResults = query
-                .OrderByDescending(r => r.ResultSet?.AssessmentDate ?? DateTime.MinValue)
+            var filteredResults = subjectResults
+                .OrderByDescending(r => r.ResultSet!.AssessmentDate)
                 .Take(6)
                 .ToList();
 
-            resultsBySubject[subject.Name!] = subjectResults;
+            if (filteredResults.Count > 0)
+            {
+                var subjectName = filteredResults.First().ResultSet!.Subject!.Name!;
+                resultsBySubject[subjectName] = filteredResults;
+            }
         }
 
         string learnerName = $"{learner.Name} {learner.Surname}";
         TextInfo textInfo = CultureInfo.CurrentCulture.TextInfo;
-
-        string learnerNamTitleCase = textInfo.ToTitleCase(learnerName.ToLower());
+        string learnerNameTitleCase = textInfo.ToTitleCase(learnerName.ToLower());
 
         var progressFeedback = new ProgressFeedback
         {
-            LearnerName = learnerNamTitleCase,
+            LearnerName = learnerNameTitleCase,
             ResultsBySubject = resultsBySubject
         };
 
         return progressFeedback;
+    }
+
+    public async Task<List<ProgressFeedbackListItem>> GetProgressFeedbackListAsync(Guid schoolId, Guid? gradeId = null, int? subjectId = null, DateTime? fromDate = null, DateTime? toDate = null)
+    {
+        using var context = await _dbContextFactory.CreateDbContextAsync();
+
+        var query = context.Learners
+            .AsNoTracking()
+            .Where(l => l.Results!.Any() && l.SchoolId == schoolId && l.Active);
+
+        if (fromDate.HasValue || toDate.HasValue)
+        {
+            query = query.Include(l => l.Results!)
+                        .ThenInclude(r => r.ResultSet);
+        }
+
+        if (gradeId.HasValue)
+        {
+            query = query.Where(l => l.RegisterClass!.SchoolGradeId == gradeId);
+        }
+
+        if (subjectId.HasValue)
+        {
+            query = query.Where(l => l.LearnerSubjects!.Any(s => s.SubjectId == subjectId));
+        }
+
+        if (fromDate.HasValue)
+        {
+            var fromDateUtc = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
+            query = query.Where(l => l.Results!.Any(r => r.ResultSet != null && r.ResultSet.AssessmentDate >= fromDateUtc));
+        }
+
+        if (toDate.HasValue)
+        {
+            var toDateUtc = DateTime.SpecifyKind(toDate.Value.AddDays(1).AddSeconds(-1), DateTimeKind.Utc);
+            query = query.Where(l => l.Results!.Any(r => r.ResultSet != null && r.ResultSet.AssessmentDate <= toDateUtc));
+        }
+
+        var list = await query
+            .OrderBy(l => l.Surname)
+            .Select(l => new ProgressFeedbackListItem
+            {
+                LearnerId = l.Id,
+                Surname = l.Surname!,
+                Name = l.Name!
+            })
+            .ToListAsync();
+
+        return list;
     }
 }

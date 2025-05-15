@@ -269,7 +269,6 @@
             await LoadRegisterClasses();
         }
         
-        // Load students and attendance data
         await LoadLearners();
         await LoadAttendanceData();
     }
@@ -393,10 +392,8 @@
             );
         }
         
-        // Navigate to the session URL
         NavigationManager.NavigateTo($"/attendance/sign-out/{_currentSession.Id}");
         
-        // Load students for this session
         await LoadLearners();
     }
 

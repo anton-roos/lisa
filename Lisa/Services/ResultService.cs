@@ -5,7 +5,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class ResultService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<ResultService> logger)
+public class ResultService
+(
+    IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<ResultService> logger
+)
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly ILogger<ResultService> _logger = logger;

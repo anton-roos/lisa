@@ -36,7 +36,7 @@
    - `Error handling when SMTP details are not configured for a school.`
  - Can setup Subject Combinations
  - Can Add or Edit Grades
- - Move Students Between Care Groups
+ - Move Learner Between Care Groups
 
 ### Teacher
  - Can capture marks for their subjects
@@ -92,7 +92,7 @@ Link na Learner met OnDelete.Cascade → as ’n Learner delete word, word sy Pa
 # RegisterClass
 Link na SchoolGrade met OnDelete.Restrict → Kan nie n SchoolGrade delete as daar n RegisterClass gekoppel is nie.
 Link na Teacher met OnDelete.Restrict → kan nie n Teacher delete as daar n RegisterClass gekoppel is nie.
-Het baie Learners OnDelete.Restrict → Waneer n RegisterClass delete word hou hy die Students "unparented". 
+Het baie Learners OnDelete.Restrict → Waneer n RegisterClass delete word hou hy die Learners "unparented". 
 
 # RegisterClassSubject
 OnDelete.Restrict aan die SubjectId-kant, Waneer n RegisterClassSubject delete word delete hy nie die Subject nie.
@@ -188,3 +188,10 @@ After lock in all Abent on Daily Register shows Absent
 After lock in all Marked not Attending that shows up reads Late (11:33)
 
 MAT
+
+
+Changelog
+-- Fixed Learner Code clashing between schools.
+-- Fixed Historical Subjects not pulling through
+-- Fixed Inactive Learners getting sent Progress Feedback
+-- Fixed Date Oredering on Progress Feedbacks

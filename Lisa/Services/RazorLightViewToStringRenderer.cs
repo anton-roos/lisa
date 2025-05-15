@@ -17,3 +17,4 @@ public class RazorLightViewToStringRenderer
         return await _engine.CompileRenderAsync(viewKey, model);
     }
 }
+        

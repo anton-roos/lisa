@@ -247,12 +247,10 @@
     {
         if (_selectedSchool == null) return;
 
-        // Check if there's an active session for today for this school
         var existingSession = await AttendanceService.GetActiveSessionForSchoolAsync(_selectedSchool.Id, DateTime.Today);
 
         if (existingSession != null)
         {
-            // Redirect to that session
             NavigationManager.NavigateTo($"/attendance/sign-in/{existingSession.Id}");
         }
     }
@@ -263,25 +261,21 @@
 
         if (_currentSession == null)
         {
-            // Session not found, go back to main page
             NavigationManager.NavigateTo("/attendance/sign-in");
             return;
         }
 
-        // Set start time from session
         _startTime = _currentSession.StartTime.ToLocalTime();
-        _startTimeOnly = TimeOnly.FromDateTime(_startTime); // Update the input control
+        _startTimeOnly = TimeOnly.FromDateTime(_startTime);
         _startTimeDateTime = _startTime;
         _isStartTimeConfirmed = true;
 
-        // If school changed, update it
         if (_selectedSchool?.Id != _currentSession.SchoolId)
         {
             _selectedSchool = await SchoolService.GetSchoolAsync(_currentSession.SchoolId);
             await LoadRegisterClasses();
         }
 
-        // Load students and attendance data
         await LoadLearners();
         await LoadAttendanceData();
     }
@@ -325,7 +319,6 @@
         // Navigate to the session URL
         NavigationManager.NavigateTo($"/attendance/sign-in/{_currentSession.Id}");
 
-        // Load students for this session
         await LoadLearners();
     }
     private async Task LoadLearners()

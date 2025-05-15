@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
-using Ardalis.GuardClauses;
 using Hangfire;
 using Lisa.Data;
 using Lisa.Enums;
@@ -10,14 +9,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class EmailCampaignService(
+public class EmailCampaignService
+(
     IDbContextFactory<LisaDbContext> contextFactory,
     UiEventService uiEventService,
     ILogger<EmailCampaignService> logger,
     EmailService emailService,
     LearnerService learnerService,
     UserService userService,
-    EmailRendererService emailRendererService)
+    EmailRendererService emailRendererService,
+    ResultService resultService,
+    ProgressFeedbackService progressFeedbackService
+)
 {
     private readonly IDbContextFactory<LisaDbContext> _contextFactory = contextFactory;
     private readonly UiEventService _uiEventService = uiEventService;
@@ -27,6 +30,8 @@ public class EmailCampaignService(
     private readonly LearnerService _learnerService = learnerService;
     private readonly UserService _userService = userService;
     private readonly EmailRendererService _emailRendererService = emailRendererService;
+    private readonly ResultService _resultService = resultService;
+    private readonly ProgressFeedbackService _progressFeedbackService = progressFeedbackService;
     private const int BatchSize = 100;
     private const int ProgressComplete = 100;
     private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled); public async Task<EmailCampaign> CreateAsync(CommunicationCommand command)
@@ -305,7 +310,7 @@ public class EmailCampaignService(
                 RecipientTemplate.Test when recipient.LearnerId.HasValue =>
                     await GetSubjectLine(recipient.LearnerId.Value, campaign),
                 _ => throw new InvalidOperationException($"Unsupported recipient template: {campaign.RecipientTemplate}")
-            };            // Get campaign-specific data like date range
+            };
 
             string body = campaign.RecipientTemplate switch
             {
@@ -326,6 +331,8 @@ public class EmailCampaignService(
                 return;
             }
 
+            
+            
             await _emailService.SendEmailAsync(recipient.EmailAddress, subject, body, campaign.SchoolId);
             recipient.Status = EmailRecipientStatus.Sent;
         }
@@ -398,17 +405,14 @@ public class EmailCampaignService(
     }
     private async Task<List<(string Email, Guid LearnerId)>> GetProgressFeedbackRecipientsAsync(CommunicationCommand command)
     {
-        // If this is a progress feedback template and dates are specified, use the specialized method
         if (command.RecipientTemplate == RecipientTemplate.ProgressFeedback &&
             (command.FromDate.HasValue || command.ToDate.HasValue))
         {
-            // Use the specialized method that supports date filtering
             List<Learner> filteredLearners = await GetLearnersWithDateFilterAsync(command);
             return await MapRecipientsAsync(command.RecipientType, filteredLearners, command.SchoolId);
         }
         else
         {
-            // Use the standard approach if no date filtering is needed
             List<Learner> learners = await GetLearnersAsync(command);
             return await MapRecipientsAsync(command.RecipientType, learners, command.SchoolId);
         }
@@ -533,7 +537,6 @@ public class EmailCampaignService(
     }
     private bool ValidateCampaign(EmailCampaign campaign)
     {
-        // Guard against null parameter
         Guard.Against.Null(campaign, nameof(campaign));
 
         if (string.IsNullOrWhiteSpace(campaign.Name))
@@ -590,15 +593,14 @@ public class EmailCampaignService(
 
     private async Task<List<Learner>> GetLearnersWithDateFilterAsync(CommunicationCommand command)
     {
-        // For a specific learner, just get that specific learner
         if (command.RecipientGroup == RecipientGroup.Learner && command.LearnerId.HasValue)
         {
             var learner = await _learnerService.GetByIdAsync(command.LearnerId.Value);
             return learner != null ? new List<Learner> { learner } : new List<Learner>();
-        }        // Get a progress feedback service directly to use the date-filtered method
-        using var context = await _contextFactory.CreateDbContextAsync();
+        }
+        using var context = await _contextFactory.CreateDbContextAsync();        // Use the injected service
+        var progressService = _progressFeedbackService;
 
-        var progressService = new ProgressFeedbackService(_contextFactory, _logger as ILogger<LearnerService>);        // Ensure dates are in UTC format before passing to the service
         DateTime? fromDateUtc = command.FromDate.HasValue ? DateTime.SpecifyKind(command.FromDate.Value, DateTimeKind.Utc) : null;
         DateTime? toDateUtc = command.ToDate.HasValue ? DateTime.SpecifyKind(command.ToDate.Value, DateTimeKind.Utc) : null;
 
@@ -610,7 +612,6 @@ public class EmailCampaignService(
             toDateUtc
         );
 
-        // Get the full learner data for each ID in the list
         List<Learner> learners = new();
         foreach (var item in progressItems)
         {

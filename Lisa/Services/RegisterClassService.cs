@@ -6,16 +6,15 @@ using NuGet.Packaging;
 
 namespace Lisa.Services;
 
-public class RegisterClassService(
+public class RegisterClassService
+(
     IDbContextFactory<LisaDbContext> dbContextFactory,
-    ILogger<RegisterClassService> logger)
+    ILogger<RegisterClassService> logger
+)
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly ILogger<RegisterClassService> _logger = logger;
 
-    /// <summary>
-    /// Retrieves a RegisterClass by ID.
-    /// </summary>
     public async Task<RegisterClass?> GetByIdAsync(Guid registerClassId)
     {
         try
@@ -36,9 +35,6 @@ public class RegisterClassService(
         }
     }
 
-    /// <summary>
-    /// Retrieves a RegisterClass by ID.
-    /// </summary>
     public async Task<List<RegisterClass>> GetBySchoolIdAsync(Guid schoolId)
     {
         try
@@ -57,9 +53,6 @@ public class RegisterClassService(
         }
     }
 
-    /// <summary>
-    /// Retrieves all RegisterClasses.
-    /// </summary>
     public async Task<List<RegisterClass>> GetAllAsync()
     {
         try
@@ -83,9 +76,6 @@ public class RegisterClassService(
         }
     }
 
-    /// <summary>
-    /// Updates an existing RegisterClass.
-    /// </summary>
     public async Task<bool> UpdateAsync(RegisterClass registerClass)
     {
         try
@@ -117,9 +107,6 @@ public class RegisterClassService(
         }
     }
 
-    /// <summary>
-    /// Deletes a RegisterClass.
-    /// </summary>
     public async Task<bool> DeleteAsync(Guid registerClassId)
     {
         try

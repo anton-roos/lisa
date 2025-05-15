@@ -3,7 +3,10 @@ using Lisa.Interfaces;
 
 namespace Lisa.Services;
 
-public class UiEventService(ILogger<UiEventService> logger) : IDisposable
+public class UiEventService
+(
+    ILogger<UiEventService> logger
+) : IDisposable
 {
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<Guid, WeakReference<IEventSubscriber>>> _subscribers = new();
     private readonly ILogger<UiEventService> _logger = logger;

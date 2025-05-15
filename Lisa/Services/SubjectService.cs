@@ -4,7 +4,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<SubjectService> logger)
+public class SubjectService
+(
+    IDbContextFactory<LisaDbContext> dbContextFactory,
+    ILogger<SubjectService> logger
+)
 {
     private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
     private readonly ILogger<SubjectService> _logger = logger;
@@ -80,9 +84,6 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         }
     }
 
-    /// <summary>
-    /// Creates a new subject.
-    /// </summary>
     public async Task<bool> CreateAsync(Subject subject)
     {
         try
@@ -100,9 +101,6 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         }
     }
 
-    /// <summary>
-    /// Retrieves a subject by ID.
-    /// </summary>
     public async Task<Subject?> GetByIdAsync(int id)
     {
         try
@@ -119,9 +117,6 @@ public class SubjectService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         }
     }
 
-    /// <summary>
-    /// Updates an existing subject.
-    /// </summary>
     public async Task<bool> UpdateAsync(Subject subject)
     {
         try

@@ -8,7 +8,11 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Lisa.Data;
 
-public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<LisaDbContext> logger)
+public class LisaDbContext
+(
+    DbContextOptions<LisaDbContext> options,
+    ILogger<LisaDbContext> logger
+)
     : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options)
 {
     private readonly ILogger<LisaDbContext> _logger = logger;
@@ -151,8 +155,7 @@ public class LisaDbContext(DbContextOptions<LisaDbContext> options, ILogger<Lisa
         modelBuilder.Entity<Learner>()
             .HasIndex(l => l.RegisterClassId);
         modelBuilder.Entity<Learner>()
-            .HasIndex(l => l.Code)
-            .IsUnique();
+            .HasIndex(l => l.Code);
         modelBuilder.Entity<Learner>()
             .Property(l => l.Code)
             .HasMaxLength(20);

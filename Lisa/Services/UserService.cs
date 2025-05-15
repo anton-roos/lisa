@@ -1,4 +1,3 @@
-using Ardalis.GuardClauses;
 using Lisa.Data;
 using Lisa.Models.Entities;
 using Lisa.Models.ViewModels;
@@ -7,12 +6,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class UserService(
+public class UserService
+(
     UserManager<User> userManager,
     IDbContextFactory<LisaDbContext> dbContextFactory,
     ILogger<UserService> logger,
     UiEventService uiEventService,
-    IPasswordHasher<User> passwordHasher)
+    IPasswordHasher<User> passwordHasher
+)
 {
     public async Task<List<User>> GetAllByRoleAndSchoolAsync(string[] roles, Guid? schoolId)
     {

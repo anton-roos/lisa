@@ -85,13 +85,13 @@ else
                 return;
             }
 
-            bool canSignIn = await SignInManager.CanSignInAsync(user);
+            var canSignIn = await SignInManager.CanSignInAsync(user);
             Logger.LogInformation($"CanSignIn result: {canSignIn}");
 
-            bool isLockedOut = await UserManager.IsLockedOutAsync(user);
+            var isLockedOut = await UserManager.IsLockedOutAsync(user);
             Logger.LogInformation($"IsLockedOut result: {isLockedOut}");
 
-            bool isEmailConfirmed = await UserManager.IsEmailConfirmedAsync(user);
+            var isEmailConfirmed = await UserManager.IsEmailConfirmedAsync(user);
             Logger.LogInformation($"IsEmailConfirmed: {isEmailConfirmed}");
 
             var identityErrors = await UserManager.GetUserAsync(new ClaimsPrincipal(new ClaimsIdentity([
@@ -119,7 +119,7 @@ else
                 return;
             }
 
-            Guid key = LoginStore.StoreLoginInfo(_loginModel.Email!, _loginModel.Password!);
+            var key = LoginStore.StoreLoginInfo(_loginModel.Email!, _loginModel.Password!);
             NavigationManager.NavigateTo($"/login?key={key}", true);
         }
         catch (Exception ex)

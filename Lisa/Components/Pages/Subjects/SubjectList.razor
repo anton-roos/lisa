@@ -136,11 +136,11 @@
         if (subject.GradesApplicable == null || !subject.GradesApplicable.Any())
             return string.Empty;
 
-        int firstGrade = subject.GradesApplicable.First();
-        int lastGrade = subject.GradesApplicable.Last();
+        var firstGrade = subject.GradesApplicable.First();
+        var lastGrade = subject.GradesApplicable.Last();
 
-        string firstGradeName = GetGradeName(firstGrade);
-        string lastGradeName = GetGradeName(lastGrade);
+        var firstGradeName = GetGradeName(firstGrade);
+        var lastGradeName = GetGradeName(lastGrade);
 
         return firstGrade == lastGrade
         ? $"Gr {firstGradeName}"

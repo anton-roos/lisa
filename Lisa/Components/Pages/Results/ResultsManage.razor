@@ -181,8 +181,8 @@
     private bool IsEdit => ResultSetId.HasValue;
     private string _submitError = string.Empty;
     [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
-    private List<Guid> _removedLearnerIds = new List<Guid>();
-    private List<AssessmentType> AssessmentTypes { get; set; } = new();
+    private List<Guid> _removedLearnerIds = [];
+    private List<AssessmentType> AssessmentTypes { get; set; } = [];
     private int? SelectedAssessmentTypeId { get; set; }
 
     protected override async Task OnInitializedAsync()
@@ -229,7 +229,7 @@
             ViewModel.GradeId = string.Empty;
             ViewModel.SubjectId = string.Empty;
             ViewModel.Teacher = null;
-            ViewModel.LearnerResults = new List<LearnerResultViewModel>();
+            ViewModel.LearnerResults = [];
             await LoadDropdowns();
         }
 
@@ -241,7 +241,7 @@
         ViewModel.GradeId = value;
         ViewModel.SubjectId = string.Empty;
         ViewModel.Teacher = null;
-        ViewModel.LearnerResults = new List<LearnerResultViewModel>();
+        ViewModel.LearnerResults = [];
 
         if (string.IsNullOrEmpty(value))
         {
@@ -274,7 +274,7 @@
 
         if (!IsEdit)
         {
-            ViewModel.LearnerResults = new List<LearnerResultViewModel>();
+            ViewModel.LearnerResults = [];
         }
 
         await InvokeAsync(StateHasChanged);
@@ -370,7 +370,7 @@
     {
         if (string.IsNullOrEmpty(ViewModel.GradeId))
         {
-            ViewModel.FilteredSubjects = new List<Subject>();
+            ViewModel.FilteredSubjects = [];
             return;
         }
 

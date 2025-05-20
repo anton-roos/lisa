@@ -56,10 +56,10 @@
                     {
                         @foreach (var subject in FilteredSubjects)
                         {
-                            bool isChecked = _selectedSubjectIds.Contains(subject.Id);
-                            bool isDisabled = (_combinationModel.CombinationType == CombinationType.MathCombination)
-                            && !isChecked
-                            && (_selectedSubjectIds.Count >= 2);
+                            var isChecked = _selectedSubjectIds.Contains(subject.Id);
+                            var isDisabled = (_combinationModel.CombinationType == CombinationType.MathCombination)
+                                             && !isChecked
+                                             && (_selectedSubjectIds.Count >= 2);
 
                             <div>
                                 <input type="checkbox" checked="@isChecked" disabled="@isDisabled"

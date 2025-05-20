@@ -10,14 +10,11 @@ public class ResultService
     IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<ResultService> logger
 )
 {
-    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-    private readonly ILogger<ResultService> _logger = logger;
-
     public async Task<ResultSet> CreateAsync(ResultsCaptureViewModel viewModel, Guid capturedById)
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
 
             DateTime? assessmentDate = null;
             if (viewModel.AssessmentDate is not null)
@@ -59,14 +56,14 @@ public class ResultService
             await context.ResultSets.AddAsync(resultSet);
             await context.SaveChangesAsync();
 
-            _logger.LogInformation("Created ResultSet for SubjectId: {SubjectId}, CapturedById: {CapturedById} with {ResultCount} results",
+            logger.LogInformation("Created ResultSet for SubjectId: {SubjectId}, CapturedById: {CapturedById} with {ResultCount} results",
                 resultSet.SubjectId, resultSet.CapturedById, resultSet.Results?.Count ?? 0);
 
             return resultSet;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating ResultSet for SubjectId: {SubjectId}, CapturedById: {CapturedById}",
+            logger.LogError(ex, "Error creating ResultSet for SubjectId: {SubjectId}, CapturedById: {CapturedById}",
                 viewModel.SubjectId, capturedById);
             throw;
         }
@@ -74,13 +71,13 @@ public class ResultService
 
     public async Task<int> GetCountAsync()
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.Results.CountAsync();
     }
 
     public async Task<int> GetCountAsync(Guid schoolId)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.Results
             .Where(x => x.ResultSet != null && x.ResultSet.SchoolGrade != null && x.ResultSet.SchoolGrade.SchoolId == schoolId)
             .CountAsync();
@@ -90,14 +87,14 @@ public class ResultService
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             var existingResultSet = await context.ResultSets
                 .Include(rs => rs.Results)
                 .FirstOrDefaultAsync(rs => rs.Id == resultSetId);
 
             if (existingResultSet == null)
             {
-                _logger.LogWarning("ResultSet with ID {ResultSetId} not found.", resultSetId);
+                logger.LogWarning("ResultSet with ID {ResultSetId} not found.", resultSetId);
                 return false;
             }
 
@@ -138,19 +135,19 @@ public class ResultService
             }
 
             await context.SaveChangesAsync();
-            _logger.LogInformation("Updated ResultSet {ResultSetId} with {ResultCount} results.", resultSetId, viewModel.LearnerResults.Count);
+            logger.LogInformation("Updated ResultSet {ResultSetId} with {ResultCount} results.", resultSetId, viewModel.LearnerResults.Count);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating ResultSet with ID: {ResultSetId}", resultSetId);
+            logger.LogError(ex, "Error updating ResultSet with ID: {ResultSetId}", resultSetId);
             return false;
         }
     }
 
     public async Task SyncLearnerResultsAsync(Guid resultSetId)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         var resultSet = await context.ResultSets
             .Include(rs => rs.Results)
             .FirstOrDefaultAsync(rs => rs.Id == resultSetId);
@@ -189,25 +186,25 @@ public class ResultService
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             var resultSet = await context.ResultSets
                 .Include(rs => rs.Results)
                 .FirstOrDefaultAsync(rs => rs.Id == resultSetId);
 
             if (resultSet == null)
             {
-                _logger.LogWarning("ResultSet with ID {ResultSetId} not found.", resultSetId);
+                logger.LogWarning("ResultSet with ID {ResultSetId} not found.", resultSetId);
                 return false;
             }
 
             context.ResultSets.Remove(resultSet);
             await context.SaveChangesAsync();
-            _logger.LogInformation("Deleted ResultSet {ResultSetId} with {ResultCount} results.", resultSetId, resultSet.Results?.Count ?? 0);
+            logger.LogInformation("Deleted ResultSet {ResultSetId} with {ResultCount} results.", resultSetId, resultSet.Results?.Count ?? 0);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting ResultSet with ID: {ResultSetId}", resultSetId);
+            logger.LogError(ex, "Error deleting ResultSet with ID: {ResultSetId}", resultSetId);
             return false;
         }
     }
@@ -216,7 +213,7 @@ public class ResultService
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             var resultSet = await context.ResultSets
                 .AsNoTracking()
                 .Include(rs => rs.Teacher)
@@ -242,7 +239,7 @@ public class ResultService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching ResultSet with ID: {ResultSetId}", id);
+            logger.LogError(ex, "Error fetching ResultSet with ID: {ResultSetId}", id);
             return null;
         }
     }
@@ -259,7 +256,7 @@ public class ResultService
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
 
             var query = context.ResultSets
                 .AsNoTracking()
@@ -314,10 +311,10 @@ public class ResultService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex,
+            logger.LogError(ex,
                 "Error fetching result sets for SchoolId: {SchoolId}, GradeId: {GradeId}, SubjectId: {SubjectId}, TeacherId: {TeacherId}",
                 schoolId, gradeId, subjectId, teacherId);
-            return new List<ResultSet?>();
+            return [];
         }
     }
 
@@ -325,14 +322,14 @@ public class ResultService
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             var resultSet = await context.ResultSets
                 .Include(rs => rs.Results)
                 .FirstOrDefaultAsync(rs => rs.Id == resultSetId);
 
             if (resultSet == null)
             {
-                _logger.LogWarning("ResultSet with ID {ResultSetId} not found.", resultSetId);
+                logger.LogWarning("ResultSet with ID {ResultSetId} not found.", resultSetId);
                 return;
             }
 
@@ -344,12 +341,12 @@ public class ResultService
             {
                 context.Results.RemoveRange(resultsToRemove);
                 await context.SaveChangesAsync();
-                _logger.LogInformation("Removed {RemovedCount} learner results from ResultSet {ResultSetId}.", resultsToRemove.Count, resultSetId);
+                logger.LogInformation("Removed {RemovedCount} learner results from ResultSet {ResultSetId}.", resultsToRemove.Count, resultSetId);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error removing learner results from ResultSet {ResultSetId}.", resultSetId);
+            logger.LogError(ex, "Error removing learner results from ResultSet {ResultSetId}.", resultSetId);
             throw;
         }
     }

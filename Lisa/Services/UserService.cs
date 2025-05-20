@@ -69,7 +69,7 @@ public class UserService
     {
         try
         {
-            using var context = await dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
 
             var user = await context.Users
                 .AsNoTracking()
@@ -111,7 +111,7 @@ public class UserService
 
         try
         {
-            using var context = await dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
 
             var grade = await context.SchoolGrades.FindAsync(gradeId);
 
@@ -138,7 +138,7 @@ public class UserService
     {
         try
         {
-            using var context = await dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             var existing = await context.Users.FindAsync(user.Id);
 
             if (existing == null)
@@ -166,7 +166,7 @@ public class UserService
 
         try
         {
-            using var context = await dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             var existing = await context.Users
                 .Include(t => t.CareGroups)
                 .Include(t => t.Subjects)
@@ -260,7 +260,7 @@ public class UserService
 
         try
         {
-            using var context = await dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             var existing = await context.Users.FindAsync(id);
             if (existing == null)
             {
@@ -285,7 +285,7 @@ public class UserService
     {
         try
         {
-            using var context = await dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             return await context.Users
                 .Where(u => u.SchoolId == schoolId)
                 .ToListAsync();
@@ -299,7 +299,7 @@ public class UserService
 
     public async Task<bool> HasRegisterClassesAsync(Guid userId)
     {
-        using var context = await dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.RegisterClasses.AnyAsync(rc => rc.UserId == userId);
     }
 
@@ -309,7 +309,7 @@ public class UserService
 
         try
         {
-            using var context = await dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             var teacher = await context.Users.FindAsync(userId);
 
             if (teacher == null)
@@ -337,7 +337,7 @@ public class UserService
 
         try
         {
-            using var context = await dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
 
             var teachers = await context.Users
                 .Where(t => t.Id == oldUserId || t.Id == newUserId)
@@ -370,7 +370,7 @@ public class UserService
 
         try
         {
-            using var context = await dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             var learner = await context.Learners
                 .Include(l => l.RegisterClass)
                 .ThenInclude(rc => rc!.User)

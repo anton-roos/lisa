@@ -10,29 +10,26 @@ public class SchoolGradeService
     ILogger<SchoolGradeService> logger
 )
 {
-    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-    private readonly ILogger<SchoolGradeService> _logger = logger;
-
     public async Task<SchoolGrade> CreateAsync(SchoolGrade grade)
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             await context.SchoolGrades.AddAsync(grade);
             await context.SaveChangesAsync();
-            _logger.LogInformation("Created a new grade: {GradeId}", grade.Id);
+            logger.LogInformation("Created a new grade: {GradeId}", grade.Id);
             return grade;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating grade.");
+            logger.LogError(ex, "Error creating grade.");
             throw;
         }
     }
 
     public async Task<SchoolGrade?> GetByIdAsync(Guid id)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.SchoolGrades
             .AsNoTracking()
             .Include(g => g.SystemGrade)
@@ -45,29 +42,29 @@ public class SchoolGradeService
     {
         try
         {
-            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             var grade = await context.SchoolGrades.FindAsync(id);
             if (grade == null)
             {
-                _logger.LogWarning("Attempted to delete grade {GradeId}, but it does not exist.", id);
+                logger.LogWarning("Attempted to delete grade {GradeId}, but it does not exist.", id);
                 return false;
             }
 
             context.SchoolGrades.Remove(grade);
             await context.SaveChangesAsync();
-            _logger.LogInformation("Deleted grade: {GradeId}", id);
+            logger.LogInformation("Deleted grade: {GradeId}", id);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting grade: {GradeId}", id);
+            logger.LogError(ex, "Error deleting grade: {GradeId}", id);
             return false;
         }
     }
 
     public async Task<List<SchoolGrade>> GetGradesForSchool(Guid schoolId)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.SchoolGrades
             .AsNoTracking()
             .Include(g => g.SystemGrade)
@@ -78,7 +75,7 @@ public class SchoolGradeService
 
     public async Task<List<SchoolGrade>> GetCombinationGradesForSchool(Guid schoolId)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.SchoolGrades
             .AsNoTracking()
             .Include(g => g.SystemGrade)
@@ -89,7 +86,7 @@ public class SchoolGradeService
 
     public async Task<SchoolGrade?> GetBySystemGradeAndSchoolAsync(int systemGradeId, Guid selectedSchoolId)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.SchoolGrades
             .AsNoTracking()
             .Include(g => g.SystemGrade)

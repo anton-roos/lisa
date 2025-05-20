@@ -38,14 +38,11 @@ public class SecureLoginInfo
 /// </summary>
 public class BlazorAuthMiddleware(RequestDelegate next, ILoginStore loginStore)
 {
-    private readonly RequestDelegate _next = next;
-    private readonly ILoginStore _loginStore = loginStore;
-
     public async Task Invoke(HttpContext context, SignInManager<User> signInManager)
     {
         if (context.Request.Path == "/login" && context.Request.Query.ContainsKey("key"))
         {
-            if (!Guid.TryParse(context.Request.Query["key"], out var key) || !_loginStore.TryGetLoginInfo(key, out var info))
+            if (!Guid.TryParse(context.Request.Query["key"], out var key) || !loginStore.TryGetLoginInfo(key, out var info))
             {
                 context.Response.Redirect("/login-failed");
                 return;
@@ -59,7 +56,7 @@ public class BlazorAuthMiddleware(RequestDelegate next, ILoginStore loginStore)
             }
 
             var result = await signInManager.CheckPasswordSignInAsync(user, info.Password, false);
-            _loginStore.Remove(key);
+            loginStore.Remove(key);
 
             if (result.Succeeded)
             {
@@ -78,7 +75,7 @@ public class BlazorAuthMiddleware(RequestDelegate next, ILoginStore loginStore)
             return;
         }
 
-        await _next.Invoke(context);
+        await next.Invoke(context);
     }
 }
 

@@ -1,7 +1,4 @@
 @page "/progress-feedback-details/{LearnerId:guid}"
-@using Lisa.Models.EmailModels
-@using Lisa.Models.Entities
-@using System.Globalization
 @using Microsoft.AspNetCore.WebUtilities
 @inject ProgressFeedbackService ProgressFeedbackService
 @inject NavigationManager NavigationManager
@@ -31,27 +28,21 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Parse query parameters
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
         var queryParams = QueryHelpers.ParseQuery(uri.Query);
 
-        // Extract from date parameter if present
         if (queryParams.TryGetValue("fromDate", out var fromDateParam) && 
             DateTime.TryParse(fromDateParam, out var parsedFromDate))
         {
-            // Convert to UTC to ensure compatibility with PostgreSQL
             FromDate = DateTime.SpecifyKind(parsedFromDate, DateTimeKind.Utc);
         }
 
-        // Extract to date parameter if present
         if (queryParams.TryGetValue("toDate", out var toDateParam) && 
             DateTime.TryParse(toDateParam, out var parsedToDate))
         {
-            // Convert to UTC to ensure compatibility with PostgreSQL
             ToDate = DateTime.SpecifyKind(parsedToDate, DateTimeKind.Utc);
         }
 
-        // Pass date parameters to the renderer service
         html = await RenderService.RenderProgressFeedbackAsync(LearnerId, FromDate, ToDate);
     }
 

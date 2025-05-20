@@ -9,7 +9,6 @@ namespace Lisa.Middleware;
 public class HangfireAuthorizationFilter(ILogger<HangfireAuthorizationFilter> logger)
     : IDashboardAuthorizationFilter
 {
-    private readonly ILogger<HangfireAuthorizationFilter> _logger = logger;
     private static readonly List<string> AllowedRoles = [Roles.SystemAdministrator];
 
     /// <summary>
@@ -22,13 +21,13 @@ public class HangfireAuthorizationFilter(ILogger<HangfireAuthorizationFilter> lo
 
         if (user.Identity?.IsAuthenticated != true)
         {
-            _logger.LogWarning("Unauthorized access attempt to Hangfire Dashboard. User not authenticated.");
+            logger.LogWarning("Unauthorized access attempt to Hangfire Dashboard. User not authenticated.");
             return false;
         }
 
         if (!UserHasAccess(user))
         {
-            _logger.LogWarning("Unauthorized access attempt by user {User}.", user.Identity?.Name);
+            logger.LogWarning("Unauthorized access attempt by user {User}.", user.Identity?.Name);
             return false;
         }
 

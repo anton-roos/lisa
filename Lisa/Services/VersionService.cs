@@ -4,7 +4,7 @@ namespace Lisa.Services;
 
 public class VersionService
 {
-    public string GetVersion()
+    public static string GetVersion()
     {
         return Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown Version";
     }

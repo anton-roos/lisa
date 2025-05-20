@@ -316,9 +316,9 @@
     [Parameter] public Guid? LearnerId { get; set; }
     private bool IsEdit => LearnerId.HasValue;
     private LearnerViewModel _learnerModel = new();
-    private List<ParentViewModel> _parents = new();
-    private List<RegisterClass> _registerClasses = new();
-    private List<CareGroup> _careGroups = new();
+    private List<ParentViewModel> _parents = [];
+    private List<RegisterClass> _registerClasses = [];
+    private List<CareGroup> _careGroups = [];
     private IEnumerable<Combination>? _allCombinations;
     private List<Subject>? _mathSubjects;
     private List<Subject>? _extraSubjects;
@@ -635,16 +635,6 @@
 
         try
         {
-            if (!IsEdit)
-            {
-                var learnerExists = await LearnerService.LearnerExistsByCodeAsync(_learnerModel.Code!);
-                if (learnerExists)
-                {
-                    SetAlert("danger", "A learner with this code already exists.");
-                    return;
-                }
-            }
-
             if (IsEdit && LearnerId.HasValue)
             {
                 _learnerModel.Id = LearnerId.Value;

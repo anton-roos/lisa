@@ -7,11 +7,9 @@ public class SystemGradeService(
     IDbContextFactory<LisaDbContext> dbContextFactory
 )
 {
-    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-
     public async Task<List<SystemGrade>> GetAllAsync()
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.SystemGrades
             .AsNoTracking()
             .OrderBy(s => s.SequenceNumber)

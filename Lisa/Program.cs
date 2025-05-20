@@ -156,6 +156,7 @@ builder.Services.AddScoped<ProgressFeedbackService>();
 builder.Services.AddScoped<RazorLightViewToStringRenderer>();
 builder.Services.AddScoped<AssessmentTypeService>();
 builder.Services.AddScoped<AuditService>();
+builder.Services.AddScoped<AttendanceRecordService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();

@@ -17,7 +17,7 @@
         else if (_loading)
         {
             <div class="list-group">
-                @for (int i = 0; i < _systemGrades.Count(); i++)
+                @for (var i = 0; i < _systemGrades.Count(); i++)
                 {
                     <div class="list-group-item d-flex justify-content-start align-items-center flex-wrap">
                         <div class="col-1">
@@ -38,7 +38,7 @@
             <div class="list-group">
                 @foreach (var systemGrade in _systemGrades)
                 {
-                    bool isChecked = _schoolGrades.Any(sg => sg.SystemGradeId == systemGrade.Id);
+                    var isChecked = _schoolGrades.Any(sg => sg.SystemGradeId == systemGrade.Id);
                     <div class="list-group-item d-flex justify-content-start align-items-center flex-wrap">
                         <div class="col-1">
                             <Switch Value="isChecked" Reverse="false" ValueChanged="async (bool newValue) =>
@@ -150,10 +150,10 @@
                 var schoolGrade = await SchoolGradeService.GetByIdAsync(existingSchoolGrade.Id);
                 if (schoolGrade != null)
                 {
-                    int registerClassCount = schoolGrade.RegisterClasses?.Count ?? 0;
-                    int combinationCount = schoolGrade.Combinations?.Count ?? 0;
-                    bool hasRegisterClasses = registerClassCount > 0;
-                    bool hasCombinations = combinationCount > 0;
+                    var registerClassCount = schoolGrade.RegisterClasses?.Count ?? 0;
+                    var combinationCount = schoolGrade.Combinations?.Count ?? 0;
+                    var hasRegisterClasses = registerClassCount > 0;
+                    var hasCombinations = combinationCount > 0;
 
                     if (hasRegisterClasses || hasCombinations)
                     {

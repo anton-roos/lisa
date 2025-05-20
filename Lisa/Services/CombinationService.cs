@@ -7,11 +7,9 @@ namespace Lisa.Services;
 
 public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactory)
 {
-    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-
     public async Task<Combination?> GetByIdAsync(Guid id)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.Combinations
             .AsNoTracking()
             .Include(sc => sc.Subjects)
@@ -24,7 +22,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
 
     public async Task<List<Combination>> GetCombinationsBySchoolId(Guid schoolId)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.Combinations
             .AsNoTracking()
             .Where(c => c.SchoolGrade!.SchoolId == schoolId)
@@ -36,7 +34,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
 
     public async Task<IEnumerable<Combination>> GetSubjectCombinationsForSchool(School school)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.Combinations
             .AsNoTracking()
             .Include(sc => sc.Subjects)
@@ -50,7 +48,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
 
     public async Task<bool> DeleteAsync(Guid combinationId)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         var combination = await context.Combinations.FindAsync(combinationId);
         if (combination == null)
         {
@@ -66,7 +64,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
 
     public async Task<bool> RestoreAsync(Guid combinationId)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         var combination = await context.Combinations.FindAsync(combinationId);
         if (combination == null)
         {
@@ -82,7 +80,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
 
     public async Task AddCombinationAsync(CombinationViewModel model, IEnumerable<Subject> selectedSubjects)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
 
         var newCombination = new Combination
         {
@@ -108,7 +106,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
 
     public async Task UpdateCombinationAsync(CombinationViewModel model, List<Subject> selectedSubjects)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
 
         var existingCombination = await context.Combinations
             .Include(c => c.Subjects)

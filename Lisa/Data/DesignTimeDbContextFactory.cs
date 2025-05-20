@@ -1,7 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 
 namespace Lisa.Data;
 
@@ -10,7 +8,7 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<LisaDbCont
     public LisaDbContext CreateDbContext(string[] args)
     {
         // Build configuration
-        IConfigurationRoot configuration = new ConfigurationBuilder()
+        var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json")
             .AddJsonFile($"appsettings.Development.json", optional: true)

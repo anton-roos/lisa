@@ -7,13 +7,11 @@ namespace Lisa.Services;
 public interface IEventBus
 {
     Task PublishAsync<TEvent>(TEvent @event) where TEvent : class;
-    void Subscribe<TEvent>(Func<TEvent, Task> handler) where TEvent : class;
 }
 
 public class EventBus(IServiceProvider serviceProvider) : IEventBus
 {
     private readonly ConcurrentDictionary<Type, List<Func<object, Task>>> _handlers = new();
-    private readonly IServiceProvider _serviceProvider = serviceProvider;
 
     public async Task PublishAsync<TEvent>(TEvent @event) where TEvent : class
     {
@@ -28,7 +26,7 @@ public class EventBus(IServiceProvider serviceProvider) : IEventBus
 
         try
         {
-            using var scope = _serviceProvider.CreateScope();
+            using var scope = serviceProvider.CreateScope();
             var eventLogRepository = scope.ServiceProvider.GetRequiredService<IEventLogRepository>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<EventBus>>();
 
@@ -55,7 +53,7 @@ public class EventBus(IServiceProvider serviceProvider) : IEventBus
         }
         catch (Exception ex)
         {
-            var logger = _serviceProvider.GetRequiredService<ILogger<EventBus>>();
+            var logger = serviceProvider.GetRequiredService<ILogger<EventBus>>();
             logger.LogError(ex, "An error occurred while publishing event: {EventType}", eventType);
         }
     }

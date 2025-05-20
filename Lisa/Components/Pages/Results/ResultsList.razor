@@ -181,7 +181,7 @@
     private DateTime? _fromDate;
     private DateTime? _toDate;
 
-    private List<Learner> _learners = new();
+    private List<Learner> _learners = [];
     private bool _learnersLoading = false;
     private string _learnerSearchText = "";
     private Guid? _learnerGradeId;
@@ -311,7 +311,7 @@
         {
             _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
             _subjects = await SubjectService.GetAllAsync();
-            _teachers = await UserService.GetAllByRoleAndSchoolAsync(new[] { Roles.Teacher }, _selectedSchool.Id);
+            _teachers = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], _selectedSchool.Id);
         }
     }
 

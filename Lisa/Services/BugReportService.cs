@@ -16,17 +16,9 @@ public class BugReportService
     SchoolService schoolService
 )
 {
-    private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
-    private readonly NavigationManager _navigationManager = navigationManager;
-    private readonly VersionService _versionService = versionService;
-    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-    private readonly EmailService _emailService = emailService;
-    private readonly ILogger<BugReportService> _logger = logger;
-    private readonly SchoolService _schoolService = schoolService;
-
     public async Task<List<BugReport>> GetAllAsync()
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.BugReports
             .AsNoTracking()
             .ToListAsync();
@@ -36,17 +28,17 @@ public class BugReportService
     {
         bugReport.ReportedAt = DateTime.UtcNow;
 
-        var user = _httpContextAccessor.HttpContext?.User;
+        var user = httpContextAccessor.HttpContext?.User;
         if (user != null)
         {
             bugReport.UserAuthenticated = user.Identity?.IsAuthenticated == true;
             bugReport.ReportedBy = user.Identity?.Name;
         }
 
-        bugReport.PageUrl = _navigationManager.Uri;
-        bugReport.Version = _versionService.GetVersion();
+        bugReport.PageUrl = navigationManager.Uri;
+        bugReport.Version = VersionService.GetVersion();
 
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         await context.BugReports.AddAsync(bugReport);
         await context.SaveChangesAsync();
 
@@ -56,17 +48,17 @@ public class BugReportService
         }
         catch (Exception ex)
         {
-            _logger.LogError("Failed to send bug report email: {exceptionMessage}", ex.Message);
+            logger.LogError("Failed to send bug report email: {exceptionMessage}", ex.Message);
         }
     }
 
     public async Task UpdateStatusAsync(Guid id, BugReportStatus status)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         var bugReport = await context.BugReports.FindAsync(id);
         if (bugReport == null)
         {
-            _logger.LogWarning("Bug report with ID {id} not found.", id);
+            logger.LogWarning("Bug report with ID {id} not found.", id);
             return;
         }
 
@@ -87,13 +79,13 @@ public class BugReportService
 
     public async Task<int> GetCountAsync()
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.BugReports.CountAsync();
     }
 
     public async Task<BugReport?> GetAsync(Guid id)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.BugReports
             .AsNoTracking()
             .FirstOrDefaultAsync(b => b.Id == id);
@@ -103,7 +95,7 @@ public class BugReportService
     {
         try
         {
-            var selectedSchool = await _schoolService.GetSelectedSchoolAsync();
+            var selectedSchool = await schoolService.GetSelectedSchoolAsync();
             var htmlBody = $@"
                     <!DOCTYPE html>
                     <html lang=""en"">
@@ -134,7 +126,7 @@ public class BugReportService
                     </html>
                 ";
             
-            await _emailService.SendEmailAsync(
+            await emailService.SendEmailAsync(
                 "antonroos992@gmail.com",
                 "Bug Report",
                 htmlBody,
@@ -143,7 +135,7 @@ public class BugReportService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error sending bug report email: {Message}", ex.Message);
+            logger.LogError(ex, "Error sending bug report email: {Message}", ex.Message);
         }
     }
 }

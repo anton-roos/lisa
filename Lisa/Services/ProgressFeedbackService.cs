@@ -12,12 +12,9 @@ public class ProgressFeedbackService
     IDbContextFactory<LisaDbContext> dbContextFactory
 )
 {
-    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-    private readonly LearnerService _learnerService = learnerService;
-
     public async Task<ProgressFeedback?> GetProgressFeedbackAsync(Guid learnerId, DateTime? fromDate = null, DateTime? toDate = null)
     {
-        var learner = await _learnerService.GetByIdAsync(learnerId, activeOnly: true);
+        var learner = await learnerService.GetByIdAsync(learnerId, activeOnly: true);
 
         Guard.Against.Null(learner, nameof(learner), "Learner not found or inactive in get progress feedback.");
 
@@ -51,16 +48,14 @@ public class ProgressFeedbackService
                 .Take(6)
                 .ToList();
 
-            if (filteredResults.Count > 0)
-            {
-                var subjectName = filteredResults.First().ResultSet!.Subject!.Name!;
-                resultsBySubject[subjectName] = filteredResults;
-            }
+            if (filteredResults.Count <= 0) continue;
+            var subjectName = filteredResults.First().ResultSet!.Subject!.Name!;
+            resultsBySubject[subjectName] = filteredResults;
         }
 
-        string learnerName = $"{learner.Name} {learner.Surname}";
-        TextInfo textInfo = CultureInfo.CurrentCulture.TextInfo;
-        string learnerNameTitleCase = textInfo.ToTitleCase(learnerName.ToLower());
+        var learnerName = $"{learner.Name} {learner.Surname}";
+        var textInfo = CultureInfo.CurrentCulture.TextInfo;
+        var learnerNameTitleCase = textInfo.ToTitleCase(learnerName.ToLower());
 
         var progressFeedback = new ProgressFeedback
         {
@@ -73,7 +68,7 @@ public class ProgressFeedbackService
 
     public async Task<List<ProgressFeedbackListItem>> GetProgressFeedbackListAsync(Guid schoolId, Guid? gradeId = null, int? subjectId = null, DateTime? fromDate = null, DateTime? toDate = null)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
 
         var query = context.Learners
             .AsNoTracking()

@@ -112,15 +112,15 @@
 </AuthorizeView>
 
 @code {
-    private List<ProgressFeedbackListItem> _allFeedbackList = new();
+    private List<ProgressFeedbackListItem> _allFeedbackList = [];
     private List<ProgressFeedbackListItem>? _progressFeedbackList;
     private School? _selectedSchool;
     private bool _isLoading;
     private Guid? _selectedGradeId = null;
     private int? _selectedSubjectId = null;
     private string _searchTerm = "";
-    private List<Subject> _subjects = new();
-    private List<SchoolGrade> _grades = new();
+    private List<Subject> _subjects = [];
+    private List<SchoolGrade> _grades = [];
     private DateTime? _fromDate = null;
     private DateTime? _toDate = null;
 

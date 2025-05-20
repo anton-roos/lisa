@@ -16,11 +16,11 @@ public class DatabaseSeed
 
         try
         {
-            using var dbContext = serviceProvider.GetRequiredService<LisaDbContext>();
+            await using var dbContext = serviceProvider.GetRequiredService<LisaDbContext>();
 
             await ApplyMigrations(dbContext, logger);
 
-            using var transaction = await dbContext.Database.BeginTransactionAsync();
+            await using var transaction = await dbContext.Database.BeginTransactionAsync();
             await SeedRoles(serviceProvider, logger);
             await SeedAdmin(serviceProvider, logger);
             await SeedSchoolTypes(dbContext, logger);

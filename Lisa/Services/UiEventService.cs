@@ -9,7 +9,6 @@ public class UiEventService
 ) : IDisposable
 {
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<Guid, WeakReference<IEventSubscriber>>> _subscribers = new();
-    private readonly ILogger<UiEventService> _logger = logger;
     private readonly SynchronizationContext? _syncContext = SynchronizationContext.Current;
 
     public Guid Subscribe(string eventName, IEventSubscriber subscriber)
@@ -20,7 +19,7 @@ public class UiEventService
 
         CleanupDeadReferences(subscribers);
 
-        _logger.LogInformation("Subscriber {SubscriberId} subscribed to event {EventName}.", subscriberId, eventName);
+        logger.LogInformation("Subscriber {SubscriberId} subscribed to event {EventName}.", subscriberId, eventName);
         return subscriberId;
     }
 
@@ -30,7 +29,7 @@ public class UiEventService
         {
             subscribers.TryRemove(subscriberId, out _);
             CleanupDeadReferences(subscribers);
-            _logger.LogInformation("Subscriber {SubscriberId} unsubscribed from event {EventName}.", subscriberId, eventName);
+            logger.LogInformation("Subscriber {SubscriberId} unsubscribed from event {EventName}.", subscriberId, eventName);
         }
     }
 
@@ -44,7 +43,7 @@ public class UiEventService
     {
         if (!_subscribers.TryGetValue(eventName, out var subscribers) || subscribers.IsEmpty)
         {
-            _logger.LogWarning("No subscribers found for event {EventName}.", eventName);
+            logger.LogWarning("No subscribers found for event {EventName}.", eventName);
             return;
         }
 
@@ -80,7 +79,7 @@ public class UiEventService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error invoking subscriber for event {EventName}.", eventName);
+            logger.LogError(ex, "Error invoking subscriber for event {EventName}.", eventName);
         }
     }
 
@@ -105,6 +104,6 @@ public class UiEventService
         }
         _subscribers.Clear();
         GC.SuppressFinalize(this);
-        _logger.LogInformation("UiEventService disposed.");
+        logger.LogInformation("UiEventService disposed.");
     }
 }

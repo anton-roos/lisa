@@ -33,13 +33,13 @@ public class LearnerViewModel
     [Required(AllowEmptyStrings = false, ErrorMessage = "Learner needs to be assigned to a Care Group.")]
     public Guid? CareGroupId { get; set; }
 
-    public List<int> SubjectIds { get; set; } = new();
+    public List<int> SubjectIds { get; set; } = [];
 
     public Dictionary<Guid, int> CombinationSelections { get; set; } = new();
 
     public int MathSelection { get; set; }
 
-    public List<int> ExtraSubjectIds { get; set; } = new();
+    public List<int> ExtraSubjectIds { get; set; } = [];
 
     public string? MedicalAidName { get; set; }
 

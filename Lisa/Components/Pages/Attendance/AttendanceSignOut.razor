@@ -1,12 +1,9 @@
 @page "/attendance/sign-out"
-@page "/attendance/sign-out/{AttendanceSessionId:guid}"
+@page "/attendance/sign-out/{AttendanceId:guid}"
 @using Lisa.Models.Entities
-@using System.Text.Json
-@using Microsoft.AspNetCore.Components.Authorization
 @inject SchoolService SchoolService
 @inject RegisterClassService RegisterClassService
 @inject LearnerService LearnerService
-@inject IJSRuntime JSRuntime
 @inject AttendanceService AttendanceService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
@@ -23,7 +20,7 @@
                 <div class="col-md-6">
                     <h2>Sign Out</h2>
                     <p>@DateTime.Now.ToString("dd/M")</p>
-                    
+
                     @if (_selectedSchool == null)
                     {
                         <div class="alert alert-warning mb-3">
@@ -34,30 +31,33 @@
                     else
                     {
                         <div class="input-group mb-3">
-                            <input type="time" class="form-control" @bind="_endTimeOnly" />
-                            <button class="btn btn-primary" @onclick="ConfirmEndTime" disabled="@_isEndTimeConfirmed">Confirm</button>
+                            <input type="time" class="form-control" @bind="_endTimeOnly"/>
+                            <button class="btn btn-primary" @onclick="ConfirmEndTime" disabled="@_isEndTimeConfirmed">
+                                Confirm
+                            </button>
                         </div>
                         <div class="mb-3">
                             <small class="text-muted">End time: @_endTimeOnly.ToString("HH:mm")</small>
                         </div>
-                        
+
                         @if (_isEndTimeConfirmed)
                         {
                             <div class="d-flex mb-3">
                                 @foreach (var filter in _registerClassFilters)
                                 {
-                                    <button class="btn @(filter == _selectedFilter ? "btn-primary" : "btn-secondary") me-2"
-                                            @onclick="() => FilterByRegisterClass(filter)">
+                                    <button
+                                        class="btn @(filter == _selectedFilter ? "btn-primary" : "btn-secondary") me-2"
+                                        @onclick="() => FilterByRegisterClass(filter)">
                                         @filter
                                     </button>
                                 }
                             </div>
-                            
+
                             <div class="mb-3">
-                                <input type="text" class="form-control" @bind-value="_searchText" 
-                                    @bind-value:event="oninput" placeholder="Search Learner" />
+                                <input type="text" class="form-control" @bind-value="_searchText"
+                                       @bind-value:event="oninput" placeholder="Search Learner"/>
                             </div>
-                            
+
                             @if (_registerClassLearners.Any())
                             {
                                 @foreach (var registerClass in _registerClassLearners.Keys)
@@ -68,15 +68,16 @@
                                             <h4>Gr @registerClass</h4>
                                             <div class="d-flex flex-column">
                                                 @foreach (var learner in _registerClassLearners[registerClass]
-                                                    .Where(l => string.IsNullOrEmpty(_searchText) || 
-                                                        $"{l.Name} {l.Surname}".ToLower().Contains(_searchText.ToLower())))
+                                                                  .Where(l => string.IsNullOrEmpty(_searchText) ||
+                                                                              $"{l.Name} {l.Surname}".ToLower().Contains(_searchText.ToLower())))
                                                 {
                                                     <div class="d-flex align-items-center mb-2">
-                                                        <div class="me-3" style="min-width: 150px;">@learner.Name @learner.Surname</div>
+                                                        <div class="me-3"
+                                                             style="min-width: 150px;">@learner.Name @learner.Surname</div>
                                                         <div @onclick="() => ToggleAttendance(learner, registerClass)">
                                                             @{
-                                                                string pillColor = GetPillColor(learner);
-                                                                string pillClass = $"pill {pillColor}";
+                                                                var pillColor = GetPillColor(learner);
+                                                                var pillClass = $"pill {pillColor}";
                                                             }
                                                             <div class="@pillClass">
                                                                 @if (pillColor == "present")
@@ -120,18 +121,18 @@
                 cursor: pointer;
                 font-weight: bold;
             }
-            
+
             .present {
                 background-color: #4CAF50;
                 color: white;
             }
-            
+
             .early-leave {
                 background-color: white;
                 color: black;
                 border: 2px solid #f44336;
             }
-            
+
             .left {
                 background-color: #2196F3;
                 color: white;
@@ -139,28 +140,27 @@
         </style>
     </Authorized>
     <NotAuthorized>
-        <Unauthenticated />
+        <Unauthenticated/>
     </NotAuthorized>
 </AuthorizeView>
 
 @code {
-    [Parameter]
-    public Guid? AttendanceSessionId { get; set; }
-    
+    [Parameter] public Guid? AttendanceSessionId { get; set; }
+
     private School? _selectedSchool;
-    private List<RegisterClass> _registerClasses = new();
+    private List<RegisterClass> _registerClasses = [];
     private Dictionary<string, List<Learner>> _registerClassLearners = new();
     private Dictionary<Guid, AttendanceData> _attendanceData = new();
     private DateTime _endTime = DateTime.Today.AddHours(14); // Default to 2:00 PM
     private TimeOnly _endTimeOnly = new TimeOnly(14, 0); // Default to 2:00 PM for the input
     private bool _isEndTimeConfirmed = false;
     private DateTime _endTimeDateTime;
-    private List<string> _registerClassFilters = new() { "All" };
+    private List<string> _registerClassFilters = ["All"];
     private string _selectedFilter = "All";
     private string _searchText = "";
     private Dictionary<string, Guid> _registerClassNameToIdMap = new();
     private Guid? _currentUserId;
-    private AttendanceSession? _currentSession;
+    private Attendance? _currentSession;
 
     private class AttendanceData
     {
@@ -196,7 +196,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        // If we have an AttendanceSessionId, load that session
+        // If we have an AttendanceId, load that session
         if (AttendanceSessionId.HasValue)
         {
             await LoadAttendanceSession(AttendanceSessionId.Value);
@@ -213,10 +213,10 @@
         if (_selectedSchool == null) return;
 
         // First check for any active session for today for this school
-        var activeSession = await AttendanceService.GetActiveSessionForSchoolAsync(
-            _selectedSchool.Id, 
+        var activeSession = await AttendanceService.GetActiveAttendanceAsync(
+            _selectedSchool.Id,
             DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Utc));
-        
+
         if (activeSession != null)
         {
             // Redirect to that session - this is the same session that was created during sign-in
@@ -232,14 +232,14 @@
         if (completedSession != null)
         {
             // Redirect to the existing completed session
-            NavigationManager.NavigateTo($"/attendance/sign-out/{completedSession.Id}");
+            //NavigationManager.NavigateTo($"/attendance/sign-out/{completedSession.}");
         }
     }
 
     private async Task LoadAttendanceSession(Guid sessionId)
     {
-        _currentSession = await AttendanceService.GetAttendanceSessionAsync(sessionId);
-        
+        _currentSession = await AttendanceService.GetAsync(sessionId);
+
         if (_currentSession == null)
         {
             // Session not found, go back to main page
@@ -248,9 +248,8 @@
         }
 
         // Use end time from session if available, otherwise use default
-        if (_currentSession.EndTime.HasValue)
+        if (_currentSession.End.HasValue)
         {
-            _endTime = _currentSession.EndTime.Value.ToLocalTime();
             _endTimeOnly = TimeOnly.FromDateTime(_endTime); // Update the time input control
             _endTimeDateTime = _endTime;
             _isEndTimeConfirmed = true;
@@ -261,14 +260,14 @@
             _endTime = DateTime.Today.AddHours(14);
             _endTimeOnly = new TimeOnly(14, 0);
         }
-        
+
         // If school changed, update it
         if (_selectedSchool?.Id != _currentSession.SchoolId)
         {
             _selectedSchool = await SchoolService.GetSchoolAsync(_currentSession.SchoolId);
             await LoadRegisterClasses();
         }
-        
+
         await LoadLearners();
         await LoadAttendanceData();
     }
@@ -276,21 +275,21 @@
     private async Task LoadAttendanceData()
     {
         if (_currentSession == null) return;
-        
+
         // Load attendance data for this session
-        var attendances = await AttendanceService.GetAttendancesForSessionAsync(_currentSession.Id);
-        
-        foreach (var attendance in attendances)
+        var attendances = await AttendanceService.GetAsync(_currentSession.Id);
+
+        foreach (var attendance in attendances.AttendanceRecords)
         {
             if (_attendanceData.ContainsKey(attendance.LearnerId))
             {
                 // Only update sign-out data if it exists
-                if (attendance.SignOutTime.HasValue)
+                if (attendance.End.HasValue)
                 {
                     _attendanceData[attendance.LearnerId].HasLeft = true;
-                    _attendanceData[attendance.LearnerId].SignOutTime = attendance.SignOutTime.Value.ToLocalTime();
+                    _attendanceData[attendance.LearnerId].SignOutTime = attendance.End.Value.ToLocalTime();
                 }
-                
+
                 // Store the attendance ID for later updates
                 _attendanceData[attendance.LearnerId].AttendanceId = attendance.Id;
             }
@@ -303,26 +302,26 @@
         {
             // Log selection to help debug
             Console.WriteLine($"School selected: {school.LongName} (ID: {school.Id})");
-            
+
             // Update selected school
             _selectedSchool = school;
-            
+
             // Reset state when school changes
             _isEndTimeConfirmed = false;
             _currentSession = null;
             _registerClassLearners.Clear();
             _attendanceData.Clear();
-            
+
             // Keep the current time selection (don't reset it)
-            
+
             // Load new data for selected school
             await LoadRegisterClasses();
             await CheckForExistingSession();
-            
+
             // Force UI update
             await InvokeAsync(StateHasChanged);
         }
-        
+
         await base.HandleEventAsync(eventName, payload);
     }
 
@@ -331,11 +330,11 @@
         if (_selectedSchool == null) return;
 
         _registerClasses = await RegisterClassService.GetBySchoolIdAsync(_selectedSchool.Id);
-        
+
         // Reset everything when school changes
         _registerClassLearners.Clear();
         _attendanceData.Clear();
-        _registerClassFilters = new() { "All" };
+        _registerClassFilters = ["All"];
         _registerClassNameToIdMap.Clear();
         _isEndTimeConfirmed = false;
     }
@@ -343,42 +342,42 @@
     private async Task ConfirmEndTime()
     {
         if (_selectedSchool == null) return;
-        
+
         // Convert TimeOnly to DateTime for our application logic
         _endTime = DateTime.Today.Add(_endTimeOnly.ToTimeSpan());
         _endTimeDateTime = _endTime;
         _isEndTimeConfirmed = true;
-        
+
         // Create or update attendance session
         if (_currentSession == null)
         {
             // Check both active and completed sessions
-            _currentSession = await AttendanceService.GetActiveSessionForSchoolAsync(
-                _selectedSchool.Id, 
+            _currentSession = await AttendanceService.GetActiveAttendanceAsync(
+                _selectedSchool.Id,
                 DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Utc)
             );
-            
+
             if (_currentSession == null)
             {
                 // Check for completed session as well
-                _currentSession = await AttendanceService.GetCompletedSessionForSchoolAsync(
-                    _selectedSchool.Id,
-                    DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Utc)
-                );
-                
+                // _currentSession = await AttendanceService.GetCompletedSessionForSchoolAsync(
+                //     _selectedSchool.Id,
+                //     DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Utc)
+                // );
+                //
                 if (_currentSession == null)
                 {
                     // No session exists at all, create one with both start and end time
-                    _currentSession = await AttendanceService.CreateAttendanceSessionAsync(
-                        _selectedSchool.Id,
-                        DateTime.Today.AddHours(7).ToUniversalTime(), // Default start time if creating from sign-out
-                        _currentUserId
-                    );
+                    // _currentSession = await AttendanceService.CreateAttendanceSessionAsync(
+                    //     _selectedSchool.Id,
+                    //     DateTime.Today.AddHours(7).ToUniversalTime(), // Default start time if creating from sign-out
+                    //     _currentUserId
+                    // );
                 }
             }
-            
+
             // Update with end time
-            await AttendanceService.UpdateSessionEndTimeAsync(
+            await AttendanceService.UpdateAttendanceEndTimeAsync(
                 _currentSession.Id,
                 _endTime.ToUniversalTime()
             );
@@ -386,15 +385,18 @@
         else
         {
             // Update existing session with new end time
-            await AttendanceService.UpdateSessionEndTimeAsync(
+            await AttendanceService.UpdateAttendanceEndTimeAsync(
                 _currentSession.Id,
                 _endTime.ToUniversalTime()
             );
         }
-        
+
         NavigationManager.NavigateTo($"/attendance/sign-out/{_currentSession.Id}");
-        
+
         await LoadLearners();
+
+        // Create or confirm attendance records for all learners with confirmed end time
+        //await EnsureAttendanceRecordsExistAsync();
     }
 
     private async Task LoadLearners()
@@ -403,7 +405,7 @@
 
         _registerClassLearners.Clear();
         _attendanceData.Clear();
-        _registerClassFilters = new() { "All" };
+        _registerClassFilters = ["All"];
         _registerClassNameToIdMap.Clear();
 
         foreach (var registerClass in _registerClasses)
@@ -411,19 +413,19 @@
             if (registerClass?.SchoolGrade?.SystemGrade?.Name != null)
             {
                 var className = registerClass.SchoolGrade.SystemGrade.Name;
-                
+
                 if (!_registerClassFilters.Contains(className))
                 {
                     _registerClassFilters.Add(className);
                 }
-                
+
                 var learners = await LearnerService.GetByRegisterClassAsync(registerClass.Id);
-                
+
                 if (learners.Any())
                 {
                     _registerClassLearners[className] = learners;
                     _registerClassNameToIdMap[className] = registerClass.Id;
-                    
+
                     // Initialize attendance data for all learners as present (since they haven't left yet)
                     foreach (var learner in learners)
                     {
@@ -432,7 +434,7 @@
                 }
             }
         }
-        
+
         StateHasChanged();
     }
 
@@ -447,28 +449,40 @@
         {
             _attendanceData[learner.Id] = new AttendanceData();
         }
-        
+
         var data = _attendanceData[learner.Id];
         data.HasLeft = !data.HasLeft;
-        
+
         if (data.HasLeft)
         {
             data.SignOutTime = DateTime.Now;
-            
+
             // Get the register class ID
             if (_registerClassNameToIdMap.TryGetValue(registerClassName, out var registerClassId))
             {
-                bool isEarlyLeave = data.IsEarlyLeave(_endTimeDateTime);
-                
+                var isEarlyLeave = data.IsEarlyLeave(_endTimeDateTime);
+
                 // If it's an early leave, redirect to the Leave Early page
                 if (isEarlyLeave)
                 {
                     NavigationManager.NavigateTo($"/leave-early/{learner.Id}");
                     return;
                 }
-                
-                // Otherwise, save the attendance to the database
-                await SaveSignOut(learner.Id, registerClassId, isEarlyLeave);
+
+                // Update the existing attendance record with sign-out time
+                if (data.AttendanceId.HasValue)
+                {
+                    // await AttendanceService.RecordSignOutAsync(
+                    //     data.AttendanceId.Value,
+                    //     isEarlyLeave,
+                    //     $"Signed out at {DateTime.Now:HH:mm}{(isEarlyLeave ? " (early)" : "")}"
+                    // );
+                }
+                else
+                {
+                    // Fallback: create a new record if one doesn't exist (should be rare)
+                    await SaveSignOut(learner.Id, registerClassId, isEarlyLeave);
+                }
             }
         }
         else
@@ -476,7 +490,7 @@
             // If toggling back to not left, remove the sign-out time
             if (data.AttendanceId.HasValue)
             {
-                await AttendanceService.ClearSignOutAsync(data.AttendanceId.Value);
+                //await AttendanceService.ClearSignOutAsync(data.AttendanceId.Value);
             }
         }
     }
@@ -484,41 +498,40 @@
     private async Task SaveSignOut(Guid learnerId, Guid registerClassId, bool isEarlyLeave)
     {
         if (_selectedSchool == null || _currentSession == null) return;
-        
+
         // Check if we already have an attendance record for this learner
         if (_attendanceData[learnerId].AttendanceId.HasValue)
         {
             // Update existing record with sign-out time
-            await AttendanceService.RecordSignOutAsync(
-                _attendanceData[learnerId].AttendanceId.Value, 
-                isEarlyLeave,
-                $"Signed out at {DateTime.Now:HH:mm}{(isEarlyLeave ? " (early)" : "")}"
-            );
+            //     await AttendanceService.RecordSignOutAsync(
+            //         _attendanceData[learnerId].AttendanceId.Value, 
+            //         isEarlyLeave,
+            //         $"Signed out at {DateTime.Now:HH:mm}{(isEarlyLeave ? " (early)" : "")}"
+            //     );
         }
         else
         {
             // Create a new attendance record with sign-out info
-            var attendance = await AttendanceService.RecordAttendanceAsync(
-                learnerId,
-                _selectedSchool.Id,
-                registerClassId,
-                true, // Assume they were present if they're signing out
-                isEarlyLeave ? "Early leave" : "Regular sign out",
-                _currentUserId,
-                _currentSession.Id
-            );
-            
+            // var attendance = await AttendanceService.RecordAttendanceAsync(
+            //     learnerId,
+            //     _selectedSchool.Id,
+            //     registerClassId,
+            //     true, // Assume they were present if they're signing out
+            //     isEarlyLeave ? "Early leave" : "Regular sign out",
+            //     _currentUserId,
+            //     _currentSession.Id
+            // );
+
             // Store the ID and update with sign-out info
-            _attendanceData[learnerId].AttendanceId = attendance.Id;
-            await AttendanceService.RecordSignOutAsync(
-                attendance.Id,
-                isEarlyLeave,
-                $"Signed out at {DateTime.Now:HH:mm}{(isEarlyLeave ? " (early)" : "")}"
-            );
+            //     _attendanceData[learnerId].AttendanceId = attendance.Id;
+            //     await AttendanceService.RecordSignOutAsync(
+            //         attendance.Id,
+            //         isEarlyLeave,
+            //         $"Signed out at {DateTime.Now:HH:mm}{(isEarlyLeave ? " (early)" : "")}"
+            //     );
         }
 
         // Optionally show a success message
-        await JSRuntime.InvokeVoidAsync("console.log", $"Sign-out saved for {learnerId}");
     }
 
     private string GetPillColor(Learner learner)
@@ -527,7 +540,58 @@
         {
             return "present";
         }
-        
+
         return _attendanceData[learner.Id].IsEarlyLeave(_endTimeDateTime) ? "early-leave" : "left";
     }
+
+    private async Task EnsureAttendanceRecordsExistAsync()
+    {
+        if (_selectedSchool == null || _currentSession == null) return;
+
+        // Load existing attendance records for this session
+        //var existingAttendances = await AttendanceService.GetAttendancesForSessionAsync(_currentSession.Id);
+       // var existingLearnerIds = existingAttendances.Select(a => a.LearnerId).ToHashSet();
+
+        foreach (var registerClassGroup in _registerClassLearners)
+        {
+            var className = registerClassGroup.Key;
+            if (_registerClassNameToIdMap.TryGetValue(className, out var registerClassId))
+            {
+                foreach (var learner in registerClassGroup.Value)
+                {
+                    // If this learner doesn't have an attendance record yet, create one
+                    // if (!existingLearnerIds.Contains(learner.Id))
+                    // {
+                    //     // Create attendance record with confirmed start time
+                    //     // var attendance = await AttendanceService.RecordAttendanceAsync(
+                    //     //     learner.Id,
+                    //     //     _selectedSchool.Id,
+                    //     //     registerClassId,
+                    //     //     true, // Assume they were present since we're at sign-out
+                    //     //     "Record created at sign-out time",
+                    //     //     _currentUserId,
+                    //     //     _currentSession.Id
+                    //     // );
+                    //
+                    //     // Store the ID for later updates
+                    //     // if (_attendanceData.ContainsKey(learner.Id))
+                    //     // {
+                    //     //     _attendanceData[learner.Id].AttendanceId = attendance.Id;
+                    //     // }
+                    //     // else
+                    //     // {
+                    //     //     _attendanceData[learner.Id] = new AttendanceData
+                    //     //     {
+                    //     //         AttendanceId = attendance.Id
+                    //     //     };
+                    //     // }
+                    // }
+                }
+            }
+        }
+
+        // Refresh attendance data to make sure we have all the IDs
+        await LoadAttendanceData();
+    }
+
 }

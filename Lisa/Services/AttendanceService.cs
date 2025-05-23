@@ -4,288 +4,135 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public partial class AttendanceService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<AttendanceService> logger)
+public partial class AttendanceService(
+    IDbContextFactory<LisaDbContext> dbContextFactory,
+    ILogger<AttendanceService> logger
+)
 {
-    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-    private readonly ILogger<AttendanceService> _logger = logger;
-
-    public async Task<Attendance> RecordAttendanceAsync(Guid learnerId, Guid schoolId, Guid registerClassId,
-        bool isPresent, string? notes = null, Guid? recordedByUserId = null, Guid? sessionId = null)
+    public async Task<bool> InitiatedAttendanceForToday(Guid? schoolId)
     {
         var today = DateTime.UtcNow.Date;
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var attendance = await dbContext.Attendances
+            .FirstOrDefaultAsync(a => a.Start == today && a.SchoolId == schoolId);
 
-        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        var existingAttendance = await dbContext.Attendances
-            .FirstOrDefaultAsync(a => a.LearnerId == learnerId &&
-                                    a.RegisterClassId == registerClassId &&
-                                    a.Date.Date == today);
-
-        if (existingAttendance != null)
-        {
-            existingAttendance.IsPresent = isPresent;
-            existingAttendance.Notes = notes;
-            existingAttendance.UpdatedAt = DateTime.UtcNow;
-            existingAttendance.UpdatedBy = recordedByUserId;
-
-            if (isPresent && existingAttendance.SignInTime == null)
-            {
-                existingAttendance.SignInTime = DateTime.UtcNow;
-            }
-
-            if (sessionId.HasValue && existingAttendance.AttendanceSessionId != sessionId)
-            {
-                existingAttendance.AttendanceSessionId = sessionId;
-            }
-
-            await dbContext.SaveChangesAsync();
-            _logger.LogInformation("Updated attendance for learner {LearnerId}", learnerId);
-            return existingAttendance;
-        }
-
-        var attendance = new Attendance
-        {
-            Id = Guid.NewGuid(),
-            LearnerId = learnerId,
-            SchoolId = schoolId,
-            RegisterClassId = registerClassId,
-            Date = today,
-            IsPresent = isPresent,
-            SignInTime = isPresent ? DateTime.UtcNow : null,
-            Notes = notes,
-            RecordedByUserId = recordedByUserId,
-            AttendanceSessionId = sessionId,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            CreatedBy = recordedByUserId,
-            UpdatedBy = recordedByUserId
-        };
-
-        await dbContext.Attendances.AddAsync(attendance);
-        await dbContext.SaveChangesAsync();
-
-        _logger.LogInformation("Created new attendance record for learner {LearnerId}", learnerId);
-        return attendance;
+        return attendance != null;
     }
 
-    public async Task<Attendance?> GetAttendanceAsync(Guid learnerId, Guid registerClassId, DateTime date)
+    public async Task<Attendance> CreateAttendanceAsync(
+        Guid schoolId,
+        DateTimeOffset start,
+        DateTimeOffset? end = null
+    )
     {
-        var utcDate = date.Kind == DateTimeKind.Unspecified
-            ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
-            : date.ToUniversalTime();
-
-        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        return await dbContext.Attendances
-            .FirstOrDefaultAsync(a => a.LearnerId == learnerId &&
-                                     a.RegisterClassId == registerClassId &&
-                                     a.Date.Date == utcDate.Date);
-    }
-
-    public async Task<Attendance> UpdateAttendanceAsync(Guid attendanceId, bool isPresent,
-        bool isEarlyLeave = false, string? notes = null)
-    {
-        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        var attendance = await dbContext.Attendances.FindAsync(attendanceId)
-            ?? throw new KeyNotFoundException($"Attendance record with ID {attendanceId} not found");
-
-        attendance.IsPresent = isPresent;
-        attendance.IsEarlyLeave = isEarlyLeave;
-
-        if (notes != null)
-        {
-            attendance.Notes = notes;
-        }
-
-        attendance.UpdatedAt = DateTime.UtcNow;
-
-        await dbContext.SaveChangesAsync();
-        _logger.LogInformation("Updated attendance {AttendanceId}", attendanceId);
-
-        return attendance;
-    }
-
-    public async Task<bool> RecordSignOutAsync(Guid attendanceId)
-    {
-        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        var attendance = await dbContext.Attendances.FindAsync(attendanceId);
-
-        if (attendance == null)
-        {
-            _logger.LogWarning("Attempted to sign out non-existent attendance record {AttendanceId}", attendanceId);
-            return false;
-        }
-
-        attendance.SignOutTime = DateTime.UtcNow;
-        attendance.UpdatedAt = DateTime.UtcNow;
-
-        await dbContext.SaveChangesAsync();
-        _logger.LogInformation("Recorded sign-out for attendance {AttendanceId}", attendanceId);
-
-        return true;
-    }
-
-    public async Task<AttendanceSession> CreateAttendanceSessionAsync(Guid schoolId, DateTime startTime, Guid? createdByUserId)
-    {
-        startTime = startTime.Kind == DateTimeKind.Unspecified
-            ? DateTime.SpecifyKind(startTime, DateTimeKind.Utc)
-            : startTime.ToUniversalTime();
-
-        var existingSession = await GetActiveSessionForSchoolAsync(schoolId, startTime.Date);
-        if (existingSession != null)
-        {
-            return existingSession;
-        }
-
-        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        var session = new AttendanceSession
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var session = new Attendance
         {
             Id = Guid.NewGuid(),
             SchoolId = schoolId,
-            Date = startTime.Date,
-            StartTime = startTime,
-            CreatedByUserId = createdByUserId,
+            Start = start,
+            End = end,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
-            CreatedBy = createdByUserId
         };
 
-        await dbContext.AttendanceSessions.AddAsync(session);
+        await dbContext.Attendances.AddAsync(session);
         await dbContext.SaveChangesAsync();
 
-        _logger.LogInformation("Created new attendance session {SessionId} for school {SchoolId}",
+        logger.LogInformation("Created new attendance session {SessionId} for school {SchoolId}",
             session.Id, schoolId);
 
         return session;
     }
 
-    public async Task<AttendanceSession?> GetAttendanceSessionAsync(Guid sessionId)
+    public async Task<bool> RecordSignOutAsync(Guid attendanceId)
     {
-        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        return await dbContext.AttendanceSessions
-            .Include(s => s.School)
-            .FirstOrDefaultAsync(s => s.Id == sessionId);
-    }
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var attendance = await dbContext.Attendances.FindAsync(attendanceId);
 
-    public async Task<AttendanceSession?> GetActiveSessionForSchoolAsync(Guid schoolId, DateTime date)
-    {
-        var utcDate = date.Kind == DateTimeKind.Unspecified
-            ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
-            : date.ToUniversalTime();
-
-        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        return await dbContext.AttendanceSessions
-            .FirstOrDefaultAsync(s => s.SchoolId == schoolId &&
-                                      s.Date.Date == utcDate.Date &&
-                                      s.EndTime == null);
-    }
-
-    public async Task<List<Attendance>> GetAttendancesForSessionAsync(Guid sessionId)
-    {
-        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        return await dbContext.Attendances
-            .Where(a => a.AttendanceSessionId == sessionId)
-            .ToListAsync();
-    }
-
-    public async Task<bool> EndSessionAsync(Guid sessionId)
-    {
-        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        var session = await dbContext.AttendanceSessions.FindAsync(sessionId);
-
-        if (session == null)
+        if (attendance == null)
         {
-            _logger.LogWarning("Attempted to end non-existent session {SessionId}", sessionId);
+            logger.LogWarning("Attempted to sign out non-existent attendance record {AttendanceId}", attendanceId);
             return false;
         }
 
-        session.EndTime = DateTime.UtcNow;
+        attendance.End = DateTime.UtcNow;
+        attendance.UpdatedAt = DateTime.UtcNow;
+
+        await dbContext.SaveChangesAsync();
+        logger.LogInformation("Recorded sign-out for attendance {AttendanceId}", attendanceId);
+
+        return true;
+    }
+
+    public async Task<Attendance?> GetAsync(Guid sessionId)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        return await dbContext.Attendances
+            .Include(s => s.School)
+            .Include(ar => ar.AttendanceRecords)
+            .FirstOrDefaultAsync(s => s.Id == sessionId);
+    }
+
+    public async Task<Attendance?> GetActiveAttendanceAsync(Guid schoolId, DateTimeOffset date)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        return await dbContext.Attendances
+            .FirstOrDefaultAsync(s => s.SchoolId == schoolId &&
+                                      s.Start == date &&
+                                      s.End == null);
+    }
+
+    public async Task<bool> EndAttendanceAsync(Guid sessionId)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var session = await dbContext.Attendances.FindAsync(sessionId);
+
+        if (session == null)
+        {
+            logger.LogWarning("Attempted to end non-existent session {SessionId}", sessionId);
+            return false;
+        }
+
+        session.End = DateTime.UtcNow;
         session.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync();
 
-        _logger.LogInformation("Ended attendance session {SessionId}", sessionId);
+        logger.LogInformation("Ended attendance session {SessionId}", sessionId);
         return true;
     }
 
-    public async Task<bool> RecordSignOutAsync(Guid attendanceId, bool isEarlyLeave, string? notes = null)
+    public async Task<Attendance> UpdateAttendanceEndTimeAsync(Guid attendanceId, DateTime endTime)
     {
-        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        var attendance = await dbContext.Attendances.FindAsync(attendanceId);
-
-        if (attendance == null)
-        {
-            _logger.LogWarning("Attempted to sign out non-existent attendance record {AttendanceId}", attendanceId);
-            return false;
-        }
-
-        attendance.SignOutTime = DateTime.UtcNow;
-        attendance.IsEarlyLeave = isEarlyLeave;
-        attendance.UpdatedAt = DateTime.UtcNow;
-
-        if (notes != null)
-        {
-            attendance.Notes = notes;
-        }
-
-        await dbContext.SaveChangesAsync();
-        _logger.LogInformation("Recorded sign-out for attendance {AttendanceId}", attendanceId);
-
-        return true;
-    }
-
-    public async Task<bool> ClearSignOutAsync(Guid attendanceId)
-    {
-        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        var attendance = await dbContext.Attendances.FindAsync(attendanceId);
-
-        if (attendance == null)
-        {
-            _logger.LogWarning("Attempted to clear sign-out for non-existent attendance record {AttendanceId}", attendanceId);
-            return false;
-        }
-
-        attendance.SignOutTime = null;
-        attendance.IsEarlyLeave = false;
-        attendance.UpdatedAt = DateTime.UtcNow;
-
-        await dbContext.SaveChangesAsync();
-        _logger.LogInformation("Cleared sign-out for attendance {AttendanceId}", attendanceId);
-
-        return true;
-    }
-
-    public async Task<AttendanceSession> UpdateSessionEndTimeAsync(Guid sessionId, DateTime endTime)
-    {
-        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        var session = await dbContext.AttendanceSessions.FindAsync(sessionId);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var session = await dbContext.Attendances.FindAsync(attendanceId);
 
         if (session == null)
         {
-            throw new KeyNotFoundException($"Attendance session with ID {sessionId} not found");
+            throw new KeyNotFoundException($"Attendance session with ID {attendanceId} not found");
         }
 
         endTime = endTime.Kind == DateTimeKind.Unspecified
             ? DateTime.SpecifyKind(endTime, DateTimeKind.Utc)
             : endTime.ToUniversalTime();
 
-        session.EndTime = endTime;
+        session.End = endTime;
         session.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync();
-        _logger.LogInformation("Updated end time for session {SessionId}", sessionId);
+        logger.LogInformation("Updated end time for session {SessionId}", attendanceId);
 
         return session;
     }
 
-    public async Task<AttendanceSession?> GetCompletedSessionForSchoolAsync(Guid schoolId, DateTime date)
+    public async Task<List<Attendance>> GetCompletedSessionForSchoolAsync(Guid schoolId, DateTimeOffset date)
     {
-        var utcDate = date.Kind == DateTimeKind.Unspecified
-            ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
-            : date.ToUniversalTime();
-
-        using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        return await dbContext.AttendanceSessions
-            .FirstOrDefaultAsync(s => s.SchoolId == schoolId &&
-                                    s.Date.Date == utcDate.Date &&
-                                    s.EndTime != null);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        return await dbContext.Attendances
+            .Where(s => s.SchoolId == schoolId &&
+                        s.Start == date.Date &&
+                        s.End != null)
+            .ToListAsync();
     }
 }

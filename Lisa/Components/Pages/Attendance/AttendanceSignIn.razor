@@ -250,7 +250,7 @@
     {
         if (_selectedSchool == null) return;
 
-        var existingSession = await AttendanceService.GetActiveAttendanceAsync(_selectedSchool.Id, DateTime.UtcNow.Date);
+        var existingSession = await AttendanceService.GetTodaysAttendanceAsync(_selectedSchool.Id);
 
         if (existingSession != null)
         {

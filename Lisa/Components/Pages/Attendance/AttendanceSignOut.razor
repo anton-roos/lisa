@@ -155,28 +155,27 @@
     private List<RegisterClass> _registerClasses = [];
     private Dictionary<string, List<Learner>> _learners = new();
     private Dictionary<Guid, AttendanceData> _attendanceData = new();
-    private DateTime _endTime = DateTime.UtcNow.Date.AddHours(14); // Default to 2:00 PM
-    private TimeOnly _endTimeOnly = new TimeOnly(14, 0); // Default to 2:00 PM for the input
+    private TimeOnly _endTimeOnly = new TimeOnly(14, 0);
     private bool _isEndTimeConfirmed = false;
-    private DateTime _endTimeDateTime;
     private List<string> _registerClassFilters = ["All"];
     private string _selectedFilter = "All";
     private string _searchText = "";
     private Dictionary<string, Guid> _registerClassNameToIdMap = new();
     private Attendance? _attendance;
+    private Dictionary<Learner, List<AttendanceRecord>> _attendanceRecordsByLearner = new();
 
     private class AttendanceData
     {
         public bool HasLeft { get; set; } = false;
         public DateTime SignOutTime { get; set; }
-        public bool IsEarlyLeave(DateTime endTimeDateTime) => SignOutTime < endTimeDateTime;
+        public bool IsEarlyLeave(TimeOnly endTime) => 
+            SignOutTime.TimeOfDay < endTime.ToTimeSpan();
         public Guid? AttendanceId { get; set; } // Store the attendance record ID
     }
 
     protected override async Task OnInitializedAsync()
     {
-        _endTime = DateTime.UtcNow.Date.AddHours(14);
-        _endTimeOnly = new TimeOnly(14, 0);
+        _endTimeOnly = new TimeOnly(14, 0); // Default to 2:00 PM
 
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         SubscribeToEvent(UiEvents.SchoolSelected);
@@ -211,27 +210,11 @@
     {
         if (_selectedSchool == null) return;
 
-        // First check for any active session for today for this school
-        var activeSession = await AttendanceService.GetActiveAttendanceAsync(
-            _selectedSchool.Id,
-            DateTime.UtcNow.Date);
+        var activeSession = await AttendanceService.GetTodaysAttendanceAsync(_selectedSchool.Id);
 
-        if (activeSession != null)
+        if (activeSession is not null)
         {
-            // Redirect to that session - this is the same session that was created during sign-in
             NavigationManager.NavigateTo($"/attendance/sign-out/{activeSession.Id}");
-            return;
-        }
-
-        // Also check if there's already a completed session for today
-        var completedSession = await AttendanceService.GetCompletedSessionForSchoolAsync(
-            _selectedSchool.Id,
-            DateTime.UtcNow);
-
-        if (completedSession != null)
-        {
-            // Redirect to the existing completed session
-            //NavigationManager.NavigateTo($"/attendance/sign-out/{completedSession.}");
         }
     }
 
@@ -250,13 +233,11 @@
         if (_attendance.End.HasValue)
         {
             _endTimeOnly = TimeOnly.FromDateTime(_attendance.End.Value);
-            _endTimeDateTime = _attendance.End.Value;
             _isEndTimeConfirmed = true;
         }
         else
         {
             // Default end time 
-            _endTime = DateTime.UtcNow.Date.AddHours(14);
             _endTimeOnly = new TimeOnly(14, 0);
         }
 
@@ -275,12 +256,14 @@
     {
         if (_attendance is null || _attendance.AttendanceRecords is null) return;
 
+        // Create a lookup dictionary for attendance records by learner ID for faster access
+        var attendanceRecordsByLearnerId = _attendance.AttendanceRecords
+            .ToDictionary(record => record.LearnerId, record => record);
+
+        // Process all learners
         foreach (var learner in _learners.SelectMany(rc => rc.Value))
         {
-            var attendanceRecord = _attendance.AttendanceRecords
-                .FirstOrDefault(record => record.LearnerId == learner.Id);
-
-            if (attendanceRecord != null)
+            if (attendanceRecordsByLearnerId.TryGetValue(learner.Id, out var attendanceRecord))
             {
                 _attendanceData[learner.Id] = new AttendanceData
                 {
@@ -291,11 +274,10 @@
             }
             else
             {
-                // Mark learners without an attendance record as "Not at School"
                 _attendanceData[learner.Id] = new AttendanceData
                 {
                     HasLeft = false,
-                    SignOutTime = DateTime.MinValue // Default value for "Not at School"
+                    SignOutTime = DateTime.MinValue
                 };
             }
         }
@@ -348,19 +330,12 @@
     {
         if (_selectedSchool == null) return;
 
-        // Convert TimeOnly to DateTime for our application logic
-        _endTime = DateTime.UtcNow.Date.Add(_endTimeOnly.ToTimeSpan());
-        _endTimeDateTime = _endTime;
+        var endDateTime = DateTime.UtcNow.Date.Add(_endTimeOnly.ToTimeSpan());
         _isEndTimeConfirmed = true;
 
-        // Create or update attendance session
         if (_attendance == null)
         {
-            // Check both active and completed sessions
-            _attendance = await AttendanceService.GetActiveAttendanceAsync(
-                _selectedSchool.Id,
-               DateTime.UtcNow
-            );
+            _attendance = await AttendanceService.GetTodaysAttendanceAsync(_selectedSchool.Id);
 
             if (_attendance == null)
             {
@@ -373,7 +348,7 @@
 
             await AttendanceService.UpdateAttendanceEndTimeAsync(
                 _attendance!.Id,
-                _endTime
+                endDateTime
             );
         }
         else
@@ -381,7 +356,7 @@
             // Update existing session with new end time
             await AttendanceService.UpdateAttendanceEndTimeAsync(
                 _attendance.Id,
-                _endTime
+                endDateTime
             );
         }
 
@@ -433,20 +408,6 @@
         StateHasChanged();
     }
 
-    private async Task LoadLearnersAsync()
-    {
-        if (_selectedSchool != null)
-        {
-            var learners = await LearnerService.GetBySchoolAsync(_selectedSchool.Id);
-            _learners = learners
-                .GroupBy(l => l.RegisterClass.Name)
-                .ToDictionary(g => g.Key, g => g.ToList());
-
-            _registerClassFilters = new List<string> { "All" };
-            _registerClassFilters.AddRange(_learners.Keys.OrderBy(name => name));
-        }
-    }
-
     private void FilterByRegisterClass(string filter)
     {
         _selectedFilter = filter;
@@ -454,22 +415,26 @@
 
     private async Task ToggleAttendance(Learner learner, string registerClassName)
     {
-        if (!_attendanceData.ContainsKey(learner.Id))
+        // Ensure there's an attendance data entry for this learner
+        if (!_attendanceData.TryGetValue(learner.Id, out var data))
         {
             _attendanceData[learner.Id] = new AttendanceData();
+            data = _attendanceData[learner.Id];
         }
 
-        var data = _attendanceData[learner.Id];
+        // Toggle the HasLeft state
         data.HasLeft = !data.HasLeft;
 
+        // If learner is now marked as left
         if (data.HasLeft)
         {
+            // Set the sign-out time to now
             data.SignOutTime = DateTime.UtcNow;
 
             // Get the register class ID
             if (_registerClassNameToIdMap.TryGetValue(registerClassName, out var registerClassId))
             {
-                var isEarlyLeave = data.IsEarlyLeave(_endTimeDateTime);
+                var isEarlyLeave = data.IsEarlyLeave(_endTimeOnly);
 
                 // If it's an early leave, redirect to the Leave Early page
                 if (isEarlyLeave)
@@ -502,6 +467,9 @@
                 //await AttendanceService.ClearSignOutAsync(data.AttendanceId.Value);
             }
         }
+        
+        // Force UI update
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task SaveSignOut(Guid learnerId, Guid registerClassId, bool isEarlyLeave)
@@ -545,21 +513,25 @@
 
     private string GetPillColor(Learner learner)
     {
-        if (_attendanceData.ContainsKey(learner.Id) || !_attendanceData[learner.Id].HasLeft)
+        // Make sure the learner exists in our attendance data
+        if (!_attendanceData.TryGetValue(learner.Id, out var data))
+        {
+            return "present"; // Default to present if no data exists
+        }
+        
+        // If the learner has not left yet
+        if (!data.HasLeft)
         {
             return "present";
         }
-
-        return _attendanceData[learner.Id].IsEarlyLeave(_endTimeDateTime) ? "early-leave" : "left";
+        
+        // If the learner has left, check if it was an early leave
+        return data.IsEarlyLeave(_endTimeOnly) ? "early-leave" : "left";
     }
 
     private async Task EnsureAttendanceRecordsExistAsync()
     {
         if (_selectedSchool == null || _attendance == null) return;
-
-        // Load existing attendance records for this session
-        //var existingAttendances = await AttendanceService.GetAttendancesForSessionAsync(_attendance.Id);
-       // var existingLearnerIds = existingAttendances.Select(a => a.LearnerId).ToHashSet();
 
         foreach (var registerClassGroup in _learners)
         {

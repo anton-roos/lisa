@@ -162,8 +162,7 @@
 
             if (todayAttendance != null)
             {
-                var today = DateTime.UtcNow.Date;
-                var activeAttendance = await AttendanceService.GetActiveAttendanceAsync(_selectedSchool.Id, today);
+                var activeAttendance = await AttendanceService.GetTodaysAttendanceAsync(_selectedSchool.Id);
 
                 _todayAttendance = activeAttendance ?? todayAttendance;
 

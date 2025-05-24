@@ -79,12 +79,14 @@ public partial class AttendanceService(
             .FirstOrDefaultAsync(s => s.Id == sessionId);
     }
 
-    public async Task<Attendance?> GetActiveAttendanceAsync(Guid schoolId, DateTime date)
+    public async Task<Attendance?> GetTodaysAttendanceAsync(Guid schoolId)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         return await dbContext.Attendances
+            .Include(s => s.School)
+            .Include(s => s.AttendanceRecords)
             .FirstOrDefaultAsync(s => s.SchoolId == schoolId &&
-                                      s.Start == date &&
+                                      s.Start.Date == DateTime.UtcNow.Date &&
                                       s.End == null);
     }
 
@@ -125,15 +127,5 @@ public partial class AttendanceService(
         logger.LogInformation("Updated end time for session {SessionId}", attendanceId);
 
         return session;
-    }
-
-    public async Task<List<Attendance>> GetCompletedSessionForSchoolAsync(Guid schoolId, DateTime date)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        return await dbContext.Attendances
-            .Where(s => s.SchoolId == schoolId &&
-                        s.Start == date.Date &&
-                        s.End != null)
-            .ToListAsync();
     }
 }

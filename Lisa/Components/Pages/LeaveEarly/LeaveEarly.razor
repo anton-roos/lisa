@@ -381,9 +381,7 @@ else
     {
         if (_selectedSchool == null) return;
         
-        var activeSession = await AttendanceService.GetActiveAttendanceAsync(
-            _selectedSchool.Id, 
-            DateTime.UtcNow);
+        var activeSession = await AttendanceService.GetTodaysAttendanceAsync(_selectedSchool.Id);
         
         if (activeSession != null)
         {
@@ -396,23 +394,6 @@ else
                 await InvokeAsync(StateHasChanged);
             }
             return;
-        }
-        
-        var completedSession = await AttendanceService.GetCompletedSessionForSchoolAsync(
-            _selectedSchool.Id,
-            DateTime.UtcNow);
-
-        if (completedSession != null)
-        {
-            _currentSession = completedSession.FirstOrDefault();
-            
-            if (completedSession.Any())
-            {
-                EndTime = TimeOnly.FromDateTime(DateTime.UtcNow);
-                EndTimeConfirmed = true;
-                Console.WriteLine($"Using existing completed session with end time: {EndTime}");
-                await InvokeAsync(StateHasChanged);
-            }
         }
     }
     

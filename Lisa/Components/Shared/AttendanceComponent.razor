@@ -144,17 +144,16 @@
     private async Task LoadDataAsync()
     {
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
-        
+
         if (_selectedSchool != null)
         {
-            // Check if there's an active attendance for today
             _hasActiveAttendance = await AttendanceService.InitiatedAttendanceForToday(_selectedSchool.Id);
-            
+
             if (_hasActiveAttendance)
             {
                 var today = DateTimeOffset.UtcNow.Date;
                 _todayAttendance = await AttendanceService.GetActiveAttendanceAsync(_selectedSchool.Id, today);
-                
+
                 if (_todayAttendance != null)
                 {
                     await LoadAttendanceStatsAsync(_todayAttendance.Id);

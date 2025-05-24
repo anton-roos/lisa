@@ -97,7 +97,8 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
 
         options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
         options.User.RequireUniqueEmail = true;
-    })    .AddEntityFrameworkStores<LisaDbContext>()
+    })
+    .AddEntityFrameworkStores<LisaDbContext>()
     .AddDefaultTokenProviders();
 
 builder.Services.AddHostedService<BackgroundJobService>();
@@ -148,39 +149,17 @@ builder.Services.AddBlazorBootstrap();
 builder.Services.AddControllers();
 
 var app = builder.Build();
-var retryCount = 0;
-var maxRetries = 10;
-var delay = TimeSpan.FromSeconds(3);
 
-while (true)
-{
-    try
-    {
-        using var scope = app.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
+using var scope = app.Services.CreateScope();
+var db = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
 
-        app.Logger.LogInformation("Attempting database migration...");
+app.Logger.LogInformation("Attempting database migration...");
+db.Database.Migrate();
+app.Logger.LogInformation("Database migration successful!");
 
-
-        db.Database.Migrate();
-        app.Logger.LogInformation("Database migration successful!");
-
-        break; // Success, break out of retry loop
-    }
-    catch (Exception ex)
-    {
-        retryCount++;
-        app.Logger.LogWarning(ex, "Database not ready yet. Retrying ({RetryCount}/{MaxRetries}) in {DelaySeconds}s...", retryCount, maxRetries, delay.TotalSeconds);
-
-        if (retryCount >= maxRetries)
-        {
-            app.Logger.LogCritical(ex, "Database migration failed after {MaxRetries} retries. Exiting application...", maxRetries);
-            throw;
-        }
-
-        await Task.Delay(delay);
-    }
-}
+var services = scope.ServiceProvider;
+await DatabaseSeed.Seed(services);
+Log.Information("Database seeding completed successfully.");
 
 if (!app.Environment.IsDevelopment())
 {
@@ -198,18 +177,6 @@ app.UseMiddleware<BlazorAuthMiddleware>();
 app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapControllers();
-
-try
-{
-    using var scope = app.Services.CreateScope();
-    var services = scope.ServiceProvider;
-    await DatabaseSeed.Seed(services);
-    Log.Information("Database seeding completed successfully.");
-}
-catch (Exception ex)
-{
-    Log.Fatal(ex, "Error seeding database.");
-}
 
 var eventBus = app.Services.GetRequiredService<IEventBus>();
 try

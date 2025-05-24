@@ -7,7 +7,8 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<LisaDbCont
 {
     public LisaDbContext CreateDbContext(string[] args)
     {
-        // Build configuration
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
         var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json")

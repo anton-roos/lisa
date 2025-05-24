@@ -97,7 +97,7 @@ namespace Lisa.Migrations
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTimeOffset>("Start")
+                    b.Property<DateTime>("Start")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("UpdatedAt")

@@ -14,7 +14,7 @@ public partial class AttendanceService(
         var today = DateTime.UtcNow.Date;
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var attendance = await dbContext.Attendances
-            .FirstOrDefaultAsync(a => a.Start == today && a.SchoolId == schoolId);
+            .FirstOrDefaultAsync(a => a.Start.Date == today && a.SchoolId == schoolId);
 
         return attendance != null;
     }

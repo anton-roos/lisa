@@ -8,6 +8,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 @using System.Security.Claims
+@using Lisa.Enums
 
 @inherits EventAwareComponentBase
 
@@ -131,6 +132,11 @@
                 color: white;
             }
 
+            .not-at-school {
+                background-color: #FF9800;
+                color: white;
+            }
+
             .early-leave {
                 background-color: white;
                 color: black;
@@ -164,13 +170,13 @@
     private Attendance? _attendance;
     private Dictionary<Learner, List<AttendanceRecord>> _attendanceRecordsByLearner = new();
 
-    private class AttendanceData
+    private class AttendanceData(bool hasLeft = false, DateTime signOutTime = default, Guid? attendanceId = null)
     {
-        public bool HasLeft { get; set; } = false;
-        public DateTime SignOutTime { get; set; }
+        public bool HasLeft { get; set; } = hasLeft;
+        public DateTime SignOutTime { get; set; } = signOutTime;
         public bool IsEarlyLeave(TimeOnly endTime) => 
             SignOutTime.TimeOfDay < endTime.ToTimeSpan();
-        public Guid? AttendanceId { get; set; } // Store the attendance record ID
+        public Guid? AttendanceId { get; set; } = attendanceId;
     }
 
     protected override async Task OnInitializedAsync()
@@ -256,30 +262,51 @@
     {
         if (_attendance is null || _attendance.AttendanceRecords is null) return;
 
-        // Create a lookup dictionary for attendance records by learner ID for faster access
+        // Clear existing data
+        _attendanceData.Clear();
+        _attendanceRecordsByLearner.Clear();
+
+        // Group attendance records by learner for easy access
         var attendanceRecordsByLearnerId = _attendance.AttendanceRecords
-            .ToDictionary(record => record.LearnerId, record => record);
+            .GroupBy(record => record.LearnerId)
+            .ToDictionary(group => group.Key, group => group.ToList());
 
         // Process all learners
         foreach (var learner in _learners.SelectMany(rc => rc.Value))
         {
-            if (attendanceRecordsByLearnerId.TryGetValue(learner.Id, out var attendanceRecord))
+            // Initialize the dictionary entry for this learner with an empty list
+            if (!_attendanceRecordsByLearner.ContainsKey(learner))
             {
-                _attendanceData[learner.Id] = new AttendanceData
-                {
-                    HasLeft = attendanceRecord.End.HasValue,
-                    SignOutTime = attendanceRecord.End.HasValue ? attendanceRecord.End.Value.ToLocalTime() : DateTime.MinValue,
-                    AttendanceId = attendanceRecord.Id
-                };
+                _attendanceRecordsByLearner[learner] = [];
             }
-            else
+
+            if (attendanceRecordsByLearnerId.TryGetValue(learner.Id, out var attendanceRecords))
             {
-                _attendanceData[learner.Id] = new AttendanceData
+                // Add all records to the learner's collection
+                _attendanceRecordsByLearner[learner].AddRange(attendanceRecords);
+
+                // Use the most recent check-in record for the attendance data display
+                var mostRecentCheckInRecord = attendanceRecords
+                    .Where(r => r.AttendanceType == AttendanceType.CheckIn)
+                    .OrderByDescending(r => r.CreatedAt)
+                    .FirstOrDefault();
+                
+                if (mostRecentCheckInRecord != null)
                 {
-                    HasLeft = false,
-                    SignOutTime = DateTime.MinValue
-                };
+                    _attendanceData[learner.Id] = new AttendanceData(
+                        hasLeft: mostRecentCheckInRecord.End.HasValue,
+                        signOutTime: mostRecentCheckInRecord.End.HasValue ? mostRecentCheckInRecord.End.Value.ToLocalTime() : DateTime.MinValue,
+                        attendanceId: mostRecentCheckInRecord.Id
+                    );
+                    continue;
+                }
             }
+
+            // If no records found or no recent record, initialize with default values
+            _attendanceData[learner.Id] = new AttendanceData(
+                hasLeft: false,
+                signOutTime: DateTime.MinValue
+            );
         }
     }
 
@@ -415,6 +442,16 @@
 
     private async Task ToggleAttendance(Learner learner, string registerClassName)
     {
+        // Check if the learner has any check-in attendance records
+        bool hasCheckInRecords = _attendanceRecordsByLearner.TryGetValue(learner, out var value) && 
+                               value.Any(r => r.AttendanceType == AttendanceType.CheckIn);
+        
+        // If no check-in records, don't allow toggling
+        if (!hasCheckInRecords)
+        {
+            return;
+        }
+        
         // Ensure there's an attendance data entry for this learner
         if (!_attendanceData.TryGetValue(learner.Id, out var data))
         {
@@ -451,6 +488,16 @@
                     //     isEarlyLeave,
                     //     $"Signed out at {DateTime.UtcNow:HH:mm}{(isEarlyLeave ? " (early)" : "")}"
                     // );
+                    
+                    // Update the record in the _attendanceRecordsByLearner dictionary
+                    if (_attendanceRecordsByLearner.TryGetValue(learner, out var records))
+                    {
+                        var record = records.FirstOrDefault(r => r.Id == data.AttendanceId.Value);
+                        if (record != null)
+                        {
+                            record.End = DateTime.UtcNow;
+                        }
+                    }
                 }
                 else
                 {
@@ -465,6 +512,16 @@
             if (data.AttendanceId.HasValue)
             {
                 //await AttendanceService.ClearSignOutAsync(data.AttendanceId.Value);
+                
+                // Update the record in the _attendanceRecordsByLearner dictionary
+                if (_attendanceRecordsByLearner.TryGetValue(learner, out var records))
+                {
+                    var record = records.FirstOrDefault(r => r.Id == data.AttendanceId.Value);
+                    if (record != null)
+                    {
+                        record.End = null;
+                    }
+                }
             }
         }
         
@@ -476,6 +533,12 @@
     {
         if (_selectedSchool == null || _attendance == null) return;
 
+        var learner = _learners
+            .SelectMany(rc => rc.Value)
+            .FirstOrDefault(l => l.Id == learnerId);
+
+        if (learner == null) return;
+
         // Check if we already have an attendance record for this learner
         if (_attendanceData[learnerId].AttendanceId.HasValue)
         {
@@ -485,6 +548,16 @@
             //         isEarlyLeave,
             //         $"Signed out at {DateTime.UtcNow:HH:mm}{(isEarlyLeave ? " (early)" : "")}"
             //     );
+
+            // Update the record in the _attendanceRecordsByLearner dictionary
+            if (_attendanceRecordsByLearner.TryGetValue(learner, out var records))
+            {
+                var record = records.FirstOrDefault(r => r.Id == _attendanceData[learnerId].AttendanceId.Value);
+                if (record != null)
+                {
+                    record.End = DateTime.UtcNow;
+                }
+            }
         }
         else
         {
@@ -499,8 +572,29 @@
             //     _attendance.Id
             // );
 
+            // For now, create a temporary record for the UI until API is implemented
+            var newRecord = new AttendanceRecord
+            {
+                Id = Guid.NewGuid(),
+                AttendanceId = _attendance.Id,
+                LearnerId = learnerId,
+                Start = DateTime.UtcNow.AddHours(-6), // Assume they were here since morning
+                End = DateTime.UtcNow,
+                Notes = isEarlyLeave ? "Early leave" : "Regular sign out",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                AttendanceType = AttendanceType.CheckIn
+            };
+
+            // Add the record to the learner's collection in our dictionary
+            if (!_attendanceRecordsByLearner.TryGetValue(learner, out _))
+            {
+                _attendanceRecordsByLearner[learner] = [];
+            }
+            _attendanceRecordsByLearner[learner].Add(newRecord);
+
             // Store the ID and update with sign-out info
-            //     _attendanceData[learnerId].AttendanceId = attendance.Id;
+            _attendanceData[learnerId].AttendanceId = newRecord.Id;
             //     await AttendanceService.RecordSignOutAsync(
             //         attendance.Id,
             //         isEarlyLeave,
@@ -513,16 +607,22 @@
 
     private string GetPillColor(Learner learner)
     {
+        // Check if the learner has any attendance records
+        bool hasAttendanceRecords = _attendanceRecordsByLearner.TryGetValue(learner, out var records) && 
+                                   records.Any(r => r.AttendanceType == AttendanceType.CheckIn);
+        
         // Make sure the learner exists in our attendance data
         if (!_attendanceData.TryGetValue(learner.Id, out var data))
         {
-            return "present"; // Default to present if no data exists
+            // If no attendance data, only show present if they have check-in records
+            return hasAttendanceRecords ? "present" : "not-at-school";
         }
         
         // If the learner has not left yet
         if (!data.HasLeft)
         {
-            return "present";
+            // Only show present if they have check-in records
+            return hasAttendanceRecords ? "present" : "not-at-school";
         }
         
         // If the learner has left, check if it was an early leave
@@ -533,6 +633,11 @@
     {
         if (_selectedSchool == null || _attendance == null) return;
 
+        // Get the set of learner IDs that already have attendance records
+        var existingLearnerIds = _attendance.AttendanceRecords
+            .Select(ar => ar.LearnerId)
+            .ToHashSet();
+
         foreach (var registerClassGroup in _learners)
         {
             var className = registerClassGroup.Key;
@@ -541,32 +646,51 @@
                 foreach (var learner in registerClassGroup.Value)
                 {
                     // If this learner doesn't have an attendance record yet, create one
-                    // if (!existingLearnerIds.Contains(learner.Id))
-                    // {
-                    //     // Create attendance record with confirmed start time
-                    //     // var attendance = await AttendanceService.RecordAttendanceAsync(
-                    //     //     learner.Id,
-                    //     //     _selectedSchool.Id,
-                    //     //     registerClassId,
-                    //     //     true, // Assume they were present since we're at sign-out
-                    //     //     "Record created at sign-out time",
-                    //     //     _currentUserId,
-                    //     //     _attendance.Id
-                    //     // );
-                    //
-                    //     // Store the ID for later updates
-                    //     // if (_attendanceData.ContainsKey(learner.Id))
-                    //     // {
-                    //     //     _attendanceData[learner.Id].AttendanceId = attendance.Id;
-                    //     // }
-                    //     // else
-                    //     // {
-                    //     //     _attendanceData[learner.Id] = new AttendanceData
-                    //     //     {
-                    //     //         AttendanceId = attendance.Id
-                    //     //     };
-                    //     // }
-                    // }
+                    if (!existingLearnerIds.Contains(learner.Id))
+                    {
+                        // Create a temporary record for UI purposes until API integration is complete
+                        var newRecord = new AttendanceRecord
+                        {
+                            Id = Guid.NewGuid(),
+                            AttendanceId = _attendance.Id,
+                            LearnerId = learner.Id,
+                            Start = DateTime.UtcNow,
+                            Notes = "Record created at sign-out time",
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            AttendanceType = AttendanceType.CheckIn
+                        };
+
+                        // Add to our in-memory collections
+                        if (!_attendanceRecordsByLearner.ContainsKey(learner))
+                        {
+                            _attendanceRecordsByLearner[learner] = [];
+                        }
+                        _attendanceRecordsByLearner[learner].Add(newRecord);
+
+                        // Store the ID for later updates
+                        if (_attendanceData.ContainsKey(learner.Id))
+                        {
+                            _attendanceData[learner.Id].AttendanceId = newRecord.Id;
+                        }
+                        else
+                        {
+                            _attendanceData[learner.Id] = new AttendanceData(
+                                attendanceId: newRecord.Id
+                            );
+                        }
+
+                        // In a real implementation, you would call the service:
+                        // var attendance = await AttendanceService.RecordAttendanceAsync(
+                        //     learner.Id,
+                        //     _selectedSchool.Id,
+                        //     registerClassId,
+                        //     true, // Assume they were present since we're at sign-out
+                        //     "Record created at sign-out time",
+                        //     _currentUserId,
+                        //     _attendance.Id
+                        // );
+                    }
                 }
             }
         }
@@ -575,4 +699,13 @@
         await LoadAttendanceData();
     }
 
+    // Utility method to get attendance information for a learner
+    private List<AttendanceRecord> GetAttendanceRecordsForLearner(Learner learner)
+    {
+        if (_attendanceRecordsByLearner.TryGetValue(learner, out var records))
+        {
+            return records.OrderByDescending(r => r.Start).ToList();
+        }
+        return [];
+    }
 }

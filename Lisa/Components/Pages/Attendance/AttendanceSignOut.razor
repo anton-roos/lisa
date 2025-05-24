@@ -432,6 +432,20 @@
         StateHasChanged();
     }
 
+    private async Task LoadLearnersAsync()
+    {
+        if (_selectedSchool != null)
+        {
+            var learners = await LearnerService.GetBySchoolAsync(_selectedSchool.Id);
+            _learners = learners
+                .GroupBy(l => l.RegisterClass.Name)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            _registerClassFilters = new List<string> { "All" };
+            _registerClassFilters.AddRange(_learners.Keys.OrderBy(name => name));
+        }
+    }
+
     private void FilterByRegisterClass(string filter)
     {
         _selectedFilter = filter;

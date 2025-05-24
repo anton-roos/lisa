@@ -10,7 +10,7 @@
 
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Attendance}")">
     <Authorized>
-        <AttendanceComponent SelectedSchool="_selectedSchool" />
+        <AttendanceComponent @key="_selectedSchool?.Id" SelectedSchool="@_selectedSchool" />
     </Authorized>
     <NotAuthorized>
         <Unauthenticated />
@@ -24,16 +24,27 @@
     {
         await base.OnInitializedAsync();
         SubscribeToEvent(UiEvents.SchoolsUpdated);
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        if (eventName == UiEvents.SchoolsUpdated)
+        if (eventName == UiEvents.SchoolsUpdated || 
+            (eventName == UiEvents.SchoolSelected && payload is School))
         {
-            _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+            _selectedSchool = payload as School ?? await SchoolService.GetSelectedSchoolAsync();
             await InvokeAsync(StateHasChanged);
         }
 
         await base.HandleEventAsync(eventName, payload);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        await InvokeAsync(StateHasChanged);
     }
 }

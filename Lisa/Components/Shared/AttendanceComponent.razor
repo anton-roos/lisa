@@ -10,8 +10,6 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 
-@inherits EventAwareComponentBase
-
 <div class="container">
     <div class="row">
         <div class="col-md-12">
@@ -120,10 +118,10 @@
     </div>
 </div>
 
-@code {
+@code {    
+    [Parameter] public School? SelectedSchool { get; set; }
     private School? _selectedSchool;
     private Attendance? _todayAttendance;
-
     private AttendanceStats? _attendanceStats;
 
     private class AttendanceStats
@@ -132,47 +130,34 @@
         public int CheckedOutCount { get; set; }
         public int AbsentCount { get; set; }
     }
-
-    [Parameter] public School? SelectedSchool { get; set; }
-
+    
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        SubscribeToEvent(UiEvents.SchoolsUpdated);
-        
         await LoadDataAsync();
     }
-
+    
     protected override async Task OnParametersSetAsync()
     {
-        if (SelectedSchool != null && SelectedSchool != _selectedSchool)
+        if (SelectedSchool != null && !object.Equals(SelectedSchool, _selectedSchool))
         {
             _selectedSchool = SelectedSchool;
             await LoadDataAsync();
+            await InvokeAsync(StateHasChanged);
         }
     }
-
-    protected override async Task HandleEventAsync(string eventName, object? payload)
-    {
-        if (eventName == UiEvents.SchoolsUpdated)
-        {
-            // Reload data when the school is updated
-            await LoadDataAsync();
-            await InvokeAsync(StateHasChanged); // Ensure the UI is updated
-        }
-
-        await base.HandleEventAsync(eventName, payload);
-    }
-
+    
     private async Task LoadDataAsync()
     {
-        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        if (_selectedSchool == null)
+        {
+            _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        }
 
         await InvokeAsync(StateHasChanged);
 
         if (_selectedSchool != null)
         {
-            // Fetch today's attendance session
             var todayAttendance = await AttendanceService.GetTodaysAttendance(_selectedSchool.Id);
 
             if (todayAttendance != null)
@@ -180,7 +165,6 @@
                 var today = DateTime.UtcNow.Date;
                 var activeAttendance = await AttendanceService.GetActiveAttendanceAsync(_selectedSchool.Id, today);
 
-                // Retain today's attendance if no active session is found
                 _todayAttendance = activeAttendance ?? todayAttendance;
 
                 if (_todayAttendance != null)
@@ -199,10 +183,9 @@
             {
                 CheckedInCount = _todayAttendance.AttendanceRecords.Count(r => r.Start != null),
                 CheckedOutCount = _todayAttendance.AttendanceRecords.Count(r => r.End != null),
-                AbsentCount = 0 // This would need to be calculated based on total learners - checked in
+                AbsentCount = 0
             };
             
-            // Calculate absent count if we have the total learner count
             if (_selectedSchool != null)
             {
                 var totalLearners = await LearnerService.GetCountAsync(_selectedSchool.Id);

@@ -40,15 +40,15 @@
                                         <i class="bi bi-person-check" style="font-size: 2rem;"></i>
                                     </div>
                                     <div>
-                                        <h5 class="card-title mb-1">@(_hasActiveAttendance ? "Continue Check In" : "Start Check In")</h5>
+                                        <h5 class="card-title mb-1">@(_todayAttendance != null ? "Continue Check In" : "Start Check In")</h5>
                                         <p class="card-text text-muted mb-0">Record attendance for learners arriving at school.</p>
                                         <small class="text-transparent">placeholder</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>                    <div class="col-md-6">                        <div class="card attendance-card h-100 @(!_hasActiveAttendance ? "disabled" : "")" 
-                             @onclick="@(_hasActiveAttendance ? NavigateToSignOut : () => {})">
+                    </div>                    <div class="col-md-6">                        <div class="card attendance-card h-100 @(_todayAttendance is null ? "disabled" : "")" 
+                             @onclick="@(_todayAttendance is not null ? NavigateToSignOut : () => {})">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
                                     <div class="me-3">
@@ -57,7 +57,7 @@
                                     <div>
                                         <h5 class="card-title mb-1">Check Out</h5>
                                         <p class="card-text text-muted mb-0">Record attendance for learners leaving school.</p>
-                                        @if (!_hasActiveAttendance)
+                                        @if (_todayAttendance is null)
                                         {
                                             <small class="text-danger">(Check-in required first)</small>
                                         }
@@ -123,7 +123,7 @@
 @code {
     private School? _selectedSchool;
     private Attendance? _todayAttendance;
-    private bool _hasActiveAttendance;
+
     private AttendanceStats? _attendanceStats;
 
     private class AttendanceStats
@@ -147,11 +147,11 @@
 
         if (_selectedSchool != null)
         {
-            _hasActiveAttendance = await AttendanceService.InitiatedAttendanceForToday(_selectedSchool.Id);
+            _todayAttendance = await AttendanceService.GetTodaysAttendance(_selectedSchool.Id);
 
-            if (_hasActiveAttendance)
+            if (_todayAttendance is not null)
             {
-                var today = DateTimeOffset.UtcNow.Date;
+                var today = DateTime.Now.Date;
                 _todayAttendance = await AttendanceService.GetActiveAttendanceAsync(_selectedSchool.Id, today);
 
                 if (_todayAttendance != null)
@@ -164,15 +164,12 @@
 
     private async Task LoadAttendanceStatsAsync(Guid attendanceId)
     {
-        // Get all attendance records for this session
-        var attendance = await AttendanceService.GetAsync(attendanceId);
-        
-        if (attendance?.AttendanceRecords != null)
+        if (_todayAttendance?.AttendanceRecords != null)
         {
             _attendanceStats = new AttendanceStats
             {
-                CheckedInCount = attendance.AttendanceRecords.Count(r => r.Start != null),
-                CheckedOutCount = attendance.AttendanceRecords.Count(r => r.End != null),
+                CheckedInCount = _todayAttendance.AttendanceRecords.Count(r => r.Start != null),
+                CheckedOutCount = _todayAttendance.AttendanceRecords.Count(r => r.End != null),
                 AbsentCount = 0 // This would need to be calculated based on total learners - checked in
             };
             
@@ -199,7 +196,7 @@
 
     private void NavigateToSignOut()
     {
-        if (_hasActiveAttendance && _todayAttendance != null)
+        if (_todayAttendance is not null)
         {
             NavigationManager.NavigateTo($"/attendance/sign-out/{_todayAttendance.Id}");
         }

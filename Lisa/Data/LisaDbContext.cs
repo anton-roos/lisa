@@ -43,20 +43,6 @@ public class LisaDbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-        {
-            foreach (var property in entityType.GetProperties())
-            {
-                if (property.ClrType == typeof(DateTimeOffset))
-                {
-                    property.SetValueConverter(new ValueConverter<DateTimeOffset, DateTime>(
-                        v => v.UtcDateTime, // Convert to UTC when saving
-                        v => DateTime.SpecifyKind(v, DateTimeKind.Utc) // Convert back to UTC when reading
-                    ));
-                }
-            }
-        }
-
         modelBuilder.Entity<User>().ToTable("AspNetUsers");
         modelBuilder.Entity<User>()
         .HasIndex(u => u.Abbreviation);
@@ -493,12 +479,12 @@ public class LisaDbContext
         {
             if (entry.State == EntityState.Added)
             {
-                entry.Entity.CreatedAt = DateTime.UtcNow;
+                entry.Entity.CreatedAt = DateTime.Now;
             }
 
             if (entry.State == EntityState.Modified)
             {
-                entry.Entity.UpdatedAt = DateTime.UtcNow;
+                entry.Entity.UpdatedAt = DateTime.Now;
             }
         }
     }

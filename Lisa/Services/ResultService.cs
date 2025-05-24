@@ -19,7 +19,7 @@ public class ResultService
             DateTime? assessmentDate = null;
             if (viewModel.AssessmentDate is not null)
             {
-                assessmentDate = DateTime.SpecifyKind(viewModel.AssessmentDate!.Value, DateTimeKind.Utc);
+                assessmentDate = viewModel.AssessmentDate!.Value;
             }
 
             var resultSet = new ResultSet
@@ -29,8 +29,8 @@ public class ResultService
                 AssessmentTypeId = viewModel.AssessmentType?.Id ?? 0,
                 AssessmentTopic = viewModel.AssessmentTopic,
                 SubjectId = int.Parse(viewModel.SubjectId),
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
                 CapturedById = capturedById,
                 Status = viewModel.Status,
                 Results = viewModel.LearnerResults.Select(entry => new Result
@@ -100,11 +100,11 @@ public class ResultService
 
             if (viewModel.AssessmentDate is not null)
             {
-                existingResultSet.AssessmentDate = DateTime.SpecifyKind(viewModel.AssessmentDate!.Value, DateTimeKind.Utc);
+                existingResultSet.AssessmentDate = viewModel.AssessmentDate!.Value;
             }
             existingResultSet.AssessmentTypeId = viewModel.AssessmentType?.Id ?? 0;
             existingResultSet.AssessmentTopic = viewModel.AssessmentTopic;
-            existingResultSet.UpdatedAt = DateTime.UtcNow;
+            existingResultSet.UpdatedAt = DateTime.Now;
             existingResultSet.Status = viewModel.Status;
 
             var existingResults = existingResultSet.Results?.ToDictionary(r => r.LearnerId)
@@ -117,7 +117,7 @@ public class ResultService
                     result.Score = entry.ResultViewModel.Score;
                     result.Absent = entry.ResultViewModel.Absent;
                     result.AbsentReason = entry.ResultViewModel.AbsentReason;
-                    result.UpdatedAt = DateTime.UtcNow;
+                    result.UpdatedAt = DateTime.Now;
                 }
                 else
                 {
@@ -173,7 +173,7 @@ public class ResultService
                     Absent = false,
                     AbsentReason = null,
                     ResultSetId = resultSetId,
-                    UpdatedAt = DateTime.UtcNow
+                    UpdatedAt = DateTime.Now
                 };
                 context.Results.Add(newResult);
             }
@@ -297,14 +297,12 @@ public class ResultService
 
             if (fromDate.HasValue)
             {
-                var fromUtc = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
-                query = query.Where(rs => rs.AssessmentDate != null && rs.AssessmentDate >= fromUtc);
+                query = query.Where(rs => rs.AssessmentDate != null && rs.AssessmentDate >= fromDate.Value);
             }
 
             if (toDate.HasValue)
             {
-                var toUtc = DateTime.SpecifyKind(toDate.Value, DateTimeKind.Utc);
-                query = query.Where(rs => rs.AssessmentDate != null && rs.AssessmentDate <= toUtc);
+                query = query.Where(rs => rs.AssessmentDate != null && rs.AssessmentDate <= toDate.Value);
             }
 
             return await query.ToListAsync();

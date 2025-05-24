@@ -215,7 +215,7 @@
         // First check for any active session for today for this school
         var activeSession = await AttendanceService.GetActiveAttendanceAsync(
             _selectedSchool.Id,
-            DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Utc));
+            DateTime.Now.Date);
 
         if (activeSession != null)
         {
@@ -227,7 +227,7 @@
         // Also check if there's already a completed session for today
         var completedSession = await AttendanceService.GetCompletedSessionForSchoolAsync(
             _selectedSchool.Id,
-            DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Utc));
+            DateTime.Now);
 
         if (completedSession != null)
         {
@@ -354,32 +354,21 @@
             // Check both active and completed sessions
             _currentSession = await AttendanceService.GetActiveAttendanceAsync(
                 _selectedSchool.Id,
-                DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Utc)
+               DateTime.Now
             );
 
             if (_currentSession == null)
             {
-                // Check for completed session as well
-                // _currentSession = await AttendanceService.GetCompletedSessionForSchoolAsync(
-                //     _selectedSchool.Id,
-                //     DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Utc)
-                // );
-                //
+               
                 if (_currentSession == null)
                 {
-                    // No session exists at all, create one with both start and end time
-                    // _currentSession = await AttendanceService.CreateAttendanceSessionAsync(
-                    //     _selectedSchool.Id,
-                    //     DateTime.Today.AddHours(7).ToUniversalTime(), // Default start time if creating from sign-out
-                    //     _currentUserId
-                    // );
+                
                 }
             }
 
-            // Update with end time
             await AttendanceService.UpdateAttendanceEndTimeAsync(
-                _currentSession.Id,
-                _endTime.ToUniversalTime()
+                _currentSession!.Id,
+                _endTime
             );
         }
         else
@@ -387,7 +376,7 @@
             // Update existing session with new end time
             await AttendanceService.UpdateAttendanceEndTimeAsync(
                 _currentSession.Id,
-                _endTime.ToUniversalTime()
+                _endTime
             );
         }
 

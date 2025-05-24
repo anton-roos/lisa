@@ -5,3 +5,7 @@
 
 ## UI and Styling
 Use Bootstrap and use Lisa\wwwroot\app.css for custom styles.
+
+## Dates
+NEVER use DateTime.UtcNow or DateTimeOffset
+Awlways use DateTime.Now

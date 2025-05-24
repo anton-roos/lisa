@@ -399,12 +399,12 @@
         // Ensure dates are properly handled when changed in the UI
         if (_fromDate.HasValue)
         {
-            _fromDate = DateTime.SpecifyKind(_fromDate.Value, DateTimeKind.Utc);
+            _fromDate = _fromDate.Value;
         }
         
         if (_toDate.HasValue)
         {
-            _toDate = DateTime.SpecifyKind(_toDate.Value, DateTimeKind.Utc);
+            _toDate = _toDate.Value;
         }
         
         await InvokeAsync(StateHasChanged);

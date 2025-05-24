@@ -34,13 +34,13 @@ else
         if (queryParams.TryGetValue("fromDate", out var fromDateParam) && 
             DateTime.TryParse(fromDateParam, out var parsedFromDate))
         {
-            FromDate = DateTime.SpecifyKind(parsedFromDate, DateTimeKind.Utc);
+            FromDate = parsedFromDate;
         }
 
         if (queryParams.TryGetValue("toDate", out var toDateParam) && 
             DateTime.TryParse(toDateParam, out var parsedToDate))
         {
-            ToDate = DateTime.SpecifyKind(parsedToDate, DateTimeKind.Utc);
+            ToDate = parsedToDate;
         }
 
         html = await RenderService.RenderProgressFeedbackAsync(LearnerId, FromDate, ToDate);

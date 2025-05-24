@@ -19,7 +19,7 @@ public class DailyRegisterService
         try
         {
             await using var context = await dbContextFactory.CreateDbContextAsync();
-            var today = DateTime.UtcNow.Date;
+            var today = DateTime.Now.Date;
 
             var updatedCount = await context.AttendanceRecords
                 .Where(a =>
@@ -27,7 +27,7 @@ public class DailyRegisterService
                     a.Learner!.RegisterClassId == registerClassId &&
                     a.Start == today)
                 .ExecuteUpdateAsync(s =>
-                    s.SetProperty(a => a.UpdatedAt, DateTime.UtcNow)
+                    s.SetProperty(a => a.UpdatedAt, DateTime.Now)
                      .SetProperty(a => a.UpdatedBy, recordedByUserId));
 
             if (updatedCount > 0)
@@ -53,9 +53,9 @@ public class DailyRegisterService
             {
                 Id = Guid.NewGuid(),
                 LearnerId = learnerId,
-                Start = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                Start = DateTime.Now,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
                 CreatedBy = recordedByUserId,
                 UpdatedBy = recordedByUserId
             };

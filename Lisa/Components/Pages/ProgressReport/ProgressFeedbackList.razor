@@ -159,17 +159,13 @@
         _isLoading = true;
         await InvokeAsync(StateHasChanged);
 
-        // Ensure dates are converted to UTC
-        var fromDateUtc = _fromDate?.ToUniversalTime();
-        var toDateUtc = _toDate?.ToUniversalTime();
-
         _allFeedbackList = await ProgressFeedbackService
         .GetProgressFeedbackListAsync(
         _selectedSchool.Id,
         _selectedGradeId,
         _selectedSubjectId,
-        fromDateUtc,
-        toDateUtc);
+        _fromDate,
+        _toDate);
 
         FilterFeedbackInMemory();
 

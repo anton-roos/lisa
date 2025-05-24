@@ -150,10 +150,10 @@
     private List<RegisterClass> _registerClasses = [];
     private Dictionary<string, List<Learner>> _registerClassLearners = new();
     private Dictionary<Guid, AttendanceData> _attendanceData = new();
-    private DateTimeOffset _startTime = DateTime.Today.AddHours(7);
+    private DateTime _startTime = DateTime.Today.AddHours(7);
     private TimeOnly _startTimeOnly = new TimeOnly(7, 0);
     private bool _isStartTimeConfirmed = false;
-    private DateTimeOffset _startTimeDateTime;
+    private DateTime _startTimeDateTime;
     private List<string> _registerClassFilters = ["All"];
     private string _selectedFilter = "All";
     private string _searchText = "";
@@ -164,8 +164,8 @@
     private class AttendanceData
     {
         public bool IsPresent { get; set; } = false;
-        public DateTimeOffset SignInTime { get; set; }
-        public bool IsLate(DateTimeOffset startTimeDateTime) => SignInTime > startTimeDateTime;
+        public DateTime SignInTime { get; set; }
+        public bool IsLate(DateTime startTimeDateTime) => SignInTime > startTimeDateTime;
         public Guid? AttendanceId { get; set; } // Store the attendance record ID
     }
 
@@ -321,7 +321,7 @@
 
         _currentSession = await AttendanceService.CreateAttendanceAsync(
             _selectedSchool.Id,
-            _startTime.ToUniversalTime()
+            _startTime
         );
 
         await CreateInitialAttendanceAsync();
@@ -405,7 +405,7 @@
 
         var attendanceRecord = new AttendanceRecord()
         {
-            Start = DateTimeOffset.Now,
+            Start = DateTime.Now,
             End = null,
             AttendanceType = AttendanceType.Register,
             LearnerId = learnerId,

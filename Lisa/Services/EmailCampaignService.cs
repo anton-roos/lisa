@@ -41,13 +41,13 @@ public class EmailCampaignService
                 Status = EmailCampaignStatus.Draft,
                 TrackOpens = true,
                 TrackClicks = true,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
                 EmailRecipients = recipients,
                 SchoolId = command.SchoolId,
                 RecipientTemplate = command.RecipientTemplate,
-                FromDate = command.FromDate.HasValue ? DateTime.SpecifyKind(command.FromDate.Value, DateTimeKind.Utc) : null,
-                ToDate = command.ToDate.HasValue ? DateTime.SpecifyKind(command.ToDate.Value, DateTimeKind.Utc) : null,
+                FromDate = command.FromDate.HasValue ? command.FromDate.Value : null,
+                ToDate = command.ToDate.HasValue ? command.ToDate.Value : null,
             };
 
             context.EmailCampaigns.Add(emailCampaign);
@@ -321,8 +321,8 @@ public class EmailCampaignService
                 return;
             }
 
-            
-            
+
+
             await emailService.SendEmailAsync(recipient.EmailAddress, subject, body, campaign.SchoolId);
             recipient.Status = EmailRecipientStatus.Sent;
         }
@@ -376,8 +376,8 @@ public class EmailCampaignService
             EmailAddress = r.Email,
             LearnerId = r.LearnerId,
             Status = EmailRecipientStatus.Pending,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
         }).ToList();
     }
 
@@ -389,8 +389,8 @@ public class EmailCampaignService
             Id = Guid.NewGuid(),
             EmailAddress = email,
             Status = EmailRecipientStatus.Pending,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
         }).ToList();
     }
     private async Task<List<(string Email, Guid LearnerId)>> GetProgressFeedbackRecipientsAsync(CommunicationCommand command)
@@ -544,7 +544,7 @@ public class EmailCampaignService
 
     private static string GenerateCampaignName(CommunicationCommand command)
     {
-        return $"{command.RecipientGroup} - {command.RecipientType} - {command.RecipientTemplate} - {DateTime.UtcNow:yyyyMMddHHmmss}";
+        return $"{command.RecipientGroup} - {command.RecipientType} - {command.RecipientTemplate} - {DateTime.Now:yyyyMMddHHmmss}";
     }
 
     private static string GetSubjectLine(EmailCampaign command)
@@ -592,8 +592,8 @@ public class EmailCampaignService
         await using var context = await contextFactory.CreateDbContextAsync();        // Use the injected service
         var progressService = progressFeedbackService;
 
-        DateTime? fromDateUtc = command.FromDate.HasValue ? DateTime.SpecifyKind(command.FromDate.Value, DateTimeKind.Utc) : null;
-        DateTime? toDateUtc = command.ToDate.HasValue ? DateTime.SpecifyKind(command.ToDate.Value, DateTimeKind.Utc) : null;
+        DateTime? fromDateUtc = command.FromDate.HasValue ? command.FromDate.Value : null;
+        DateTime? toDateUtc = command.ToDate.HasValue ? command.ToDate.Value : null;
 
         var progressItems = await progressService.GetProgressFeedbackListAsync(
             command.SchoolId,

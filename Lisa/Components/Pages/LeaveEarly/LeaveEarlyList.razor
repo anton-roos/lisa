@@ -302,12 +302,12 @@ else
         try
         {
             var fromDateUtc = FromDate.HasValue
-            ? DateTime.SpecifyKind(FromDate.Value, DateTimeKind.Utc)
-            : DateTime.UtcNow.AddDays(-30);
+            ? FromDate.Value
+            : DateTime.Now.AddDays(-30);
 
             var toDateUtc = ToDate.HasValue
-            ? DateTime.SpecifyKind(ToDate.Value.AddDays(1).AddTicks(-1), DateTimeKind.Utc)
-            : DateTime.UtcNow;
+            ?ToDate.Value.AddDays(1).AddTicks(-1)
+            : DateTime.Now;
 
             // var attendances = await AttendanceService.GetLeaveEarlyAttendancesAsync(
             // _selectedSchool.Id,

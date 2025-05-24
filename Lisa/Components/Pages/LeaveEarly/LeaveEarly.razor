@@ -383,7 +383,7 @@ else
         
         var activeSession = await AttendanceService.GetActiveAttendanceAsync(
             _selectedSchool.Id, 
-            DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Utc));
+            DateTime.Now;
         
         if (activeSession != null)
         {
@@ -400,7 +400,7 @@ else
         
         var completedSession = await AttendanceService.GetCompletedSessionForSchoolAsync(
             _selectedSchool.Id,
-            DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Utc));
+            DateTime.Now;
 
         if (completedSession != null)
         {
@@ -424,16 +424,11 @@ else
         
         if (_currentSession == null)
         {
-            var startTime = DateTime.SpecifyKind(DateTime.Today.AddHours(7), DateTimeKind.Utc); // Default start time if creating from leave early
-            // _currentSession = await AttendanceService.CreateAttendanceSessionAsync(
-            //     _selectedSchool.Id,
-            //     startTime,
-            //     CurrentUserId
-            // );
+            var startTime = DateTime.Today.AddHours(7);
             
             if (EndTime.HasValue)
             {
-                var endTimeDateTime = DateTime.SpecifyKind(DateTime.Today.Add(EndTime.Value.ToTimeSpan()), DateTimeKind.Utc);
+                var endTimeDateTime = DateTime.Today.Add(EndTime.Value.ToTimeSpan());
                 await AttendanceService.UpdateAttendanceEndTimeAsync(
                     _currentSession.Id,
                     endTimeDateTime
@@ -442,16 +437,7 @@ else
                 Console.WriteLine($"Created new session with start time {startTime.ToLocalTime():HH:mm} and end time {EndTime.Value:HH:mm}");
             }
         }
-        // else if (!_currentSession.EndTime.HasValue && EndTime.HasValue)
-        // {
-        //     var endTimeDateTime = DateTime.SpecifyKind(DateTime.Today.Add(EndTime.Value.ToTimeSpan()), DateTimeKind.Utc);
-        //     await AttendanceService.UpdateAttendanceEndTimeAsync(
-        //         _currentSession.Id,
-        //         endTimeDateTime
-        //     );
-        //     
-        //     Console.WriteLine($"Updated existing session with end time {EndTime.Value:HH:mm}");
-        // }
+        
         
         await InvokeAsync(StateHasChanged);
     }
@@ -661,8 +647,8 @@ else
 
             if (EndTime.HasValue)
             {
-                var endTimeDateTime = DateTime.SpecifyKind(CurrentDate.Add(EndTime.Value.ToTimeSpan()), DateTimeKind.Utc);
-                var isEarlyLeave = DateTime.UtcNow < endTimeDateTime;
+                var endTimeDateTime = CurrentDate.Add(EndTime.Value.ToTimeSpan());
+                var isEarlyLeave = DateTime.Now < endTimeDateTime;
                 
                 var leaveNotes = $"Left early at {DateTime.Now:HH:mm}. " +
                                  $"Permission: {SelectedPermissionMethod}. " +

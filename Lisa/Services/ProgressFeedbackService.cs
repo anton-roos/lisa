@@ -31,16 +31,14 @@ public class ProgressFeedbackService
 
             if (fromDate.HasValue)
             {
-                var fromDateUtc = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
                 subjectResults = subjectResults
-                    .Where(r => r.ResultSet!.AssessmentDate >= fromDateUtc);
+                    .Where(r => r.ResultSet!.AssessmentDate >= fromDate.Value);
             }
 
             if (toDate.HasValue)
             {
-                var endDate = DateTime.SpecifyKind(toDate.Value.AddDays(1), DateTimeKind.Utc);
                 subjectResults = subjectResults
-                    .Where(r => r.ResultSet!.AssessmentDate < endDate);
+                    .Where(r => r.ResultSet!.AssessmentDate < toDate.Value);
             }
 
             var filteredResults = subjectResults
@@ -92,14 +90,12 @@ public class ProgressFeedbackService
 
         if (fromDate.HasValue)
         {
-            var fromDateUtc = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
-            query = query.Where(l => l.Results!.Any(r => r.ResultSet != null && r.ResultSet.AssessmentDate >= fromDateUtc));
+            query = query.Where(l => l.Results!.Any(r => r.ResultSet != null && r.ResultSet.AssessmentDate >= fromDate.Value));
         }
 
         if (toDate.HasValue)
         {
-            var toDateUtc = DateTime.SpecifyKind(toDate.Value.AddDays(1).AddSeconds(-1), DateTimeKind.Utc);
-            query = query.Where(l => l.Results!.Any(r => r.ResultSet != null && r.ResultSet.AssessmentDate <= toDateUtc));
+            query = query.Where(l => l.Results!.Any(r => r.ResultSet != null && r.ResultSet.AssessmentDate <= toDate.Value.AddDays(1).AddSeconds(-1)));
         }
 
         var list = await query

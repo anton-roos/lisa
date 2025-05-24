@@ -1,4 +1,5 @@
 using Lisa.Data;
+using Lisa.Enums;
 using Lisa.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,20 +10,22 @@ public partial class AttendanceService(
     ILogger<AttendanceService> logger
 )
 {
-    public async Task<bool> InitiatedAttendanceForToday(Guid? schoolId)
+    public async Task<Attendance?> GetTodaysAttendance(Guid? schoolId)
     {
         var today = DateTime.Now.Date;
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var attendance = await dbContext.Attendances
-            .FirstOrDefaultAsync(a => a.Start.Date == today && a.SchoolId == schoolId);
-
-        return attendance != null;
+            .FirstOrDefaultAsync(a => a.Start.Date == today 
+                                      && a.SchoolId == schoolId
+                                      && a.Type == AttendanceType.CheckIn);
+        
+        return attendance;
     }
 
     public async Task<Attendance> CreateAttendanceAsync(
         Guid schoolId,
-        DateTimeOffset start,
-        DateTimeOffset? end = null
+        DateTime start,
+        DateTime? end = null
     )
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -32,8 +35,8 @@ public partial class AttendanceService(
             SchoolId = schoolId,
             Start = start,
             End = end,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now,
         };
 
         await dbContext.Attendances.AddAsync(session);
@@ -56,8 +59,8 @@ public partial class AttendanceService(
             return false;
         }
 
-        attendance.End = DateTime.UtcNow;
-        attendance.UpdatedAt = DateTime.UtcNow;
+        attendance.End = DateTime.Now;
+        attendance.UpdatedAt = DateTime.Now;
 
         await dbContext.SaveChangesAsync();
         logger.LogInformation("Recorded sign-out for attendance {AttendanceId}", attendanceId);
@@ -74,7 +77,7 @@ public partial class AttendanceService(
             .FirstOrDefaultAsync(s => s.Id == sessionId);
     }
 
-    public async Task<Attendance?> GetActiveAttendanceAsync(Guid schoolId, DateTimeOffset date)
+    public async Task<Attendance?> GetActiveAttendanceAsync(Guid schoolId, DateTime date)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         return await dbContext.Attendances
@@ -94,8 +97,8 @@ public partial class AttendanceService(
             return false;
         }
 
-        session.End = DateTime.UtcNow;
-        session.UpdatedAt = DateTime.UtcNow;
+        session.End = DateTime.Now;
+        session.UpdatedAt = DateTime.Now;
 
         await dbContext.SaveChangesAsync();
 
@@ -113,12 +116,8 @@ public partial class AttendanceService(
             throw new KeyNotFoundException($"Attendance session with ID {attendanceId} not found");
         }
 
-        endTime = endTime.Kind == DateTimeKind.Unspecified
-            ? DateTime.SpecifyKind(endTime, DateTimeKind.Utc)
-            : endTime.ToUniversalTime();
-
         session.End = endTime;
-        session.UpdatedAt = DateTime.UtcNow;
+        session.UpdatedAt = DateTime.Now;
 
         await dbContext.SaveChangesAsync();
         logger.LogInformation("Updated end time for session {SessionId}", attendanceId);
@@ -126,7 +125,7 @@ public partial class AttendanceService(
         return session;
     }
 
-    public async Task<List<Attendance>> GetCompletedSessionForSchoolAsync(Guid schoolId, DateTimeOffset date)
+    public async Task<List<Attendance>> GetCompletedSessionForSchoolAsync(Guid schoolId, DateTime date)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         return await dbContext.Attendances

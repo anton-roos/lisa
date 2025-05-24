@@ -19,7 +19,7 @@
             <div class="row">
                 <div class="col-md-6">
                     <h2>Sign Out</h2>
-                    <p>@DateTime.Now.ToString("dd/M")</p>
+                    <p>@DateTime.UtcNow.ToString("dd/M")</p>
 
                     @if (_selectedSchool == null)
                     {
@@ -151,7 +151,7 @@
     private List<RegisterClass> _registerClasses = [];
     private Dictionary<string, List<Learner>> _registerClassLearners = new();
     private Dictionary<Guid, AttendanceData> _attendanceData = new();
-    private DateTime _endTime = DateTime.Today.AddHours(14); // Default to 2:00 PM
+    private DateTime _endTime = DateTime.UtcNow.Date.AddHours(14); // Default to 2:00 PM
     private TimeOnly _endTimeOnly = new TimeOnly(14, 0); // Default to 2:00 PM for the input
     private bool _isEndTimeConfirmed = false;
     private DateTime _endTimeDateTime;
@@ -215,7 +215,7 @@
         // First check for any active session for today for this school
         var activeSession = await AttendanceService.GetActiveAttendanceAsync(
             _selectedSchool.Id,
-            DateTime.Now.Date);
+            DateTime.UtcNow.Date);
 
         if (activeSession != null)
         {
@@ -227,7 +227,7 @@
         // Also check if there's already a completed session for today
         var completedSession = await AttendanceService.GetCompletedSessionForSchoolAsync(
             _selectedSchool.Id,
-            DateTime.Now);
+            DateTime.UtcNow);
 
         if (completedSession != null)
         {
@@ -257,7 +257,7 @@
         else
         {
             // Default end time 
-            _endTime = DateTime.Today.AddHours(14);
+            _endTime = DateTime.UtcNow.Date.AddHours(14);
             _endTimeOnly = new TimeOnly(14, 0);
         }
 
@@ -344,7 +344,7 @@
         if (_selectedSchool == null) return;
 
         // Convert TimeOnly to DateTime for our application logic
-        _endTime = DateTime.Today.Add(_endTimeOnly.ToTimeSpan());
+        _endTime = DateTime.UtcNow.Date.Add(_endTimeOnly.ToTimeSpan());
         _endTimeDateTime = _endTime;
         _isEndTimeConfirmed = true;
 
@@ -354,7 +354,7 @@
             // Check both active and completed sessions
             _currentSession = await AttendanceService.GetActiveAttendanceAsync(
                 _selectedSchool.Id,
-               DateTime.Now
+               DateTime.UtcNow
             );
 
             if (_currentSession == null)
@@ -444,7 +444,7 @@
 
         if (data.HasLeft)
         {
-            data.SignOutTime = DateTime.Now;
+            data.SignOutTime = DateTime.UtcNow;
 
             // Get the register class ID
             if (_registerClassNameToIdMap.TryGetValue(registerClassName, out var registerClassId))
@@ -464,7 +464,7 @@
                     // await AttendanceService.RecordSignOutAsync(
                     //     data.AttendanceId.Value,
                     //     isEarlyLeave,
-                    //     $"Signed out at {DateTime.Now:HH:mm}{(isEarlyLeave ? " (early)" : "")}"
+                    //     $"Signed out at {DateTime.UtcNow:HH:mm}{(isEarlyLeave ? " (early)" : "")}"
                     // );
                 }
                 else
@@ -495,7 +495,7 @@
             //     await AttendanceService.RecordSignOutAsync(
             //         _attendanceData[learnerId].AttendanceId.Value, 
             //         isEarlyLeave,
-            //         $"Signed out at {DateTime.Now:HH:mm}{(isEarlyLeave ? " (early)" : "")}"
+            //         $"Signed out at {DateTime.UtcNow:HH:mm}{(isEarlyLeave ? " (early)" : "")}"
             //     );
         }
         else
@@ -516,7 +516,7 @@
             //     await AttendanceService.RecordSignOutAsync(
             //         attendance.Id,
             //         isEarlyLeave,
-            //         $"Signed out at {DateTime.Now:HH:mm}{(isEarlyLeave ? " (early)" : "")}"
+            //         $"Signed out at {DateTime.UtcNow:HH:mm}{(isEarlyLeave ? " (early)" : "")}"
             //     );
         }
 

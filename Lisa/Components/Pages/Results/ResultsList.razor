@@ -52,8 +52,6 @@
                 </div>
             </div>
 
-            @* The rest of your filtering and result display UI remains unchanged *@
-
             @if (ViewMode == "Grade")
             {
                 <div class="mb-3">
@@ -158,6 +156,20 @@
                         }
                     </div>
                 }
+            }
+
+            @if (_loading)
+            {
+                <div class="text-center p-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Loading results...</p>
+                </div>
+            }
+            else
+            {
+                @* The existing content for displaying results goes here *@
             }
         }
     </Authorized>

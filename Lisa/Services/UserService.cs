@@ -208,6 +208,7 @@ public class UserService
 
             if (!string.IsNullOrWhiteSpace(newPassword))
             {
+                Guard.Against.Null(existing, nameof(existing), "User cannot be null when updating password");
                 existing.PasswordHash = passwordHasher.HashPassword(existing, newPassword);
                 logger.LogInformation("Updated password for teacher: {TeacherId}", user.Id);
             }

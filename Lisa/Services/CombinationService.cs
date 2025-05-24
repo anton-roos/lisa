@@ -56,7 +56,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
         }
 
         combination.IsDeleted = true;
-        combination.DeletedAt = DateTime.Now;
+        combination.DeletedAt = DateTime.UtcNow;
 
         await context.SaveChangesAsync();
         return true;
@@ -72,7 +72,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
         }
 
         combination.IsDeleted = false;
-        combination.DeletedAt = DateTime.Now;
+        combination.DeletedAt = DateTime.UtcNow;
 
         await context.SaveChangesAsync();
         return true;

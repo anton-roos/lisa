@@ -41,8 +41,8 @@ public class EmailCampaignService
                 Status = EmailCampaignStatus.Draft,
                 TrackOpens = true,
                 TrackClicks = true,
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
                 EmailRecipients = recipients,
                 SchoolId = command.SchoolId,
                 RecipientTemplate = command.RecipientTemplate,
@@ -376,8 +376,8 @@ public class EmailCampaignService
             EmailAddress = r.Email,
             LearnerId = r.LearnerId,
             Status = EmailRecipientStatus.Pending,
-            CreatedAt = DateTime.Now,
-            UpdatedAt = DateTime.Now
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         }).ToList();
     }
 
@@ -389,8 +389,8 @@ public class EmailCampaignService
             Id = Guid.NewGuid(),
             EmailAddress = email,
             Status = EmailRecipientStatus.Pending,
-            CreatedAt = DateTime.Now,
-            UpdatedAt = DateTime.Now
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         }).ToList();
     }
     private async Task<List<(string Email, Guid LearnerId)>> GetProgressFeedbackRecipientsAsync(CommunicationCommand command)
@@ -544,7 +544,7 @@ public class EmailCampaignService
 
     private static string GenerateCampaignName(CommunicationCommand command)
     {
-        return $"{command.RecipientGroup} - {command.RecipientType} - {command.RecipientTemplate} - {DateTime.Now:yyyyMMddHHmmss}";
+        return $"{command.RecipientGroup} - {command.RecipientType} - {command.RecipientTemplate} - {DateTime.UtcNow:yyyyMMddHHmmss}";
     }
 
     private static string GetSubjectLine(EmailCampaign command)

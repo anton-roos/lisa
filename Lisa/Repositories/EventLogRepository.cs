@@ -25,7 +25,7 @@ public class EventLogRepository(IDbContextFactory<LisaDbContext> dbContextFactor
             {
                 EventType = eventType,
                 EventData = eventData,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.UtcNow
             };
 
             context.EventLogs.Add(eventLog);

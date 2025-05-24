@@ -11,7 +11,7 @@
 
 <PageTitle>Daily Register</PageTitle>
 
-<h3>Daily Register - @DateTime.Today.ToString("d MMM yyyy")</h3>
+<h3>Daily Register - @DateTime.UtcNow.Date.ToString("d MMM yyyy")</h3>
 
 @if (_selectedSchool == null)
 {
@@ -254,7 +254,7 @@ else
             // _attendanceData = await AttendanceRecordService.Get(
             // registerClassId,
             // learnerIds,
-            // DateTime.Today);
+            // DateTime.UtcNow.Date);
         }
         catch (Exception ex)
         {

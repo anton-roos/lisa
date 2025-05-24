@@ -235,8 +235,8 @@ else
 @code {
     private School? _selectedSchool;
 
-    private DateTime? FromDate { get; set; } = DateTime.Today.AddDays(-30);
-    private DateTime? ToDate { get; set; } = DateTime.Today;
+    private DateTime? FromDate { get; set; } = DateTime.UtcNow.Date.AddDays(-30);
+    private DateTime? ToDate { get; set; } = DateTime.UtcNow.Date;
     private string? SelectedClassId { get; set; }
     private string LearnerSearchTerm { get; set; } = "";
 
@@ -303,11 +303,11 @@ else
         {
             var fromDateUtc = FromDate.HasValue
             ? FromDate.Value
-            : DateTime.Now.AddDays(-30);
+            : DateTime.UtcNow.AddDays(-30);
 
             var toDateUtc = ToDate.HasValue
             ?ToDate.Value.AddDays(1).AddTicks(-1)
-            : DateTime.Now;
+            : DateTime.UtcNow;
 
             // var attendances = await AttendanceService.GetLeaveEarlyAttendancesAsync(
             // _selectedSchool.Id,
@@ -363,8 +363,8 @@ else
 
     private async Task ResetFilters()
     {
-        FromDate = DateTime.Today.AddDays(-30);
-        ToDate = DateTime.Today;
+        FromDate = DateTime.UtcNow.Date.AddDays(-30);
+        ToDate = DateTime.UtcNow.Date;
         SelectedClassId = null;
         LearnerSearchTerm = "";
         CurrentPage = 1;

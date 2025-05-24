@@ -21,7 +21,7 @@
             <div class="row">
                 <div class="col-md-6">
                     <h2>Sign In</h2>
-                    <p>@DateTime.Now.ToString("dd/M")</p>
+                    <p>@DateTime.UtcNow.ToString("dd/M")</p>
 
                     @if (_selectedSchool == null)
                     {
@@ -150,7 +150,7 @@
     private List<RegisterClass> _registerClasses = [];
     private Dictionary<string, List<Learner>> _registerClassLearners = new();
     private Dictionary<Guid, AttendanceData> _attendanceData = new();
-    private DateTime _startTime = DateTime.Today.AddHours(7);
+    private DateTime _startTime;
     private TimeOnly _startTimeOnly = new TimeOnly(7, 0);
     private bool _isStartTimeConfirmed = false;
     private DateTime _startTimeDateTime;
@@ -172,6 +172,7 @@
     protected override async Task OnInitializedAsync()
     {
         // Make sure TimeOnly is properly initialized
+        _startTime = DateTime.UtcNow.AddHours(7);
         _startTimeOnly = new TimeOnly(7, 0);
 
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
@@ -213,7 +214,6 @@
             _registerClassLearners.Clear();
             _attendanceData.Clear();
 
-            // Don't reset the time - keep the user's selection
             // _startTime will be set from _startTimeOnly when they click Confirm
 
             await LoadRegisterClasses();
@@ -250,7 +250,7 @@
     {
         if (_selectedSchool == null) return;
 
-        var existingSession = await AttendanceService.GetActiveAttendanceAsync(_selectedSchool.Id, DateTime.Today);
+        var existingSession = await AttendanceService.GetActiveAttendanceAsync(_selectedSchool.Id, DateTime.UtcNow.Date);
 
         if (existingSession != null)
         {
@@ -269,7 +269,7 @@
         }
 
         _startTime = _currentSession.Start;
-        _startTimeOnly = TimeOnly.FromDateTime(_startTime.Date);
+        _startTimeOnly = TimeOnly.FromDateTime(_startTime);
         _startTimeDateTime = _startTime;
         _isStartTimeConfirmed = true;
 
@@ -287,26 +287,28 @@
     {
         if (_currentSession == null) return;
 
-        // Load attendance data for this session
-        var attendances = await AttendanceService.GetAsync(_currentSession.Id);
+        var sessionWithRecords = await AttendanceService.GetAsync(_currentSession.Id);
 
-        foreach (var attendance in attendances.AttendanceRecords)
+        if (sessionWithRecords?.AttendanceRecords != null)
         {
-            if (_attendanceData.ContainsKey(attendance.LearnerId))
+            foreach (var record in sessionWithRecords.AttendanceRecords)
             {
-                if (attendance.Start.HasValue)
+                if (!_attendanceData.ContainsKey(record.LearnerId))
                 {
+                    _attendanceData[record.LearnerId] = new AttendanceData
+                    {
+                        SignInTime = record.Start.HasValue ? record.Start.Value.ToLocalTime() : DateTime.UtcNow,
+                        AttendanceId = record.Id,
+                        IsPresent = record.Start.HasValue
+                    };
                 }
-
-                _attendanceData[attendance.LearnerId].AttendanceId = attendance.Id;
-            }
-            else
-            {
-                _attendanceData[attendance.LearnerId] = new AttendanceData
+                else
                 {
-                    SignInTime = attendance.Start.HasValue ? attendance.Start.Value.ToLocalTime() : DateTime.Now,
-                    AttendanceId = attendance.Id
-                };
+                    var data = _attendanceData[record.LearnerId];
+                    data.SignInTime = record.Start.HasValue ? record.Start.Value.ToLocalTime() : data.SignInTime;
+                    data.AttendanceId = record.Id;
+                    data.IsPresent = record.Start.HasValue;
+                }
             }
         }
     }
@@ -315,7 +317,7 @@
     {
         if (_selectedSchool == null) return;
 
-        _startTime = DateTime.Today.Add(_startTimeOnly.ToTimeSpan());
+        _startTime = DateTime.UtcNow.Date.Add(_startTimeOnly.ToTimeSpan());
         _startTimeDateTime = _startTime;
         _isStartTimeConfirmed = true;
 
@@ -383,7 +385,7 @@
 
         if (data.IsPresent)
         {
-            data.SignInTime = DateTime.Now;
+            data.SignInTime = DateTime.UtcNow;
         }
 
         if (_registerClassNameToIdMap.TryGetValue(registerClassName, out var registerClassId))
@@ -405,7 +407,7 @@
 
         var attendanceRecord = new AttendanceRecord()
         {
-            Start = DateTime.Now,
+            Start = DateTime.UtcNow,
             End = null,
             AttendanceType = AttendanceType.Register,
             LearnerId = learnerId,
@@ -418,7 +420,7 @@
     private async Task UpdateAttendanceStatus(Guid attendanceId, bool isPresent)
     {
         var notes = isPresent
-            ? $"Updated to present at {DateTime.Now:HH:mm}"
+            ? $"Updated to present at {DateTime.UtcNow:HH:mm}"
             : "Updated to absent";
     }
 

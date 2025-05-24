@@ -18,7 +18,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
                     <h3 class="mb-1">Attendance Management</h3>
-                    <p class="text-muted mb-0">@DateTime.Now.ToString("dd MMMM yyyy")</p>
+                    <p class="text-muted mb-0">@DateTime.UtcNow.ToString("dd MMMM yyyy")</p>
                 </div>
             </div>
 
@@ -141,18 +141,36 @@
         await LoadDataAsync();
     }
 
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolsUpdated)
+        {
+            // Reload data when the school is updated
+            await LoadDataAsync();
+            await InvokeAsync(StateHasChanged); // Ensure the UI is updated
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
     private async Task LoadDataAsync()
     {
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
 
+        await InvokeAsync(StateHasChanged);
+
         if (_selectedSchool != null)
         {
-            _todayAttendance = await AttendanceService.GetTodaysAttendance(_selectedSchool.Id);
+            // Fetch today's attendance session
+            var todayAttendance = await AttendanceService.GetTodaysAttendance(_selectedSchool.Id);
 
-            if (_todayAttendance is not null)
+            if (todayAttendance != null)
             {
-                var today = DateTime.Now.Date;
-                _todayAttendance = await AttendanceService.GetActiveAttendanceAsync(_selectedSchool.Id, today);
+                var today = DateTime.UtcNow.Date;
+                var activeAttendance = await AttendanceService.GetActiveAttendanceAsync(_selectedSchool.Id, today);
+
+                // Retain today's attendance if no active session is found
+                _todayAttendance = activeAttendance ?? todayAttendance;
 
                 if (_todayAttendance != null)
                 {
@@ -200,15 +218,5 @@
         {
             NavigationManager.NavigateTo($"/attendance/sign-out/{_todayAttendance.Id}");
         }
-    }
-
-    protected override async Task HandleEventAsync(string eventName, object? payload)
-    {
-        if (eventName == UiEvents.SchoolsUpdated)
-        {
-            await LoadDataAsync();
-        }
-        
-        await base.HandleEventAsync(eventName, payload);
     }
 }

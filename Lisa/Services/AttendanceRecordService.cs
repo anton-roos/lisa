@@ -11,7 +11,7 @@ public class AttendanceRecordService(
 {
     public async Task CreateAsync(AttendanceRecord attendanceRecord)
     {
-        attendanceRecord.CreatedAt = DateTime.Now;
+        attendanceRecord.CreatedAt = DateTime.UtcNow;
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         dbContext.AttendanceRecords.Add(attendanceRecord);
@@ -81,8 +81,8 @@ public class AttendanceRecordService(
             return false;
         }
 
-        attendance.End = DateTime.Now;
-        attendance.UpdatedAt = DateTime.Now;
+        attendance.End = DateTime.UtcNow;
+        attendance.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync();
         logger.LogInformation("Recorded sign-out for attendance {AttendanceId}", attendanceId);
@@ -103,7 +103,7 @@ public class AttendanceRecordService(
         }
 
         attendance.End = null;
-        attendance.UpdatedAt = DateTime.Now;
+        attendance.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync();
         logger.LogInformation("Cleared sign-out for attendance {AttendanceId}", attendanceId);

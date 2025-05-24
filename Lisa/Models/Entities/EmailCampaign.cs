@@ -11,8 +11,8 @@ public class EmailCampaign
     public EmailCampaignStatus Status { get; set; }
     public bool TrackOpens { get; set; } = true;
     public bool TrackClicks { get; set; } = true;
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
-    public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public ICollection<EmailRecipient>? EmailRecipients { get; set; }
     public Guid SchoolId { get; set; }
     public RecipientTemplate RecipientTemplate { get; set; }

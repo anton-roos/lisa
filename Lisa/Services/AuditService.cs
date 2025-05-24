@@ -15,7 +15,7 @@ public class AuditService(IDbContextFactory<LisaDbContext> dbContextFactory)
             Description = description,
             EntityId = entityId,
             UserId = userId,
-            Timestamp = DateTime.Now
+            Timestamp = DateTime.UtcNow
         };
 
         await context.AuditLogs.AddAsync(auditLog);

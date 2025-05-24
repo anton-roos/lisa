@@ -12,9 +12,11 @@ public partial class AttendanceService(
 {
     public async Task<Attendance?> GetTodaysAttendance(Guid? schoolId)
     {
-        var today = DateTime.Now.Date;
+        var today = DateTime.UtcNow.Date;
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var attendance = await dbContext.Attendances
+            .Include(a => a.School)
+            .Include(a => a.AttendanceRecords)
             .FirstOrDefaultAsync(a => a.Start.Date == today 
                                       && a.SchoolId == schoolId
                                       && a.Type == AttendanceType.CheckIn);
@@ -35,8 +37,8 @@ public partial class AttendanceService(
             SchoolId = schoolId,
             Start = start,
             End = end,
-            CreatedAt = DateTime.Now,
-            UpdatedAt = DateTime.Now,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
         };
 
         await dbContext.Attendances.AddAsync(session);
@@ -59,8 +61,8 @@ public partial class AttendanceService(
             return false;
         }
 
-        attendance.End = DateTime.Now;
-        attendance.UpdatedAt = DateTime.Now;
+        attendance.End = DateTime.UtcNow;
+        attendance.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync();
         logger.LogInformation("Recorded sign-out for attendance {AttendanceId}", attendanceId);
@@ -97,8 +99,8 @@ public partial class AttendanceService(
             return false;
         }
 
-        session.End = DateTime.Now;
-        session.UpdatedAt = DateTime.Now;
+        session.End = DateTime.UtcNow;
+        session.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync();
 
@@ -117,7 +119,7 @@ public partial class AttendanceService(
         }
 
         session.End = endTime;
-        session.UpdatedAt = DateTime.Now;
+        session.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync();
         logger.LogInformation("Updated end time for session {SessionId}", attendanceId);

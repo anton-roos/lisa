@@ -11,8 +11,8 @@ public class EmailRecipient
     public DateTime? ClickedAt { get; set; }
     public DateTime? BouncedAt { get; set; }
     public DateTime? UnsubscribedAt { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
-    public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public Guid? ParentId { get; set; }
     public Parent? Parent { get; set; }
     public Guid? LearnerId { get; set; }

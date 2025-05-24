@@ -29,8 +29,8 @@ public class ResultService
                 AssessmentTypeId = viewModel.AssessmentType?.Id ?? 0,
                 AssessmentTopic = viewModel.AssessmentTopic,
                 SubjectId = int.Parse(viewModel.SubjectId),
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
                 CapturedById = capturedById,
                 Status = viewModel.Status,
                 Results = viewModel.LearnerResults.Select(entry => new Result
@@ -104,7 +104,7 @@ public class ResultService
             }
             existingResultSet.AssessmentTypeId = viewModel.AssessmentType?.Id ?? 0;
             existingResultSet.AssessmentTopic = viewModel.AssessmentTopic;
-            existingResultSet.UpdatedAt = DateTime.Now;
+            existingResultSet.UpdatedAt = DateTime.UtcNow;
             existingResultSet.Status = viewModel.Status;
 
             var existingResults = existingResultSet.Results?.ToDictionary(r => r.LearnerId)
@@ -117,7 +117,7 @@ public class ResultService
                     result.Score = entry.ResultViewModel.Score;
                     result.Absent = entry.ResultViewModel.Absent;
                     result.AbsentReason = entry.ResultViewModel.AbsentReason;
-                    result.UpdatedAt = DateTime.Now;
+                    result.UpdatedAt = DateTime.UtcNow;
                 }
                 else
                 {
@@ -173,7 +173,7 @@ public class ResultService
                     Absent = false,
                     AbsentReason = null,
                     ResultSetId = resultSetId,
-                    UpdatedAt = DateTime.Now
+                    UpdatedAt = DateTime.UtcNow
                 };
                 context.Results.Add(newResult);
             }
@@ -244,7 +244,7 @@ public class ResultService
         }
     }
 
-    public async Task<List<ResultSet?>> GetResultsByFiltersAsync(
+    public async Task<List<ResultSet>> GetResultsByFiltersAsync(
         Guid schoolId,
         Guid? gradeId,
         int? subjectId,

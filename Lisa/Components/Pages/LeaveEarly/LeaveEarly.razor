@@ -309,11 +309,11 @@ else
 
     [CascadingParameter]
     private Task<AuthenticationState> AuthState { get; set; } = default!;
-    private DateTime CurrentDate { get; set; } = DateTime.Today;
+    private DateTime CurrentDate { get; set; } = DateTime.UtcNow.Date;
 
     private School? _selectedSchool; 
     
-    private string CurrentTime => DateTime.Now.ToString("HH:mm");
+    private string CurrentTime => DateTime.UtcNow.ToString("HH:mm");
     private TimeOnly? EndTime { get; set; } = new TimeOnly(14, 0);
     private bool EndTimeConfirmed { get; set; } = false;
     private Attendance? _currentSession;
@@ -383,7 +383,7 @@ else
         
         var activeSession = await AttendanceService.GetActiveAttendanceAsync(
             _selectedSchool.Id, 
-            DateTime.Now;
+            DateTime.UtcNow);
         
         if (activeSession != null)
         {
@@ -400,7 +400,7 @@ else
         
         var completedSession = await AttendanceService.GetCompletedSessionForSchoolAsync(
             _selectedSchool.Id,
-            DateTime.Now;
+            DateTime.UtcNow);
 
         if (completedSession != null)
         {
@@ -408,7 +408,7 @@ else
             
             if (completedSession.Any())
             {
-                EndTime = TimeOnly.FromDateTime(DateTime.Now);
+                EndTime = TimeOnly.FromDateTime(DateTime.UtcNow);
                 EndTimeConfirmed = true;
                 Console.WriteLine($"Using existing completed session with end time: {EndTime}");
                 await InvokeAsync(StateHasChanged);
@@ -419,26 +419,25 @@ else
     private async Task ConfirmEndTime()
     {
         if (_selectedSchool == null || !CurrentUserId.HasValue) return;
-        
+
         EndTimeConfirmed = true;
-        
+
         if (_currentSession == null)
         {
-            var startTime = DateTime.Today.AddHours(7);
-            
+            var startTime = DateTime.UtcNow.Date.AddHours(7);
+
             if (EndTime.HasValue)
             {
-                var endTimeDateTime = DateTime.Today.Add(EndTime.Value.ToTimeSpan());
+                var endTimeDateTime = DateTime.UtcNow.Date.Add(EndTime.Value.ToTimeSpan());
                 await AttendanceService.UpdateAttendanceEndTimeAsync(
-                    _currentSession.Id,
+                    _currentSession!.Id,
                     endTimeDateTime
                 );
-                
+
                 Console.WriteLine($"Created new session with start time {startTime.ToLocalTime():HH:mm} and end time {EndTime.Value:HH:mm}");
             }
         }
-        
-        
+
         await InvokeAsync(StateHasChanged);
     }
     
@@ -478,16 +477,16 @@ else
         {
             return;
         }
-            
+
         IsLoading = true;
         await InvokeAsync(StateHasChanged);
-        
+
         try
         {
             AllLearners = await LearnerService.GetBySchoolAsync(_selectedSchool.Id);
-            
+
             Console.WriteLine($"Loaded {AllLearners.Count} learners for school {_selectedSchool.LongName}");
-            
+
             RegisterClassFilters = ["All"];
             var classNames = AllLearners
                 .Where(l => l.RegisterClass?.Name != null)
@@ -495,9 +494,9 @@ else
                 .Distinct()
                 .OrderBy(n => n)
                 .ToList();
-                
+
             RegisterClassFilters.AddRange(classNames);
-            
+
             Console.WriteLine($"Found {classNames.Count} unique register classes for filtering");
         }
         catch (Exception ex)
@@ -516,7 +515,7 @@ else
     {
         if (string.IsNullOrWhiteSpace(SearchTerm) || SearchTerm.Length < 2)
         {
-            SearchResults = [];
+            SearchResults = new List<Learner>();
             return;
         }
         
@@ -539,24 +538,21 @@ else
 
     private async Task SelectLearner(Learner learner)
     {
-        // Get the full learner details with all related data
         var fullLearner = await LearnerService.GetByIdAsync(learner.Id);
-        
-        // If we successfully got the full details, use those
+
         if (fullLearner != null)
         {
             SelectedLearner = fullLearner;
-            ParentContacts = fullLearner.Parents?.ToList() ?? [];
+            ParentContacts = fullLearner.Parents?.ToList() ?? new List<Parent>();
             Console.WriteLine($"Loaded {ParentContacts.Count} parent contacts for learner {fullLearner.Name} {fullLearner.Surname}");
         }
         else
         {
-            // Fall back to the original learner object
             SelectedLearner = learner;
-            ParentContacts = learner.Parents?.ToList() ?? [];
+            ParentContacts = learner.Parents?.ToList() ?? new List<Parent>();
             Console.WriteLine($"Warning: Could not load full learner details. Using limited data.");
         }
-        
+
         var registerClass = SelectedLearner.RegisterClass;
         if (registerClass != null)
         {
@@ -570,11 +566,11 @@ else
             if (_selectedSchool != null)
             {
                 var registerClasses = await RegisterClassService.GetBySchoolIdAsync(_selectedSchool.Id);
-                
+
                 if (registerClasses.Any())
                 {
                     var possibleClass = registerClasses.FirstOrDefault();
-                    
+
                     if (possibleClass != null)
                     {
                         CurrentRegisterClassId = possibleClass.Id;
@@ -583,12 +579,14 @@ else
                 }
             }
         }
-        
+
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task ProcessLearnerLeft()
     {
+        var currentTime = DateTime.UtcNow;
+
         var isValid = true;
         
         if (string.IsNullOrEmpty(SelectedPermissionMethod))
@@ -637,20 +635,12 @@ else
 
         try
         {
-            var currentTime = DateTime.Now;
-            
-            // var attendance = await AttendanceService.GetAttendanceAsync(
-            //     SelectedLearner.Id, 
-            //     CurrentRegisterClassId.Value, 
-            //     CurrentDate
-            // );
-
             if (EndTime.HasValue)
             {
                 var endTimeDateTime = CurrentDate.Add(EndTime.Value.ToTimeSpan());
-                var isEarlyLeave = DateTime.Now < endTimeDateTime;
+                var isEarlyLeave = DateTime.UtcNow < endTimeDateTime;
                 
-                var leaveNotes = $"Left early at {DateTime.Now:HH:mm}. " +
+                var leaveNotes = $"Left early at {DateTime.UtcNow:HH:mm}. " +
                                  $"Permission: {SelectedPermissionMethod}. " +
                                  $"Pickup: {SelectedPickupOption}. " +
                                  $"{Notes}";
@@ -693,13 +683,15 @@ else
                 
                 await SendEmailNotification(isEarlyLeave);
                 
-                await AuditService.LogActivityAsync(
-                    "Learner Left Early",
-                    $"Learner {SelectedLearner.Name} left school at {currentTime:HH:mm}" +
-                    $"{(isEarlyLeave ? " (early leave)" : "")}",
-                    SelectedLearner.Id,
-                    CurrentUserId
-                );
+                if (SelectedLearner != null)
+                {
+                    await AuditService.LogActivityAsync(
+                        "Learner Left Early",
+                        $"Learner {SelectedLearner.Name} left school at {currentTime:HH:mm}",
+                        SelectedLearner.Id,
+                        CurrentUserId
+                    );
+                }
                 
                 await JSRuntime.InvokeVoidAsync("alert", "Leave early process completed successfully");
                 NavigationManager.NavigateTo("/attendance/sign-out");
@@ -732,7 +724,7 @@ else
                     $"School Notification: {SelectedLearner.Name} Left School",
                     $@"Dear {contact.Name},
 
-This is to inform you that {SelectedLearner.Name} left school at {DateTime.Now:HH:mm} on {CurrentDate:d MMMM yyyy}.
+This is to inform you that {SelectedLearner.Name} left school at {DateTime.UtcNow:HH:mm} on {CurrentDate:d MMMM yyyy}.
 
 Permission method: {SelectedPermissionMethod}
 Pickup arrangement: {SelectedPickupOption}

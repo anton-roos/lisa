@@ -13,7 +13,7 @@ public class SecureLoginInfo
     public string Password { get; private set; }
     private string PasswordHash { get; }
 
-    public DateTime CreatedAt { get; init; } = DateTime.Now;
+    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 
     public SecureLoginInfo(string email, string password)
     {
@@ -29,7 +29,7 @@ public class SecureLoginInfo
 
     public bool VerifyPassword(string password) => BCrypt.Net.BCrypt.Verify(password, PasswordHash);
 
-    public bool IsExpired(TimeSpan expiration) => DateTime.Now - CreatedAt > expiration;
+    public bool IsExpired(TimeSpan expiration) => DateTime.UtcNow - CreatedAt > expiration;
 }
 
 

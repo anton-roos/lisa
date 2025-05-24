@@ -276,15 +276,18 @@
     {
         if (_currentSession == null) return;
 
+        // Load attendance data for this session
         var sessionWithRecords = await AttendanceService.GetAsync(_currentSession.Id);
 
         if (sessionWithRecords?.AttendanceRecords != null)
         {
-            foreach (var record in sessionWithRecords.AttendanceRecords)
+            foreach (var learner in _registerClassLearners.SelectMany(rc => rc.Value))
             {
-                if (!_attendanceData.ContainsKey(record.LearnerId))
+                var record = sessionWithRecords.AttendanceRecords.FirstOrDefault(r => r.LearnerId == learner.Id);
+
+                if (record != null)
                 {
-                    _attendanceData[record.LearnerId] = new AttendanceData
+                    _attendanceData[learner.Id] = new AttendanceData
                     {
                         SignOutTime = record.End.HasValue ? record.End.Value.ToLocalTime() : DateTime.UtcNow,
                         AttendanceId = record.Id,
@@ -293,10 +296,11 @@
                 }
                 else
                 {
-                    var data = _attendanceData[record.LearnerId];
-                    data.SignOutTime = record.End.HasValue ? record.End.Value.ToLocalTime() : data.SignOutTime;
-                    data.AttendanceId = record.Id;
-                    data.HasLeft = record.End.HasValue;
+                    _attendanceData[learner.Id] = new AttendanceData
+                    {
+                        HasLeft = false,
+                        SignOutTime = DateTime.MinValue // Default value for "Not at School"
+                    };
                 }
             }
         }

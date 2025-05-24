@@ -5,14 +5,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Lisa.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Hangfire;
-using Hangfire.PostgreSql;
 using Lisa.Models.Entities;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Serilog;
 using Lisa.Repositories;
 using Lisa.Events;
-using Hangfire.Dashboard;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -100,18 +97,11 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
 
         options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
         options.User.RequireUniqueEmail = true;
-    })
-    .AddEntityFrameworkStores<LisaDbContext>()
+    })    .AddEntityFrameworkStores<LisaDbContext>()
     .AddDefaultTokenProviders();
 
-builder.Services.AddHangfire(config =>
-    config.UsePostgreSqlStorage(options =>
-    {
-        options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("Lisa"));
-    })
-    .WithJobExpirationTimeout(TimeSpan.FromDays(7)));
-
-builder.Services.AddHangfireServer(options => { options.WorkerCount = 1; });
+builder.Services.AddHostedService<BackgroundJobService>();
+builder.Services.AddScoped<BackgroundJobService>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -139,12 +129,9 @@ builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<DailyRegisterService>();
 builder.Services.AddScoped<ProtectedSessionStorage>();
-builder.Services.AddScoped<BugReportService>();
-builder.Services.AddScoped<VersionService>();
 builder.Services.AddSingleton<IEventBus, EventBus>();
 builder.Services.AddScoped<IEventLogRepository, EventLogRepository>();
 builder.Services.AddSingleton<ILoginStore, InMemoryLoginStore>();
-builder.Services.AddSingleton<HangfireAuthorizationFilter>();
 builder.Services.AddScoped<SystemGradeService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<EmailService>();
@@ -208,24 +195,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<BlazorAuthMiddleware>();
 
-var hangfireAuthFilter = app.Services.GetRequiredService<HangfireAuthorizationFilter>();
-
-app.UseHangfireDashboard("/hangfire", new DashboardOptions
-{
-    Authorization = [hangfireAuthFilter],
-    IsReadOnlyFunc = context =>
-    {
-        var isProduction = app.Environment.IsProduction();
-
-        var logger = app.Services.GetRequiredService<ILogger<Program>>();
-        var httpContext = context.GetHttpContext();
-        var user = httpContext?.User.Identity?.Name ?? "Unknown User";
-
-        logger.LogInformation("Hangfire Dashboard accessed by {User}. ReadOnly: {ReadOnly}", user, isProduction);
-
-        return isProduction;
-    }
-});
 app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapControllers();

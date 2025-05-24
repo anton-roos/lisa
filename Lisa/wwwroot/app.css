@@ -65,3 +65,68 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* Attendance Component Styles */
+.attendance-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+}
+
+.attendance-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.attendance-card.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.attendance-card .card-body {
+    padding: 1.5rem;
+}
+
+.attendance-status {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+}
+
+.attendance-status.active {
+    background-color: rgba(25, 135, 84, 0.1);
+    border-left: 4px solid #198754;
+}
+
+.attendance-status.inactive {
+    background-color: rgba(13, 110, 253, 0.1);
+    border-left: 4px solid #0d6efd;
+}
+
+/* Pills for attendance status */
+.pill {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+    color: white;
+    font-weight: 500;
+    text-align: center;
+    min-width: 100px;
+}
+
+.pill.present {
+    background-color: #198754;
+}
+
+.pill.absent {
+    background-color: #dc3545;
+}
+
+.pill.late {
+    background-color: #fd7e14;
+}
+
+.pill.early-leave {
+    background-color: #6f42c1;
+}

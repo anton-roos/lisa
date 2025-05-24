@@ -2,7 +2,6 @@
 @inject ILogger<CustomErrorBoundary> Logger
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
-@inject VersionService VersionService
 
 @if (CurrentException is null)
 {
@@ -14,8 +13,6 @@ else if (ErrorContent is not null)
         <h3>An error occurred in the application.</h3>
         <button class="btn btn-danger my-4" @onclick="Recover">Reload Application</button>
         <dl>
-            <dt>Version</dt>
-            <dd>@Version</dd>
             <dt>Source</dt>
             <dd>@CurrentException.Source</dd>
             <dt>Message</dt>
@@ -29,8 +26,6 @@ else if (ErrorContent is not null)
 }
 
 @code {
-    private string Version => VersionService.GetVersion();
-
     protected override Task OnErrorAsync(Exception ex)
     {
         Logger.LogError(ex, "An error occurred in the application.");

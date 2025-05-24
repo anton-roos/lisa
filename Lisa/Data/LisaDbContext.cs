@@ -27,7 +27,6 @@ public class LisaDbContext
     public DbSet<Result> Results { get; set; } = null!;
     public DbSet<CareGroup> CareGroups { get; set; } = null!;
     public DbSet<EmailTemplate> EmailTemplates { get; set; } = null!;
-    public DbSet<BugReport> BugReports { get; set; } = null!;
     public DbSet<EventLog> EventLogs { get; set; } = null!;
     public DbSet<LearnerSubject> LearnerSubjects { get; set; } = null!;
     public DbSet<EmailCampaign> EmailCampaigns { get; set; } = null!;

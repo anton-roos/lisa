@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
-using Hangfire;
 using Lisa.Data;
 using Lisa.Enums;
 using Lisa.Models.EmailModels;
@@ -79,7 +78,6 @@ public class EmailCampaignService
         return await context.EmailCampaigns.FindAsync(id);
     }
 
-    [JobDisplayName("Email Campaign Processing")]
     public async Task StartCampaignAsync(Guid campaignId)
     {
         await using var context = await contextFactory.CreateDbContextAsync(); var campaign = await context.EmailCampaigns

@@ -1,0 +1,218 @@
+@using Lisa.Models.Entities
+@using System.Security.Claims
+@using Lisa.Enums
+@using Microsoft.AspNetCore.Components
+@inject SchoolService SchoolService
+@inject RegisterClassService RegisterClassService
+@inject LearnerService LearnerService
+@inject AttendanceService AttendanceService
+@inject AttendanceRecordService AttendanceRecordService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+@inherits EventAwareComponentBase
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h3 class="mb-1">Attendance Management</h3>
+                    <p class="text-muted mb-0">@DateTime.Now.ToString("dd MMMM yyyy")</p>
+                </div>
+            </div>
+
+            @if (_selectedSchool == null)
+            {
+                <div class="alert alert-warning mb-3">
+                    <h4><i class="bi bi-exclamation-triangle"></i> No School Selected</h4>
+                    <p>Please select a school from the dropdown at the top of the page before proceeding.</p>
+                </div>
+            }
+            else
+            {
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card attendance-card h-100" @onclick="NavigateToSignIn">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="bi bi-person-check" style="font-size: 2rem;"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title mb-1">@(_hasActiveAttendance ? "Continue Check In" : "Start Check In")</h5>
+                                        <p class="card-text text-muted mb-0">Record attendance for learners arriving at school.</p>
+                                        <small class="text-transparent">placeholder</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>                    <div class="col-md-6">                        <div class="card attendance-card h-100 @(!_hasActiveAttendance ? "disabled" : "")" 
+                             @onclick="@(_hasActiveAttendance ? NavigateToSignOut : () => {})">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="bi bi-box-arrow-right" style="font-size: 2rem;"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title mb-1">Check Out</h5>
+                                        <p class="card-text text-muted mb-0">Record attendance for learners leaving school.</p>
+                                        @if (!_hasActiveAttendance)
+                                        {
+                                            <small class="text-danger">(Check-in required first)</small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-transparent">placeholder</small>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>                @if (_todayAttendance != null)
+                {
+                    <div class="attendance-status @(_todayAttendance.End.HasValue ? "inactive" : "active")">
+                        <h5>Today's Attendance Session</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Started:</strong> @_todayAttendance.Start.ToString("dd/MM/yyyy HH:mm")</p>
+                                @if (_todayAttendance.End.HasValue)
+                                {
+                                    <p class="mb-1"><strong>Ended:</strong> @_todayAttendance.End.Value.ToString("dd/MM/yyyy HH:mm")</p>
+                                    <p class="mb-0"><span class="badge bg-secondary">Completed</span></p>
+                                }
+                                else
+                                {
+                                    <p class="mb-0"><span class="badge bg-success">Active</span></p>
+                                }
+                            </div>
+                            <div class="col-md-6">
+                                @if (_attendanceStats != null)
+                                {
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="stat-card">
+                                                <div class="stat-card-value text-success">@_attendanceStats.CheckedInCount</div>
+                                                <div class="stat-card-label">Checked in</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="stat-card">
+                                                <div class="stat-card-value text-primary">@_attendanceStats.CheckedOutCount</div>
+                                                <div class="stat-card-label">Checked out</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="stat-card">
+                                                <div class="stat-card-value text-danger">@_attendanceStats.AbsentCount</div>
+                                                <div class="stat-card-label">Absent</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private School? _selectedSchool;
+    private Attendance? _todayAttendance;
+    private bool _hasActiveAttendance;
+    private AttendanceStats? _attendanceStats;
+
+    private class AttendanceStats
+    {
+        public int CheckedInCount { get; set; }
+        public int CheckedOutCount { get; set; }
+        public int AbsentCount { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        SubscribeToEvent(UiEvents.SchoolsUpdated);
+        
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        
+        if (_selectedSchool != null)
+        {
+            // Check if there's an active attendance for today
+            _hasActiveAttendance = await AttendanceService.InitiatedAttendanceForToday(_selectedSchool.Id);
+            
+            if (_hasActiveAttendance)
+            {
+                var today = DateTimeOffset.UtcNow.Date;
+                _todayAttendance = await AttendanceService.GetActiveAttendanceAsync(_selectedSchool.Id, today);
+                
+                if (_todayAttendance != null)
+                {
+                    await LoadAttendanceStatsAsync(_todayAttendance.Id);
+                }
+            }
+        }
+    }
+
+    private async Task LoadAttendanceStatsAsync(Guid attendanceId)
+    {
+        // Get all attendance records for this session
+        var attendance = await AttendanceService.GetAsync(attendanceId);
+        
+        if (attendance?.AttendanceRecords != null)
+        {
+            _attendanceStats = new AttendanceStats
+            {
+                CheckedInCount = attendance.AttendanceRecords.Count(r => r.Start != null),
+                CheckedOutCount = attendance.AttendanceRecords.Count(r => r.End != null),
+                AbsentCount = 0 // This would need to be calculated based on total learners - checked in
+            };
+            
+            // Calculate absent count if we have the total learner count
+            if (_selectedSchool != null)
+            {
+                var totalLearners = await LearnerService.GetCountAsync(_selectedSchool.Id);
+                _attendanceStats.AbsentCount = totalLearners - _attendanceStats.CheckedInCount;
+            }
+        }
+    }
+
+    private void NavigateToSignIn()
+    {
+        if (_todayAttendance != null)
+        {
+            NavigationManager.NavigateTo($"/attendance/sign-in/{_todayAttendance.Id}");
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/attendance/sign-in");
+        }
+    }
+
+    private void NavigateToSignOut()
+    {
+        if (_hasActiveAttendance && _todayAttendance != null)
+        {
+            NavigationManager.NavigateTo($"/attendance/sign-out/{_todayAttendance.Id}");
+        }
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolsUpdated)
+        {
+            await LoadDataAsync();
+        }
+        
+        await base.HandleEventAsync(eventName, payload);
+    }
+}

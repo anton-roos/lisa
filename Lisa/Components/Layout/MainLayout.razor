@@ -1,7 +1,6 @@
 ﻿@using Lisa.Models.Entities
 @inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
-@inject BugReportService BugReportService
 @inject ILogger<MainLayout> Logger
 
 <div class="page">
@@ -23,10 +22,6 @@
             </div>
 
             <div class="d-flex align-items-center py-3">
-                <button class="btn btn-outline-secondary btn-sm me-3" @onclick="OpenBugReportModal">
-                    <i class="bi bi-bug-fill me-1"></i> Report Bug
-                </button>
-
                 <AuthorizeView Context="_">
                     <Authorized>
                         <button @onclick="Logout" class="btn btn-outline-danger btn-sm">
@@ -81,74 +76,7 @@
     </script>
 </div>
 
-<div class="modal-backdrop fade show" style="display: @(_isBugReportModalVisible ? "block" : "none");"></div>
-<div class="modal" tabindex="-1" role="dialog" style="display: @(_isBugReportModalVisible ? "block" : "none");">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Report a Bug</h5>
-                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseBugReportModal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label for="BugWhatTried" class="form-label">What did you try to do?</label>
-                    <textarea id="BugWhatTried" class="form-control" rows="3" @bind="_whatTried"></textarea>
-                </div>
-                <div class="mb-3">
-                    <label for="BugWhatHappened" class="form-label">What happened when you tried to do it?</label>
-                    <textarea id="BugWhatHappened" class="form-control" rows="3" @bind="_whatHappened"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" @onclick="CloseBugReportModal">Cancel</button>
-                <button type="button" class="btn btn-primary" @onclick="SubmitBugReportAsync">Submit</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 @code {
-    private bool _isBugReportModalVisible;
-    private string _whatTried = string.Empty;
-    private string _whatHappened = string.Empty;
-
-    private void OpenBugReportModal()
-    {
-        _isBugReportModalVisible = true;
-        _whatTried = string.Empty;
-        _whatHappened = string.Empty;
-    }
-
-    private void CloseBugReportModal()
-    {
-        _isBugReportModalVisible = false;
-    }
-
-    private async Task SubmitBugReportAsync()
-    {
-        CloseBugReportModal();
-
-        try
-        {
-            var bugreport = new BugReport
-            {
-                WhatTried = _whatTried,
-                WhatHappened = _whatHappened
-            };
-
-            await BugReportService.LogBugAsync(bugreport);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError("Error logging bug: {ex.Message}", ex.Message);
-        }
-        finally
-        {
-            _whatTried = string.Empty;
-            _whatHappened = string.Empty;
-        }
-    }
-
     private void Logout()
     {
         NavigationManager.NavigateTo("/logout");

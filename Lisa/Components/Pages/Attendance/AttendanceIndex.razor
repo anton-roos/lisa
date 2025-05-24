@@ -1,39 +1,11 @@
 @page "/attendance"
-@inject NavigationManager NavigationManager
+@using Lisa.Components.Shared
 
 <PageTitle>Attendance</PageTitle>
 
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Attendance}")">
     <Authorized>
-        <div class="container">
-            <div class="row">
-                <div class="col-md-12">
-                    <h2>Attendance Management</h2>
-
-                    <div class="row mt-4">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">Morning Sign In</h5>
-                                    <p class="card-text">Record morning attendance for learners.</p>
-                                    <button class="btn btn-primary" @onclick="NavigateToSignIn">Go to Sign In</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">Afternoon Sign Out</h5>
-                                    <p class="card-text">Record end of day attendance for learners.</p>
-                                    <button class="btn btn-primary" @onclick="NavigateToSignOut">Go to Sign Out</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <AttendanceComponent />
     </Authorized>
     <NotAuthorized>
         <Unauthenticated />
@@ -41,13 +13,5 @@
 </AuthorizeView>
 
 @code {
-    private void NavigateToSignIn()
-    {
-        NavigationManager.NavigateTo("/attendance/sign-in");
-    }
-
-    private void NavigateToSignOut()
-    {
-        NavigationManager.NavigateTo("/attendance/sign-out");
-    }
+    // Logic moved to AttendanceComponent
 }

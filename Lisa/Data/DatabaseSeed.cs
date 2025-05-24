@@ -62,7 +62,8 @@ public class DatabaseSeed
             Roles.Principal,
             Roles.Administrator,
             Roles.SchoolManagement,
-            Roles.Teacher
+            Roles.Teacher,
+            Roles.Attendance
         };
 
         foreach (var role in roles)

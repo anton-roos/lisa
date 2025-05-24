@@ -11,7 +11,7 @@ public partial class AttendanceService(
 {
     public async Task<bool> InitiatedAttendanceForToday(Guid? schoolId)
     {
-        var today = DateTime.UtcNow.Date;
+        var today = DateTime.Now.Date;
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var attendance = await dbContext.Attendances
             .FirstOrDefaultAsync(a => a.Start.Date == today && a.SchoolId == schoolId);

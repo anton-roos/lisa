@@ -72,10 +72,9 @@
                                                                   .Where(l => string.IsNullOrEmpty(_searchText) ||
                                                                               $"{l.Name} {l.Surname}".ToLower().Contains(_searchText.ToLower())))
                                                 {
-                                                    <div class="d-flex align-items-center mb-2">
-                                                        <div class="me-3"
-                                                             style="min-width: 150px;">@learner.Name @learner.Surname</div>
-                                                        <div @onclick="() => ToggleAttendance(learner, registerClass)">
+                                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                                        <div style="min-width: 150px;">@learner.Name @learner.Surname</div>
+                                                        <div class="pill-container" @onclick="() => ToggleAttendance(learner, registerClass)">
                                                             @{
                                                                 var pillColor = GetPillColor(learner);
                                                                 var pillClass = $"pill {pillColor}";
@@ -125,6 +124,11 @@
                 text-align: center;
                 cursor: pointer;
                 font-weight: bold;
+            }
+
+            .pill-container {
+                display: flex;
+                justify-content: flex-end;
             }
 
             .present {

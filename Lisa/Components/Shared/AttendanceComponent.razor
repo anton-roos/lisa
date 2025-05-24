@@ -133,12 +133,23 @@
         public int AbsentCount { get; set; }
     }
 
+    [Parameter] public School? SelectedSchool { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
         SubscribeToEvent(UiEvents.SchoolsUpdated);
         
         await LoadDataAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SelectedSchool != null && SelectedSchool != _selectedSchool)
+        {
+            _selectedSchool = SelectedSchool;
+            await LoadDataAsync();
+        }
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)

@@ -1,5 +1,5 @@
 @page "/attendance/sign-out"
-@page "/attendance/sign-out/{AttendanceId:guid}"
+@page "/attendance/sign-out/{AttendanceSessionId:guid}"
 @using Lisa.Models.Entities
 @inject SchoolService SchoolService
 @inject RegisterClassService RegisterClassService
@@ -172,10 +172,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _endTime = DateTime.UtcNow.Date.AddHours(14);
+        _endTimeOnly = new TimeOnly(14, 0);
+
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         SubscribeToEvent(UiEvents.SchoolSelected);
 
-        // Get the current user ID
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         if (user.Identity?.IsAuthenticated ?? false)
@@ -196,14 +198,12 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        // If we have an AttendanceId, load that session
         if (AttendanceSessionId.HasValue)
         {
             await LoadAttendanceSession(AttendanceSessionId.Value);
         }
         else if (_selectedSchool != null)
         {
-            // Otherwise check if there's an existing session for today
             await CheckForExistingSession();
         }
     }
@@ -250,8 +250,8 @@
         // Use end time from session if available, otherwise use default
         if (_currentSession.End.HasValue)
         {
-            _endTimeOnly = TimeOnly.FromDateTime(_endTime); // Update the time input control
-            _endTimeDateTime = _endTime;
+            _endTimeOnly = TimeOnly.FromDateTime(_currentSession.End.Value);
+            _endTimeDateTime = _currentSession.End.Value;
             _isEndTimeConfirmed = true;
         }
         else
@@ -276,22 +276,28 @@
     {
         if (_currentSession == null) return;
 
-        // Load attendance data for this session
-        var attendances = await AttendanceService.GetAsync(_currentSession.Id);
+        var sessionWithRecords = await AttendanceService.GetAsync(_currentSession.Id);
 
-        foreach (var attendance in attendances.AttendanceRecords)
+        if (sessionWithRecords?.AttendanceRecords != null)
         {
-            if (_attendanceData.ContainsKey(attendance.LearnerId))
+            foreach (var record in sessionWithRecords.AttendanceRecords)
             {
-                // Only update sign-out data if it exists
-                if (attendance.End.HasValue)
+                if (!_attendanceData.ContainsKey(record.LearnerId))
                 {
-                    _attendanceData[attendance.LearnerId].HasLeft = true;
-                    _attendanceData[attendance.LearnerId].SignOutTime = attendance.End.Value.ToLocalTime();
+                    _attendanceData[record.LearnerId] = new AttendanceData
+                    {
+                        SignOutTime = record.End.HasValue ? record.End.Value.ToLocalTime() : DateTime.UtcNow,
+                        AttendanceId = record.Id,
+                        HasLeft = record.End.HasValue
+                    };
                 }
-
-                // Store the attendance ID for later updates
-                _attendanceData[attendance.LearnerId].AttendanceId = attendance.Id;
+                else
+                {
+                    var data = _attendanceData[record.LearnerId];
+                    data.SignOutTime = record.End.HasValue ? record.End.Value.ToLocalTime() : data.SignOutTime;
+                    data.AttendanceId = record.Id;
+                    data.HasLeft = record.End.HasValue;
+                }
             }
         }
     }

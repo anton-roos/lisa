@@ -340,8 +340,14 @@
         _attendanceData.Clear();
         _registerClassFilters = ["All"];
         _registerClassNameToIdMap.Clear();
+        
+        // Sort register classes by SystemGrade sequence number
+        var sortedRegisterClasses = _registerClasses
+            .Where(rc => rc?.SchoolGrade?.SystemGrade != null)
+            .OrderBy(rc => rc.SchoolGrade.SystemGrade.SequenceNumber)
+            .ToList();
 
-        foreach (var registerClass in _registerClasses)
+        foreach (var registerClass in sortedRegisterClasses)
         {
             if (registerClass?.SchoolGrade?.SystemGrade?.Name == null) continue;
             var className = registerClass.SchoolGrade.SystemGrade.Name;
@@ -354,7 +360,13 @@
             var learners = await LearnerService.GetByRegisterClassAsync(registerClass.Id);
 
             if (!learners.Any()) continue;
-            _registerClassLearners[className] = learners;
+            
+            // Sort learners by surname then by name
+            _registerClassLearners[className] = learners
+                .OrderBy(l => l.Surname)
+                .ThenBy(l => l.Name)
+                .ToList();
+                
             _registerClassNameToIdMap[className] = registerClass.Id;
 
             foreach (var learner in learners)

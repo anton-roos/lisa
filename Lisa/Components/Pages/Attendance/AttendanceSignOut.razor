@@ -407,11 +407,18 @@
         // Group learners by register class
         var learnersByClass = allLearners
             .Where(l => l.RegisterClass?.SchoolGrade?.SystemGrade?.Name != null)
+            // First, order by SystemGrade's sequence number
+            .OrderBy(l => l.RegisterClass.SchoolGrade.SystemGrade.SequenceNumber)
+            // Then group by grade name
             .GroupBy(l => l.RegisterClass.SchoolGrade.SystemGrade.Name)
-            .ToDictionary(g => g.Key, g => g.ToList());
+            // For each group, sort learners by surname then by name
+            .ToDictionary(
+                g => g.Key, 
+                g => g.OrderBy(l => l.Surname).ThenBy(l => l.Name).ToList()
+            );
             
-        // Set up filter options
-        _registerClassFilters.AddRange(learnersByClass.Keys.OrderBy(name => name));
+        // Set up filter options in the same order as the grades (by sequence number)
+        _registerClassFilters.AddRange(learnersByClass.Keys);
         
         // Store class name to ID mapping for future use
         foreach (var learner in allLearners.Where(l => l.RegisterClass != null))

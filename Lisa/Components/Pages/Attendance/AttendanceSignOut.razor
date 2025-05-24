@@ -388,9 +388,6 @@
         NavigationManager.NavigateTo($"/attendance/sign-out/{_attendance.Id}");
 
         await LoadLearners();
-
-        // Create or confirm attendance records for all learners with confirmed end time
-        //await EnsureAttendanceRecordsExistAsync();
     }
 
     private async Task LoadLearners()
@@ -402,31 +399,35 @@
         _registerClassFilters = ["All"];
         _registerClassNameToIdMap.Clear();
 
-        foreach (var registerClass in _registerClasses)
+        // Get all learners for the school in a single call
+        var allLearners = await LearnerService.GetBySchoolAsync(_selectedSchool.Id);
+        
+        // Group learners by register class
+        var learnersByClass = allLearners
+            .Where(l => l.RegisterClass?.SchoolGrade?.SystemGrade?.Name != null)
+            .GroupBy(l => l.RegisterClass.SchoolGrade.SystemGrade.Name)
+            .ToDictionary(g => g.Key, g => g.ToList());
+            
+        // Set up filter options
+        _registerClassFilters.AddRange(learnersByClass.Keys.OrderBy(name => name));
+        
+        // Store class name to ID mapping for future use
+        foreach (var learner in allLearners.Where(l => l.RegisterClass != null))
         {
-            if (registerClass?.SchoolGrade?.SystemGrade?.Name != null)
+            var className = learner.RegisterClass.SchoolGrade?.SystemGrade?.Name;
+            if (className != null && !_registerClassNameToIdMap.ContainsKey(className))
             {
-                var className = registerClass.SchoolGrade.SystemGrade.Name;
-
-                if (!_registerClassFilters.Contains(className))
-                {
-                    _registerClassFilters.Add(className);
-                }
-
-                var learners = await LearnerService.GetByRegisterClassAsync(registerClass.Id);
-
-                if (learners.Any())
-                {
-                    _learners[className] = learners;
-                    _registerClassNameToIdMap[className] = registerClass.Id;
-
-                    // Initialize attendance data for all learners as present (since they haven't left yet)
-                    foreach (var learner in learners)
-                    {
-                        _attendanceData[learner.Id] = new AttendanceData();
-                    }
-                }
+                _registerClassNameToIdMap[className] = learner.RegisterClass.Id;
             }
+        }
+        
+        // Store grouped learners
+        _learners = learnersByClass;
+        
+        // Initialize attendance data for all learners
+        foreach (var learner in allLearners)
+        {
+            _attendanceData[learner.Id] = new AttendanceData();
         }
 
         StateHasChanged();

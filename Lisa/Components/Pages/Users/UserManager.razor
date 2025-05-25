@@ -210,7 +210,7 @@
     private List<Subject> AvailableSubjects { get; set; } = [];
     private List<int> SchoolApplicableGrades { get; set; } = [];
 
-    private List<string> AvailableRoles { get; set; } = [Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher, Roles.Attendance];
+    private List<string> AvailableRoles { get; set; } = [Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher, Roles.Attendance, Roles.Reception];
 
     [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
     private bool IsCurrentUserSystemAdmin { get; set; }

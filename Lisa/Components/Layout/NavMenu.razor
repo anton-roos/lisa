@@ -88,7 +88,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator}")">
+        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.Reception}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="leave-early">
                     <span class="bi leave-early-icon" aria-hidden="true"></span> Leave Early

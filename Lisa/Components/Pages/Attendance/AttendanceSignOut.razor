@@ -477,7 +477,7 @@
         if (data.HasLeft)
         {
             // Set the sign-out time to now
-            data.SignOutTime = DateTime.UtcNow;
+            data.SignOutTime = DateTime.UtcNow.ToLocalTime();
 
             // Get the register class ID
             if (_registerClassNameToIdMap.TryGetValue(registerClassName, out var registerClassId))
@@ -553,14 +553,6 @@
         // Check if we already have an attendance record for this learner
         if (_attendanceData[learnerId].AttendanceId.HasValue)
         {
-            // Update existing record with sign-out time
-            //     await AttendanceService.RecordSignOutAsync(
-            //         _attendanceData[learnerId].AttendanceId.Value, 
-            //         isEarlyLeave,
-            //         $"Signed out at {DateTime.UtcNow:HH:mm}{(isEarlyLeave ? " (early)" : "")}"
-            //     );
-
-            // Update the record in the _attendanceRecordsByLearner dictionary
             if (_attendanceRecordsByLearner.TryGetValue(learner, out var records))
             {
                 var record = records.FirstOrDefault(r => r.Id == _attendanceData[learnerId].AttendanceId.Value);
@@ -572,18 +564,6 @@
         }
         else
         {
-            // Create a new attendance record with sign-out info
-            // var attendance = await AttendanceService.RecordAttendanceAsync(
-            //     learnerId,
-            //     _selectedSchool.Id,
-            //     registerClassId,
-            //     true, // Assume they were present if they're signing out
-            //     isEarlyLeave ? "Early leave" : "Regular sign out",
-            //     _currentUserId,
-            //     _attendance.Id
-            // );
-
-            // For now, create a temporary record for the UI until API is implemented
             var newRecord = new AttendanceRecord
             {
                 Id = Guid.NewGuid(),

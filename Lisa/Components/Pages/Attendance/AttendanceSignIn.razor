@@ -1,6 +1,7 @@
 @page "/attendance/sign-in"
 @page "/attendance/sign-in/{AttendanceId:guid}"
 @using Lisa.Models.Entities
+@using Lisa.helpers
 @inject SchoolService SchoolService
 @inject RegisterClassService RegisterClassService
 @inject LearnerService LearnerService
@@ -21,7 +22,7 @@
             <div class="row">
                 <div class="col-md-6">
                     <h2>Sign In</h2>
-                    <p>@DateTime.UtcNow.ToString("dd/M")</p>
+                    <p>@TimeHelpers.GetCurrentTimeInLocal().ToString("dd/M")</p>
 
                     @if (_selectedSchool == null)
                     {
@@ -88,7 +89,7 @@
                                                                 }
                                                                 else
                                                                 {
-                                                                    @_attendanceData[learner.Id].SignInTime.ToString("HH:mm")
+                                                                    @TimeHelpers.ConvertToLocal(_attendanceData[learner.Id].SignInTime).ToString("HH:mm")
                                                                 }
                                                             </div>
                                                         </div>
@@ -176,7 +177,7 @@
     protected override async Task OnInitializedAsync()
     {
         // Make sure TimeOnly is properly initialized
-        _startTime = DateTime.UtcNow.AddHours(7);
+        _startTime = TimeHelpers.GetCurrentTime().AddHours(7);
         _startTimeOnly = new TimeOnly(7, 0);
 
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
@@ -301,7 +302,7 @@
                 {
                     _attendanceData[record.LearnerId] = new AttendanceData
                     {
-                        SignInTime = record.Start.HasValue ? record.Start.Value.ToLocalTime() : DateTime.UtcNow,
+                        SignInTime = record.Start.HasValue ? TimeHelpers.ConvertToLocal(record.Start.Value) : TimeHelpers.GetCurrentTimeInLocal(),
                         AttendanceId = record.Id,
                         IsPresent = record.Start.HasValue
                     };
@@ -321,7 +322,7 @@
     {
         if (_selectedSchool == null) return;
 
-        _startTime = DateTime.UtcNow.Date.Add(_startTimeOnly.ToTimeSpan());
+        _startTime = TimeHelpers.GetCurrentTime().Date.Add(_startTimeOnly.ToTimeSpan());
         _startTimeDateTime = _startTime;
         _isStartTimeConfirmed = true;
 
@@ -401,7 +402,7 @@
 
         if (data.IsPresent)
         {
-            data.SignInTime = DateTime.UtcNow;
+            data.SignInTime = TimeHelpers.GetCurrentTime();
         }
 
         if (_registerClassNameToIdMap.TryGetValue(registerClassName, out var registerClassId))
@@ -423,7 +424,7 @@
 
         var attendanceRecord = new AttendanceRecord()
         {
-            Start = DateTime.UtcNow,
+            Start = TimeHelpers.GetCurrentTime(),
             End = null,
             AttendanceType = AttendanceType.CheckIn,
             LearnerId = learnerId,
@@ -436,7 +437,7 @@
     private async Task UpdateAttendanceStatus(Guid attendanceId, bool isPresent)
     {
         var notes = isPresent
-            ? $"Updated to present at {DateTime.UtcNow:HH:mm}"
+            ? $"Updated to present at {TimeHelpers.GetCurrentTimeInLocal():HH:mm}"
             : "Updated to absent";
     }
 

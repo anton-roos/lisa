@@ -313,6 +313,9 @@
                 signOutTime: DateTime.MinValue
             );
         }
+        
+        // Ensure the async method has at least one await operation
+        await Task.CompletedTask;
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)
@@ -413,25 +416,25 @@
         var learnersByClass = allLearners
             .Where(l => l.RegisterClass?.SchoolGrade?.SystemGrade?.Name != null)
             // First, order by SystemGrade's sequence number
-            .OrderBy(l => l.RegisterClass.SchoolGrade.SystemGrade.SequenceNumber)
+            .OrderBy(l => l.RegisterClass?.SchoolGrade?.SystemGrade?.SequenceNumber)
             // Then group by grade name
-            .GroupBy(l => l.RegisterClass.SchoolGrade.SystemGrade.Name)
+            .GroupBy(l => l.RegisterClass?.SchoolGrade?.SystemGrade?.Name)
             // For each group, sort learners by surname then by name
             .ToDictionary(
-                g => g.Key, 
+                g => g.Key ?? "Unknown", 
                 g => g.OrderBy(l => l.Surname).ThenBy(l => l.Name).ToList()
             );
             
         // Set up filter options in the same order as the grades (by sequence number)
-        _registerClassFilters.AddRange(learnersByClass.Keys);
+        _registerClassFilters.AddRange(learnersByClass.Keys.Where(k => k != null));
         
         // Store class name to ID mapping for future use
         foreach (var learner in allLearners.Where(l => l.RegisterClass != null))
         {
-            var className = learner.RegisterClass.SchoolGrade?.SystemGrade?.Name;
+            var className = learner.RegisterClass?.SchoolGrade?.SystemGrade?.Name;
             if (className != null && !_registerClassNameToIdMap.ContainsKey(className))
             {
-                _registerClassNameToIdMap[className] = learner.RegisterClass.Id;
+                _registerClassNameToIdMap[className] = learner.RegisterClass?.Id ?? Guid.Empty;
             }
         }
         
@@ -499,19 +502,17 @@
                     //     data.AttendanceId.Value,
                     //     isEarlyLeave,
                     //     $"Signed out at {TimeHelpers.GetCurrentTimeInLocal():HH:mm}{(isEarlyLeave ? " (early)" : "")}"
-                    // );
-                    
-                    // Update the record in the _attendanceRecordsByLearner dictionary
-                    if (_attendanceRecordsByLearner.TryGetValue(learner, out var records))
-                    {
-                        var record = records.FirstOrDefault(r => r.Id == data.AttendanceId.Value);
-                        if (record != null)
-                        {
-                            // Store UTC time in database
-                            record.End = TimeHelpers.GetCurrentTime();
-                            record.Notes = "Regular sign out";
-                            record.UpdatedAt = TimeHelpers.GetCurrentTime();
-                        }
+                    // );                            // Update the record in the _attendanceRecordsByLearner dictionary
+                            if (_attendanceRecordsByLearner.TryGetValue(learner, out var records))
+                            {
+                                var record = records.FirstOrDefault(r => r.Id == data.AttendanceId.Value);
+                                if (record != null)
+                                {
+                                    // Use TimeHelpers to ensure consistent time handling
+                                    record.End = TimeHelpers.GetCurrentTime();
+                                    record.Notes = "Regular sign out";
+                                    record.UpdatedAt = TimeHelpers.GetCurrentTime();
+                                }
                     }
                 }
                 else
@@ -558,12 +559,12 @@
         if (_attendanceData[learnerId].AttendanceId.HasValue)
         {
             // This is the preferred path - update the existing record
-            if (_attendanceRecordsByLearner.TryGetValue(learner, out var records))
+            if (_attendanceRecordsByLearner.TryGetValue(learner, out var records) && records != null)
             {
                 var record = records.FirstOrDefault(r => r.Id == _attendanceData[learnerId].AttendanceId.Value);
                 if (record != null)
                 {
-                    // Store UTC time in the database but display local time in UI
+                    // Use TimeHelpers for consistent time handling
                     record.End = TimeHelpers.GetCurrentTime();
                     record.Notes = isEarlyLeave ? "Early leave" : "Regular sign out";
                     record.UpdatedAt = TimeHelpers.GetCurrentTime();
@@ -607,7 +608,8 @@
             //     );
         }
 
-        // Optionally show a success message
+        // Ensure the async method has at least one await operation
+        await Task.CompletedTask;
     }
 
     private string GetPillColor(Learner learner)

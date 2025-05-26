@@ -1,9 +1,11 @@
 @page "/leave-early"
 @page "/leave-early/{LearnerId:guid?}"
 @using Lisa.Models.Entities
+@using Lisa.helpers
 @using System.Security.Claims
 @inject LearnerService LearnerService
 @inject AttendanceService AttendanceService
+@inject AttendanceRecordService AttendanceRecordService
 @inject SchoolService SchoolService 
 @inject EmailService EmailService
 @inject AuditService AuditService
@@ -30,30 +32,48 @@ else
             <i class="oi oi-list"></i> View History
         </button>
     </div>
-    <h4>@CurrentDate.ToString("d/M")</h4>
+    <h4>@TimeHelpers.GetCurrentTimeInLocal().ToString("d/M")</h4>
     
     <div class="row mb-3">
         <div class="col-md-6">
-            <label>School End Time</label>
-            <div class="d-flex align-items-center">
-                <input type="time" @bind="EndTime" class="form-control w-auto me-2" disabled="@EndTimeConfirmed" />
-                @if (!EndTimeConfirmed)
-                {
-                    <button class="btn btn-primary" @onclick="ConfirmEndTime">Confirm</button>
-                }
-                else
-                {
-                    <span class="badge bg-success">School End Time Confirmed</span>
-                }
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">School End Time</h5>
+                    @if (EndTimeConfirmed)
+                    {
+                        <div class="attendance-status active">
+                            <div class="d-flex align-items-center">
+                                <i class="oi oi-check me-2"></i>
+                                <div>
+                                    <div>School closes at <strong>@EndTime?.ToString("HH:mm")</strong></div>
+                                    <small class="text-muted">End time confirmed</small>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="input-group">
+                            <input type="time" @bind="EndTime" class="form-control" />
+                            <button class="btn btn-primary" @onclick="ConfirmEndTime">
+                                Confirm
+                            </button>
+                        </div>
+                        <small class="text-muted">Please set and confirm the school closing time</small>
+                    }
+                </div>
             </div>
         </div>
     </div>
     
     @if (!EndTimeConfirmed)
     {
-        <div class="alert alert-warning">
-            <h5><i class="oi oi-warning"></i> Please confirm school closing time</h5>
-            <p>You need to confirm the school's closing time before continuing. This is required to determine if a learner is leaving early.</p>
+        <div class="alert alert-warning d-flex align-items-center">
+            <i class="oi oi-warning me-3 fs-4"></i>
+            <div>
+                <h5 class="mb-1">Please confirm school closing time</h5>
+                <p class="mb-0">You need to confirm the school's closing time before continuing. This is required to determine if a learner is leaving early.</p>
+            </div>
         </div>
     }
     else if (!LearnerSelected)
@@ -61,10 +81,10 @@ else
         <div class="row mb-3">
             <div class="col">
                 <div class="d-flex mb-3">
-                    @foreach (var grade in RegisterClassFilters)
+                    @foreach (var grade in GradeFilters)
                     {
-                        <button class="btn @(grade == SelectedClass ? "btn-primary" : "btn-secondary") me-2"
-                                @onclick="() => FilterByClass(grade)">
+                        <button class="btn @(grade == SelectedGrade ? "btn-primary" : "btn-secondary") me-2"
+                                @onclick="() => FilterByGrade(grade)">
                             @(grade == "All" ? "All" : $"Gr {grade}")
                         </button>
                     }
@@ -97,7 +117,8 @@ else
                     <thead>
                         <tr>
                             <th>Name</th>
-                            <th>Class</th>
+                            <th>Grade</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -106,7 +127,16 @@ else
                         {
                             <tr>
                                 <td>@learner.Name @learner.Surname</td>
-                                <td>@(learner.RegisterClass?.Name ?? "Unknown")</td>
+                                <td>@(learner.RegisterClass?.SchoolGrade?.SystemGrade?.Name ?? "Unknown")</td>
+                                <td>
+                                    @{
+                                        var status = GetAttendanceStatus(learner);
+                                        var pillClass = $"pill {status.ToLower()}";
+                                    }
+                                    <div class="@pillClass">
+                                        <span>@status</span>
+                                    </div>
+                                </td>
                                 <td>
                                     <button class="btn btn-primary btn-sm" @onclick="() => SelectLearner(learner)">
                                         Process Leave Early
@@ -136,7 +166,16 @@ else
     {
         <div class="card mb-4">
             <div class="card-body">
-                <h5>@SelectedLearner?.Name</h5>
+                <h5>@SelectedLearner?.Name @SelectedLearner?.Surname</h5>
+                <div class="mb-3">
+                    @{
+                        var status = GetAttendanceStatus(SelectedLearner);
+                        var pillClass = $"pill {status.ToLower()}";
+                    }
+                    <div class="@pillClass d-inline-block">
+                        <span>@status</span>
+                    </div>
+                </div>
                 
                 <h5 class="mt-4">Contact Details</h5>
                 @if (ParentContacts.Any())
@@ -303,33 +342,63 @@ else
     }
 </div>
 }
+
+<style>
+    .pill {
+        padding: 5px 15px;
+        border-radius: 20px;
+        display: inline-block;
+        min-width: 100px;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .present {
+        background-color: #4CAF50;
+        color: white;
+    }
+
+    .not-at-school {
+        background-color: rgb(134, 134, 134);
+        color: white;
+    }
+
+    .processing {
+        opacity: 0.7;
+        pointer-events: none;
+    }
+</style>
+
 @code {
     [Parameter]
     public Guid? LearnerId { get; set; }
 
     [CascadingParameter]
     private Task<AuthenticationState> AuthState { get; set; } = default!;
-    private DateTime CurrentDate { get; set; } = DateTime.UtcNow.Date;
+    private DateTime CurrentDate { get; set; } = TimeHelpers.GetCurrentTimeInLocal().Date;
 
     private School? _selectedSchool; 
     
-    private string CurrentTime => DateTime.UtcNow.ToString("HH:mm");
+    private string CurrentTime => TimeHelpers.GetCurrentTimeInLocal().ToString("HH:mm");
     private TimeOnly? EndTime { get; set; } = new TimeOnly(14, 0);
     private bool EndTimeConfirmed { get; set; } = false;
     private Attendance? _currentSession;
     
     private string SearchTerm { get; set; } = "";
-    private string SelectedClass { get; set; } = "All";
+    private string SelectedGrade { get; set; } = "All";
     private List<Learner> SearchResults { get; set; } = [];
     private List<Learner> AllLearners { get; set; } = [];
-    private List<string> RegisterClassFilters { get; set; } = ["All"];
+    private List<string> GradeFilters { get; set; } = ["All"];
+    private Dictionary<Guid, bool> LearnerAttendanceStatus { get; set; } = new();
     private bool IsLoading { get; set; } = false;
     
     private IEnumerable<Learner> FilteredLearners => AllLearners
-        .Where(l => (SelectedClass == "All" || 
-                   (l.RegisterClass != null && l.RegisterClass.Name == SelectedClass)) &&
+        .Where(l => (SelectedGrade == "All" || 
+                   (l.RegisterClass?.SchoolGrade?.SystemGrade?.Name == SelectedGrade)) &&
                   (string.IsNullOrEmpty(SearchTerm) || 
                    $"{l.Name} {l.Surname}".ToLower().Contains(SearchTerm.ToLower())))
+        .OrderBy(l => l.Surname)
+        .ThenBy(l => l.Name)
         .ToList();
     
     private Learner? SelectedLearner { get; set; }
@@ -389,36 +458,94 @@ else
             
             if (activeSession.End.HasValue)
             {
+                // If session already has an end time, use it and set as confirmed
+                EndTime = TimeOnly.FromDateTime(TimeHelpers.ConvertToLocal(activeSession.End.Value));
                 EndTimeConfirmed = true;
                 Console.WriteLine($"Using existing active session with end time: {EndTime}");
                 await InvokeAsync(StateHasChanged);
             }
+            
+            // Load attendance records to determine who is present
+            await LoadAttendanceData();
+            
             return;
         }
+    }
+    
+    private async Task LoadAttendanceData()
+    {
+        if (_currentSession == null || _selectedSchool == null) return;
+        
+        // Clear existing data
+        LearnerAttendanceStatus.Clear();
+        
+        // Get all attendance records for the current session
+        var sessionWithRecords = await AttendanceService.GetAsync(_currentSession.Id);
+        
+        if (sessionWithRecords?.AttendanceRecords != null)
+        {
+            // Mark learners with a record as present (checked in)
+            foreach (var record in sessionWithRecords.AttendanceRecords)
+            {
+                LearnerAttendanceStatus[record.LearnerId] = record.Start.HasValue;
+            }
+        }
+    }
+    
+    private string GetAttendanceStatus(Learner? learner)
+    {
+        if (learner == null) return "Not At School";
+        
+        // Check if the learner has checked in today
+        if (LearnerAttendanceStatus.TryGetValue(learner.Id, out var isPresent) && isPresent)
+        {
+            return "Present";
+        }
+        
+        return "Not At School";
     }
     
     private async Task ConfirmEndTime()
     {
         if (_selectedSchool == null || !CurrentUserId.HasValue) return;
 
-        EndTimeConfirmed = true;
-
-        if (_currentSession == null)
+        if (!EndTime.HasValue)
         {
-            var startTime = DateTime.UtcNow.Date.AddHours(7);
-
-            if (EndTime.HasValue)
-            {
-                var endTimeDateTime = DateTime.UtcNow.Date.Add(EndTime.Value.ToTimeSpan());
-                await AttendanceService.UpdateAttendanceEndTimeAsync(
-                    _currentSession!.Id,
-                    endTimeDateTime
-                );
-
-                Console.WriteLine($"Created new session with start time {startTime.ToLocalTime():HH:mm} and end time {EndTime.Value:HH:mm}");
-            }
+            await JSRuntime.InvokeVoidAsync("alert", "Please select a valid end time");
+            return;
         }
 
+        // Set this to true to allow continuing with the process
+        EndTimeConfirmed = true;
+
+        // Get or create the attendance session
+        if (_currentSession == null)
+        {
+            // If there's no session yet, create a new one
+            var startTime = TimeHelpers.GetCurrentTime().Date.AddHours(7);
+            var endTimeDateTime = TimeHelpers.GetCurrentTime().Date.Add(EndTime.Value.ToTimeSpan());
+            
+            _currentSession = await AttendanceService.CreateAttendanceAsync(
+                _selectedSchool.Id,
+                startTime,
+                endTimeDateTime
+            );
+
+            Console.WriteLine($"Created new session with start time {TimeHelpers.ConvertToLocal(startTime):HH:mm} and end time {EndTime.Value:HH:mm}");
+        }
+        else if (!_currentSession.End.HasValue)
+        {
+            // If session exists but doesn't have an end time, update it
+            var endTimeDateTime = TimeHelpers.GetCurrentTime().Date.Add(EndTime.Value.ToTimeSpan());
+            await AttendanceService.UpdateAttendanceEndTimeAsync(
+                _currentSession.Id,
+                endTimeDateTime
+            );
+            
+            Console.WriteLine($"Updated existing session (ID: {_currentSession.Id}) with end time {EndTime.Value:HH:mm}");
+        }
+
+        await LoadAttendanceData();
         await InvokeAsync(StateHasChanged);
     }
     
@@ -446,7 +573,7 @@ else
     private async Task ClearFilters()
     {
         SearchTerm = "";
-        SelectedClass = "All";
+        SelectedGrade = "All";
         SelectedLearner = null;
         ParentContacts.Clear();
         await InvokeAsync(StateHasChanged);
@@ -468,17 +595,20 @@ else
 
             Console.WriteLine($"Loaded {AllLearners.Count} learners for school {_selectedSchool.LongName}");
 
-            RegisterClassFilters = ["All"];
-            var classNames = AllLearners
-                .Where(l => l.RegisterClass?.Name != null)
-                .Select(l => l.RegisterClass!.Name!)
+            // Initialize grade filters
+            GradeFilters = ["All"];
+            
+            // Group learners by grade
+            var gradeNames = AllLearners
+                .Where(l => l.RegisterClass?.SchoolGrade?.SystemGrade?.Name != null)
+                .Select(l => l.RegisterClass!.SchoolGrade!.SystemGrade!.Name)
                 .Distinct()
                 .OrderBy(n => n)
                 .ToList();
 
-            RegisterClassFilters.AddRange(classNames);
+            GradeFilters.AddRange(gradeNames);
 
-            Console.WriteLine($"Found {classNames.Count} unique register classes for filtering");
+            Console.WriteLine($"Found {gradeNames.Count} unique grades for filtering");
         }
         catch (Exception ex)
         {
@@ -511,9 +641,9 @@ else
         );
     }
 
-    private async Task FilterByClass(string className)
+    private async Task FilterByGrade(string gradeName)
     {
-        SelectedClass = className;
+        SelectedGrade = gradeName;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -619,9 +749,9 @@ else
             if (EndTime.HasValue)
             {
                 var endTimeDateTime = CurrentDate.Add(EndTime.Value.ToTimeSpan());
-                var isEarlyLeave = DateTime.UtcNow < endTimeDateTime;
+                var isEarlyLeave = TimeHelpers.GetCurrentTimeInLocal() < endTimeDateTime;
                 
-                var leaveNotes = $"Left early at {DateTime.UtcNow:HH:mm}. " +
+                var leaveNotes = $"Left early at {TimeHelpers.GetCurrentTimeInLocal():HH:mm}. " +
                                  $"Permission: {SelectedPermissionMethod}. " +
                                  $"Pickup: {SelectedPickupOption}. " +
                                  $"{Notes}";
@@ -631,36 +761,7 @@ else
                     leaveNotes += $" Registration: {RegistrationNumber}";
                 }
 
-                // if (attendance != null)
-                // {
-                //     await AttendanceService.RecordSignOutAsync(
-                //         attendance.Id,
-                //         isEarlyLeave,
-                //         leaveNotes
-                //     );
-                // }
-                // else
-                // {
-                //     var sessionId = _currentSession?.Id;
-                //     attendance = await AttendanceService.RecordAttendanceAsync(
-                //         SelectedLearner.Id,
-                //         _selectedSchool.Id,
-                //         CurrentRegisterClassId.Value,
-                //         true,
-                //         leaveNotes,
-                //         CurrentUserId,
-                //         sessionId
-                //     );
-                //     
-                //     if (attendance != null)
-                //     {
-                //         await AttendanceService.RecordSignOutAsync(
-                //             attendance.Id,
-                //             isEarlyLeave,
-                //             leaveNotes
-                //         );
-                //     }
-                // }
+
                 
                 await SendEmailNotification(isEarlyLeave);
                 
@@ -668,7 +769,7 @@ else
                 {
                     await AuditService.LogActivityAsync(
                         "Learner Left Early",
-                        $"Learner {SelectedLearner.Name} left school at {currentTime:HH:mm}",
+                        $"Learner {SelectedLearner.Name} left school at {TimeHelpers.GetCurrentTimeInLocal():HH:mm}",
                         SelectedLearner.Id,
                         CurrentUserId
                     );
@@ -705,7 +806,7 @@ else
                     $"School Notification: {SelectedLearner.Name} Left School",
                     $@"Dear {contact.Name},
 
-This is to inform you that {SelectedLearner.Name} left school at {DateTime.UtcNow:HH:mm} on {CurrentDate:d MMMM yyyy}.
+This is to inform you that {SelectedLearner.Name} left school at {TimeHelpers.GetCurrentTimeInLocal():HH:mm} on {TimeHelpers.GetCurrentTimeInLocal():d MMMM yyyy}.
 
 Permission method: {SelectedPermissionMethod}
 Pickup arrangement: {SelectedPickupOption}

@@ -310,7 +310,7 @@
                 else
                 {
                     var data = _attendanceData[record.LearnerId];
-                    data.SignInTime = record.Start.HasValue ? record.Start.Value.ToLocalTime() : data.SignInTime;
+                    data.SignInTime = record.Start.HasValue ? TimeHelpers.ConvertToLocal(record.Start.Value) : data.SignInTime;
                     data.AttendanceId = record.Id;
                     data.IsPresent = record.Start.HasValue;
                 }
@@ -349,7 +349,7 @@
         // Sort register classes by SystemGrade sequence number
         var sortedRegisterClasses = _registerClasses
             .Where(rc => rc?.SchoolGrade?.SystemGrade != null)
-            .OrderBy(rc => rc.SchoolGrade.SystemGrade.SequenceNumber)
+            .OrderBy(rc => rc.SchoolGrade?.SystemGrade?.SequenceNumber)
             .ToList();
 
         foreach (var registerClass in sortedRegisterClasses)
@@ -439,6 +439,9 @@
         var notes = isPresent
             ? $"Updated to present at {TimeHelpers.GetCurrentTimeInLocal():HH:mm}"
             : "Updated to absent";
+            
+        // This method is async but currently has no await operation
+        await Task.CompletedTask;
     }
 
     private string GetPillColor(Learner learner)

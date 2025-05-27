@@ -77,19 +77,43 @@
                                                 {
                                                     <div class="d-flex align-items-center justify-content-between mb-2">
                                                         <div style="min-width: 150px;">@learner.Name @learner.Surname</div>
-                                                        <div class="pill-container" @onclick="() => ToggleAttendance(learner, registerClass)">
-                                                            @{
-                                                                var pillColor = GetPillColor(learner);
-                                                                var pillClass = $"pill {pillColor}";
-                                                            }
-                                                            <div class="@pillClass">
-                                                                @if (pillColor == "absent")
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="pill-container">
+                                                                @{
+                                                                    var pillColor = GetPillColor(learner);
+                                                                    var pillClass = $"pill {pillColor}";
+                                                                }
+                                                                <div class="@pillClass" @onclick="() => ToggleAttendance(learner, registerClass)">
+                                                                    @if (pillColor == "absent")
+                                                                    {
+                                                                        <span>Absent</span>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        @TimeHelpers.ConvertToLocal(_attendanceData[learner.Id].SignInTime).ToString("HH:mm")
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                            <div class="phone-button-container">
+                                                                @if (pillColor == "on-time" || pillColor == "late")
                                                                 {
-                                                                    <span>Absent</span>
+                                                                    @if (IsCellPhoneCollected(learner))
+                                                                    {
+                                                                        <button class="btn btn-phone-collected ms-2" disabled>
+                                                                            <i class="bi bi-phone"></i> Collected
+                                                                        </button>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <button class="btn btn-phone ms-2" @onclick="(e) => CollectPhone(e, learner)">
+                                                                            <i class="bi bi-phone"></i> Collect
+                                                                        </button>
+                                                                    }
                                                                 }
                                                                 else
                                                                 {
-                                                                    @TimeHelpers.ConvertToLocal(_attendanceData[learner.Id].SignInTime).ToString("HH:mm")
+                                                                    <!-- Empty div to maintain spacing when no button is shown -->
+                                                                    <div style="width: 0;"></div>
                                                                 }
                                                             </div>
                                                         </div>
@@ -124,6 +148,13 @@
             .pill-container {
                 display: flex;
                 justify-content: flex-end;
+                min-width: 100px; /* Ensure consistent width */
+            }
+            
+            .phone-button-container {
+                min-width: 120px; /* Ensure consistent width for the button area */
+                display: flex;
+                justify-content: flex-start;
             }
 
             .on-time {
@@ -140,6 +171,22 @@
             .absent {
                 background-color: #f44336;
                 color: white;
+            }
+            
+            .btn-phone {
+                background-color: #8a2be2;
+                color: white;
+                border-radius: 20px;
+                min-width: 100px;
+                font-size: 0.9rem;
+            }
+            
+            .btn-phone-collected {
+                background-color: #4CAF50;
+                color: white;
+                border-radius: 20px;
+                min-width: 100px;
+                font-size: 0.9rem;
             }
         </style>
     </Authorized>
@@ -294,10 +341,16 @@
 
         var sessionWithRecords = await AttendanceService.GetAsync(_currentSession.Id);
 
+        // Clear the existing attendance record map
+        _learnerToAttendanceRecordMap.Clear();
+
         if (sessionWithRecords?.AttendanceRecords != null)
         {
             foreach (var record in sessionWithRecords.AttendanceRecords)
             {
+                // Store the attendance record for cell phone tracking
+                _learnerToAttendanceRecordMap[record.LearnerId] = record;
+                
                 if (!_attendanceData.ContainsKey(record.LearnerId))
                 {
                     _attendanceData[record.LearnerId] = new AttendanceData
@@ -481,5 +534,66 @@
 
         // Refresh attendance data to get the IDs
         await LoadAttendanceData();
+    }
+
+    private Dictionary<Guid, AttendanceRecord> _learnerToAttendanceRecordMap = new();
+    
+    // Helper methods for cellphone collection
+    private bool IsCellPhoneCollected(Learner learner)
+    {
+        if (_attendanceData.TryGetValue(learner.Id, out var data) && data.AttendanceId.HasValue)
+        {
+            if (_learnerToAttendanceRecordMap.TryGetValue(learner.Id, out var record))
+            {
+                return record.CellPhoneCollected;
+            }
+        }
+        return false;
+    }
+    
+    private async Task CollectPhone(MouseEventArgs e, Learner learner)
+    {
+        // For present students, we need to collect their phone
+        if (!_attendanceData.TryGetValue(learner.Id, out var data) || !data.AttendanceId.HasValue)
+        {
+            // This should not happen for present students, but just in case
+            return;
+        }
+        
+        // Get the attendance record from our map or from the service
+        AttendanceRecord? record = null;
+        if (_learnerToAttendanceRecordMap.TryGetValue(learner.Id, out var cachedRecord))
+        {
+            record = cachedRecord;
+        }
+        else
+        {
+            record = await AttendanceRecordService.GetByIdAsync(data.AttendanceId.Value);
+            if (record != null)
+            {
+                _learnerToAttendanceRecordMap[learner.Id] = record;
+            }
+        }
+        
+        if (record == null)
+        {
+            return;
+        }
+        
+        // Only allow collection, not return, at sign-in
+        if (!record.CellPhoneCollected)
+        {
+            // Set cell phone collected to true
+            record.CellPhoneCollected = true;
+            record.UpdatedAt = TimeHelpers.GetCurrentTime();
+            
+            bool success = await AttendanceRecordService.ToggleCellPhoneCollectedAsync(record.Id);
+            
+            if (success)
+            {
+                // Force UI update
+                await InvokeAsync(StateHasChanged);
+            }
+        }
     }
 }

@@ -110,4 +110,33 @@ public class AttendanceRecordService(
 
         return true;
     }
+
+    public async Task<bool> ToggleCellPhoneCollectedAsync(Guid attendanceRecordId)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var record = await dbContext.AttendanceRecords.FindAsync(attendanceRecordId);
+
+        if (record == null)
+        {
+            logger.LogWarning("Attempted to toggle cellphone collection for non-existent attendance record {AttendanceRecordId}", attendanceRecordId);
+            return false;
+        }
+
+        record.CellPhoneCollected = !record.CellPhoneCollected;
+        record.UpdatedAt = DateTime.UtcNow;
+
+        await dbContext.SaveChangesAsync();
+        logger.LogInformation("Toggled cellphone collection for attendance record {AttendanceRecordId} to {CellPhoneCollected}", 
+            attendanceRecordId, record.CellPhoneCollected);
+
+        return true;
+    }
+    
+    public async Task<AttendanceRecord?> GetByIdAsync(Guid attendanceRecordId)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        return await dbContext.AttendanceRecords
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == attendanceRecordId);
+    }
 }

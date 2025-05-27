@@ -38,9 +38,9 @@
                                         <i class="bi bi-person-check" style="font-size: 2rem;"></i>
                                     </div>
                                     <div>
-                                        <h5 class="card-title mb-1">@(_todayAttendance != null ? "Continue Check In" : "Start Check In")</h5>
+                                        <h5 class="card-title mb-1">@(_todayAttendance != null ? "Continue Sign In" : "Start Sign In")</h5>
                                         <p class="card-text text-muted mb-0">Record attendance for learners arriving at school.</p>
-                                        <small class="text-transparent">placeholder</small>
+                                        <small class="text-transparent"></small>
                                     </div>
                                 </div>
                             </div>
@@ -53,15 +53,15 @@
                                         <i class="bi bi-box-arrow-right" style="font-size: 2rem;"></i>
                                     </div>
                                     <div>
-                                        <h5 class="card-title mb-1">Check Out</h5>
+                                        <h5 class="card-title mb-1">Sign Out</h5>
                                         <p class="card-text text-muted mb-0">Record attendance for learners leaving school.</p>
                                         @if (_todayAttendance is null)
                                         {
-                                            <small class="text-danger">(Check-in required first)</small>
+                                            <small class="text-danger">(Sign in required first)</small>
                                         }
                                         else
                                         {
-                                            <small class="text-transparent">placeholder</small>
+                                            <small class="text-transparent"></small>
                                         }
                                     </div>
                                 </div>
@@ -92,13 +92,13 @@
                                         <div class="col-md-4">
                                             <div class="stat-card">
                                                 <div class="stat-card-value text-success">@_attendanceStats.CheckedInCount</div>
-                                                <div class="stat-card-label">Checked in</div>
+                                                <div class="stat-card-label">Signed in</div>
                                             </div>
                                         </div>
                                         <div class="col-md-4">
                                             <div class="stat-card">
                                                 <div class="stat-card-value text-primary">@_attendanceStats.CheckedOutCount</div>
-                                                <div class="stat-card-label">Checked out</div>
+                                                <div class="stat-card-label">Signed out</div>
                                             </div>
                                         </div>
                                         <div class="col-md-4">

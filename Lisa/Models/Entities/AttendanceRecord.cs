@@ -12,4 +12,5 @@ public class AttendanceRecord : Entity
     public DateTime? End { get; set; }
     public string? Notes { get; set; }
     public AttendanceType AttendanceType { get; set; }
+    public bool CellPhoneCollected { get; set; } = false;
 }

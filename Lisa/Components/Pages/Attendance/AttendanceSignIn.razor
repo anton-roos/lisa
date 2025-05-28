@@ -19,6 +19,13 @@
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Attendance}")">
     <Authorized>
         <div class="container">
+            <button class="btn btn-secondary mb-3" @onclick="NavigateToAttendanceHome">
+                <i class="bi bi-arrow-left"></i> Back
+            </button>
+            <button class="btn btn-secondary mb-3" @onclick="NavigateToSignOut">
+                <i class="bi bi-arrow-right"></i> Sign Out
+            </button>
+
             @if (isLoading)
             {
                 <div class="overlay d-flex justify-content-center align-items-center">
@@ -416,6 +423,11 @@
     private void NavigateToAttendanceHome()
     {
         NavigationManager.NavigateTo("/attendance");
+    }
+    
+    private void NavigateToSignOut()
+    {
+        NavigationManager.NavigateTo($"/attendance/sign-out/{AttendanceId}");
     }
 
     // This method is no longer used as time confirmation happens at the component level

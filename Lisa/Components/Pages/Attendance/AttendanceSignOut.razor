@@ -35,6 +35,13 @@
                     }
                     else
                     {
+                        <button class="btn btn-secondary mb-3" @onclick="NavigateToAttendanceHome">
+                            <i class="bi bi-arrow-left"></i> Back
+                        </button>
+                        <button class="btn btn-secondary mb-3" @onclick="NavigateToSignIn">
+                            <i class="bi bi-arrow-left"></i> Sign In
+                        </button>
+
                         @if (_attendance != null)
                         {
                             <div class="d-flex mb-3">
@@ -332,23 +339,9 @@
         NavigationManager.NavigateTo("/attendance");
     }
 
-    // This method is no longer used as time confirmation happens at the component level
-    private async Task ConfirmEndTime()
+    private void NavigateToSignIn()
     {
-        if (_selectedSchool == null) return;
-        
-        // This is now done at the component level, but we keep the method for backward compatibility
-        if (_attendance == null)
-        {
-            _attendance = await AttendanceService.GetTodaysAttendanceAsync(_selectedSchool.Id);
-            
-            if (_attendance != null)
-            {
-                await LoadLearners();
-                await LoadAttendanceData();
-                NavigationManager.NavigateTo($"/attendance/sign-out/{_attendance.Id}");
-            }
-        }
+        NavigationManager.NavigateTo($"/attendance/sign-in/{AttendanceId}");
     }
     
     private async Task LoadAttendanceData()

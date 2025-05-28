@@ -95,7 +95,7 @@
                                                             <div class="phone-button-container">
                                                                 @if (HasAttendanceRecord(learner))
                                                                 {
-                                                                    @if (IsCellPhoneCollected(learner))
+                                                                    @if (IsCellPhoneCollected(learner) && !WasPhoneReturned(learner))
                                                                     {
                                                                         <button class="btn btn-phone ms-2" @onclick="(e) => TogglePhoneCollection(e, learner)">
                                                                             <i class="bi bi-phone"></i> Return
@@ -106,11 +106,6 @@
                                                                         <button class="btn btn-phone-returned ms-2" disabled>
                                                                             <i class="bi bi-phone"></i> Returned
                                                                         </button>
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        <!-- Empty div to maintain spacing when no button is shown -->
-                                                                        <div style="width: 0;"></div>
                                                                     }
                                                                 }
                                                             </div>
@@ -194,6 +189,14 @@
 
             .btn-phone-returned {
                 background-color: #4CAF50;
+                color: white;
+                border-radius: 20px;
+                min-width: 100px;
+                font-size: 0.9rem;
+            }
+
+            .btn-phone-collect {
+                background-color: #FF9800;
                 color: white;
                 border-radius: 20px;
                 min-width: 100px;
@@ -555,7 +558,11 @@
                         recordToUpdate.Notes = isEarlyLeave ? "Early leave" : "Regular sign out";
                         recordToUpdate.UpdatedAt = TimeHelpers.GetCurrentTime();
                         
-                        // In a real implementation with service call, you would update the database here
+                        // Save changes to the database
+                        await AttendanceRecordService.UpdateAsync(recordToUpdate);
+                        
+                        // Log successful update
+                        Console.WriteLine($"Updated attendance record {recordToUpdate.Id} for learner {learner.Name} {learner.Surname}");
                     }
                     
                     // Update the record in the _attendanceRecordsByLearner dictionary
@@ -583,7 +590,21 @@
             // If toggling back to not left, remove the sign-out time
             if (data.AttendanceId.HasValue)
             {
-                //await AttendanceService.ClearSignOutAsync(data.AttendanceId.Value);
+                // Get record from database
+                var recordToUpdate = await AttendanceRecordService.GetByIdAsync(data.AttendanceId.Value);
+                if (recordToUpdate != null)
+                {
+                    // Clear the end time
+                    recordToUpdate.End = null;
+                    recordToUpdate.UpdatedAt = TimeHelpers.GetCurrentTime();
+                    
+                    // Update in database
+                    await AttendanceRecordService.UpdateAsync(recordToUpdate);
+                    
+                    // Log operation
+                    await JSRuntime.InvokeVoidAsync("console.log", 
+                        $"Cleared sign-out time for {learner.Name} {learner.Surname}");
+                }
                 
                 // Update the record in the _attendanceRecordsByLearner dictionary
                 if (_attendanceRecordsByLearner.TryGetValue(learner, out var records))
@@ -595,6 +616,13 @@
                     }
                 }
             }
+        }
+        
+        // Refresh data to ensure synchronization with database
+        if (_attendance != null)
+        {
+            _attendance = await AttendanceService.GetAsync(_attendance.Id);
+            await LoadAttendanceData();
         }
         
         // Force UI update
@@ -624,16 +652,30 @@
                 if (attendanceId.HasValue)
                 {
                     record = records.FirstOrDefault(r => r.Id == attendanceId.Value);
-                }
-                if (record != null)
-                {
-                    // Use TimeHelpers for consistent time handling
-                    record.End = TimeHelpers.GetCurrentTime();
-                    record.Notes = isEarlyLeave ? "Early leave" : "Regular sign out";
-                    record.UpdatedAt = TimeHelpers.GetCurrentTime();
                     
-                    // In a real implementation with service call:
-                    // await AttendanceService.UpdateAttendanceRecordAsync(record);
+                    // Also get from database to ensure we're updating the actual record
+                    var dbRecord = await AttendanceRecordService.GetByIdAsync(attendanceId.Value);
+                    if (dbRecord != null)
+                    {
+                        // Use TimeHelpers for consistent time handling
+                        dbRecord.End = TimeHelpers.GetCurrentTime();
+                        dbRecord.Notes = isEarlyLeave ? "Early leave" : "Regular sign out";
+                        dbRecord.UpdatedAt = TimeHelpers.GetCurrentTime();
+                        
+                        // Update in database
+                        await AttendanceRecordService.UpdateAsync(dbRecord);
+                        
+                        // Sync with in-memory record if it exists
+                        if (record != null)
+                        {
+                            record.End = dbRecord.End;
+                            record.Notes = dbRecord.Notes;
+                            record.UpdatedAt = dbRecord.UpdatedAt;
+                        }
+                        
+                        await JSRuntime.InvokeVoidAsync("console.log", 
+                            $"Updated sign-out status for {learner.Name} {learner.Surname}: {(isEarlyLeave ? "Early leave" : "Regular sign out")}");
+                    }
                 }
             }
         }
@@ -655,6 +697,9 @@
                 AttendanceType = AttendanceType.CheckIn
             };
 
+            // Add to database
+            await AttendanceRecordService.CreateAsync(newRecord);
+
             // Add the record to the learner's collection in our dictionary
             if (!_attendanceRecordsByLearner.TryGetValue(learner, out _))
             {
@@ -664,15 +709,17 @@
 
             // Store the ID and update with sign-out info
             _attendanceData[learnerId].AttendanceId = newRecord.Id;
-            //     await AttendanceService.RecordSignOutAsync(
-            //         attendance.Id,
-            //         isEarlyLeave,
-            //         $"Signed out at {TimeHelpers.GetCurrentTimeInLocal():HH:mm}{(isEarlyLeave ? " (early)" : "")}"
-            //     );
+            
+            await JSRuntime.InvokeVoidAsync("console.log", 
+                $"Created new sign-out record for {learner.Name} {learner.Surname}: {(isEarlyLeave ? "Early leave" : "Regular sign out")}");
         }
 
-        // Ensure the async method has at least one await operation
-        await Task.CompletedTask;
+        // Refresh data to ensure synchronization with database
+        if (_attendance != null)
+        {
+            _attendance = await AttendanceService.GetAsync(_attendance.Id);
+            await LoadAttendanceData();
+        }
     }
 
     private string GetPillColor(Learner learner)
@@ -749,17 +796,6 @@
                                 attendanceId: newRecord.Id
                             );
                         }
-
-                        // In a real implementation, you would call the service:
-                        // var attendance = await AttendanceService.RecordAttendanceAsync(
-                        //     learner.Id,
-                        //     _selectedSchool.Id,
-                        //     registerClassId,
-                        //     true, // Assume they were present since we're at sign-out
-                        //     "Record created at sign-out time",
-                        //     _currentUserId,
-                        //     _attendance.Id
-                        // );
                     }
                 }
             }
@@ -801,45 +837,99 @@
 
     private bool WasPhoneReturned(Learner learner)
     {
-        // Check our local tracking dictionary
-        return _returnedPhones.ContainsKey(learner.Id) && _returnedPhones[learner.Id];
+        if (_attendanceRecordsByLearner.TryGetValue(learner, out var records))
+        {
+            var record = records
+                .Where(r => r.AttendanceType == AttendanceType.CheckIn)
+                .OrderByDescending(r => r.CreatedAt)
+                .FirstOrDefault();
+            
+            return record?.CellPhoneReturned ?? false;
+        }
+        return false;
     }
 
     private async Task TogglePhoneCollection(MouseEventArgs e, Learner learner)
     {
-        // Prevent click from triggering the pill's onclick event (e.preventDefault in JavaScript)
-        
-        if (!_attendanceRecordsByLearner.TryGetValue(learner, out var records) || !records.Any())
+        try
         {
-            return;
-        }
-        
-        var record = records
-            .Where(r => r.AttendanceType == AttendanceType.CheckIn)
-            .OrderByDescending(r => r.CreatedAt)
-            .FirstOrDefault();
-            
-        if (record == null || !_attendanceData.TryGetValue(learner.Id, out var data))
-        {
-            return;
-        }
-        
-        // Toggle the cell phone collection status
-        bool success = await AttendanceRecordService.ToggleCellPhoneCollectedAsync(record.Id);
-        
-        if (success)
-        {
-            // Update the record in our local state
-            record.CellPhoneCollected = !record.CellPhoneCollected;
-            
-            // If we're returning a phone (setting CellPhoneCollected to false), mark it as returned in our tracking dictionary
-            if (!record.CellPhoneCollected)
+            // Prevent click from triggering the pill's onclick event (e.preventDefault in JavaScript)
+            if (!_attendanceRecordsByLearner.TryGetValue(learner, out var records) || !records.Any())
             {
-                _returnedPhones[learner.Id] = true;
+                return;
             }
             
-            // Force UI update
-            await InvokeAsync(StateHasChanged);
+            var record = records
+                .Where(r => r.AttendanceType == AttendanceType.CheckIn)
+                .OrderByDescending(r => r.CreatedAt)
+                .FirstOrDefault();
+                
+            if (record == null || !_attendanceData.TryGetValue(learner.Id, out var data))
+            {
+                return;
+            }
+            
+            bool success;
+            
+            // If phone is already collected, toggle the returned status
+            if (record.CellPhoneCollected && !record.CellPhoneReturned)
+            {
+                // Toggle the cell phone returned status
+                success = await AttendanceRecordService.ToggleCellPhoneReturnedAsync(record.Id);
+                
+                if (success)
+                {
+                    // Update the record in our local state
+                    record.CellPhoneReturned = !record.CellPhoneReturned;
+                    record.CellPhoneReturnedAt = record.CellPhoneReturned ? DateTime.UtcNow : null;
+                    
+                    await JSRuntime.InvokeVoidAsync("console.log", 
+                        $"Phone return status toggled for {learner.Name} {learner.Surname}: {(record.CellPhoneReturned ? "Returned" : "Not returned")}");
+                }
+            }
+            else
+            {
+                // Toggle the cell phone collection status
+                success = await AttendanceRecordService.ToggleCellPhoneCollectedAsync(record.Id);
+                
+                if (success)
+                {
+                    // Update the record in our local state
+                    record.CellPhoneCollected = !record.CellPhoneCollected;
+                    
+                    // If we're un-collecting a phone, make sure to reset the returned status too
+                    if (!record.CellPhoneCollected)
+                    {
+                        // If we're toggling phone collection to off, also set returned to false
+                        record.CellPhoneReturned = false;
+                        record.CellPhoneReturnedAt = null;
+                        
+                        // Update the database with these changes
+                        await AttendanceRecordService.UpdateAsync(record);
+                    }
+                    
+                    await JSRuntime.InvokeVoidAsync("console.log", 
+                        $"Phone collection status toggled for {learner.Name} {learner.Surname}: {(record.CellPhoneCollected ? "Collected" : "Not collected")}");
+                }
+            }
+            
+            if (success)
+            {
+                // Refresh all records to ensure state stays in sync with DB
+                if (_attendance != null)
+                {
+                    _attendance = await AttendanceService.GetAsync(_attendance.Id);
+                    await LoadAttendanceData();
+                }
+                
+                // Force UI update
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log the error
+            await JSRuntime.InvokeVoidAsync("console.error", $"Error toggling phone status: {ex.Message}");
         }
     }
 

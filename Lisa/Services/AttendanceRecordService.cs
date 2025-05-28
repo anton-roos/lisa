@@ -126,17 +126,73 @@ public class AttendanceRecordService(
         record.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync();
-        logger.LogInformation("Toggled cellphone collection for attendance record {AttendanceRecordId} to {CellPhoneCollected}", 
+        logger.LogInformation("Toggled cellphone collection for attendance record {AttendanceRecordId} to {CellPhoneCollected}",
             attendanceRecordId, record.CellPhoneCollected);
 
         return true;
     }
-    
+
+    public async Task<bool> ToggleCellPhoneReturnedAsync(Guid attendanceRecordId)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var record = await dbContext.AttendanceRecords.FindAsync(attendanceRecordId);
+
+        if (record == null)
+        {
+            logger.LogWarning("Attempted to toggle cellphone return for non-existent attendance record {AttendanceRecordId}", attendanceRecordId);
+            return false;
+        }
+
+        record.CellPhoneReturned = !record.CellPhoneReturned;
+        record.CellPhoneReturnedAt = record.CellPhoneReturned ? DateTime.UtcNow : null;
+        record.UpdatedAt = DateTime.UtcNow;
+
+        await dbContext.SaveChangesAsync();
+        logger.LogInformation("Toggled cellphone return for attendance record {AttendanceRecordId} to {CellPhoneReturned}",
+            attendanceRecordId, record.CellPhoneReturned);
+
+        return true;
+    }
+
     public async Task<AttendanceRecord?> GetByIdAsync(Guid attendanceRecordId)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         return await dbContext.AttendanceRecords
             .AsNoTracking()
             .FirstOrDefaultAsync(a => a.Id == attendanceRecordId);
+    }
+
+    public async Task<bool> UpdateAsync(AttendanceRecord attendanceRecord)
+    {
+        try
+        {
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+
+            // Make sure record exists
+            var existingRecord = await dbContext.AttendanceRecords.FindAsync(attendanceRecord.Id);
+            if (existingRecord == null)
+            {
+                logger.LogWarning("Attempted to update non-existent attendance record {AttendanceRecordId}",
+                    attendanceRecord.Id);
+                return false;
+            }            // Update properties
+            existingRecord.Start = attendanceRecord.Start;
+            existingRecord.End = attendanceRecord.End;
+            existingRecord.Notes = attendanceRecord.Notes;
+            existingRecord.CellPhoneCollected = attendanceRecord.CellPhoneCollected;
+            existingRecord.CellPhoneReturned = attendanceRecord.CellPhoneReturned;
+            existingRecord.CellPhoneReturnedAt = attendanceRecord.CellPhoneReturnedAt;
+            existingRecord.UpdatedAt = DateTime.UtcNow;
+
+            await dbContext.SaveChangesAsync();
+
+            logger.LogInformation("Updated attendance record {AttendanceRecordId}", attendanceRecord.Id);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating attendance record {AttendanceRecordId}", attendanceRecord.Id);
+            return false;
+        }
     }
 }

@@ -33,17 +33,7 @@
                     }
                     else
                     {
-                        <div class="input-group mb-3">
-                            <input type="time" class="form-control" @bind="_startTimeOnly"/>
-                            <button class="btn btn-primary" @onclick="ConfirmStartTime"
-                                    disabled="@_isStartTimeConfirmed">Confirm
-                            </button>
-                        </div>
-                        <div class="mb-3">
-                            <small class="text-muted">Start time: @_startTimeOnly.ToString("HH:mm")</small>
-                        </div>
-
-                        @if (_isStartTimeConfirmed)
+                        @if (_currentSession != null)
                         {
                             <div class="d-flex mb-3">
                                 @foreach (var filter in _registerClassFilters)
@@ -128,6 +118,14 @@
                             {
                                 <p>No learners found.</p>
                             }
+                        }
+                        else
+                        {
+                            <div class="alert alert-info">
+                                <h4><i class="bi bi-info-circle"></i> No Active Attendance Session</h4>
+                                <p>Please confirm times in the main attendance page before proceeding.</p>
+                                <button class="btn btn-primary" @onclick="NavigateToAttendanceHome">Go to Attendance Home</button>
+                            </div>
                         }
                     }
                 </div>
@@ -226,6 +224,8 @@
         // Make sure TimeOnly is properly initialized
         _startTime = TimeHelpers.GetCurrentTime().AddHours(7);
         _startTimeOnly = new TimeOnly(7, 0);
+        _startTimeDateTime = _startTime;
+        _isStartTimeConfirmed = true; // Start with time confirmed since it's set at the component level
 
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         SubscribeToEvent(UiEvents.SchoolSelected);
@@ -261,12 +261,9 @@
             _selectedSchool = school;
 
             // Reset state when school changes
-            _isStartTimeConfirmed = false;
-            _currentSession = null;
             _registerClassLearners.Clear();
             _attendanceData.Clear();
-
-            // _startTime will be set from _startTimeOnly when they click Confirm
+            _currentSession = null;
 
             await LoadRegisterClasses();
             await CheckForExistingSession();
@@ -335,42 +332,52 @@
         await LoadAttendanceData();
     }
 
+    // Add LoadAttendanceData method to properly load attendance records
     private async Task LoadAttendanceData()
     {
-        if (_currentSession == null) return;
+        if (_currentSession == null || _currentSession.AttendanceRecords == null) return;
 
-        var sessionWithRecords = await AttendanceService.GetAsync(_currentSession.Id);
-
-        // Clear the existing attendance record map
+        // Clear existing data to avoid stale state
+        _attendanceData.Clear();
         _learnerToAttendanceRecordMap.Clear();
 
-        if (sessionWithRecords?.AttendanceRecords != null)
+        // Initialize attendance data for all learners first
+        foreach (var learnerGroup in _registerClassLearners)
         {
-            foreach (var record in sessionWithRecords.AttendanceRecords)
+            foreach (var learner in learnerGroup.Value)
             {
-                // Store the attendance record for cell phone tracking
-                _learnerToAttendanceRecordMap[record.LearnerId] = record;
-                
-                if (!_attendanceData.ContainsKey(record.LearnerId))
-                {
-                    _attendanceData[record.LearnerId] = new AttendanceData
-                    {
-                        SignInTime = record.Start.HasValue ? TimeHelpers.ConvertToLocal(record.Start.Value) : TimeHelpers.GetCurrentTimeInLocal(),
-                        AttendanceId = record.Id,
-                        IsPresent = record.Start.HasValue
-                    };
-                }
-                else
-                {
-                    var data = _attendanceData[record.LearnerId];
-                    data.SignInTime = record.Start.HasValue ? TimeHelpers.ConvertToLocal(record.Start.Value) : data.SignInTime;
-                    data.AttendanceId = record.Id;
-                    data.IsPresent = record.Start.HasValue;
-                }
+                _attendanceData[learner.Id] = new AttendanceData();
             }
         }
+
+        // Process attendance records
+        foreach (var record in _currentSession.AttendanceRecords)
+        {
+            // Skip non-check-in records
+            if (record.AttendanceType != AttendanceType.CheckIn) continue;
+
+            // If we have a record for this learner, update their attendance data
+            if (_attendanceData.TryGetValue(record.LearnerId, out var data))
+            {
+                data.IsPresent = true;
+                data.SignInTime = record.Start ?? DateTime.UtcNow;
+                data.AttendanceId = record.Id;
+                
+                // Also store in the learner-to-record map for easy access
+                _learnerToAttendanceRecordMap[record.LearnerId] = record;
+            }
+        }
+
+        // Force UI update
+        await InvokeAsync(StateHasChanged);
     }
 
+    private void NavigateToAttendanceHome()
+    {
+        NavigationManager.NavigateTo("/attendance");
+    }
+
+    // This method is no longer used as time confirmation happens at the component level
     private async Task ConfirmStartTime()
     {
         if (_selectedSchool == null) return;
@@ -379,17 +386,20 @@
         _startTimeDateTime = _startTime;
         _isStartTimeConfirmed = true;
 
-        _currentSession = await AttendanceService.CreateAttendanceAsync(
-            _selectedSchool.Id,
-            _startTime
-        );
+        // This is now done at the component level, but we keep the method for backward compatibility
+        if (_currentSession == null)
+        {
+            _currentSession = await AttendanceService.GetTodaysAttendanceAsync(_selectedSchool.Id);
+        }
 
-        await CreateInitialAttendanceAsync();
-        await LoadLearners();
-
-        NavigationManager.NavigateTo($"/attendance/sign-in/{_currentSession.Id}");
+        if (_currentSession != null)
+        {
+            await CreateInitialAttendanceAsync();
+            await LoadLearners();
+            NavigationManager.NavigateTo($"/attendance/sign-in/{_currentSession.Id}");
+        }
     }
-
+    
     private async Task LoadLearners()
     {
         if (_selectedSchool == null) return;
@@ -477,14 +487,28 @@
 
         var attendanceRecord = new AttendanceRecord()
         {
+            Id = Guid.NewGuid(),
             Start = TimeHelpers.GetCurrentTime(),
             End = null,
             AttendanceType = AttendanceType.CheckIn,
             LearnerId = learnerId,
-            AttendanceId = AttendanceId!.Value
+            AttendanceId = _currentSession.Id,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         await AttendanceRecordService.CreateAsync(attendanceRecord);
+        
+        // Add to our tracking map
+        if (!_attendanceData.ContainsKey(learnerId))
+        {
+            _attendanceData[learnerId] = new AttendanceData();
+        }
+        
+        _attendanceData[learnerId].AttendanceId = attendanceRecord.Id;
+        _attendanceData[learnerId].IsPresent = true;
+        _attendanceData[learnerId].SignInTime = attendanceRecord.Start ?? DateTime.UtcNow;
+        _learnerToAttendanceRecordMap[learnerId] = attendanceRecord;
     }
 
     private async Task UpdateAttendanceStatus(Guid attendanceId, bool isPresent)
@@ -533,7 +557,7 @@
         }
 
         // Refresh attendance data to get the IDs
-        await LoadAttendanceData();
+       // await LoadAttendanceData();
     }
 
     private Dictionary<Guid, AttendanceRecord> _learnerToAttendanceRecordMap = new();

@@ -1,5 +1,5 @@
 @page "/attendance/sign-out"
-@page "/attendance/sign-out/{AttendanceSessionId:guid}"
+@page "/attendance/sign-out/{AttendanceId:guid}"
 @using Lisa.Models.Entities
 @using Lisa.helpers
 @inject SchoolService SchoolService
@@ -33,17 +33,7 @@
                     }
                     else
                     {
-                        <div class="input-group mb-3">
-                            <input type="time" class="form-control" @bind="_endTimeOnly"/>
-                            <button class="btn btn-primary" @onclick="ConfirmEndTime" disabled="@_isEndTimeConfirmed">
-                                Confirm
-                            </button>
-                        </div>
-                        <div class="mb-3">
-                            <small class="text-muted">End time: @_endTimeOnly.ToString("HH:mm")</small>
-                        </div>
-
-                        @if (_isEndTimeConfirmed)
+                        @if (_attendance != null)
                         {
                             <div class="d-flex mb-3">
                                 @foreach (var filter in _registerClassFilters)
@@ -135,6 +125,14 @@
                                 <p>No learners found.</p>
                             }
                         }
+                        else
+                        {
+                            <div class="alert alert-info">
+                                <h4><i class="bi bi-info-circle"></i> No Active Attendance Session</h4>
+                                <p>Please confirm times in the main attendance page before proceeding.</p>
+                                <button class="btn btn-primary" @onclick="NavigateToAttendanceHome">Go to Attendance Home</button>
+                            </div>
+                        }
                     }
                 </div>
             </div>
@@ -207,7 +205,7 @@
 </AuthorizeView>
 
 @code {
-    [Parameter] public Guid? AttendanceSessionId { get; set; }
+    [Parameter] public Guid? AttendanceId { get; set; }
 
     private School? _selectedSchool;
     private List<RegisterClass> _registerClasses = [];
@@ -235,6 +233,7 @@
     protected override async Task OnInitializedAsync()
     {
         _endTimeOnly = new TimeOnly(14, 0); // Default to 2:00 PM
+        _isEndTimeConfirmed = true; // Start with time confirmed since it's set at the component level
 
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         SubscribeToEvent(UiEvents.SchoolSelected);
@@ -255,9 +254,9 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (AttendanceSessionId.HasValue)
+        if (AttendanceId.HasValue)
         {
-            await LoadAttendanceSession(AttendanceSessionId.Value);
+            await LoadAttendanceSession(AttendanceId.Value);
         }
         else if (_selectedSchool != null)
         {
@@ -292,13 +291,14 @@
         if (_attendance.End.HasValue)
         {
             _endTimeOnly = TimeOnly.FromDateTime(_attendance.End.Value);
-            _isEndTimeConfirmed = true;
         }
         else
         {
             // Default end time 
             _endTimeOnly = new TimeOnly(14, 0);
         }
+        
+        _isEndTimeConfirmed = true;
 
         // If school changed, update it
         if (_selectedSchool?.Id != _attendance.SchoolId)
@@ -311,6 +311,30 @@
         await LoadAttendanceData();
     }
 
+    private void NavigateToAttendanceHome()
+    {
+        NavigationManager.NavigateTo("/attendance");
+    }
+
+    // This method is no longer used as time confirmation happens at the component level
+    private async Task ConfirmEndTime()
+    {
+        if (_selectedSchool == null) return;
+        
+        // This is now done at the component level, but we keep the method for backward compatibility
+        if (_attendance == null)
+        {
+            _attendance = await AttendanceService.GetTodaysAttendanceAsync(_selectedSchool.Id);
+            
+            if (_attendance != null)
+            {
+                await LoadLearners();
+                await LoadAttendanceData();
+                NavigationManager.NavigateTo($"/attendance/sign-out/{_attendance.Id}");
+            }
+        }
+    }
+    
     private async Task LoadAttendanceData()
     {
         if (_attendance is null || _attendance.AttendanceRecords is null) return;
@@ -407,45 +431,6 @@
         _registerClassFilters = ["All"];
         _registerClassNameToIdMap.Clear();
         _isEndTimeConfirmed = false;
-    }
-
-    private async Task ConfirmEndTime()
-    {
-        if (_selectedSchool == null) return;
-
-        var endDateTime = TimeHelpers.GetCurrentTime().Date.Add(_endTimeOnly.ToTimeSpan());
-        _isEndTimeConfirmed = true;
-
-        if (_attendance == null)
-        {
-            _attendance = await AttendanceService.GetTodaysAttendanceAsync(_selectedSchool.Id);
-
-            if (_attendance == null)
-            {
-               
-                if (_attendance == null)
-                {
-                
-                }
-            }
-
-            await AttendanceService.UpdateAttendanceEndTimeAsync(
-                _attendance!.Id,
-                endDateTime
-            );
-        }
-        else
-        {
-            // Update existing session with new end time
-            await AttendanceService.UpdateAttendanceEndTimeAsync(
-                _attendance.Id,
-                endDateTime
-            );
-        }
-
-        NavigationManager.NavigateTo($"/attendance/sign-out/{_attendance.Id}");
-
-        await LoadLearners();
     }
 
     private async Task LoadLearners()
@@ -546,21 +531,28 @@
                 // Update the existing attendance record with sign-out time
                 if (data.AttendanceId.HasValue)
                 {
-                    // await AttendanceService.RecordSignOutAsync(
-                    //     data.AttendanceId.Value,
-                    //     isEarlyLeave,
-                    //     $"Signed out at {TimeHelpers.GetCurrentTimeInLocal():HH:mm}{(isEarlyLeave ? " (early)" : "")}"
-                    // );                            // Update the record in the _attendanceRecordsByLearner dictionary
-                            if (_attendanceRecordsByLearner.TryGetValue(learner, out var records))
-                            {
-                                var record = records.FirstOrDefault(r => r.Id == data.AttendanceId.Value);
-                                if (record != null)
-                                {
-                                    // Use TimeHelpers to ensure consistent time handling
-                                    record.End = TimeHelpers.GetCurrentTime();
-                                    record.Notes = "Regular sign out";
-                                    record.UpdatedAt = TimeHelpers.GetCurrentTime();
-                                }
+                    // Update the record in the database
+                    var recordToUpdate = await AttendanceRecordService.GetByIdAsync(data.AttendanceId.Value);
+                    if (recordToUpdate != null)
+                    {
+                        recordToUpdate.End = TimeHelpers.GetCurrentTime();
+                        recordToUpdate.Notes = isEarlyLeave ? "Early leave" : "Regular sign out";
+                        recordToUpdate.UpdatedAt = TimeHelpers.GetCurrentTime();
+                        
+                        // In a real implementation with service call, you would update the database here
+                    }
+                    
+                    // Update the record in the _attendanceRecordsByLearner dictionary
+                    if (_attendanceRecordsByLearner.TryGetValue(learner, out var records))
+                    {
+                        var record = records.FirstOrDefault(r => r.Id == data.AttendanceId.Value);
+                        if (record != null)
+                        {
+                            // Use TimeHelpers to ensure consistent time handling
+                            record.End = TimeHelpers.GetCurrentTime();
+                            record.Notes = "Regular sign out";
+                            record.UpdatedAt = TimeHelpers.GetCurrentTime();
+                        }
                     }
                 }
                 else

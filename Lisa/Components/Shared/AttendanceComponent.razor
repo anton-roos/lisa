@@ -10,6 +10,58 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 
+<style>
+    .attendance-card {
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+
+    .attendance-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .attendance-card.disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    .attendance-card.disabled:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    .attendance-status {
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .attendance-status.active {
+        border-left: 5px solid #28a745;
+    }
+
+    .attendance-status.inactive {
+        border-left: 5px solid #6c757d;
+    }
+
+    .stat-card {
+        text-align: center;
+        padding: 0.5rem;
+    }
+
+    .stat-card-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+
+    .stat-card-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+</style>
+
 <div class="container">
     <div class="row">
         <div class="col-md-12">
@@ -25,13 +77,37 @@
                 <div class="alert alert-warning mb-3">
                     <h4><i class="bi bi-exclamation-triangle"></i> No School Selected</h4>
                     <p>Please select a school from the dropdown at the top of the page before proceeding.</p>
-                </div>
-            }
+                </div>            }
             else
             {
+                @if (_todayAttendance == null)
+                {
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Set School Day Times</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="startTime" class="form-label">Start Time</label>
+                                    <input type="time" id="startTime" class="form-control" @bind="_startTimeOnly" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="endTime" class="form-label">End Time</label>
+                                    <input type="time" id="endTime" class="form-control" @bind="_endTimeOnly" />
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" @onclick="ConfirmTimes" disabled="@(_isTimeConfirmed)">
+                                Confirm Times
+                            </button>
+                        </div>
+                    </div>
+                }
+
                 <div class="row mb-4">
                     <div class="col-md-6">
-                        <div class="card attendance-card h-100" @onclick="NavigateToSignIn">
+                        <div class="card attendance-card h-100 @(_todayAttendance == null ? "disabled" : "")" 
+                             @onclick="@(_todayAttendance != null ? NavigateToSignIn : () => {})">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
                                     <div class="me-3">
@@ -40,12 +116,21 @@
                                     <div>
                                         <h5 class="card-title mb-1">@(_todayAttendance != null ? "Continue Sign In" : "Start Sign In")</h5>
                                         <p class="card-text text-muted mb-0">Record attendance for learners arriving at school.</p>
-                                        <small class="text-transparent"></small>
+                                        @if (_todayAttendance == null)
+                                        {
+                                            <small class="text-danger">(Confirm times first)</small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-transparent"></small>
+                                        }
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>                    <div class="col-md-6">                        <div class="card attendance-card h-100 @(_todayAttendance is null ? "disabled" : "")" 
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card attendance-card h-100 @(_todayAttendance is null ? "disabled" : "")" 
                              @onclick="@(_todayAttendance is not null ? NavigateToSignOut : () => {})">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
@@ -57,7 +142,7 @@
                                         <p class="card-text text-muted mb-0">Record attendance for learners leaving school.</p>
                                         @if (_todayAttendance is null)
                                         {
-                                            <small class="text-danger">(Sign in required first)</small>
+                                            <small class="text-danger">(Confirm times first)</small>
                                         }
                                         else
                                         {
@@ -68,7 +153,7 @@
                             </div>
                         </div>
                     </div>
-                </div>                @if (_todayAttendance != null)
+                </div>@if (_todayAttendance != null)
                 {
                     <div class="attendance-status @(_todayAttendance.End.HasValue ? "inactive" : "active")">
                         <h5>Today's Attendance Session</h5>
@@ -123,6 +208,10 @@
     private School? _selectedSchool;
     private Attendance? _todayAttendance;
     private AttendanceStats? _attendanceStats;
+
+    private TimeOnly _startTimeOnly = new TimeOnly(7, 0); // Default to 7:00 AM
+    private TimeOnly _endTimeOnly = new TimeOnly(14, 0); // Default to 2:00 PM
+    private bool _isTimeConfirmed = false;
 
     private class AttendanceStats
     {
@@ -191,9 +280,7 @@
                 _attendanceStats.AbsentCount = totalLearners - _attendanceStats.CheckedInCount;
             }
         }
-    }
-
-    private void NavigateToSignIn()
+    }    private void NavigateToSignIn()
     {
         if (_todayAttendance != null)
         {
@@ -201,7 +288,7 @@
         }
         else
         {
-            NavigationManager.NavigateTo("/attendance/sign-in");
+            NavigationManager.NavigateTo("/attendance");
         }
     }
 
@@ -211,5 +298,41 @@
         {
             NavigationManager.NavigateTo($"/attendance/sign-out/{_todayAttendance.Id}");
         }
+        else
+        {
+            NavigationManager.NavigateTo("/attendance");
+        }
+    }    private async Task ConfirmTimes()
+    {
+        if (_selectedSchool == null) return;
+
+        var startDateTime = DateTime.UtcNow.Date.Add(_startTimeOnly.ToTimeSpan());
+        var endDateTime = DateTime.UtcNow.Date.Add(_endTimeOnly.ToTimeSpan());
+
+        // Check if times are valid (end time must be after start time)
+        if (endDateTime <= startDateTime)
+        {
+            // In a real application, you might want to show an error message here
+            return;
+        }
+
+        _isTimeConfirmed = true;
+
+        // Create the attendance record with both start and end times
+        _todayAttendance = await AttendanceService.CreateAttendanceAsync(
+            _selectedSchool.Id,
+            startDateTime,
+            endDateTime
+        );
+
+        // Make sure the _todayAttendance is fully loaded with all attendance records
+        if (_todayAttendance != null)
+        {
+            _todayAttendance = await AttendanceService.GetAsync(_todayAttendance.Id);
+        }
+
+        // Refresh the UI
+        await LoadDataAsync();
+        await InvokeAsync(StateHasChanged);
     }
 }

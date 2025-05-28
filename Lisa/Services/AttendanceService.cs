@@ -76,6 +76,7 @@ public partial class AttendanceService(
         return await dbContext.Attendances
             .Include(s => s.School)
             .Include(ar => ar.AttendanceRecords)
+            .ThenInclude(ar => ar.Learner)
             .FirstOrDefaultAsync(s => s.Id == sessionId);
     }
 
@@ -127,5 +128,17 @@ public partial class AttendanceService(
         logger.LogInformation("Updated end time for session {SessionId}", attendanceId);
 
         return session;
+    }
+
+    public async Task<List<Attendance>> GetRecentAttendancesAsync(Guid schoolId, int count = 10)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        return await dbContext.Attendances
+            .Include(s => s.School)
+            .Include(s => s.AttendanceRecords)
+            .Where(s => s.SchoolId == schoolId)
+            .OrderByDescending(s => s.Start)
+            .Take(count)
+            .ToListAsync();
     }
 }

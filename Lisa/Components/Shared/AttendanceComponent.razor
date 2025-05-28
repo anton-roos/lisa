@@ -60,6 +60,30 @@
         font-size: 0.8rem;
         color: #6c757d;
     }
+    
+    .recent-sessions-container {
+        max-height: 500px;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+    
+    .recent-sessions-container::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .recent-sessions-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    
+    .recent-sessions-container::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+    
+    .recent-sessions-container::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
 </style>
 
 <div class="container">
@@ -155,7 +179,7 @@
                     </div>
                 </div>@if (_todayAttendance != null)
                 {
-                    <div class="attendance-status @(_todayAttendance.End.HasValue ? "inactive" : "active")">
+                    <div class="attendance-status active">
                         <h5>Today's Attendance Session</h5>
                         <div class="row">
                             <div class="col-md-6">
@@ -163,11 +187,6 @@
                                 @if (_todayAttendance.End.HasValue)
                                 {
                                     <p class="mb-1"><strong>Ended:</strong> @_todayAttendance.End.Value.ToString("dd/MM/yyyy HH:mm")</p>
-                                    <p class="mb-0"><span class="badge bg-secondary">Completed</span></p>
-                                }
-                                else
-                                {
-                                    <p class="mb-0"><span class="badge bg-success">Active</span></p>
                                 }
                             </div>
                             <div class="col-md-6">
@@ -197,6 +216,56 @@
                             </div>
                         </div>
                     </div>
+                      @if (_recentAttendances.Any())
+                    {
+                        <h5 class="mt-4 mb-3">Recent Attendance Sessions</h5>
+                        
+                        <div class="recent-sessions-container">
+                            @foreach (var attendance in _recentAttendances)
+                            {
+                                var stats = CalculateAttendanceStats(attendance);
+                                  <div class="attendance-status inactive mb-3">
+                                    <h5>@attendance.Start.ToString("yyyy-MM-dd") Attendance Session</h5>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Started:</strong> @attendance.Start.ToString("dd/MM/yyyy HH:mm")</p>
+                                            @if (attendance.End.HasValue)
+                                            {
+                                                <p class="mb-1"><strong>Ended:</strong> @attendance.End.Value.ToString("dd/MM/yyyy HH:mm")</p>
+                                            }
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <div class="stat-card">
+                                                        <div class="stat-card-value text-success">@stats.CheckedInCount</div>
+                                                        <div class="stat-card-label">Signed in</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="stat-card">
+                                                        <div class="stat-card-value text-primary">@stats.CheckedOutCount</div>
+                                                        <div class="stat-card-label">Signed out</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="stat-card">
+                                                        <div class="stat-card-value text-secondary">@(stats.CheckedInCount - stats.CheckedOutCount)</div>
+                                                        <div class="stat-card-label">Not signed out</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="text-end mt-2">
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="() => ViewAttendanceDetails(attendance.Id)">
+                                                    <i class="bi bi-eye"></i> View Details
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
                 }
             }
         </div>
@@ -219,6 +288,8 @@
         public int CheckedOutCount { get; set; }
         public int AbsentCount { get; set; }
     }
+
+    private List<Attendance> _recentAttendances = new();
     
     protected override async Task OnInitializedAsync()
     {
@@ -235,8 +306,7 @@
             await InvokeAsync(StateHasChanged);
         }
     }
-    
-    private async Task LoadDataAsync()
+      private async Task LoadDataAsync()
     {
         if (_selectedSchool == null)
         {
@@ -259,6 +329,18 @@
                 {
                     await LoadAttendanceStatsAsync(_todayAttendance.Id);
                 }
+            }
+            
+            // Load recent attendances
+            _recentAttendances = await AttendanceService.GetRecentAttendancesAsync(_selectedSchool.Id, 10);
+            
+            // Remove today's attendance from the list if it exists
+            if (_todayAttendance != null)
+            {
+                _recentAttendances = _recentAttendances
+                    .Where(a => a.Id != _todayAttendance.Id)
+                    .Take(10)
+                    .ToList();
             }
         }
     }
@@ -334,5 +416,22 @@
         // Refresh the UI
         await LoadDataAsync();
         await InvokeAsync(StateHasChanged);
+    }
+
+    private AttendanceStats CalculateAttendanceStats(Attendance attendance)
+    {
+        var stats = new AttendanceStats
+        {
+            CheckedInCount = attendance.AttendanceRecords?.Count(r => r.Start != null) ?? 0,
+            CheckedOutCount = attendance.AttendanceRecords?.Count(r => r.End != null) ?? 0,
+            AbsentCount = 0
+        };
+        
+        return stats;
+    }
+
+    private void ViewAttendanceDetails(Guid attendanceId)
+    {
+        NavigationManager.NavigateTo($"/attendance/details/{attendanceId}");
     }
 }

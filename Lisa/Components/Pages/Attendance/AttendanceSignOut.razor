@@ -2,6 +2,7 @@
 @page "/attendance/sign-out/{AttendanceId:guid}"
 @using Lisa.Models.Entities
 @using Lisa.helpers
+@using Lisa.Components.Shared
 @inject SchoolService SchoolService
 @inject RegisterClassService RegisterClassService
 @inject LearnerService LearnerService
@@ -9,6 +10,7 @@
 @inject AttendanceRecordService AttendanceRecordService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 @using System.Security.Claims
 @using Lisa.Enums
 
@@ -204,6 +206,10 @@
     </NotAuthorized>
 </AuthorizeView>
 
+<EarlyLeaveModal @ref="_earlyLeaveModal" 
+                EndTime="@_endTimeOnly" 
+                OnClose="@CloseEarlyLeaveModal" />
+
 @code {
     [Parameter] public Guid? AttendanceId { get; set; }
 
@@ -220,6 +226,8 @@
     private Attendance? _attendance;
     private Dictionary<Learner, List<AttendanceRecord>> _attendanceRecordsByLearner = new();
     private Dictionary<Guid, bool> _returnedPhones = new();
+    private EarlyLeaveModal? _earlyLeaveModal;
+    private Learner? _earlyLeaveLearner;
 
     private class AttendanceData(bool hasLeft = false, DateTime signOutTime = default, Guid? attendanceId = null)
     {
@@ -521,10 +529,18 @@
             {
                 var isEarlyLeave = data.IsEarlyLeave(_endTimeOnly);
 
-                // If it's an early leave, redirect to the Leave Early page
+                // If it's an early leave, show the modal instead of redirecting directly
                 if (isEarlyLeave)
                 {
-                    NavigationManager.NavigateTo($"/leave-early/{learner.Id}");
+                    // Set data to not left again as we'll handle it differently
+                    data.HasLeft = false;
+                    
+                    // Store the learner for the modal
+                    _earlyLeaveLearner = learner;
+                    
+                    // Show the modal
+                    _earlyLeaveModal?.Show();
+                    
                     return;
                 }
 
@@ -825,5 +841,11 @@
             // Force UI update
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private void CloseEarlyLeaveModal()
+    {
+        _earlyLeaveLearner = null;
+        StateHasChanged();
     }
 }

@@ -19,117 +19,127 @@
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Attendance}")">
     <Authorized>
         <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <h2>Sign In</h2>
-                    <p>@TimeHelpers.GetCurrentTimeInLocal().ToString("dd/M")</p>
+            @if (isLoading)
+            {
+                <div class="overlay d-flex justify-content-center align-items-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="row">
+                    <div class="col-md-6">
+                        <h2>Sign In</h2>
+                        <p>@TimeHelpers.GetCurrentTimeInLocal().ToString("dd/M")</p>
 
-                    @if (_selectedSchool == null)
-                    {
-                        <div class="alert alert-warning mb-3">
-                            <h4><i class="oi oi-warning"></i> No School Selected</h4>
-                            <p>Please select a school from the dropdown at the top of the page before proceeding.</p>
-                        </div>
-                    }
-                    else
-                    {
-                        @if (_currentSession != null)
+                        @if (_selectedSchool == null)
                         {
-                            <div class="d-flex mb-3">
-                                @foreach (var filter in _registerClassFilters)
-                                {
-                                    <button
-                                        class="btn @(filter == _selectedFilter ? "btn-primary" : "btn-secondary") me-2"
-                                        @onclick="() => FilterByRegisterClass(filter)">
-                                        @filter
-                                    </button>
-                                }
+                            <div class="alert alert-warning mb-3">
+                                <h4><i class="oi oi-warning"></i> No School Selected</h4>
+                                <p>Please select a school from the dropdown at the top of the page before proceeding.</p>
                             </div>
-
-                            <div class="mb-3">
-                                <input type="text" class="form-control" @bind-value="_searchText"
-                                       @bind-value:event="oninput"
-                                       placeholder="Search Learner"/>
-                            </div>
-
-                            @if (_registerClassLearners.Any())
+                        }
+                        else
+                        {
+                            @if (_currentSession != null)
                             {
-                                @foreach (var registerClass in _registerClassLearners.Keys)
-                                {
-                                    @if (_selectedFilter == "All" || _selectedFilter == registerClass)
+                                <div class="d-flex mb-3">
+                                    @foreach (var filter in _registerClassFilters)
                                     {
-                                        <div class="mb-4">
-                                            <h4>Gr @registerClass</h4>
-                                            <div class="d-flex flex-column">
-                                                @foreach (var learner in _registerClassLearners[registerClass]
-                                                                  .Where(l => string.IsNullOrEmpty(_searchText) ||
-                                                                              $"{l.Name} {l.Surname}".ToLower().Contains(_searchText.ToLower())))
-                                                {
-                                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                                        <div style="min-width: 150px;">@learner.Name @learner.Surname</div>
-                                                        <div class="d-flex align-items-center">
-                                                            <div class="pill-container">
-                                                                @{
-                                                                    var pillColor = GetPillColor(learner);
-                                                                    var pillClass = $"pill {pillColor}";
-                                                                }
-                                                                <div class="@pillClass" @onclick="() => ToggleAttendance(learner, registerClass)">
-                                                                    @if (pillColor == "absent")
+                                        <button
+                                            class="btn @(filter == _selectedFilter ? "btn-primary" : "btn-secondary") me-2"
+                                            @onclick="() => FilterByRegisterClass(filter)">
+                                            @filter
+                                        </button>
+                                    }
+                                </div>
+
+                                <div class="mb-3">
+                                    <input type="text" class="form-control" @bind-value="_searchText"
+                                           @bind-value:event="oninput"
+                                           placeholder="Search Learner"/>
+                                </div>
+
+                                @if (_registerClassLearners.Any())
+                                {
+                                    @foreach (var registerClass in _registerClassLearners.Keys)
+                                    {
+                                        @if (_selectedFilter == "All" || _selectedFilter == registerClass)
+                                        {
+                                            <div class="mb-4">
+                                                <h4>Gr @registerClass</h4>
+                                                <div class="d-flex flex-column">
+                                                    @foreach (var learner in _registerClassLearners[registerClass]
+                                                                      .Where(l => string.IsNullOrEmpty(_searchText) ||
+                                                                                  $"{l.Name} {l.Surname}".ToLower().Contains(_searchText.ToLower())))
+                                                    {
+                                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                                            <div style="min-width: 150px;">@learner.Name @learner.Surname</div>
+                                                            <div class="d-flex align-items-center">
+                                                                <div class="pill-container">
+                                                                    @{
+                                                                        var pillColor = GetPillColor(learner);
+                                                                        var pillClass = $"pill {pillColor}";
+                                                                    }
+                                                                    <div class="@pillClass" @onclick="() => ToggleAttendance(learner, registerClass)">
+                                                                        @if (pillColor == "absent")
+                                                                        {
+                                                                            <span>Absent</span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            @TimeHelpers.ConvertToLocal(_attendanceData[learner.Id].SignInTime).ToString("HH:mm")
+                                                                        }
+                                                                    </div>
+                                                                </div>
+                                                                <div class="phone-button-container">
+                                                                    @if (pillColor == "on-time" || pillColor == "late")
                                                                     {
-                                                                        <span>Absent</span>
+                                                                        @if (IsCellPhoneCollected(learner))
+                                                                        {
+                                                                            <button class="btn btn-phone-collected ms-2" disabled>
+                                                                                <i class="bi bi-phone"></i> Collected
+                                                                            </button>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <button class="btn btn-phone ms-2" @onclick="(e) => CollectPhone(e, learner)">
+                                                                                <i class="bi bi-phone"></i> Collect
+                                                                            </button>
+                                                                        }
                                                                     }
                                                                     else
                                                                     {
-                                                                        @TimeHelpers.ConvertToLocal(_attendanceData[learner.Id].SignInTime).ToString("HH:mm")
+                                                                        <div style="width: 0;"></div>
                                                                     }
                                                                 </div>
                                                             </div>
-                                                            <div class="phone-button-container">
-                                                                @if (pillColor == "on-time" || pillColor == "late")
-                                                                {
-                                                                    @if (IsCellPhoneCollected(learner))
-                                                                    {
-                                                                        <button class="btn btn-phone-collected ms-2" disabled>
-                                                                            <i class="bi bi-phone"></i> Collected
-                                                                        </button>
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        <button class="btn btn-phone ms-2" @onclick="(e) => CollectPhone(e, learner)">
-                                                                            <i class="bi bi-phone"></i> Collect
-                                                                        </button>
-                                                                    }
-                                                                }
-                                                                else
-                                                                {
-                                                                    <!-- Empty div to maintain spacing when no button is shown -->
-                                                                    <div style="width: 0;"></div>
-                                                                }
-                                                            </div>
                                                         </div>
-                                                    </div>
-                                                }
+                                                    }
+                                                </div>
                                             </div>
-                                        </div>
+                                        }
                                     }
+                                }
+                                else
+                                {
+                                    <p>No learners found.</p>
                                 }
                             }
                             else
                             {
-                                <p>No learners found.</p>
+                                <div class="alert alert-info">
+                                    <h4><i class="bi bi-info-circle"></i> No Active Attendance Session</h4>
+                                    <p>Please confirm times in the main attendance page before proceeding.</p>
+                                    <button class="btn btn-primary" @onclick="NavigateToAttendanceHome">Go to Attendance Home</button>
+                                </div>
                             }
                         }
-                        else
-                        {
-                            <div class="alert alert-info">
-                                <h4><i class="bi bi-info-circle"></i> No Active Attendance Session</h4>
-                                <p>Please confirm times in the main attendance page before proceeding.</p>
-                                <button class="btn btn-primary" @onclick="NavigateToAttendanceHome">Go to Attendance Home</button>
-                            </div>
-                        }
-                    }
+                    </div>
                 </div>
-            </div>
+            }
         </div>
 
         <style>
@@ -186,6 +196,30 @@
                 min-width: 100px;
                 font-size: 0.9rem;
             }
+
+            .loader-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: rgba(255, 255, 255, 0.8);
+                z-index: 1040;
+            }
+
+            .overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: rgba(255, 255, 255, 0.8);
+                z-index: 1050;
+            }
+
+            .sidebar {
+                display: none !important;
+            }
         </style>
     </Authorized>
     <NotAuthorized>
@@ -219,8 +253,15 @@
         public Guid? AttendanceId { get; set; } // Store the attendance record ID
     }
 
+    private bool isLoading = true;
+    private List<Learner> learners = new();
+
     protected override async Task OnInitializedAsync()
     {
+        // Load learners asynchronously until all have loaded
+        learners = await LoadLearnersAsync();
+        isLoading = false;
+
         // Make sure TimeOnly is properly initialized
         _startTime = TimeHelpers.GetCurrentTime().AddHours(7);
         _startTimeOnly = new TimeOnly(7, 0);
@@ -619,5 +660,17 @@
                 await InvokeAsync(StateHasChanged);
             }
         }
+    }
+
+    private async Task<List<Learner>> LoadLearnersAsync()
+    {
+        // TODO: Replace the following simulation with actual call to load learners
+        await Task.Delay(2000);
+        return new List<Learner>
+        {
+            new Learner { Name = "Learner 1" },
+            new Learner { Name = "Learner 2" },
+            new Learner { Name = "Learner 3" }
+        };
     }
 }

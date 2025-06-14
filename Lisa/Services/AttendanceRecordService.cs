@@ -195,4 +195,26 @@ public class AttendanceRecordService(
             return false;
         }
     }
+
+    public async Task<bool> CollectCellPhoneWithModelAsync(Guid attendanceRecordId, string phoneModel)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var record = await dbContext.AttendanceRecords.FindAsync(attendanceRecordId);
+
+        if (record == null)
+        {
+            logger.LogWarning("Attempted to collect cellphone for non-existent attendance record {AttendanceRecordId}", attendanceRecordId);
+            return false;
+        }
+
+        record.CellPhoneCollected = true;
+        record.CellPhoneModel = phoneModel;
+        record.UpdatedAt = DateTime.UtcNow;
+
+        await dbContext.SaveChangesAsync();
+        logger.LogInformation("Collected cellphone for attendance record {AttendanceRecordId} with model {CellPhoneModel}",
+            attendanceRecordId, phoneModel);
+
+        return true;
+    }
 }

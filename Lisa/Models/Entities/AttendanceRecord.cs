@@ -15,4 +15,5 @@ public class AttendanceRecord : Entity
     public bool CellPhoneCollected { get; set; } = false;
     public bool CellPhoneReturned { get; set; } = false;
     public DateTime? CellPhoneReturnedAt { get; set; }
+    public string? CellPhoneModel { get; set; }
 }

@@ -83,23 +83,52 @@
                                             <div class="d-flex flex-column">
                                                 @foreach (var learner in _registerClassLearners[registerClass].Where(l => string.IsNullOrEmpty(_searchText) || $"{l.Name} {l.Surname}".ToLower().Contains(_searchText.ToLower())))
                                                 {
-                                                    @* Shared learner card markup *@
+                                                    @* Shared learner card markup restored *@
                                                     <div class="card mb-3">
                                                         <div class="card-body d-flex align-items-center justify-content-between">
                                                             <div style="min-width: 150px;">@learner.Name @learner.Surname</div>
                                                             <div class="pill-container">
                                                                 @{ var pillColor = GetPillColor(learner); var pillClass = $"pill {pillColor}"; }
                                                                 <div class="@pillClass" @onclick="() => ToggleAttendance(learner, registerClass)">
-                                                                    @if (pillColor == "absent") { <span>Absent</span> } else { @TimeHelpers.ConvertToLocal(_attendanceData[learner.Id].SignInTime).ToString("HH:mm") }
+                                                                    @if (pillColor == "absent")
+                                                                    {
+                                                                        <span>Absent</span>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        @TimeHelpers.ConvertToLocal(_attendanceData[learner.Id].SignInTime).ToString("HH:mm")
+                                                                    }
                                                                 </div>
                                                             </div>
                                                         </div>
                                                         <div class="card-footer d-flex align-items-center justify-content-start">
-                                                            @if (pillColor != "absent")
+                                                            @if (GetPillColor(learner) != "absent")
                                                             {
                                                                 <div class="phone-button-container d-inline-block">
-                                                                    @if (IsCellPhoneCollected(learner)) { @* existing collected UI *@ }
-                                                                    else { @* existing toggle UI *@ }
+                                                                    @if (IsCellPhoneCollected(learner))
+                                                                    {
+                                                                        <div class="toggle-switch disabled ms-2">
+                                                                            <input type="checkbox" checked disabled />
+                                                                            <span class="slider collected"></span>
+                                                                        </div>
+                                                                        <span class="ms-2 align-self-center">
+                                                                            Cellphone
+                                                                            @if (_learnerToAttendanceRecordMap.TryGetValue(learner.Id, out var rec) && !string.IsNullOrWhiteSpace(rec.CellPhoneModel))
+                                                                            {
+                                                                                <span class="text-muted small">(@rec.CellPhoneModel)</span>
+                                                                            }
+                                                                        </span>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <div class="toggle-switch ms-2" @onclick="() => ToggleCellPhoneCollected(learner)">
+                                                                            <input type="checkbox"
+                                                                                   id="toggle-@learner.Id"
+                                                                                   checked="@(_toggleValues.TryGetValue(learner.Id, out var toggled) && toggled)" />
+                                                                            <span class="slider"></span>
+                                                                        </div>
+                                                                        <span class="ms-2 align-self-center">Cellphone</span>
+                                                                    }
                                                                 </div>
                                                             }
                                                         </div>
@@ -140,7 +169,7 @@
                 </div>
                 <div class="modal-body">
                     <p>Enter the model of the phone being collected from <b>@_pendingPhoneLearner.Name @_pendingPhoneLearner.Surname</b>:</p>
-                    <input class="form-control" @bind="_pendingPhoneModel" placeholder="e.g. Samsung A12" />
+                    <input class="form-control" @bind-value="_pendingPhoneModel" @bind-value:event="oninput" placeholder="e.g. Samsung A12" />
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CancelPhoneCollect">Cancel</button>
@@ -205,6 +234,30 @@
 
         await base.OnParametersSetAsync();
         await InvokeAsync(StateHasChanged);
+    }
+
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += HandleLocationChanged;
+        base.OnInitialized();
+    }
+
+    private async void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        // Update _isSignOut based on new URL
+        var relativePath = NavigationManager.ToBaseRelativePath(e.Location);
+        _isSignOut = relativePath.StartsWith("attendance/sign-out/", StringComparison.OrdinalIgnoreCase);
+        // Reload session data for both sign-in and sign-out views
+        if (AttendanceId.HasValue)
+        {
+            await LoadAttendanceSession(AttendanceId.Value);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= HandleLocationChanged;
     }
 
     protected override async Task OnInitializedAsync()
@@ -548,7 +601,7 @@
         }
 
         // Refresh attendance data to get the IDs
-        // await LoadAttendanceData();
+        await LoadAttendanceData();
     }
 
     private Dictionary<Guid, AttendanceRecord> _learnerToAttendanceRecordMap = new Dictionary<Guid, AttendanceRecord>();

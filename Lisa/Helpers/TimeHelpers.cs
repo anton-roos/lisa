@@ -1,4 +1,4 @@
-namespace Lisa.helpers;
+namespace Lisa.Helpers;
 
 public static class TimeHelpers
 {

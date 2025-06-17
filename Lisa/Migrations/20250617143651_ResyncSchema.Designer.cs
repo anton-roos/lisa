@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Lisa.Migrations
 {
     [DbContext(typeof(LisaDbContext))]
-    [Migration("20250614105150_CellPhoneModel")]
-    partial class CellPhoneModel
+    [Migration("20250617143651_ResyncSchema")]
+    partial class ResyncSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

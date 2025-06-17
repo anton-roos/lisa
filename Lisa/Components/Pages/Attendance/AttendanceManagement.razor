@@ -81,16 +81,19 @@
                                         <div class="mb-4">
                                             <h4>Gr @registerClass</h4>
                                             <div class="d-flex flex-column">
-                                                @foreach (var learner in _registerClassLearners[registerClass].Where(l => string.IsNullOrEmpty(_searchText) || $"{l.Name} {l.Surname}".ToLower().Contains(_searchText.ToLower())))
+                                                @foreach (var learner in _registerClassLearners[registerClass]
+                                                    .Where(l => string.IsNullOrEmpty(_searchText) || $"{l.Name} {l.Surname}".ToLower().Contains(_searchText.ToLower()))
+                                                    .Where(l => _isSignOut ? _attendanceData.TryGetValue(l.Id, out var d) && d.IsPresent && (!_signOutTimeMap.TryGetValue(l.Id, out var so) || so == default) : true))
                                                 {
                                                     <LearnerAttendanceCard
                                                         Learner="learner"
                                                         PillColor="@GetPillColor(learner)"
-                                                        SignInTime="@_attendanceData[learner.Id].SignInTime"
-                                                        ShowPhoneToggle="@(!_isSignOut)"
+                                                        SignInTime="@(_attendanceData.TryGetValue(learner.Id, out var dt) ? dt.SignInTime : DateTime.MinValue)"
+                                                        ShowPhoneToggle="true"
                                                         CellPhoneCollected="@IsCellPhoneCollected(learner)"
                                                         CellPhoneModel="@(_learnerToAttendanceRecordMap.TryGetValue(learner.Id, out var rec) ? rec.CellPhoneModel : null)"
                                                         ToggleChecked="@(_toggleValues.TryGetValue(learner.Id, out var toggled) && toggled)"
+                                                        IsSignOut="@_isSignOut"
                                                         OnToggleAttendance="@( () => ToggleAttendance(learner, registerClass) )"
                                                         OnTogglePhone="@( () => ToggleCellPhoneCollected(learner) )" />
                                                 }
@@ -174,7 +177,7 @@
         public Guid? AttendanceId { get; set; }
     }
 
-    
+    private Dictionary<Guid, DateTime> _signOutTimeMap = new();
 
     protected override async Task OnParametersSetAsync()
     {
@@ -333,6 +336,7 @@
         _attendanceData.Clear();
         _learnerToAttendanceRecordMap.Clear();
         _toggleValues.Clear();  // clear previous toggle states
+        _signOutTimeMap.Clear();
 
         // Initialize attendance data and dummy toggle values for all learners first
         foreach (var learnerGroup in _registerClassLearners)
@@ -341,12 +345,19 @@
             {
                 _attendanceData[learner.Id] = new AttendanceData();
                 _toggleValues[learner.Id] = false;  // default toggle
+                _signOutTimeMap[learner.Id] = default;
             }
         }
 
         // Process attendance records
         foreach (var record in _currentSession.AttendanceRecords)
         {
+            if (record.AttendanceType == AttendanceType.CheckOut)
+            {
+                // Track checkout time
+                _signOutTimeMap[record.LearnerId] = record.Start ?? DateTime.UtcNow;
+                continue;
+            }
             // Skip non-check-in records
             if (record.AttendanceType != AttendanceType.CheckIn) continue;
 
@@ -459,6 +470,20 @@
     {
         if (_currentSession == null) return;
 
+        // Handle sign-out separately
+        if (_isSignOut)
+        {
+            // Only allow sign-out if learner has checked in
+            if (_attendanceData.TryGetValue(learner.Id, out var outData) && outData.AttendanceId.HasValue)
+            {
+                await SaveSignOutRecord(learner.Id);
+                // Refresh to hide signed-out learner
+                await LoadAttendanceData();
+            }
+            return;
+        }
+
+        // Existing sign-in logic
         if (!_attendanceData.ContainsKey(learner.Id))
         {
             _attendanceData[learner.Id] = new AttendanceData();
@@ -483,6 +508,27 @@
                 await SaveAttendanceRecord(learner.Id);
             }
         }
+    }
+
+    private async Task SaveSignOutRecord(Guid learnerId)
+    {
+        if (_currentSession == null) return;
+        var signOut = new AttendanceRecord
+        {
+            Id = Guid.NewGuid(),
+            Start = TimeHelpers.GetCurrentTime(),
+            AttendanceType = AttendanceType.CheckOut,
+            LearnerId = learnerId,
+            AttendanceId = _currentSession.Id,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        await AttendanceRecordService.CreateAsync(signOut);
+        // Add to current session and in-memory maps for immediate UI update
+        _currentSession.AttendanceRecords ??= new List<AttendanceRecord>();
+        _currentSession.AttendanceRecords.Add(signOut);
+        _learnerToAttendanceRecordMap[learnerId] = signOut;
+        _signOutTimeMap[learnerId] = signOut.Start ?? DateTime.UtcNow;
     }
 
     private async Task SaveAttendanceRecord(Guid learnerId)

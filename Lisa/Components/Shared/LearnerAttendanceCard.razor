@@ -7,13 +7,26 @@
             <div style="min-width: 150px;">@Learner.Name @Learner.Surname</div>
             <div class="pill-container">
                 <div class="pill @PillColor" @onclick="async () => await OnToggleAttendance.InvokeAsync(null)">
-                    @if (PillColor == "absent")
+                    @if (IsSignOut)
                     {
-                        <span>Absent</span>
+                        @switch (PillColor)
+                        {
+                            case "absent": <text>Absent</text>; break;
+                            case "present": <text>Present</text>; break;
+                            case "leave-early": <text>Left Early</text>; break;
+                            default: <text>On time</text>; break;
+                        }
                     }
                     else
                     {
-                        @TimeHelpers.ConvertToLocal(SignInTime).ToString("HH:mm")
+                        @if (PillColor == "absent")
+                        {
+                            <span>Absent</span>
+                        }
+                        else
+                        {
+                            @TimeHelpers.ConvertToLocal(SignInTime).ToString("HH:mm")
+                        }
                     }
                 </div>
             </div>
@@ -52,4 +65,5 @@
     [Parameter] public bool ToggleChecked { get; set; }
     [Parameter] public EventCallback OnToggleAttendance { get; set; }
     [Parameter] public EventCallback OnTogglePhone { get; set; }
+    [Parameter] public bool IsSignOut { get; set; }
 }

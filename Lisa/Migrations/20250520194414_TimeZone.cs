@@ -15,9 +15,9 @@ namespace Lisa.Migrations
             //     name: "FK_Attendances_AspNetUsers_RecordedByUserId",
             //     table: "Attendances");
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_Attendances_AttendanceSessions_AttendanceSessionId",
-                table: "Attendances");
+            // migrationBuilder.DropForeignKey(
+            //     name: "FK_Attendances_AttendanceSessions_AttendanceSessionId",
+            //     table: "Attendances");
 
             migrationBuilder.DropForeignKey(
                 name: "FK_Attendances_Learners_LearnerId",

@@ -9,11 +9,11 @@ namespace Lisa.Migrations
     public partial class RemoveBugReports : Migration
     {
         /// <inheritdoc />
-        // protected override void Up(MigrationBuilder migrationBuilder)
-        // {
-        //     migrationBuilder.DropTable(
-        //         name: "BugReports");
-        // }
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            // migrationBuilder.DropTable(
+            //     name: "BugReports");
+        }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)

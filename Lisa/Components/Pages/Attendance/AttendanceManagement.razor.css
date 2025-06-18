@@ -1,12 +1,4 @@
-.pill {
-    padding: 5px 15px;
-    border-radius: 20px;
-    display: inline-block;
-    min-width: 100px;
-    text-align: center;
-    cursor: pointer;
-    font-weight: bold;
-}
+
 
 .pill-container {
     display: flex;
@@ -23,8 +15,8 @@
 }
 
 .on-time {
-    background-color: #4CAF50;
     color: white;
+    background-color: #4CAF50;
 }
 
 .late {
@@ -143,6 +135,7 @@ input:checked+.slider:before {
     cursor: pointer;
     font-weight: bold;
 }
+
 
 .pill-container {
     display: flex;

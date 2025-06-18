@@ -6,7 +6,7 @@
         <div class="d-flex align-items-center justify-content-between mb-2">
             <div style="min-width: 150px;">@Learner.Name @Learner.Surname</div>
             <div class="pill-container">
-                <div class="pill @PillColor" @onclick="async () => await OnToggleAttendance.InvokeAsync(null)">
+                <div class="pill @PillColor @(IsSignOut ? "signout" : "")" @onclick="async () => await OnToggleAttendance.InvokeAsync(null)">
                     @if (IsSignOut)
                     {
                         @switch (PillColor)

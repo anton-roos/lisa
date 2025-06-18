@@ -131,6 +131,19 @@ h1:focus {
     background-color: #6f42c1;
 }
 
+/* Sign-out pill outlines */
+.pill.leave-early.signout {
+  background-color: #fff;
+  color: #dc3545;
+  border: 2px solid #dc3545;
+}
+.pill.on-time.signout,
+.pill.present.signout {
+  background-color: #fff;
+  color: #198754;
+  border: 2px solid #198754;
+}
+
 /* Toggle Switch Styles for Phone Collection */
 .toggle-switch {
     position: relative;

@@ -12,6 +12,7 @@ using Lisa.Repositories;
 using Lisa.Events;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -147,6 +148,7 @@ builder.Services.AddScoped<AttendanceRecordService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();
 builder.Services.AddControllers();
+builder.Services.AddMudServices();
 
 var app = builder.Build();
 

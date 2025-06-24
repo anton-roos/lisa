@@ -75,7 +75,7 @@
         <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="attendance">
-                    <span class="bi attendance-icon" aria-hidden="true"></span> Attendance
+                    <span class="bi attendance-icon" aria-hidden="true"></span> Sign in / out
                 </NavLink>
             </div>
         </AuthorizeView>
@@ -83,7 +83,7 @@
         <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="daily-register">
-                    <span class="bi daily-register-icon" aria-hidden="true"></span> Daily Register
+                    <span class="bi daily-register-icon" aria-hidden="true"></span> Daily Attendance
                 </NavLink>
             </div>
         </AuthorizeView>

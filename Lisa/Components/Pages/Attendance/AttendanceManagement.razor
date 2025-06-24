@@ -135,8 +135,8 @@
                     <button type="button" class="btn-close" @onclick="CancelPhoneCollect"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Enter the model of the phone being collected from <b>@_pendingPhoneLearner.Name @_pendingPhoneLearner.Surname</b>:</p>
-                    <input class="form-control" @bind-value="_pendingPhoneModel" @bind-value:event="oninput" placeholder="e.g. Samsung A12" />
+                    <p>Enter the name of the person collecting the phone from <b>@_pendingPhoneLearner.Name @_pendingPhoneLearner.Surname</b> and description of phone.</p>
+                    <input class="form-control" @bind-value="_pendingPhoneModel" @bind-value:event="oninput" placeholder="Staff Name..." />
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CancelPhoneCollect">Cancel</button>

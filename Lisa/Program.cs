@@ -12,6 +12,9 @@ using Lisa.Repositories;
 using Lisa.Events;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using MudBlazor.Services;
+using DinkToPdf.Contracts;
+using DinkToPdf;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -116,6 +119,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 builder.Services.AddHttpClient();
+builder.Services.AddSingleton<IConverter>(new SynchronizedConverter(new PdfTools()));
 
 builder.Services.AddScoped<CareGroupService>();
 builder.Services.AddScoped<CombinationService>();
@@ -143,10 +147,12 @@ builder.Services.AddScoped<RazorLightViewToStringRenderer>();
 builder.Services.AddScoped<AssessmentTypeService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<AttendanceRecordService>();
+builder.Services.AddScoped<TemplateRenderService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();
 builder.Services.AddControllers();
+builder.Services.AddMudServices();
 
 var app = builder.Build();
 

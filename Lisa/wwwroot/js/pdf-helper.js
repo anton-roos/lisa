@@ -18,3 +18,17 @@ window.downloadLearnerListPDF = () => {
         pdf.save("LearnerList.pdf");
     });
 }
+
+window.downloadFileFromBytes = (filename, contentType, byteArray) => {
+    const blob = new Blob([new Uint8Array(byteArray)], { type: contentType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+};

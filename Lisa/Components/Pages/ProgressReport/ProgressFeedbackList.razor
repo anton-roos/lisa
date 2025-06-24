@@ -1,6 +1,11 @@
-@page "/progress-feedback"
+﻿@page "/progress-feedback"
+@using DinkToPdf
+@using DinkToPdf.Contracts
+@using Lisa.Models
 @using Lisa.Models.EmailModels
 @using Lisa.Models.Entities
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.Extensions.Primitives
 @inject ProgressFeedbackService ProgressFeedbackService
 @inject SchoolService SchoolService
 @inject NavigationManager NavigationManager
@@ -8,12 +13,13 @@
 @inject SchoolGradeService SchoolGradeService
 @inherits EventAwareComponentBase
 @inject IJSRuntime JsRuntime
+@inject TemplateRenderService templateRenderService
+@inject IConverter Converter
 
 <PageTitle>Progress Feedback List</PageTitle>
 <h3>Progress Feedback List</h3>
 
-<AuthorizeView
-Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
     <Authorized>
         @if (_selectedSchool != null)
         {
@@ -37,7 +43,7 @@ Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement
                 </div>
                 <div class="col-md-4">
                     <label for="gradeDropdown" class="form-label">Grade</label>
-                    <InputSelect id="gradeDropdown" class="form-select" TValue="Guid ?" Value="@_selectedGradeId"
+                    <InputSelect id="gradeDropdown" class="form-select" TValue="Guid?" Value="@_selectedGradeId"
                     ValueChanged="@OnGradeChange" ValueExpression="@(() => _selectedGradeId)">
                         <option value="">-- Select Grade --</option>
                         @foreach (var grade in _grades)
@@ -68,15 +74,18 @@ Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement
                     @if (_selectedLearnerIds.Count > 0)
                     {
                         <button class="btn btn-outline-primary" data-bs-toggle='tooltip'
-                        title='Download Selected Feedbacks' @onclick="DownloadPDF">
+                        title='Download Selected Feedbacks' @onclick="HandleDownloadSelected">
                             <i class="bi bi-file-earmark-pdf"></i> @_selectedLearnerIds.Count()/@MaxSelection Download Selected
                         </button>
                     }
 
-                    @if (_fromDate != null && _toDate != null && _selectedGradeId != null)
+                    @if (_fromDate != null
+                 && _toDate != null
+                 && _selectedGradeId != null
+                 && _filteredProgressFeedbackList?.Count > 0)
                     {
                         <button class="btn btn-outline-danger" data-bs-toggle='tooltip'
-                        title='Download All Feedbacks' @onclick="DownloadPDF">
+                        title='Download All Feedbacks' @onclick="HandleDownloadAll">
                             <i class="bi bi-file-earmark-pdf"></i> Download All
                         </button>
                     }
@@ -126,7 +135,7 @@ Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement
                                         <i class="bi bi-eye"></i>
                                     </button>
                                     <button class="btn btn-danger btn-sm" data-bs-toggle='tooltip'
-                                    title='Download PDF' @onclick="DownloadPDF">
+                                    title='Download PDF' @onclick="()=>DownloadPDF(feedback.LearnerId)">
                                         <i class="bi bi-file-earmark-pdf"></i>
                                     </button>
                                 </td>
@@ -142,6 +151,7 @@ Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement
                 Please select a school to view learners.
             </div>
         }
+
     </Authorized>
     <NotAuthorized>
         <Unauthorized />
@@ -159,10 +169,11 @@ Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement
     private List<Subject> _subjects = [];
     private List<SchoolGrade> _grades = [];
     private DateTime? _fromDate = null;
-    private DateTime? _toDate = null; 
+    private DateTime? _toDate = null;
     private List<Guid> _selectedLearnerIds = new();
     private const int MaxSelection = 10;
     private string? _warningMessage;
+    private bool shouldTriggerPdf = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -171,8 +182,44 @@ Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement
 
         if (_selectedSchool != null)
         {
+            var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+            var uriParams = QueryHelpers.ParseQuery(uri.Query);
+
+            var queryParams = new List<string>();
+
+            if (uriParams.TryGetValue("fromDate", out var fromDateParam) &&
+                DateTime.TryParse(fromDateParam, out var parsedFromDate))
+            {
+                _fromDate = parsedFromDate.ToUniversalTime();
+            }
+
+            if (uriParams.TryGetValue("toDate", out var toDateParam) &&
+                DateTime.TryParse(toDateParam, out var parsedToDate))
+            {
+                _toDate = parsedToDate.ToUniversalTime();
+            }
+
+            if (uriParams.TryGetValue("grade", out var gradeParam) &&
+    Guid.TryParse(gradeParam, out var parsedGrade))
+            {
+                _selectedGradeId = parsedGrade;
+            }
+
+            if (uriParams.TryGetValue("subject", out var subjectParam) &&
+                int.TryParse(subjectParam, out var parsedSubject))
+            {
+                _selectedSubjectId = parsedSubject;
+            }
+
+            if (uriParams.TryGetValue("learner", out var learnerParam) &&
+            !StringValues.IsNullOrEmpty(learnerParam))
+            {
+                _searchTerm = learnerParam;
+            }
+            StateHasChanged();
             await LoadDropdowns();
             await LoadProgressFeedbackListFromService();
+
         }
     }
 
@@ -240,6 +287,7 @@ Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement
     {
         _selectedGradeId = value;
         _selectedLearnerIds.Clear();
+        UpdateUrlWithFilters();
         await LoadProgressFeedbackListFromService();
         await InvokeAsync(StateHasChanged);
     }
@@ -248,6 +296,7 @@ Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement
     {
         _selectedSubjectId = value;
         _selectedLearnerIds.Clear();
+        UpdateUrlWithFilters();
         await LoadProgressFeedbackListFromService();
         await InvokeAsync(StateHasChanged);
     }
@@ -260,6 +309,7 @@ Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement
         {
             _fromDate = selected.ToUniversalTime();
             _selectedLearnerIds.Clear();
+            UpdateUrlWithFilters();
             await LoadProgressFeedbackListFromService();
         }
         else
@@ -278,6 +328,7 @@ Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement
         {
             _toDate = selected.ToUniversalTime();
             _selectedLearnerIds.Clear();
+            UpdateUrlWithFilters();
             await LoadProgressFeedbackListFromService();
         }
         else
@@ -291,23 +342,38 @@ Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement
     private void NavigateToDetails(Guid learnerId)
     {
         var queryParams = new List<string>();
-        
+
         if (_fromDate.HasValue)
         {
             queryParams.Add($"fromDate={_fromDate.Value:yyyy-MM-dd}");
         }
-        
+
         if (_toDate.HasValue)
         {
             queryParams.Add($"toDate={_toDate.Value:yyyy-MM-dd}");
         }
-        
+
+        if (_selectedGradeId.HasValue)
+        {
+            queryParams.Add($"grade={_selectedGradeId}");
+        }
+
+        if (_selectedSubjectId.HasValue)
+        {
+            queryParams.Add($"subject={_selectedSubjectId}");
+        }
+
+        if (string.IsNullOrEmpty(_searchTerm) && _searchTerm != "")
+        {
+            queryParams.Add($"learner={_searchTerm}");
+        }
+
         var url = $"/progress-feedback-details/{learnerId}";
         if (queryParams.Any())
         {
             url += $"?{string.Join("&", queryParams)}";
         }
-        
+
         NavigationManager.NavigateTo(url);
     }
 
@@ -336,9 +402,14 @@ Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task DownloadPDF()
+    private async Task DownloadPDF(Guid learnerId)
     {
-        await JsRuntime.InvokeVoidAsync("downloadLearnerListPDF");
+        var learnerIds = new List<Guid> { learnerId };
+        var progressFeedbackHtml = await templateRenderService.RenderProgressFeedbackAsync(learnerIds, _fromDate, _toDate);
+        if (string.IsNullOrEmpty(progressFeedbackHtml))
+            return;
+
+        await GeneratePDF(progressFeedbackHtml);
     }
 
     private void ToggleLearnerId(Guid learnerId, ChangeEventArgs e)
@@ -368,4 +439,90 @@ Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement
     }
 
     private bool ReachedLimit() => _selectedLearnerIds.Count >= MaxSelection;
+
+    private async Task HandleDownloadAll()
+    {
+        var learnerIds = _filteredProgressFeedbackList?
+        .Select(pf => pf.LearnerId)
+        .ToList();
+
+        var progressFeedbackHtml = await templateRenderService
+            .RenderProgressFeedbackAsync(learnerIds, _fromDate, _toDate);
+
+        if (string.IsNullOrEmpty(progressFeedbackHtml))
+            return;
+
+        await GeneratePDF(progressFeedbackHtml);
+    }
+
+
+    private async Task HandleDownloadSelected()
+    {
+        var progressFeedbackHtml = await templateRenderService.RenderProgressFeedbackAsync(_selectedLearnerIds, _fromDate, _toDate);
+        if (string.IsNullOrEmpty(progressFeedbackHtml))
+            return;
+
+        await GeneratePDF(progressFeedbackHtml);
+    }
+
+    // private async Task GeneratePDF(string htmlContent)
+    // {
+    //     var converter = new SynchronizedConverter(new PdfTools());
+    //     var doc = new HtmlToPdfDocument
+    //         {
+    //             GlobalSettings = new GlobalSettings
+    //             {
+    //                 PaperSize = PaperKind.A4,
+    //                 Orientation = DinkToPdf.Orientation.Portrait
+    //             },
+    //             Objects = { new ObjectSettings { HtmlContent = htmlContent } }
+    //         };
+    //     var fileBytes = converter.Convert(doc);
+
+    //     await JsRuntime.InvokeVoidAsync(
+    //         "downloadFileFromBytes",
+    //         "progress-feedback.pdf",
+    //         "application/pdf",
+    //         fileBytes
+    //     );
+    // }
+
+    private async Task GeneratePDF(string htmlContent)
+    {
+        var doc = new HtmlToPdfDocument
+            {
+                GlobalSettings = new GlobalSettings
+                {
+                    PaperSize = PaperKind.A4,
+                    Orientation = DinkToPdf.Orientation.Portrait
+                },
+                Objects = { new ObjectSettings { HtmlContent = htmlContent } }
+            };
+        var fileBytes = Converter.Convert(doc); // <- reuse injected converter
+        await JsRuntime.InvokeVoidAsync(
+            "downloadFileFromBytes",
+            "progress-feedback.pdf",
+            "application/pdf",
+            fileBytes
+        );
+    }
+
+    private void UpdateUrlWithFilters()
+    {
+        var queryParams = new List<string>();
+
+        if (_fromDate.HasValue)
+            queryParams.Add($"fromDate={_fromDate:yyyy-MM-dd}");
+        if (_toDate.HasValue)
+            queryParams.Add($"toDate={_toDate:yyyy-MM-dd}");
+        if (_selectedGradeId.HasValue)
+            queryParams.Add($"grade={_selectedGradeId}");
+        if (_selectedSubjectId.HasValue)
+            queryParams.Add($"subject={_selectedSubjectId}");
+        if (!string.IsNullOrEmpty(_searchTerm))
+            queryParams.Add($"learner={Uri.EscapeDataString(_searchTerm)}");
+
+        var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : string.Empty;
+        NavigationManager.NavigateTo("/progress-feedback" + queryString, forceLoad: false, replace: true);
+    }
 }

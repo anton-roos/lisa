@@ -12,12 +12,9 @@ public class ProgressFeedbackService
     IDbContextFactory<LisaDbContext> dbContextFactory
 )
 {
-    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-    private readonly LearnerService _learnerService = learnerService;
-
     public async Task<ProgressFeedback?> GetProgressFeedbackAsync(Guid learnerId, DateTime? fromDate = null, DateTime? toDate = null)
     {
-        var learner = await _learnerService.GetByIdAsync(learnerId, activeOnly: true);
+        var learner = await learnerService.GetByIdAsync(learnerId, activeOnly: true);
 
         Guard.Against.Null(learner, nameof(learner), "Learner not found or inactive in get progress feedback.");
 
@@ -34,16 +31,14 @@ public class ProgressFeedbackService
 
             if (fromDate.HasValue)
             {
-                var fromDateUtc = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
                 subjectResults = subjectResults
-                    .Where(r => r.ResultSet!.AssessmentDate >= fromDateUtc);
+                    .Where(r => r.ResultSet!.AssessmentDate >= fromDate.Value);
             }
 
             if (toDate.HasValue)
             {
-                var endDate = DateTime.SpecifyKind(toDate.Value.AddDays(1), DateTimeKind.Utc);
                 subjectResults = subjectResults
-                    .Where(r => r.ResultSet!.AssessmentDate < endDate);
+                    .Where(r => r.ResultSet!.AssessmentDate < toDate.Value);
             }
 
             var filteredResults = subjectResults
@@ -51,16 +46,14 @@ public class ProgressFeedbackService
                 .Take(6)
                 .ToList();
 
-            if (filteredResults.Count > 0)
-            {
-                var subjectName = filteredResults.First().ResultSet!.Subject!.Name!;
-                resultsBySubject[subjectName] = filteredResults;
-            }
+            if (filteredResults.Count <= 0) continue;
+            var subjectName = filteredResults.First().ResultSet!.Subject!.Name!;
+            resultsBySubject[subjectName] = filteredResults;
         }
 
-        string learnerName = $"{learner.Name} {learner.Surname}";
-        TextInfo textInfo = CultureInfo.CurrentCulture.TextInfo;
-        string learnerNameTitleCase = textInfo.ToTitleCase(learnerName.ToLower());
+        var learnerName = $"{learner.Name} {learner.Surname}";
+        var textInfo = CultureInfo.CurrentCulture.TextInfo;
+        var learnerNameTitleCase = textInfo.ToTitleCase(learnerName.ToLower());
 
         var progressFeedback = new ProgressFeedback
         {
@@ -73,7 +66,7 @@ public class ProgressFeedbackService
 
     public async Task<List<ProgressFeedbackListItem>> GetProgressFeedbackListAsync(Guid schoolId, Guid? gradeId = null, int? subjectId = null, DateTime? fromDate = null, DateTime? toDate = null)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
 
         var query = context.Learners
             .AsNoTracking()
@@ -97,14 +90,12 @@ public class ProgressFeedbackService
 
         if (fromDate.HasValue)
         {
-            var fromDateUtc = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
-            query = query.Where(l => l.Results!.Any(r => r.ResultSet != null && r.ResultSet.AssessmentDate >= fromDateUtc));
+            query = query.Where(l => l.Results!.Any(r => r.ResultSet != null && r.ResultSet.AssessmentDate >= fromDate.Value));
         }
 
         if (toDate.HasValue)
         {
-            var toDateUtc = DateTime.SpecifyKind(toDate.Value.AddDays(1).AddSeconds(-1), DateTimeKind.Utc);
-            query = query.Where(l => l.Results!.Any(r => r.ResultSet != null && r.ResultSet.AssessmentDate <= toDateUtc));
+            query = query.Where(l => l.Results!.Any(r => r.ResultSet != null && r.ResultSet.AssessmentDate <= toDate.Value.AddDays(1).AddSeconds(-1)));
         }
 
         var list = await query
@@ -119,4 +110,74 @@ public class ProgressFeedbackService
 
         return list;
     }
+    public async Task<List<ProgressFeedback>> GetProgressFeedbackForLearnersAsync(IEnumerable<Guid> learnerIds, DateTime? fromDate = null, DateTime? toDate = null)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+
+        var learners = await context.Learners
+            .AsNoTracking()
+            .Include(l => l.RegisterClass)
+                .ThenInclude(rc => rc!.SchoolGrade)
+                .ThenInclude(sg => sg!.SystemGrade)
+            .Include(l => l.Combination)
+                .ThenInclude(c => c!.Subjects)
+            .Include(l => l.LearnerSubjects!)
+                .ThenInclude(ls => ls.Subject)
+            .Include(l => l.CareGroup)
+            .Include(l => l.Parents!)
+            .Include(l => l.School)
+            .Include(l => l.Results!)
+                .ThenInclude(r => r.ResultSet)
+                .ThenInclude(rs => rs!.Subject)
+            .Where(l => learnerIds.Contains(l.Id) && l.Active)
+            .ToListAsync();
+
+        var textInfo = CultureInfo.CurrentCulture.TextInfo;
+
+        var progressFeedbackList = new List<ProgressFeedback>();
+
+        foreach (var learner in learners)
+        {
+            var resultsBySubject = new Dictionary<string, List<Result>>();
+
+            var resultsBySubjectId = learner.Results?
+                .Where(r => r.ResultSet?.Subject != null)
+                .GroupBy(r => r.ResultSet!.Subject!.Id)
+                .ToList();
+            if (resultsBySubjectId != null && resultsBySubjectId.Count > 0)
+            {
+                foreach (var group in resultsBySubjectId)
+                {
+                    var subjectResults = group.AsEnumerable();
+
+                    if (fromDate.HasValue)
+                        subjectResults = subjectResults.Where(r => r.ResultSet!.AssessmentDate >= fromDate.Value);
+
+                    if (toDate.HasValue)
+                        subjectResults = subjectResults.Where(r => r.ResultSet!.AssessmentDate < toDate.Value);
+
+                    var filteredResults = subjectResults
+                        .OrderByDescending(r => r.ResultSet!.AssessmentDate)
+                        .Take(6)
+                        .ToList();
+
+                    if (filteredResults?.Count <= 0) continue;
+
+                    var subjectName = filteredResults.First().ResultSet!.Subject!.Name!;
+                    resultsBySubject[subjectName] = filteredResults;
+                }
+            }
+            var learnerName = $"{learner.Name} {learner.Surname}";
+            var learnerNameTitleCase = textInfo.ToTitleCase(learnerName.ToLower());
+
+            progressFeedbackList.Add(new ProgressFeedback
+            {
+                LearnerName = learnerNameTitleCase,
+                ResultsBySubject = resultsBySubject
+            });
+        }
+
+        return progressFeedbackList;
+    }
+
 }

@@ -67,7 +67,7 @@
     private School? _selectedSchool;
     private bool IsEdit => Id.HasValue;
     private IEnumerable<User>? _availableUsers;
-    private List<Guid> SelectedUserIds { get; set; } = new List<Guid>();
+    private List<Guid> SelectedUserIds { get; set; } = [];
 
     protected override async Task OnInitializedAsync()
     {

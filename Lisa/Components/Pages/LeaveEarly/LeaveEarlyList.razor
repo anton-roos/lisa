@@ -1,8 +1,5 @@
 @page "/leave-early/list"
 @using Lisa.Models.Entities
-@using Microsoft.AspNetCore.Authorization
-@using System.ComponentModel.DataAnnotations
-@using System.Security.Claims
 @inject LearnerService LearnerService
 @inject AttendanceService AttendanceService
 @inject SchoolService SchoolService
@@ -144,7 +141,7 @@ else
                                         Previous
                                     </button>
                                 </li>
-                                @for (int i = 1; i <= TotalPages; i++)
+                                @for (var i = 1; i <= TotalPages; i++)
                                 {
                                     var pageNumber = i;
                                     <li class="page-item @(CurrentPage == pageNumber ? "active" : "")">
@@ -238,33 +235,27 @@ else
 @code {
     private School? _selectedSchool;
 
-    // Filters
-    private DateTime? FromDate { get; set; } = DateTime.Today.AddDays(-30);
-    private DateTime? ToDate { get; set; } = DateTime.Today;
+    private DateTime? FromDate { get; set; } = DateTime.UtcNow.Date.AddDays(-30);
+    private DateTime? ToDate { get; set; } = DateTime.UtcNow.Date;
     private string? SelectedClassId { get; set; }
     private string LearnerSearchTerm { get; set; } = "";
 
-    // Data
-    private List<RegisterClass> RegisterClasses { get; set; } = new();
-    private List<LeaveEarlyRecord> LeaveEarlyRecords { get; set; } = new();
+    private List<RegisterClass> RegisterClasses { get; set; } = [];
+    private List<LeaveEarlyRecord> LeaveEarlyRecords { get; set; } = [];
     private bool IsLoading { get; set; } = false;
 
-    // Pagination
     private int CurrentPage { get; set; } = 1;
     private int PageSize { get; set; } = 10;
     private int TotalRecords { get; set; } = 0;
     private int TotalPages => (int)Math.Ceiling(TotalRecords / (double)PageSize);
 
-    // Modal
     private bool ShowDetailsModal { get; set; } = false;
     private LeaveEarlyRecord? SelectedRecord { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        // Subscribe to school selection event
         SubscribeToEvent(UiEvents.SchoolSelected);
 
-        // Get selected school
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
 
         if (_selectedSchool != null)
@@ -310,53 +301,51 @@ else
 
         try
         {
-            // Convert to UTC for database query
             var fromDateUtc = FromDate.HasValue
-            ? DateTime.SpecifyKind(FromDate.Value, DateTimeKind.Utc)
+            ? FromDate.Value
             : DateTime.UtcNow.AddDays(-30);
 
             var toDateUtc = ToDate.HasValue
-            ? DateTime.SpecifyKind(ToDate.Value.AddDays(1).AddTicks(-1), DateTimeKind.Utc)
+            ?ToDate.Value.AddDays(1).AddTicks(-1)
             : DateTime.UtcNow;
 
-            // Query the database for leave early records
-            var attendances = await AttendanceService.GetLeaveEarlyAttendancesAsync(
-            _selectedSchool.Id,
-            fromDateUtc,
-            toDateUtc,
-            Guid.TryParse(SelectedClassId, out var classId) ? classId : (Guid?)null,
-            LearnerSearchTerm,
-            (CurrentPage - 1) * PageSize,
-            PageSize
-            );
-
-            // Get total count for pagination
-            TotalRecords = await AttendanceService.GetLeaveEarlyAttendancesCountAsync(
-            _selectedSchool.Id,
-            fromDateUtc,
-            toDateUtc,
-            Guid.TryParse(SelectedClassId, out var countClassId) ? countClassId : (Guid?)null,
-            LearnerSearchTerm
-            );
-
-            // Map to view model
-            LeaveEarlyRecords = attendances.Select(a => new LeaveEarlyRecord
-            {
-                Id = a.Id,
-                LearnerId = a.LearnerId,
-                LearnerName = $"{a.Learner?.Name} {a.Learner?.Surname}",
-                ClassName = a.Learner?.RegisterClass?.Name ?? "Unknown",
-                Date = a.Date,
-                SignOutTime = a.SignOutTime,
-                IsEarlyLeave = a.IsEarlyLeave,
-                Notes = a.Notes ?? "",
-                RecordedByUser = a.RecordedByUser?.Name ?? "Unknown"
-            }).ToList();
+            // var attendances = await AttendanceService.GetLeaveEarlyAttendancesAsync(
+            // _selectedSchool.Id,
+            // fromDateUtc,
+            // toDateUtc,
+            // Guid.TryParse(SelectedClassId, out var classId) ? classId : (Guid?)null,
+            // LearnerSearchTerm,
+            // (CurrentPage - 1) * PageSize,
+            // PageSize
+            // );
+            //
+            // // Get total count for pagination
+            // TotalRecords = await AttendanceService.GetLeaveEarlyAttendancesCountAsync(
+            // _selectedSchool.Id,
+            // fromDateUtc,
+            // toDateUtc,
+            // Guid.TryParse(SelectedClassId, out var countClassId) ? countClassId : (Guid?)null,
+            // LearnerSearchTerm
+            // );
+            //
+            // // Map to view model
+            // LeaveEarlyRecords = attendances.Select(a => new LeaveEarlyRecord
+            // {
+            //     Id = a.Id,
+            //     LearnerId = a.LearnerId,
+            //     LearnerName = $"{a.Learner?.Name} {a.Learner?.Surname}",
+            //     ClassName = a.Learner?.RegisterClass?.Name ?? "Unknown",
+            //     Date = a.Date,
+            //     SignOutTime = a.SignOutTime,
+            //     IsEarlyLeave = a.IsEarlyLeave,
+            //     Notes = a.Notes ?? "",
+            //     RecordedByUser = a.RecordedByUser?.Name ?? "Unknown"
+            // }).ToList();
         }
         catch (Exception ex)
         {
             await JSRuntime.InvokeVoidAsync("console.error", "Error loading leave early records:", ex.Message);
-            LeaveEarlyRecords = new List<LeaveEarlyRecord>();
+            LeaveEarlyRecords = [];
             TotalRecords = 0;
         }
         finally
@@ -374,8 +363,8 @@ else
 
     private async Task ResetFilters()
     {
-        FromDate = DateTime.Today.AddDays(-30);
-        ToDate = DateTime.Today;
+        FromDate = DateTime.UtcNow.Date.AddDays(-30);
+        ToDate = DateTime.UtcNow.Date;
         SelectedClassId = null;
         LearnerSearchTerm = "";
         CurrentPage = 1;

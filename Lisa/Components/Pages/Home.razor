@@ -4,7 +4,6 @@
 @inject SchoolService SchoolService
 @inject LearnerService LearnerService
 @inject ResultService ResultService
-@inject BugReportService BugService
 @inject NavigationManager NavigationManager
 @inherits EventAwareComponentBase
 
@@ -61,18 +60,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="row mb-4">
-                                    <div class="col-md-4" @onclick="NavigateToBugReports" style="cursor: pointer;"
-                                        onmouseover="this.style.backgroundColor='#f0f0f0';"
-                                        onmouseout="this.style.backgroundColor='';">
-                                        <div class="card text-center">
-                                            <div class="card-body bg-light">
-                                                <h4 class="card-title">Bugs</h4>
-                                                <p class="card-text display-4">@_bugCount</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -80,8 +67,7 @@
             </Authorized>
         </AuthorizeView>
         <!-- Teacher View -->
-        <AuthorizeView
-            Roles="@($"{Roles.Teacher}, {Roles.Principal}, {Roles.Administrator}")">
+        <AuthorizeView Roles="@($"{Roles.Teacher}, {Roles.Principal}, {Roles.Administrator}")">
             <Authorized>
                 @if (_loading)
                 {
@@ -120,12 +106,36 @@
                         </div>
                     </div>
                 }
-                else
+            </Authorized>
+        </AuthorizeView>
+        <!-- Attendance Staff View -->
+        <AuthorizeView Roles="@($"{Roles.Attendance}")">
+            <Authorized>
+                @if (_loading)
                 {
-                    <div class="alert alert-danger">
-                        The System could not find the school that you are assigned to. Please log a bug.
+                    <div class="text-center">
+                        <p>Loading...</p>
                     </div>
                 }
+                else if (_selectedSchool != null)
+                {
+                    <div class="container mt-4">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="card mb-4">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <AttendanceComponent />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            
             </Authorized>
         </AuthorizeView>
 
@@ -140,7 +150,6 @@
     int _schoolCount;
     int _resultCount;
     int _learnerCount;
-    int _bugCount;
 
     School? _selectedSchool;
     int _schoolResultCount;
@@ -154,7 +163,6 @@
         _schoolCount = await SchoolService.GetCountAsync();
         _resultCount = await ResultService.GetCountAsync();
         _learnerCount = await LearnerService.GetCountAsync();
-        _bugCount = await BugService.GetCountAsync();
 
         if (_selectedSchool != null)
         {
@@ -172,10 +180,5 @@
             _ => _selectedSchool
         };
         await base.HandleEventAsync(eventName, payload);
-    }
-
-    private void NavigateToBugReports()
-    {
-        NavigationManager.NavigateTo("/bug-reports");
     }
 }

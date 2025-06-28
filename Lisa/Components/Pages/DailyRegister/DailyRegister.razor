@@ -1,17 +1,17 @@
 @page "/daily-register"
 @using Lisa.Models.Entities
-@using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
 @inject SchoolService SchoolService
 @inject DailyRegisterService DailyRegisterService
 @inject RegisterClassService RegisterClassService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject LearnerService LearnerService
 @inject ILogger<DailyRegister> Logger
 @inherits EventAwareComponentBase
 
 <PageTitle>Daily Register</PageTitle>
 
-<h3>Daily Register - @DateTime.Today.ToString("d MMM yyyy")</h3>
+<h3>Daily Register - @DateTime.UtcNow.Date.ToString("d MMM yyyy")</h3>
 
 @if (_selectedSchool == null)
 {
@@ -95,8 +95,7 @@ else
                                         <td>@learner.Surname @learner.Name</td>
                                         <td>
                                             @{
-                                                var isPresent = _attendanceData.TryGetValue(learner.Id, out var attendance) &&
-                                                attendance.IsPresent;
+                                                var isPresent = _attendanceData.TryGetValue(learner.Id, out var attendance);
                                                 var pillClass = isPresent ? "present" : "absent";
                                                 var isProcessing = _processingLearnerIds.Contains(learner.Id);
                                             }
@@ -167,8 +166,8 @@ else
     private bool IsLoading { get; set; } = false;
     private Guid SelectedRegisterClassId { get; set; } = Guid.Empty;
     private Guid? _currentUserId;
-    private Dictionary<Guid, Attendance> _attendanceData = new();
-    private HashSet<Guid> _processingLearnerIds = new();
+    private Dictionary<Guid, AttendanceRecord> _attendanceData = new();
+    private HashSet<Guid> _processingLearnerIds = [];
 
     private IEnumerable<Learner> FilteredLearners => _learners
     .Where(l => string.IsNullOrEmpty(_searchTerm) ||
@@ -223,7 +222,7 @@ else
         try
         {
             IsLoading = true;
-            _registerClasses = await DailyRegisterService.GetRegisterClassesBySchoolIdAsync(_selectedSchool.Id);
+            _registerClasses = await RegisterClassService.GetBySchoolIdAsync(_selectedSchool.Id);
         }
         catch (Exception ex)
         {
@@ -248,14 +247,14 @@ else
             await InvokeAsync(StateHasChanged);
 
             _selectedRegisterClass = _registerClasses.FirstOrDefault(rc => rc.Id == registerClassId);
-            _learners = await DailyRegisterService.GetLearnersByRegisterClassAsync(registerClassId);
+            _learners = await LearnerService.GetByRegisterClassAsync(registerClassId);
 
             // Get today's attendance records for these learners
             var learnerIds = _learners.Select(l => l.Id).ToList();
-            _attendanceData = await DailyRegisterService.GetAttendanceRecordsAsync(
-            registerClassId,
-            learnerIds,
-            DateTime.Today);
+            // _attendanceData = await AttendanceRecordService.Get(
+            // registerClassId,
+            // learnerIds,
+            // DateTime.UtcNow.Date);
         }
         catch (Exception ex)
         {
@@ -279,27 +278,27 @@ else
             _processingLearnerIds.Add(learner.Id);
             await InvokeAsync(StateHasChanged);
 
-            // Determine current attendance status
-            bool isCurrentlyPresent = _attendanceData.TryGetValue(learner.Id, out var existingAttendance) &&
-            existingAttendance.IsPresent;
+            // // Determine current attendance status
+            // var isCurrentlyPresent = _attendanceData.TryGetValue(learner.Id, out var existingAttendance) &&
+            //                          existingAttendance.IsPresent;
 
-            // Toggle attendance
-            bool newAttendanceStatus = !isCurrentlyPresent;
+            // // Toggle attendance
+            // var newAttendanceStatus = !isCurrentlyPresent;
 
             // Record the new attendance - this immediately updates the database
-            var attendance = await DailyRegisterService.RecordAttendanceAsync(
-            learner.Id,
-            _selectedSchool.Id,
-            _selectedRegisterClass.Id,
-            newAttendanceStatus,
-            _currentUserId);
+            // var attendance = await DailyRegisterService.RecordAttendanceAsync(
+            // learner.Id,
+            // _selectedSchool.Id,
+            // _selectedRegisterClass.Id,
+            // newAttendanceStatus,
+            // _currentUserId);
 
             // Update our local cache
-            _attendanceData[learner.Id] = attendance;
-
-            // Log the successful update for debugging/audit
-            Logger.LogInformation("Attendance for learner {LearnerId} updated to {Status}",
-            learner.Id, newAttendanceStatus ? "Present" : "Absent");
+            // _attendanceData[learner.Id] = attendance;
+            //
+            // // Log the successful update for debugging/audit
+            // Logger.LogInformation("Attendance for learner {LearnerId} updated to {Status}",
+            // learner.Id, newAttendanceStatus ? "Present" : "Absent");
         }
         catch (Exception ex)
         {
@@ -327,7 +326,7 @@ else
 
     private async Task RegisterClassSelectionChanged(ChangeEventArgs e)
     {
-        if (Guid.TryParse(e.Value?.ToString(), out Guid registerClassId))
+        if (Guid.TryParse(e.Value?.ToString(), out var registerClassId))
         {
             SelectedRegisterClassId = registerClassId;
             await LoadLearners(registerClassId);

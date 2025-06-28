@@ -1,5 +1,4 @@
 @using Lisa.Models.Entities
-@using Microsoft.AspNetCore.Components
 @inject IJSRuntime JsRuntime
 
 <button class="btn btn-outline-danger" @onclick="DownloadPDF">
@@ -44,7 +43,7 @@
 
 @code {
     [Parameter]
-    public List<Learner> Learners { get; set; } = new List<Learner>();
+    public List<Learner> Learners { get; set; } = [];
     [Parameter]
     public string? Title { get; set; }
 

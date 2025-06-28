@@ -261,20 +261,20 @@
 @code {
     private RecipientGroup _recipientGroup { get; set; } = RecipientGroup.School;
     private string? _searchTerm { get; set; }
-    private List<Learner> _learners = new();
+    private List<Learner> _learners = [];
     private IEnumerable<Learner> _filteredLearners => ApplyFilters();
     private School? _selectedSchool { get; set; }
     private Guid? _gradeId { get; set; }
     private RecipientType _recipientType { get; set; } = RecipientType.None;
-    private List<SchoolGrade> _schoolGrades = new();
-    private List<Subject> _subjects = new();
+    private List<SchoolGrade> _schoolGrades = [];
+    private List<Subject> _subjects = [];
     private int _subjectId { get; set; }
     private RecipientTemplate _recipientTemplate { get; set; } = RecipientTemplate.None;
     private bool _isSendDisabled => _recipientTemplate == RecipientTemplate.None;
     private bool _isSending { get; set; }
     private string? _statusMessage { get; set; }
     private bool _isLoading { get; set; } = false;
-    public IEnumerable<Learner> Learners { get; set; } = Enumerable.Empty<Learner>();
+    public IEnumerable<Learner> Learners { get; set; } = [];
     public Learner? SelectedLearner { get; set; }
     private DateTime? _fromDate = null;
     private DateTime? _toDate = null;
@@ -310,7 +310,7 @@
 
     private IEnumerable<Learner> ApplyFilters()
     {
-        if (!_learners.Any()) return Enumerable.Empty<Learner>();
+        if (!_learners.Any()) return [];
 
         var query = _learners.AsEnumerable();
 
@@ -399,12 +399,12 @@
         // Ensure dates are properly handled when changed in the UI
         if (_fromDate.HasValue)
         {
-            _fromDate = DateTime.SpecifyKind(_fromDate.Value, DateTimeKind.Utc);
+            _fromDate = _fromDate.Value;
         }
         
         if (_toDate.HasValue)
         {
-            _toDate = DateTime.SpecifyKind(_toDate.Value, DateTimeKind.Utc);
+            _toDate = _toDate.Value;
         }
         
         await InvokeAsync(StateHasChanged);

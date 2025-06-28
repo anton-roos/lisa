@@ -76,17 +76,11 @@ namespace Lisa.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("AttendanceSessionId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
@@ -94,13 +88,74 @@ namespace Lisa.Migrations
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("End")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsEarlyLeave")
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("Start")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId", "Start");
+
+                    b.ToTable("Attendances");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.AttendanceRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AttendanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttendanceType")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("CellPhoneCollected")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsPresent")
+                    b.Property<string>("CellPhoneModel")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("CellPhoneReturned")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("CellPhoneReturnedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("End")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
                     b.Property<Guid>("LearnerId")
@@ -109,19 +164,7 @@ namespace Lisa.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("RecordedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("RegisterClassId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("SchoolId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("SignInTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("SignOutTime")
+                    b.Property<DateTime?>("Start")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -132,68 +175,11 @@ namespace Lisa.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AttendanceSessionId");
+                    b.HasIndex("AttendanceId");
 
-                    b.HasIndex("RecordedByUserId");
+                    b.HasIndex("LearnerId", "Start");
 
-                    b.HasIndex("RegisterClassId");
-
-                    b.HasIndex("SchoolId");
-
-                    b.HasIndex("LearnerId", "Date");
-
-                    b.ToTable("Attendances");
-                });
-
-            modelBuilder.Entity("Lisa.Models.Entities.AttendanceSession", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("CreatedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("EndTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("SchoolId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("StartTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedByUserId");
-
-                    b.HasIndex("SchoolId", "Date");
-
-                    b.ToTable("AttendanceSessions");
+                    b.ToTable("AttendanceRecords");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.AuditLog", b =>
@@ -222,52 +208,6 @@ namespace Lisa.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("AuditLogs");
-                });
-
-            modelBuilder.Entity("Lisa.Models.Entities.BugReport", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("ClosedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("PageUrl")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.Property<DateTime>("ReportedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ReportedBy")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
-
-                    b.Property<DateTime?>("ResolvedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("UserAuthenticated")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Version")
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
-
-                    b.Property<string>("WhatHappened")
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)");
-
-                    b.Property<string>("WhatTried")
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("BugReports");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.CareGroup", b =>
@@ -1303,10 +1243,22 @@ namespace Lisa.Migrations
 
             modelBuilder.Entity("Lisa.Models.Entities.Attendance", b =>
                 {
-                    b.HasOne("Lisa.Models.Entities.AttendanceSession", "AttendanceSession")
-                        .WithMany("Attendances")
-                        .HasForeignKey("AttendanceSessionId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                    b.HasOne("Lisa.Models.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("School");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.AttendanceRecord", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.Attendance", "Attendance")
+                        .WithMany("AttendanceRecords")
+                        .HasForeignKey("AttendanceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("Lisa.Models.Entities.Learner", "Learner")
                         .WithMany()
@@ -1314,50 +1266,9 @@ namespace Lisa.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Lisa.Models.Entities.User", "RecordedByUser")
-                        .WithMany()
-                        .HasForeignKey("RecordedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("Lisa.Models.Entities.RegisterClass", "RegisterClass")
-                        .WithMany()
-                        .HasForeignKey("RegisterClassId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Lisa.Models.Entities.School", "School")
-                        .WithMany()
-                        .HasForeignKey("SchoolId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("AttendanceSession");
+                    b.Navigation("Attendance");
 
                     b.Navigation("Learner");
-
-                    b.Navigation("RecordedByUser");
-
-                    b.Navigation("RegisterClass");
-
-                    b.Navigation("School");
-                });
-
-            modelBuilder.Entity("Lisa.Models.Entities.AttendanceSession", b =>
-                {
-                    b.HasOne("Lisa.Models.Entities.User", "CreatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("Lisa.Models.Entities.School", "School")
-                        .WithMany()
-                        .HasForeignKey("SchoolId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CreatedByUser");
-
-                    b.Navigation("School");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.CareGroup", b =>
@@ -1731,9 +1642,9 @@ namespace Lisa.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Lisa.Models.Entities.AttendanceSession", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.Attendance", b =>
                 {
-                    b.Navigation("Attendances");
+                    b.Navigation("AttendanceRecords");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.CareGroup", b =>

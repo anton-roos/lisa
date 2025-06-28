@@ -12,14 +12,11 @@ public class RegisterClassService
     ILogger<RegisterClassService> logger
 )
 {
-    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-    private readonly ILogger<RegisterClassService> _logger = logger;
-
     public async Task<RegisterClass?> GetByIdAsync(Guid registerClassId)
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             return await context.RegisterClasses
                 .AsNoTracking()
                 .Include(rc => rc.SchoolGrade!)
@@ -30,7 +27,7 @@ public class RegisterClassService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching RegisterClass with ID: {RegisterClassId}", registerClassId);
+            logger.LogError(ex, "Error fetching RegisterClass with ID: {RegisterClassId}", registerClassId);
             return null;
         }
     }
@@ -39,7 +36,7 @@ public class RegisterClassService
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             return await context.RegisterClasses
                 .Where(rc => rc.SchoolGrade != null && rc.SchoolGrade.SchoolId == schoolId)
                 .Include(rc => rc.SchoolGrade!)
@@ -48,7 +45,7 @@ public class RegisterClassService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching RegisterClass with ID: {schoolId}", schoolId);
+            logger.LogError(ex, "Error fetching RegisterClass with ID: {schoolId}", schoolId);
             return [];
         }
     }
@@ -57,7 +54,7 @@ public class RegisterClassService
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             return await context.RegisterClasses
                 .AsNoTracking()
                 .Include(rc => rc.SchoolGrade!)
@@ -71,7 +68,7 @@ public class RegisterClassService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching all RegisterClasses.");
+            logger.LogError(ex, "Error fetching all RegisterClasses.");
             return [];
         }
     }
@@ -80,12 +77,12 @@ public class RegisterClassService
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             var existing = await context.RegisterClasses.FindAsync(registerClass.Id);
 
             if (existing == null)
             {
-                _logger.LogWarning("Attempted to update non-existent RegisterClass {RegisterClassId}.",
+                logger.LogWarning("Attempted to update non-existent RegisterClass {RegisterClassId}.",
                     registerClass.Id);
                 return false;
             }
@@ -97,12 +94,12 @@ public class RegisterClassService
 
             context.Entry(existing).State = EntityState.Modified;
             await context.SaveChangesAsync();
-            _logger.LogInformation("Updated RegisterClass: {RegisterClassId}", registerClass.Id);
+            logger.LogInformation("Updated RegisterClass: {RegisterClassId}", registerClass.Id);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating RegisterClass: {RegisterClassId}", registerClass.Id);
+            logger.LogError(ex, "Error updating RegisterClass: {RegisterClassId}", registerClass.Id);
             return false;
         }
     }
@@ -111,33 +108,33 @@ public class RegisterClassService
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             var registerClass = await context.RegisterClasses.FindAsync(registerClassId);
 
             if (registerClass == null)
             {
-                _logger.LogWarning("Attempted to delete non-existent RegisterClass {RegisterClassId}.",
+                logger.LogWarning("Attempted to delete non-existent RegisterClass {RegisterClassId}.",
                     registerClassId);
                 return false;
             }
 
             context.RegisterClasses.Remove(registerClass);
             await context.SaveChangesAsync();
-            _logger.LogInformation("Deleted RegisterClass: {RegisterClassId}", registerClassId);
+            logger.LogInformation("Deleted RegisterClass: {RegisterClassId}", registerClassId);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting RegisterClass: {RegisterClassId}", registerClassId);
+            logger.LogError(ex, "Error deleting RegisterClass: {RegisterClassId}", registerClassId);
             return false;
         }
     }
 
-    public async Task<bool> SaveRegisterClassAsync(RegisterClassViewModel model, Guid? registerClassId)
+    public async Task<bool> CreateAsync(RegisterClassViewModel model, Guid? registerClassId)
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
 
             var selectedSubjects = await context.Subjects
                 .Where(s => model.SubjectIds.Contains(s.Id))
@@ -153,7 +150,7 @@ public class RegisterClassService
 
                 if (registerClass == null)
                 {
-                    _logger.LogWarning("Attempted to update non-existent RegisterClass {RegisterClassId}.", registerClassId.Value);
+                    logger.LogWarning("Attempted to update non-existent RegisterClass {RegisterClassId}.", registerClassId.Value);
                     return false;
                 }
 
@@ -178,12 +175,12 @@ public class RegisterClassService
             }
 
             await context.SaveChangesAsync();
-            _logger.LogInformation("Register Class {Action} successfully: {RegisterClassId}", registerClassId.HasValue ? "updated" : "created", registerClass.Id);
+            logger.LogInformation("Register Class {Action} successfully: {RegisterClassId}", registerClassId.HasValue ? "updated" : "created", registerClass.Id);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error saving RegisterClass.");
+            logger.LogError(ex, "Error saving RegisterClass.");
             return false;
         }
     }

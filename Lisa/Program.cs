@@ -5,20 +5,18 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Lisa.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Hangfire;
-using Hangfire.PostgreSql;
 using Lisa.Models.Entities;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Serilog;
 using Lisa.Repositories;
 using Lisa.Events;
-using Hangfire.Dashboard;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using MudBlazor.Services;
+using DinkToPdf.Contracts;
+using DinkToPdf;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.WebHost.UseUrls("http://localhost:5000");
 
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
@@ -106,14 +104,8 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
     .AddEntityFrameworkStores<LisaDbContext>()
     .AddDefaultTokenProviders();
 
-builder.Services.AddHangfire(config =>
-    config.UsePostgreSqlStorage(options =>
-    {
-        options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("Lisa"));
-    })
-    .WithJobExpirationTimeout(TimeSpan.FromDays(7)));
-
-builder.Services.AddHangfireServer(options => { options.WorkerCount = 1; });
+builder.Services.AddHostedService<BackgroundJobService>();
+builder.Services.AddScoped<BackgroundJobService>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -127,6 +119,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 builder.Services.AddHttpClient();
+builder.Services.AddSingleton<IConverter>(new SynchronizedConverter(new PdfTools()));
 
 builder.Services.AddScoped<CareGroupService>();
 builder.Services.AddScoped<CombinationService>();
@@ -141,12 +134,9 @@ builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<DailyRegisterService>();
 builder.Services.AddScoped<ProtectedSessionStorage>();
-builder.Services.AddScoped<BugReportService>();
-builder.Services.AddScoped<VersionService>();
 builder.Services.AddSingleton<IEventBus, EventBus>();
 builder.Services.AddScoped<IEventLogRepository, EventLogRepository>();
 builder.Services.AddSingleton<ILoginStore, InMemoryLoginStore>();
-builder.Services.AddSingleton<HangfireAuthorizationFilter>();
 builder.Services.AddScoped<SystemGradeService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<EmailService>();
@@ -156,45 +146,26 @@ builder.Services.AddScoped<ProgressFeedbackService>();
 builder.Services.AddScoped<RazorLightViewToStringRenderer>();
 builder.Services.AddScoped<AssessmentTypeService>();
 builder.Services.AddScoped<AuditService>();
+builder.Services.AddScoped<AttendanceRecordService>();
+builder.Services.AddScoped<TemplateRenderService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();
 builder.Services.AddControllers();
+builder.Services.AddMudServices();
 
 var app = builder.Build();
-var retryCount = 0;
-var maxRetries = 10;
-var delay = TimeSpan.FromSeconds(3);
 
-while (true)
-{
-    try
-    {
-        using var scope = app.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
+using var scope = app.Services.CreateScope();
+var db = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
 
-        app.Logger.LogInformation("Attempting database migration...");
+app.Logger.LogInformation("Attempting database migration...");
+db.Database.Migrate();
+app.Logger.LogInformation("Database migration successful!");
 
-
-        db.Database.Migrate();
-        app.Logger.LogInformation("Database migration successful!");
-
-        break; // Success, break out of retry loop
-    }
-    catch (Exception ex)
-    {
-        retryCount++;
-        app.Logger.LogWarning(ex, "Database not ready yet. Retrying ({RetryCount}/{MaxRetries}) in {DelaySeconds}s...", retryCount, maxRetries, delay.TotalSeconds);
-
-        if (retryCount >= maxRetries)
-        {
-            app.Logger.LogCritical(ex, "Database migration failed after {MaxRetries} retries. Exiting application...", maxRetries);
-            throw;
-        }
-
-        await Task.Delay(delay);
-    }
-}
+var services = scope.ServiceProvider;
+await DatabaseSeed.Seed(services);
+Log.Information("Database seeding completed successfully.");
 
 if (!app.Environment.IsDevelopment())
 {
@@ -209,39 +180,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<BlazorAuthMiddleware>();
 
-var hangfireAuthFilter = app.Services.GetRequiredService<HangfireAuthorizationFilter>();
-
-app.UseHangfireDashboard("/hangfire", new DashboardOptions
-{
-    Authorization = [hangfireAuthFilter],
-    IsReadOnlyFunc = context =>
-    {
-        var isProduction = app.Environment.IsProduction();
-
-        var logger = app.Services.GetRequiredService<ILogger<Program>>();
-        var httpContext = context.GetHttpContext();
-        var user = httpContext?.User.Identity?.Name ?? "Unknown User";
-
-        logger.LogInformation("Hangfire Dashboard accessed by {User}. ReadOnly: {ReadOnly}", user, isProduction);
-
-        return isProduction;
-    }
-});
 app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapControllers();
-
-try
-{
-    using var scope = app.Services.CreateScope();
-    var services = scope.ServiceProvider;
-    await DatabaseSeed.Seed(services);
-    Log.Information("Database seeding completed successfully.");
-}
-catch (Exception ex)
-{
-    Log.Fatal(ex, "Error seeding database.");
-}
 
 var eventBus = app.Services.GetRequiredService<IEventBus>();
 try

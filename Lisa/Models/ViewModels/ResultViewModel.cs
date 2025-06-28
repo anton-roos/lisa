@@ -25,10 +25,10 @@ public class ResultViewModel
 
 public class ResultsCaptureViewModel
 {
-    public List<SchoolGrade> SchoolGrades { get; set; } = new();
-    public List<Subject> Subjects { get; set; } = new();
-    public List<Subject> FilteredSubjects { get; set; } = new();
-    public List<LearnerResultViewModel> LearnerResults { get; set; } = new();
+    public List<SchoolGrade> SchoolGrades { get; set; } = [];
+    public List<Subject> Subjects { get; set; } = [];
+    public List<Subject> FilteredSubjects { get; set; } = [];
+    public List<LearnerResultViewModel> LearnerResults { get; set; } = [];
     public SchoolGrade? SchoolGrade { get; set; } = new();
 
     public ClaimsPrincipal? User { get; set; }

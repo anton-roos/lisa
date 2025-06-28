@@ -16,11 +16,11 @@ public class DatabaseSeed
 
         try
         {
-            using var dbContext = serviceProvider.GetRequiredService<LisaDbContext>();
+            await using var dbContext = serviceProvider.GetRequiredService<LisaDbContext>();
 
             await ApplyMigrations(dbContext, logger);
 
-            using var transaction = await dbContext.Database.BeginTransactionAsync();
+            await using var transaction = await dbContext.Database.BeginTransactionAsync();
             await SeedRoles(serviceProvider, logger);
             await SeedAdmin(serviceProvider, logger);
             await SeedSchoolTypes(dbContext, logger);
@@ -62,7 +62,9 @@ public class DatabaseSeed
             Roles.Principal,
             Roles.Administrator,
             Roles.SchoolManagement,
-            Roles.Teacher
+            Roles.Teacher,
+            Roles.Attendance,
+            Roles.Reception
         };
 
         foreach (var role in roles)

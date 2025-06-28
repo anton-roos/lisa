@@ -6,6 +6,29 @@
  - School Management
  - Administrator
  - Teacher
+ - GateOfficer
+
+Roles per Page:
+Home – Alle gebruikers
+Schools – SA
+Care Groups – SA, Principal
+Staff – SA, Principal
+Grades – SA, Principal
+Register Class – SA, Principal
+Subjects – SA
+Assessment Types – SA
+Sign in / out -  SA, GateOfficer
+Daily Attendance – SA, Principal, SchoolManagement, Administrator, Teacher
+Leave Early – SA, Principal, Administrator
+Combinations – SA, Principal
+Learners – SA, Principal, SchoolManagement, Administrator
+Class Lists – SA, Principal, SchoolManagement, Administrator, Teacher
+Capture Results – SA, Principal, SchoolManagement, Administrator, Teacher
+Results – SA, Principal, SchoolManagement, Administrator, Teacher
+Progress Feedback – SA, Principal, SchoolManagement, Administrator, Teacher
+Communication – SA, Principal, SchoolManagement
+Email Campaigns – SA, Principal, SchoolManagement
+
 
 ## User Type Privileges
 ### Super Admin
@@ -195,3 +218,13 @@ Changelog
 -- Fixed Historical Subjects not pulling through
 -- Fixed Inactive Learners getting sent Progress Feedback
 -- Fixed Date Oredering on Progress Feedbacks
+
+[] State Management and Navigation
+[] Progress Feedback (Printing)
+[] Sign in / out completion
+[] Daily Attedance completion
+[] Leave Early completion
+[] Per Period Attendance
+[] ADI (Creation Module)
+[] ADI (Attendance Module + Adhoc Learners) Build on Per Period
+[] Reporting and Communication for Attendance

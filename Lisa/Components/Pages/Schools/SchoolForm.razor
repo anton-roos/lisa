@@ -84,8 +84,8 @@
     [Parameter] public School School { get; set; } = new();
     [Parameter] public EventCallback OnValidSubmitCallback { get; set; }
     [Parameter] public EventCallback OnCancelCallback { get; set; }
-    [Parameter] public List<SchoolType> SchoolTypes { get; set; } = new();
-    [Parameter] public List<SchoolCurriculum> Curriculums { get; set; } = new();
+    [Parameter] public List<SchoolType> SchoolTypes { get; set; } = [];
+    [Parameter] public List<SchoolCurriculum> Curriculums { get; set; } = [];
 
     private async Task HandleValidSubmit()
     {

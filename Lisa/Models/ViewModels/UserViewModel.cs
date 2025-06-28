@@ -21,10 +21,10 @@ public class UserViewModel
     public string Email { get; set; } = string.Empty;
     public string? Password { get; set; }
     public Guid? SchoolId { get; set; }
-    public List<string> Roles { get; set; } = new();
-    public List<string> SelectedRoles { get; set; } = new();
-    public List<CareGroup> CareGroups { get; set; } = new();
-    public List<Guid> SelectedCareGroupIds { get; set; } = new();
+    public List<string> Roles { get; set; } = [];
+    public List<string> SelectedRoles { get; set; } = [];
+    public List<CareGroup> CareGroups { get; set; } = [];
+    public List<Guid> SelectedCareGroupIds { get; set; } = [];
     public string? PhoneNumber { get; set; }
     public List<TeacherSubject>? Subjects { get; set; }
 }

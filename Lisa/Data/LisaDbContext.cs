@@ -1,10 +1,9 @@
-using System.Text.Json;
 using Lisa.Interfaces;
 using Lisa.Models.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Lisa.Data;
 
@@ -15,7 +14,6 @@ public class LisaDbContext
 )
     : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options)
 {
-    private readonly ILogger<LisaDbContext> _logger = logger;
     public DbSet<School> Schools { get; set; } = null!;
     public DbSet<SchoolType> SchoolTypes { get; set; } = null!;
     public DbSet<SchoolCurriculum> SchoolCurriculums { get; set; } = null!;
@@ -30,7 +28,6 @@ public class LisaDbContext
     public DbSet<Result> Results { get; set; } = null!;
     public DbSet<CareGroup> CareGroups { get; set; } = null!;
     public DbSet<EmailTemplate> EmailTemplates { get; set; } = null!;
-    public DbSet<BugReport> BugReports { get; set; } = null!;
     public DbSet<EventLog> EventLogs { get; set; } = null!;
     public DbSet<LearnerSubject> LearnerSubjects { get; set; } = null!;
     public DbSet<EmailCampaign> EmailCampaigns { get; set; } = null!;
@@ -39,7 +36,7 @@ public class LisaDbContext
     public DbSet<ResultSet> ResultSets { get; set; } = null!;
     public DbSet<AssessmentType> AssessmentTypes { get; set; } = null!;
     public DbSet<Attendance> Attendances { get; set; } = null!;
-    public DbSet<AttendanceSession> AttendanceSessions { get; set; } = null!;
+    public DbSet<AttendanceRecord> AttendanceRecords { get; set; } = null!;
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -430,59 +427,35 @@ public class LisaDbContext
         });
 
         // Configure AttendanceSession entity
-        modelBuilder.Entity<AttendanceSession>(entity =>
+        modelBuilder.Entity<Attendance>(entity =>
         {
             entity.HasKey(s => s.Id);
-            entity.HasIndex(s => new { s.SchoolId, s.Date });
+            entity.HasIndex(s => new { s.SchoolId, s.Start });
 
             entity.HasOne(s => s.School)
                   .WithMany()
                   .HasForeignKey(s => s.SchoolId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasOne(s => s.CreatedByUser)
-                  .WithMany()
-                  .HasForeignKey(s => s.CreatedByUserId)
-                  .OnDelete(DeleteBehavior.SetNull);
-
-            entity.Property(s => s.Date)
-                  .IsRequired();
-
-            entity.Property(s => s.StartTime)
-                  .IsRequired();
+            entity.Property(s => s.Start)
+                .IsRequired();
         });
 
         // Configure Attendance entity with relation to AttendanceSession
-        modelBuilder.Entity<Attendance>(entity =>
+        modelBuilder.Entity<AttendanceRecord>(entity =>
         {
             entity.HasKey(a => a.Id);
-            entity.HasIndex(a => new { a.LearnerId, a.Date });
+            entity.HasIndex(a => new { a.LearnerId, a.Start });
 
             entity.HasOne(a => a.Learner)
                   .WithMany()
                   .HasForeignKey(a => a.LearnerId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasOne(a => a.School)
-                  .WithMany()
-                  .HasForeignKey(a => a.SchoolId)
+            entity.HasOne(a => a.Attendance)
+                  .WithMany(a => a.AttendanceRecords)
+                  .HasForeignKey(a => a.AttendanceId)
                   .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(a => a.RegisterClass)
-                  .WithMany()
-                  .HasForeignKey(a => a.RegisterClassId)
-                  .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(a => a.RecordedByUser)
-                  .WithMany()
-                  .HasForeignKey(a => a.RecordedByUserId)
-                  .OnDelete(DeleteBehavior.SetNull);
-
-            // Add relation to AttendanceSession
-            entity.HasOne(a => a.AttendanceSession)
-                  .WithMany(s => s.Attendances)
-                  .HasForeignKey(a => a.AttendanceSessionId)
-                  .OnDelete(DeleteBehavior.SetNull);
         });
     }
 
@@ -530,7 +503,7 @@ public class LisaDbContext
                     }
                     catch (Exception exception)
                     {
-                        _logger.LogError(exception, "Validation failed for entity of type {EntityType} with values: {CurrentValues}.", entry.Entity.GetType().Name, entry.CurrentValues);
+                        logger.LogError(exception, "Validation failed for entity of type {EntityType} with values: {CurrentValues}.", entry.Entity.GetType().Name, entry.CurrentValues);
                         throw new InvalidOperationException($"Validation failed for entity of type {entry.Entity.GetType().Name}.", exception);
                     }
                 }

@@ -1,39 +1,16 @@
 @page "/attendance"
-@inject NavigationManager NavigationManager
+@using Lisa.Components.Shared
+@using Lisa.Models.Entities
+@using Lisa.Enums
+@inject SchoolService SchoolService
+
+@inherits EventAwareComponentBase
 
 <PageTitle>Attendance</PageTitle>
 
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Attendance}")">
     <Authorized>
-        <div class="container">
-            <div class="row">
-                <div class="col-md-12">
-                    <h2>Attendance Management</h2>
-
-                    <div class="row mt-4">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">Morning Sign In</h5>
-                                    <p class="card-text">Record morning attendance for learners.</p>
-                                    <button class="btn btn-primary" @onclick="NavigateToSignIn">Go to Sign In</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">Afternoon Sign Out</h5>
-                                    <p class="card-text">Record end of day attendance for learners.</p>
-                                    <button class="btn btn-primary" @onclick="NavigateToSignOut">Go to Sign Out</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <AttendanceComponent @key="_selectedSchool?.Id" SelectedSchool="@_selectedSchool" />
     </Authorized>
     <NotAuthorized>
         <Unauthenticated />
@@ -41,13 +18,33 @@
 </AuthorizeView>
 
 @code {
-    private void NavigateToSignIn()
+    private School? _selectedSchool;
+    
+    protected override async Task OnInitializedAsync()
     {
-        NavigationManager.NavigateTo("/attendance/sign-in");
+        await base.OnInitializedAsync();
+        SubscribeToEvent(UiEvents.SchoolsUpdated);
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
-    private void NavigateToSignOut()
+    protected override async Task HandleEventAsync(string eventName, object? payload)
     {
-        NavigationManager.NavigateTo("/attendance/sign-out");
+        if (eventName == UiEvents.SchoolsUpdated || 
+            (eventName == UiEvents.SchoolSelected && payload is School))
+        {
+            _selectedSchool = payload as School ?? await SchoolService.GetSelectedSchoolAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        await InvokeAsync(StateHasChanged);
     }
 }

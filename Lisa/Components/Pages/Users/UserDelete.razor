@@ -101,7 +101,7 @@
                 // Transfer register classes from this teacher to the selected replacement
                 await UserService.TransferRegisterClassesAsync(UserId, Guid.Parse(_selectedTeacherId));
             }
-            bool deleted = await UserService.DeleteAsync(UserId);
+            var deleted = await UserService.DeleteAsync(UserId);
             if (deleted)
             {
                 Navigation.NavigateTo("/users");

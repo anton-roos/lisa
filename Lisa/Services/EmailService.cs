@@ -5,19 +5,13 @@ using Lisa.Models.Entities;
 
 namespace Lisa.Services;
 
-public class EmailService
+public class EmailService(SchoolService schoolService, ILogger<EmailService> logger)
 {
-    private readonly SchoolService _schoolService;
-    private readonly ILogger<EmailService> _logger;
+    private readonly SchoolService _schoolService = Guard.Against.Null(schoolService, nameof(schoolService));
+    private readonly ILogger<EmailService> _logger = Guard.Against.Null(logger, nameof(logger));
     private const int DefaultRetryCount = 3;
     private const int DefaultRetryDelayMs = 2000;
     private const int DefaultTimeoutMs = 60000;
-
-    public EmailService(SchoolService schoolService, ILogger<EmailService> logger)
-    {
-        _schoolService = Guard.Against.Null(schoolService, nameof(schoolService));
-        _logger = Guard.Against.Null(logger, nameof(logger));
-    }
 
     public async Task SendEmailAsync(string to, string subject, string body, Guid schoolId)
     {

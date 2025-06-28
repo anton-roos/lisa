@@ -163,7 +163,7 @@
                                     {
                                         <div class="ms-4 mt-2">
                                             @foreach (var grade in subject.GradesApplicable?.Where(g =>
-                                                              SchoolApplicableGrades.Contains(g)) ?? Enumerable.Empty<int>())
+                                                              SchoolApplicableGrades.Contains(g)) ?? [])
                                             {
                                                 <div class="d-flex align-items-center mb-1">
                                                     <input class="form-check-input me-1" type="checkbox"
@@ -206,20 +206,17 @@
     [Parameter] public Guid? UserId { get; set; }
     private UserViewModel User { get; set; } = new();
     private School? _selectedSchool;
-    private List<CareGroup> AvailableCareGroups { get; set; } = new();
-    private List<Subject> AvailableSubjects { get; set; } = new();
-    private List<int> SchoolApplicableGrades { get; set; } = new();
+    private List<CareGroup> AvailableCareGroups { get; set; } = [];
+    private List<Subject> AvailableSubjects { get; set; } = [];
+    private List<int> SchoolApplicableGrades { get; set; } = [];
 
-    private List<string> AvailableRoles { get; set; } = new()
-    {
-        Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher
-    };
+    private List<string> AvailableRoles { get; set; } = [Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher, Roles.Attendance, Roles.Reception];
 
     [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
     private bool IsCurrentUserSystemAdmin { get; set; }
 
     private string SubjectSearchTerm { get; set; } = "";
-    private List<Subject> FilteredSubjects { get; set; } = new();
+    private List<Subject> FilteredSubjects { get; set; } = [];
 
     private bool ShowSubjectSelectionModal { get; set; }
     private bool ShowErrorModal { get; set; }
@@ -247,9 +244,9 @@
         {
             User = new UserViewModel
             {
-                SelectedCareGroupIds = new List<Guid>(),
-                Subjects = new List<TeacherSubject>(),
-                SelectedRoles = new List<string>()
+                SelectedCareGroupIds = [],
+                Subjects = [],
+                SelectedRoles = []
             };
         }
         else
@@ -461,8 +458,8 @@
         if (!applicableGrades.Any())
             return "No Grades";
 
-        int minGrade = applicableGrades.Min();
-        int maxGrade = applicableGrades.Max();
+        var minGrade = applicableGrades.Min();
+        var maxGrade = applicableGrades.Max();
         return $"{FormatGrade(minGrade)} - {FormatGrade(maxGrade)}";
     }
 

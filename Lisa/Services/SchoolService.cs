@@ -16,11 +16,6 @@ public class SchoolService
     ILogger<SchoolService> logger
 )
 {
-    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-    private readonly UiEventService _uiEventService = uiEventService;
-    private readonly ILogger<SchoolService> _logger = logger;
-    private readonly UserService _userService = userService;
-    private readonly AuthenticationStateProvider _authenticationStateProvider = authenticationStateProvider;
     private School? _selectedSchool;
 
     public async Task<School?> SetCurrentSchoolAsync(Guid? schoolId)
@@ -31,18 +26,18 @@ public class SchoolService
             {
                 _selectedSchool = null;
                 await UpdateUserSelectedSchoolAsync();
-                await _uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
+                await uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
                 return null;
             }
 
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             var school = await context.Schools
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Id == schoolId);
 
             if (school == null)
             {
-                _logger.LogWarning("Attempted to select a school that does not exist. SchoolId: {SchoolId}", schoolId);
+                logger.LogWarning("Attempted to select a school that does not exist. SchoolId: {SchoolId}", schoolId);
                 return null;
             }
 
@@ -50,12 +45,12 @@ public class SchoolService
 
             await UpdateUserSelectedSchoolAsync();
 
-            await _uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
+            await uiEventService.PublishAsync(UiEvents.SchoolSelected, _selectedSchool);
             return _selectedSchool;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error setting current school. SchoolId: {SchoolId}", schoolId);
+            logger.LogError(ex, "Error setting current school. SchoolId: {SchoolId}", schoolId);
             return null;
         }
     }
@@ -69,30 +64,30 @@ public class SchoolService
         var currentUser = await GetCurrentUserAsync();
         if (currentUser == null)
         {
-            _logger.LogError("Unable to retrieve current user.");
+            logger.LogError("Unable to retrieve current user.");
             return null;
         }
 
-        var user = await _userService.GetByIdAsync(currentUser.Id);
+        var user = await userService.GetByIdAsync(currentUser.Id);
         if (user == null)
         {
-            _logger.LogError("User data not found for current user with Id: {UserId}", currentUser.Id);
+            logger.LogError("User data not found for current user with Id: {UserId}", currentUser.Id);
             return null;
         }
 
         if (user.Roles.Contains(Roles.SystemAdministrator))
         {
-            _logger.LogError("Returning null for system administrator user {UserId}.", user.Id);
+            logger.LogError("Returning null for system administrator user {UserId}.", user.Id);
             return null;
         }
 
         if (user.SchoolId == null)
         {
-            _logger.LogError("Non-system administrator user {UserId} does not have an associated selected school.", user.Id);
+            logger.LogError("Non-system administrator user {UserId} does not have an associated selected school.", user.Id);
             throw new InvalidOperationException("Non-system administrator users must have an associated selected school.");
         }
 
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         _selectedSchool = await context.Schools
             .AsNoTracking().Include(school => school.Learners)
             .FirstOrDefaultAsync(s => s.Id == user.SchoolId);
@@ -100,35 +95,35 @@ public class SchoolService
         $"School not found for non-system administrator user {user.Id} with SchoolId: {user.SchoolId}. " +
         "Non-system administrator user must have a valid associated school.");
 
-        _logger.LogError("Main return returned school as {school} ", _selectedSchool.Learners);
+        logger.LogInformation("Main return returned school as {school} ", _selectedSchool.Learners);
         return _selectedSchool;
     }
 
     private async Task<IdentityUser<Guid>?> GetCurrentUserAsync()
     {
-        var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
         var userPrincipal = authState.User;
 
         if (userPrincipal.Identity is null || !userPrincipal.Identity.IsAuthenticated)
         {
-            _logger.LogError("User is not authenticated.");
+            logger.LogError("User is not authenticated.");
             return null;
         }
 
         var userId = userPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId))
         {
-            _logger.LogWarning("No user id claim found in the current authentication state.");
+            logger.LogWarning("No user id claim found in the current authentication state.");
             return null;
         }
 
         try
         {
-            return await _userService.GetByIdAsync(Guid.Parse(userId));
+            return await userService.GetByIdAsync(Guid.Parse(userId));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving current user with Id: {UserId}", userId);
+            logger.LogError(ex, "Error retrieving current user with Id: {UserId}", userId);
             return null;
         }
     }
@@ -138,23 +133,23 @@ public class SchoolService
         var currentUser = await GetCurrentUserAsync();
         if (currentUser == null)
         {
-            _logger.LogError("Unable to update selected school because the current user is null.");
+            logger.LogError("Unable to update selected school because the current user is null.");
             return;
         }
 
-        var user = await _userService.GetByIdAsync(currentUser.Id);
+        var user = await userService.GetByIdAsync(currentUser.Id);
         if (user == null)
         {
-            _logger.LogError("User data not found for the current user with Id: {UserId}", currentUser.Id);
+            logger.LogError("User data not found for the current user with Id: {UserId}", currentUser.Id);
             return;
         }
 
-        await _userService.UpdateUserSelectedSchool(user);
+        await userService.UpdateUserSelectedSchool(user);
     }
 
     public async Task<int> GetCountAsync()
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.Schools.CountAsync();
     }
 
@@ -162,21 +157,21 @@ public class SchoolService
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             return await context.Schools
                 .AsNoTracking()
                 .ToListAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching all schools.");
+            logger.LogError(ex, "Error fetching all schools.");
             return [];
         }
     }
 
     public async Task<List<SchoolType>> GetSchoolTypesAsync()
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.SchoolTypes.AsNoTracking().ToListAsync();
     }
 
@@ -184,7 +179,7 @@ public class SchoolService
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             return await context.Schools
                 .AsNoTracking()
                 .Include(s => s.SchoolType!)
@@ -198,14 +193,14 @@ public class SchoolService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching school with ID: {SchoolId}", id);
+            logger.LogError(ex, "Error fetching school with ID: {SchoolId}", id);
             return null;
         }
     }
 
     public async Task<List<SchoolCurriculum>> GetSchoolCurriculumsAsync()
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.SchoolCurriculums.AsNoTracking().ToListAsync();
     }
 
@@ -239,15 +234,15 @@ public class SchoolService
     {
         try
         {
-            using var context = await _dbContextFactory.CreateDbContextAsync();
+            await using var context = await dbContextFactory.CreateDbContextAsync();
             await action(context);
             await context.SaveChangesAsync();
-            await _uiEventService.PublishAsync(UiEvents.SchoolsUpdated, _selectedSchool);
+            await uiEventService.PublishAsync(UiEvents.SchoolsUpdated, _selectedSchool);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error modifying school data.");
+            logger.LogError(ex, "Error modifying school data.");
             return false;
         }
     }

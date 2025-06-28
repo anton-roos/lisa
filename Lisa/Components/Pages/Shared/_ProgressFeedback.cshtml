@@ -4,7 +4,7 @@
 @{
     var firstResult = Model?.Feedback?.ResultsBySubject?
                          .SelectMany(x => x.Value)?.FirstOrDefault();
-    bool isAchievementRating = firstResult?.Learner?.RegisterClass?.SchoolGrade?.SystemGrade.AchievementLevelRating ?? false;
+    var isAchievementRating = firstResult?.Learner?.RegisterClass?.SchoolGrade?.SystemGrade.AchievementLevelRating ?? false;
 }
 
 <!DOCTYPE html>
@@ -62,7 +62,7 @@
                                     <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom: 1rem; color: #212529; border-collapse: collapse; text-align: center;">
                                         <thead>
                                             <tr>
-                                                @for (int i = 0; i < 3; i++)
+                                                @for (var i = 0; i < 3; i++)
                                                 {
                                                     <th style="padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6;">Date</th>
                                                     @if (isAchievementRating)
@@ -78,16 +78,16 @@
                                         </thead>
                                         <tbody>
                                             @{
-                                                int totalResults = Math.Min(subjectGroup.Value.Count, 6);
-                                                int rows = (int)Math.Ceiling(totalResults / 3.0);
+                                                var totalResults = Math.Min(subjectGroup.Value.Count, 6);
+                                                var rows = (int)Math.Ceiling(totalResults / 3.0);
                                             }
-                                            @for (int row = 0; row < rows; row++)
+                                            @for (var row = 0; row < rows; row++)
                                             {
                                                 var rowStyle = (row % 2 == 0) ? "background-color: rgba(0, 0, 0, 0.05);" : "";
                                                 <tr style="@rowStyle">
-                                                    @for (int col = 0; col < 3; col++)
+                                                    @for (var col = 0; col < 3; col++)
                                                     {
-                                                        int index = row * 3 + col;
+                                                        var index = row * 3 + col;
                                                         if (index < totalResults)
                                                         {
                                                             var result = subjectGroup.Value[index];
@@ -102,7 +102,7 @@
                                                                 }
                                                             </td>
 
-                                                            string markStyle = "padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6;";
+                                                            var markStyle = "padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6;";
                                                             if (!result.Score.HasValue)
                                                             {
                                                                 markStyle += "color: #ffc107; font-weight: 700;";

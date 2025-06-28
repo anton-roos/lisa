@@ -91,7 +91,7 @@
                 @if (_subjectId != null)
                 {
                     var grade = _schoolGrades.FirstOrDefault(g => g.Id == _gradeId);
-                    string subjectName = "";
+                    var subjectName = "";
                     if (_combinationId == "Math")
                     {
                         subjectName = "Math";
@@ -184,24 +184,24 @@
     private School? _selectedSchool;
     private string ViewMode = "Combination";
 
-    private List<SchoolGrade> _schoolGrades = new();
+    private List<SchoolGrade> _schoolGrades = [];
     private Guid? _gradeId;
 
-    private List<Combination> _combinations = new();
-    private List<Combination> _filteredCombinations = new();
+    private List<Combination> _combinations = [];
+    private List<Combination> _filteredCombinations = [];
     private string? _combinationId;
 
-    private List<Subject> _subjects = new();
+    private List<Subject> _subjects = [];
     private int? _subjectId;
-    private List<Subject> _combinationSubjects = new();
+    private List<Subject> _combinationSubjects = [];
 
-    private List<CareGroup> _careGroups = new();
+    private List<CareGroup> _careGroups = [];
     private Guid? _careGroupId;
 
-    private List<RegisterClass> _registerClasses = new();
+    private List<RegisterClass> _registerClasses = [];
     private Guid? _registerClassId;
 
-    private List<Learner> _learners = new();
+    private List<Learner> _learners = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -288,7 +288,7 @@
         {
             if (value == "Math" || value == "MathLit")
             {
-                string subjectName = value == "Math" ? "Mathematics" : "Mathematical Literacy";
+                var subjectName = value == "Math" ? "Mathematics" : "Mathematical Literacy";
                 var mathSubject = _subjects.FirstOrDefault(s => s.Name.Equals(subjectName, StringComparison.OrdinalIgnoreCase) && s.SubjectType == SubjectType.MathCombination);
                 if (mathSubject != null)
                 {
@@ -296,7 +296,7 @@
                 }
                 _combinationSubjects.Clear();
             }
-            else if (Guid.TryParse(value, out Guid combId))
+            else if (Guid.TryParse(value, out var combId))
             {
                 var selectedCombination = _combinations.FirstOrDefault(c => c.Id == combId);
                 if (selectedCombination != null && selectedCombination.Subjects != null)
@@ -354,7 +354,7 @@
                     // Use a method that loads by grade and subject (adjust as needed)
                     _learners = await LearnerService.GetByGradeAndSubjectAsync(_gradeId.Value, _subjectId.Value);
                 }
-                else if (Guid.TryParse(_combinationId, out Guid combId))
+                else if (Guid.TryParse(_combinationId, out var combId))
                 {
                     _learners = await LearnerService.GetByCombinationAndSubjectAsync(combId, _subjectId.Value);
                 }

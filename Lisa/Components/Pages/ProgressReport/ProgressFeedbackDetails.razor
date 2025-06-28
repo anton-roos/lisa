@@ -1,7 +1,4 @@
 @page "/progress-feedback-details/{LearnerId:guid}"
-@using Lisa.Models.EmailModels
-@using Lisa.Models.Entities
-@using System.Globalization
 @using Microsoft.AspNetCore.WebUtilities
 @inject ProgressFeedbackService ProgressFeedbackService
 @inject NavigationManager NavigationManager
@@ -16,11 +13,12 @@
 }
 else
 {
+    <div class="text-center my-2">
+        <button class="btn btn-secondary float-end" @onclick="GoBack">Back</button>
+    </div>
     <div>@((MarkupString)html)</div>
 }
-<div class="text-center mt-4">
-    <button class="btn btn-secondary btn-lg" @onclick="GoBack">Back</button>
-</div>
+
 
 @code {
     [Parameter]
@@ -31,32 +29,63 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Parse query parameters
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
         var queryParams = QueryHelpers.ParseQuery(uri.Query);
 
-        // Extract from date parameter if present
-        if (queryParams.TryGetValue("fromDate", out var fromDateParam) && 
+        if (queryParams.TryGetValue("fromDate", out var fromDateParam) &&
             DateTime.TryParse(fromDateParam, out var parsedFromDate))
         {
-            // Convert to UTC to ensure compatibility with PostgreSQL
-            FromDate = DateTime.SpecifyKind(parsedFromDate, DateTimeKind.Utc);
+            FromDate = parsedFromDate;
         }
 
-        // Extract to date parameter if present
-        if (queryParams.TryGetValue("toDate", out var toDateParam) && 
+        if (queryParams.TryGetValue("toDate", out var toDateParam) &&
             DateTime.TryParse(toDateParam, out var parsedToDate))
         {
-            // Convert to UTC to ensure compatibility with PostgreSQL
-            ToDate = DateTime.SpecifyKind(parsedToDate, DateTimeKind.Utc);
+            ToDate = parsedToDate;
         }
 
-        // Pass date parameters to the renderer service
         html = await RenderService.RenderProgressFeedbackAsync(LearnerId, FromDate, ToDate);
     }
 
     private void GoBack()
     {
-        NavigationManager.NavigateTo("/progress-feedback");
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var uriParams = QueryHelpers.ParseQuery(uri.Query);
+
+        var queryParams = new List<string>();
+        string queryString = "/progress-feedback";
+
+        if (uriParams.TryGetValue("fromDate", out var fromDateParam) &&
+            DateTime.TryParse(fromDateParam, out var parsedFromDate))
+        {
+            queryParams.Add($"fromDate={parsedFromDate:yyyy-MM-dd}");
+        }
+
+        if (uriParams.TryGetValue("toDate", out var toDateParam) &&
+            DateTime.TryParse(toDateParam, out var parsedToDate))
+        {
+            queryParams.Add($"toDate={parsedToDate:yyyy-MM-dd}");
+        }
+
+        if (uriParams.TryGetValue("grade", out var gradeParam))
+        {
+            queryParams.Add($"grade={gradeParam}");
+        }
+
+        if (uriParams.TryGetValue("subject", out var subjectParam))
+        {
+            queryParams.Add($"subject={subjectParam}");
+        }
+
+        if (uriParams.TryGetValue("learner", out var learnerParam))
+        {
+            queryParams.Add($"learner={learnerParam}");
+        }
+        if (queryParams.Any())
+        {
+            queryString += $"?{string.Join("&", queryParams)}";
+        }
+
+        NavigationManager.NavigateTo(queryString);
     }
 }

@@ -9,11 +9,9 @@ public class CareGroupService
     IDbContextFactory<LisaDbContext> dbContextFactory
 )
 {
-    private readonly IDbContextFactory<LisaDbContext> _dbContextFactory = dbContextFactory;
-
     public async Task AddUserToCareGroupAsync(Guid careGroupId, Guid userId)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
 
         var careGroup = await context.CareGroups
             .Include(cg => cg.Users)
@@ -39,7 +37,7 @@ public class CareGroupService
 
     public async Task RemoveUserFromCareGroupAsync(Guid careGroupId, Guid userId)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
 
         var careGroup = await context.CareGroups
             .Include(cg => cg.Users)
@@ -57,7 +55,7 @@ public class CareGroupService
 
     public async Task CreateAsync(CareGroup careGroup, List<Guid> userIds)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         await context.CareGroups.AddAsync(careGroup);
         await context.SaveChangesAsync();
 
@@ -69,7 +67,7 @@ public class CareGroupService
 
     public async Task UpdateAsync(CareGroup careGroup, List<Guid> userIds)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         var existingCareGroup = await context.CareGroups
             .Include(cg => cg.Users)
             .FirstOrDefaultAsync(cg => cg.Id == careGroup.Id)
@@ -85,7 +83,7 @@ public class CareGroupService
 
     public async Task<IEnumerable<CareGroup>> GetAllAsync()
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.CareGroups
             .AsNoTracking()
             .Include(c => c.CareGroupMembers)
@@ -96,7 +94,7 @@ public class CareGroupService
 
     public async Task<List<CareGroup>> GetBySchoolAsync(Guid schoolId)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.CareGroups
             .AsNoTracking()
             .Include(c => c.CareGroupMembers)
@@ -106,7 +104,7 @@ public class CareGroupService
 
     public async Task<CareGroup?> GetByIdAsync(Guid id)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.CareGroups
             .Include(c => c.CareGroupMembers)
             .Include(c => c.Users)
@@ -115,7 +113,7 @@ public class CareGroupService
 
     public async Task DeleteAsync(CareGroup careGroup)
     {
-        using var context = await _dbContextFactory.CreateDbContextAsync();
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         context.CareGroups.Remove(careGroup);
         await context.SaveChangesAsync();
     }

@@ -95,7 +95,7 @@ public class SchoolService
         $"School not found for non-system administrator user {user.Id} with SchoolId: {user.SchoolId}. " +
         "Non-system administrator user must have a valid associated school.");
 
-        logger.LogError("Main return returned school as {school} ", _selectedSchool.Learners);
+        logger.LogInformation("Main return returned school as {school} ", _selectedSchool.Learners);
         return _selectedSchool;
     }
 

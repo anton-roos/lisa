@@ -1,4 +1,4 @@
-name: Deploy to Server
+name: Echo Workflow
 
 on:
   push:
@@ -6,37 +6,12 @@ on:
       - main
 
 jobs:
-  deploy:
+  echo:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup .NET 9
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Publish .NET app
-        run: dotnet publish Lisa/Lisa.csproj -c Release -o publish
-
-      - name: Upload published files to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "publish/*"
-          target: "/var/www/lisa"
-          strip_components: 1
-
-      - name: Restart systemd service
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            sudo systemctl restart lisa.service
-            sudo systemctl status lisa.service --no-pager
+      - name: Echo message
+        run: echo "Hello from GitHub Actions!"

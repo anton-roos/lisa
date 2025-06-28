@@ -2,8 +2,8 @@
 # PowerShell script to count lines of code in C# and Razor files
 
 param (
-    [string]$rootPath = "c:\Users\farro\src\Lisa",
-    [string[]]$excludeFolders = @("bin", "obj", "node_modules", "wwwroot\lib", ".git"),
+    [string]$rootPath = (Split-Path -Parent (Get-Location).Path),
+    [string[]]$excludeFolders = @("bin", "obj", "node_modules", "wwwroot\lib", ".git", "Migrations"),
     [switch]$includeEmptyLines = $false,
     [switch]$excludeComments = $false,
     [switch]$detailed = $false
@@ -63,7 +63,6 @@ function CountLinesInFile {
         TotalLines = $lineCount
         CommentCount = $commentCount
         EmptyLineCount = $emptyLineCount
-        RawLineCount = $content.Count
     }
 }
 
@@ -81,7 +80,6 @@ $csharpStats = @{
     TotalLines = 0
     CommentCount = 0
     EmptyLineCount = 0
-    RawLineCount = 0
     Files = @()
 }
 
@@ -90,7 +88,6 @@ $razorStats = @{
     TotalLines = 0
     CommentCount = 0
     EmptyLineCount = 0
-    RawLineCount = 0
     Files = @()
 }
 
@@ -102,14 +99,12 @@ foreach ($file in $csharpFiles) {
     $csharpStats.TotalLines += $result.TotalLines
     $csharpStats.CommentCount += $result.CommentCount
     $csharpStats.EmptyLineCount += $result.EmptyLineCount
-    $csharpStats.RawLineCount += $result.RawLineCount
     
     if ($detailed) {
         $csharpStats.Files += [PSCustomObject]@{
             Name = $file.Name
             Path = $file.FullName.Replace($rootPath, "")
             Lines = $result.TotalLines
-            RawLines = $result.RawLineCount
         }
     }
 }
@@ -122,14 +117,12 @@ foreach ($file in $razorFiles) {
     $razorStats.TotalLines += $result.TotalLines
     $razorStats.CommentCount += $result.CommentCount
     $razorStats.EmptyLineCount += $result.EmptyLineCount
-    $razorStats.RawLineCount += $result.RawLineCount
     
     if ($detailed) {
         $razorStats.Files += [PSCustomObject]@{
             Name = $file.Name
             Path = $file.FullName.Replace($rootPath, "")
             Lines = $result.TotalLines
-            RawLines = $result.RawLineCount
         }
     }
 }
@@ -137,7 +130,6 @@ foreach ($file in $razorFiles) {
 # Calculate total
 $totalFiles = $csharpFiles.Count + $razorFiles.Count
 $totalLines = $csharpStats.TotalLines + $razorStats.TotalLines
-$totalRawLines = $csharpStats.RawLineCount + $razorStats.RawLineCount
 
 # Output results
 Write-Host "`n=== CODE STATISTICS ===`n" -ForegroundColor Green
@@ -164,8 +156,7 @@ if ($excludeComments) {
 
 Write-Host "`nTotal Statistics:" -ForegroundColor Green
 Write-Host "  Files: $totalFiles"
-Write-Host "  Total Lines: $totalLines"
-Write-Host "  Raw Line Count: $totalRawLines`n"
+Write-Host "  Total Lines: $totalLines`n"
 
 # Display detailed file statistics if requested
 if ($detailed) {
@@ -190,7 +181,6 @@ if ($exportCsv -eq "y") {
                 FileName = $file.Name
                 FilePath = $file.Path
                 LineCount = $file.Lines
-                RawLineCount = $file.RawLines
             }
         }
         
@@ -200,7 +190,6 @@ if ($exportCsv -eq "y") {
                 FileName = $file.Name
                 FilePath = $file.Path
                 LineCount = $file.Lines
-                RawLineCount = $file.RawLines
             }
         }
         
@@ -213,19 +202,16 @@ if ($exportCsv -eq "y") {
                 Type = "C#"
                 FileCount = $csharpStats.Count
                 LineCount = $csharpStats.TotalLines
-                RawLineCount = $csharpStats.RawLineCount
             },
             [PSCustomObject]@{
                 Type = "Razor"
                 FileCount = $razorStats.Count
                 LineCount = $razorStats.TotalLines
-                RawLineCount = $razorStats.RawLineCount
             },
             [PSCustomObject]@{
                 Type = "Total"
                 FileCount = $totalFiles
                 LineCount = $totalLines
-                RawLineCount = $totalRawLines
             }
         )
         

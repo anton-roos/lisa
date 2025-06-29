@@ -1,7 +1,6 @@
-using Lisa.Models.EmailModels;
-using Lisa.Models.Entities;
+using Lisa.Domain.Models.EmailModels;
 
-namespace Lisa.Models.ViewModels;
+namespace Lisa.Domain.Models.ViewModels;
 
 public class ProgressFeedbackViewModel
 {

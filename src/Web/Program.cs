@@ -3,9 +3,9 @@ using Lisa.Infrastructure.Data;
 using Lisa.Web.Data;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Lisa.Data;
 using Microsoft.AspNetCore.Identity;
 using Lisa.Web.Components;
+using Lisa.Domain.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,9 +30,9 @@ builder.Services.AddAuthentication(options =>
     .AddIdentityCookies();
 
 
-builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+//builder.Services.AddSingleton<IEmailSender<User>, IdentityNoOpEmailSender>();
 
-builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+builder.Services.AddIdentityCore<User>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<LisaDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();

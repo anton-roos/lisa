@@ -1,8 +1,6 @@
 using System.ComponentModel.DataAnnotations;
-using Lisa.Enums;
-using Lisa.Models.Entities;
 
-namespace Lisa.Models.ViewModels;
+namespace Lisa.Domain.Models.ViewModels;
 
 public class LearnerViewModel
 {

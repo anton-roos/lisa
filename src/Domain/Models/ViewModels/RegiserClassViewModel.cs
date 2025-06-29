@@ -1,6 +1,4 @@
-using Lisa.Models.Entities;
-
-namespace Lisa.Models.ViewModels;
+namespace Lisa.Domain.Models.ViewModels;
 
 public class RegisterClassViewModel
 {

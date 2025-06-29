@@ -1,6 +1,4 @@
-using Lisa.Enums;
-
-namespace Lisa.Models.EmailModels;
+namespace Lisa.Domain.Models.EmailModels;
 
 public class CommunicationCommand
 {

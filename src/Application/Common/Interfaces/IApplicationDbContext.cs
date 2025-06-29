@@ -2,7 +2,7 @@
 
 namespace Lisa.Application.Common.Interfaces;
 
-public interface IApplicationDbContext
+public interface ILisaDbContext
 {
     DbSet<TodoList> TodoLists { get; }
 

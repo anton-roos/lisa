@@ -1,6 +1,4 @@
-using Lisa.Models.Entities;
-
-namespace Lisa.Models.EmailModels;
+namespace Lisa.Domain.Models.EmailModels;
 
 public class ProgressFeedback
 {

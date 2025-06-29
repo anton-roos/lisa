@@ -46,6 +46,18 @@
     <PackageReference Include="Serilog.Sinks.File" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Components\Pages\Shared\_ProgressFeedback.cshtml" />
+    <EmbeddedResource Include="Components\Pages\Shared\_TestEmail.cshtml" />
+    <EmbeddedResource Include="Components\Pages\Shared\_ProgressFeedbackTemplate.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Ardalis.GuardClauses" />
+    <Using Include="Lisa.Web.Infrastructure" />
+    <Using Include="MediatR" />
+  </ItemGroup>
+
   <!-- Auto-generated Open API specification and Angular TypeScript clients -->
   <PropertyGroup>
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>

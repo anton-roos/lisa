@@ -1,16 +1,17 @@
 ﻿using System.Reflection;
 using Lisa.Application.Common.Interfaces;
 using Lisa.Domain.Entities;
-using Lisa.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Infrastructure.Data;
 
-public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplicationDbContext
+public class LisaDbContext
+(
+    DbContextOptions<LisaDbContext> options
+) : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options), ILisaDbContext
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
-
     public DbSet<TodoList> TodoLists => Set<TodoList>();
 
     public DbSet<TodoItem> TodoItems => Set<TodoItem>();

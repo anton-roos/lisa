@@ -1,4 +1,4 @@
-﻿@using Lisa.Models.EmailModels
+﻿@using Lisa.Domain.Models.EmailModels
 @using Lisa.Models.ViewModels
 @model IEnumerable<ProgressFeedback>
 
@@ -95,7 +95,7 @@
                                             if (result.Score == null)
                                                 text = "Absent";
                                             else if (isAchievementRating)
-                                                text = result.Score.ToString();
+                                                text = result?.Score?.ToString() ?? string.Empty;
                                             else
                                                 text = result.Score.Value + "%";
                                         

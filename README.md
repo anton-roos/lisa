@@ -219,8 +219,8 @@ Changelog
 -- Fixed Inactive Learners getting sent Progress Feedback
 -- Fixed Date Oredering on Progress Feedbacks
 
-[] State Management and Navigation
-[] Progress Feedback (Printing)
+[x] State Management and Navigation
+[x] Progress Feedback (Printing)
 [] Sign in / out completion
 [] Daily Attedance completion
 [] Leave Early completion

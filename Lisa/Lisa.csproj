@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -15,12 +15,16 @@
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="libwkhtmltox.dll" CopyToOutputDirectory="Always" />
+    <None Include="libwkhtmltox.dylib" CopyToOutputDirectory="Always" />
+    <None Include="libwkhtmltox.so" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
   <ItemGroup>    
     <PackageReference Include="Ardalis.GuardClauses" Version="5.0.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="Blazor.Bootstrap" Version="3.2.0" />
+    <PackageReference Include="DinkToPdf" Version="1.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
@@ -33,7 +37,6 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.0-preview.3.25172.1" />
-    <PackageReference Include="Microsoft.Playwright" Version="1.49.0" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />
     <PackageReference Include="MudBlazor" Version="8.8.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.2" />
@@ -47,6 +50,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Components\Pages\Shared\_ProgressFeedback.cshtml" />
     <EmbeddedResource Include="Components\Pages\Shared\_TestEmail.cshtml" />
+    <EmbeddedResource Include="Templates\_ProgressFeedbackTemplate.cshtml" />
   </ItemGroup>
 
   <ItemGroup>

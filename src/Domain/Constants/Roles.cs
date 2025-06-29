@@ -1,4 +1,4 @@
-﻿namespace lisa_new.Domain.Constants;
+﻿namespace Lisa.Domain.Constants;
 
 public abstract class Roles
 {

@@ -1,4 +1,4 @@
-﻿namespace lisa_new.Domain.Common;
+﻿namespace Lisa.Domain.Common;
 
 public abstract class BaseAuditableEntity : BaseEntity
 {

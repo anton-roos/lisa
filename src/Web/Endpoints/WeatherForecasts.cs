@@ -1,7 +1,7 @@
-﻿using lisa_new.Application.WeatherForecasts.Queries.GetWeatherForecasts;
+﻿using Lisa.Application.WeatherForecasts.Queries.GetWeatherForecasts;
 using Microsoft.AspNetCore.Http.HttpResults;
 
-namespace lisa_new.Web.Endpoints;
+namespace Lisa.Web.Endpoints;
 
 public class WeatherForecasts : EndpointGroupBase
 {

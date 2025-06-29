@@ -1,13 +1,13 @@
-﻿using lisa_new.Domain.Constants;
-using lisa_new.Domain.Entities;
-using lisa_new.Infrastructure.Identity;
+﻿using Lisa.Domain.Constants;
+using Lisa.Domain.Entities;
+using Lisa.Infrastructure.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace lisa_new.Infrastructure.Data;
+namespace Lisa.Infrastructure.Data;
 
 public static class InitialiserExtensions
 {

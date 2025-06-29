@@ -1,12 +1,12 @@
 ﻿using System.Data.Common;
-using lisa_new.Infrastructure.Data;
+using Lisa.Infrastructure.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Respawn;
 
-namespace lisa_new.Application.FunctionalTests;
+namespace Lisa.Application.FunctionalTests;
 
 public class SqlTestDatabase : ITestDatabase
 {
@@ -21,7 +21,7 @@ public class SqlTestDatabase : ITestDatabase
             .AddEnvironmentVariables()
             .Build();
 
-        var connectionString = configuration.GetConnectionString("lisa_newDb");
+        var connectionString = configuration.GetConnectionString("LisaDb");
 
         Guard.Against.Null(connectionString);
 

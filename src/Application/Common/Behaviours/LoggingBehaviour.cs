@@ -1,8 +1,8 @@
-﻿using lisa_new.Application.Common.Interfaces;
+﻿using Lisa.Application.Common.Interfaces;
 using MediatR.Pipeline;
 using Microsoft.Extensions.Logging;
 
-namespace lisa_new.Application.Common.Behaviours;
+namespace Lisa.Application.Common.Behaviours;
 
 public class LoggingBehaviour<TRequest> : IRequestPreProcessor<TRequest> where TRequest : notnull
 {
@@ -28,7 +28,7 @@ public class LoggingBehaviour<TRequest> : IRequestPreProcessor<TRequest> where T
             userName = await _identityService.GetUserNameAsync(userId);
         }
 
-        _logger.LogInformation("lisa_new Request: {Name} {@UserId} {@UserName} {@Request}",
+        _logger.LogInformation("Lisa Request: {Name} {@UserId} {@UserName} {@Request}",
             requestName, userId, userName, request);
     }
 }

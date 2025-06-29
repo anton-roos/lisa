@@ -1,6 +1,6 @@
-﻿using lisa_new.Domain.Entities;
+﻿using Lisa.Domain.Entities;
 
-namespace lisa_new.Application.TodoItems.Queries.GetTodoItemsWithPagination;
+namespace Lisa.Application.TodoItems.Queries.GetTodoItemsWithPagination;
 
 public class TodoItemBriefDto
 {

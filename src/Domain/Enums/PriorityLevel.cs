@@ -1,4 +1,4 @@
-﻿namespace lisa_new.Domain.Enums;
+﻿namespace Lisa.Domain.Enums;
 
 public enum PriorityLevel
 {

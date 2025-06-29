@@ -1,14 +1,14 @@
 ﻿using System.Reflection;
 using System.Runtime.CompilerServices;
 using AutoMapper;
-using lisa_new.Application.Common.Interfaces;
-using lisa_new.Application.Common.Models;
-using lisa_new.Application.TodoItems.Queries.GetTodoItemsWithPagination;
-using lisa_new.Application.TodoLists.Queries.GetTodos;
-using lisa_new.Domain.Entities;
+using Lisa.Application.Common.Interfaces;
+using Lisa.Application.Common.Models;
+using Lisa.Application.TodoItems.Queries.GetTodoItemsWithPagination;
+using Lisa.Application.TodoLists.Queries.GetTodos;
+using Lisa.Domain.Entities;
 using NUnit.Framework;
 
-namespace lisa_new.Application.UnitTests.Common.Mappings;
+namespace Lisa.Application.UnitTests.Common.Mappings;
 
 public class MappingTests
 {

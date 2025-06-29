@@ -1,8 +1,8 @@
-﻿using lisa_new.Application.Common.Interfaces;
-using lisa_new.Application.Common.Security;
-using lisa_new.Domain.Constants;
+﻿using Lisa.Application.Common.Interfaces;
+using Lisa.Application.Common.Security;
+using Lisa.Domain.Constants;
 
-namespace lisa_new.Application.TodoLists.Commands.PurgeTodoLists;
+namespace Lisa.Application.TodoLists.Commands.PurgeTodoLists;
 
 [Authorize(Roles = Roles.Administrator)]
 [Authorize(Policy = Policies.CanPurge)]

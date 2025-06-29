@@ -1,8 +1,8 @@
-﻿using lisa_new.Application.Common.Interfaces;
-using lisa_new.Domain.Constants;
-using lisa_new.Infrastructure.Data;
-using lisa_new.Infrastructure.Data.Interceptors;
-using lisa_new.Infrastructure.Identity;
+﻿using Lisa.Application.Common.Interfaces;
+using Lisa.Domain.Constants;
+using Lisa.Infrastructure.Data;
+using Lisa.Infrastructure.Data.Interceptors;
+using Lisa.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -15,8 +15,8 @@ public static class DependencyInjection
 {
     public static void AddInfrastructureServices(this IHostApplicationBuilder builder)
     {
-        var connectionString = builder.Configuration.GetConnectionString("lisa_newDb");
-        Guard.Against.Null(connectionString, message: "Connection string 'lisa_newDb' not found.");
+        var connectionString = builder.Configuration.GetConnectionString("LisaDb");
+        Guard.Against.Null(connectionString, message: "Connection string 'LisaDb' not found.");
 
         builder.Services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();
         builder.Services.AddScoped<ISaveChangesInterceptor, DispatchDomainEventsInterceptor>();

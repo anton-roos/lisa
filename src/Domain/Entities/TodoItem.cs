@@ -1,4 +1,4 @@
-﻿namespace lisa_new.Domain.Entities;
+﻿namespace Lisa.Domain.Entities;
 
 public class TodoItem : BaseAuditableEntity
 {

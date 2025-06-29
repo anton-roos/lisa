@@ -1,7 +1,7 @@
-﻿using lisa_new.Application.Common.Interfaces;
-using lisa_new.Domain.Entities;
+﻿using Lisa.Application.Common.Interfaces;
+using Lisa.Domain.Entities;
 
-namespace lisa_new.Application.TodoLists.Commands.CreateTodoList;
+namespace Lisa.Application.TodoLists.Commands.CreateTodoList;
 
 public record CreateTodoListCommand : IRequest<int>
 {

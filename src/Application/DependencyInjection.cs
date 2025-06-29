@@ -1,5 +1,5 @@
 ﻿using System.Reflection;
-using lisa_new.Application.Common.Behaviours;
+using Lisa.Application.Common.Behaviours;
 using Microsoft.Extensions.Hosting;
 
 namespace Microsoft.Extensions.DependencyInjection;

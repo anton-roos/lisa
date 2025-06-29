@@ -1,7 +1,7 @@
-﻿using lisa_new.Application.Common.Interfaces;
-using lisa_new.Domain.Events;
+﻿using Lisa.Application.Common.Interfaces;
+using Lisa.Domain.Events;
 
-namespace lisa_new.Application.TodoItems.Commands.DeleteTodoItem;
+namespace Lisa.Application.TodoItems.Commands.DeleteTodoItem;
 
 public record DeleteTodoItemCommand(int Id) : IRequest;
 

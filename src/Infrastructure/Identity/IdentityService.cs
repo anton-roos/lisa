@@ -1,10 +1,10 @@
-using lisa_new.Application.Common.Interfaces;
-using lisa_new.Application.Common.Models;
+using Lisa.Application.Common.Interfaces;
+using Lisa.Application.Common.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace lisa_new.Infrastructure.Identity;
+namespace Lisa.Infrastructure.Identity;
 
 public class IdentityService : IIdentityService
 {

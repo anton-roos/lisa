@@ -1,9 +1,9 @@
-﻿using lisa_new.Application.Common.Interfaces;
-using lisa_new.Application.Common.Models;
-using lisa_new.Application.Common.Security;
-using lisa_new.Domain.Enums;
+﻿using Lisa.Application.Common.Interfaces;
+using Lisa.Application.Common.Models;
+using Lisa.Application.Common.Security;
+using Lisa.Domain.Enums;
 
-namespace lisa_new.Application.TodoLists.Queries.GetTodos;
+namespace Lisa.Application.TodoLists.Queries.GetTodos;
 
 [Authorize]
 public record GetTodosQuery : IRequest<TodosVm>;

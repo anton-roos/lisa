@@ -1,9 +1,9 @@
-﻿using lisa_new.Domain.Common;
+﻿using Lisa.Domain.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
-namespace lisa_new.Infrastructure.Data.Interceptors;
+namespace Lisa.Infrastructure.Data.Interceptors;
 
 public class DispatchDomainEventsInterceptor : SaveChangesInterceptor
 {

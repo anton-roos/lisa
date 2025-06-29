@@ -1,9 +1,9 @@
-﻿using lisa_new.Domain.Exceptions;
-using lisa_new.Domain.ValueObjects;
+﻿using Lisa.Domain.Exceptions;
+using Lisa.Domain.ValueObjects;
 using FluentAssertions;
 using NUnit.Framework;
 
-namespace lisa_new.Domain.UnitTests.ValueObjects;
+namespace Lisa.Domain.UnitTests.ValueObjects;
 
 public class ColourTests
 {

@@ -10,7 +10,7 @@ IProcess webProcess = null;
 Task("Build")
     .Does(() => {
         Information("Building project...");
-        DotNetBuild("./lisa_new.sln", new DotNetBuildSettings {
+        DotNetBuild("./Lisa.sln", new DotNetBuildSettings {
             Configuration = configuration
         });
     });
@@ -66,7 +66,7 @@ Task("Test")
         };
 
 
-        DotNetTest("./lisa_new.sln", testSettings);
+        DotNetTest("./Lisa.sln", testSettings);
     });
 
 Teardown(context =>

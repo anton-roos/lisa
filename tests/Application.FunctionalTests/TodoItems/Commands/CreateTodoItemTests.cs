@@ -1,9 +1,9 @@
-﻿using lisa_new.Application.Common.Exceptions;
-using lisa_new.Application.TodoItems.Commands.CreateTodoItem;
-using lisa_new.Application.TodoLists.Commands.CreateTodoList;
-using lisa_new.Domain.Entities;
+﻿using Lisa.Application.Common.Exceptions;
+using Lisa.Application.TodoItems.Commands.CreateTodoItem;
+using Lisa.Application.TodoLists.Commands.CreateTodoList;
+using Lisa.Domain.Entities;
 
-namespace lisa_new.Application.FunctionalTests.TodoItems.Commands;
+namespace Lisa.Application.FunctionalTests.TodoItems.Commands;
 
 using static Testing;
 

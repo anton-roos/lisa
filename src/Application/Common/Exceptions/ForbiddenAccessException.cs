@@ -1,4 +1,4 @@
-﻿namespace lisa_new.Application.Common.Exceptions;
+﻿namespace Lisa.Application.Common.Exceptions;
 
 public class ForbiddenAccessException : Exception
 {

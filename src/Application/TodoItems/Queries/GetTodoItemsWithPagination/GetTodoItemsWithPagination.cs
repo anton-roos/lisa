@@ -1,8 +1,8 @@
-﻿using lisa_new.Application.Common.Interfaces;
-using lisa_new.Application.Common.Mappings;
-using lisa_new.Application.Common.Models;
+﻿using Lisa.Application.Common.Interfaces;
+using Lisa.Application.Common.Mappings;
+using Lisa.Application.Common.Models;
 
-namespace lisa_new.Application.TodoItems.Queries.GetTodoItemsWithPagination;
+namespace Lisa.Application.TodoItems.Queries.GetTodoItemsWithPagination;
 
 public record GetTodoItemsWithPaginationQuery : IRequest<PaginatedList<TodoItemBriefDto>>
 {

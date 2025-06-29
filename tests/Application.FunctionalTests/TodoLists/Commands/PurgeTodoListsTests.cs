@@ -1,10 +1,10 @@
-﻿using lisa_new.Application.Common.Exceptions;
-using lisa_new.Application.Common.Security;
-using lisa_new.Application.TodoLists.Commands.CreateTodoList;
-using lisa_new.Application.TodoLists.Commands.PurgeTodoLists;
-using lisa_new.Domain.Entities;
+﻿using Lisa.Application.Common.Exceptions;
+using Lisa.Application.Common.Security;
+using Lisa.Application.TodoLists.Commands.CreateTodoList;
+using Lisa.Application.TodoLists.Commands.PurgeTodoLists;
+using Lisa.Domain.Entities;
 
-namespace lisa_new.Application.FunctionalTests.TodoLists.Commands;
+namespace Lisa.Application.FunctionalTests.TodoLists.Commands;
 
 using static Testing;
 

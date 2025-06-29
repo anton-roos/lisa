@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>lisa_new.Infrastructure</RootNamespace>
-    <AssemblyName>lisa_new.Infrastructure</AssemblyName>
+    <RootNamespace>Lisa.Infrastructure</RootNamespace>
+    <AssemblyName>Lisa.Infrastructure</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

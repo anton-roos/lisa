@@ -1,8 +1,8 @@
 ﻿using System.Security.Claims;
 
-using lisa_new.Application.Common.Interfaces;
+using Lisa.Application.Common.Interfaces;
 
-namespace lisa_new.Web.Services;
+namespace Lisa.Web.Services;
 
 public class CurrentUser : IUser
 {

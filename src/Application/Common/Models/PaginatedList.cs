@@ -1,4 +1,4 @@
-﻿namespace lisa_new.Application.Common.Models;
+﻿namespace Lisa.Application.Common.Models;
 
 public class PaginatedList<T>
 {

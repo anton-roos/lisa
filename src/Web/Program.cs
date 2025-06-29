@@ -1,4 +1,4 @@
-using lisa_new.Infrastructure.Data;
+using Lisa.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 

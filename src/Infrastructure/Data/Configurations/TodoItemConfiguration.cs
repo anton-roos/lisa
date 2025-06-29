@@ -1,8 +1,8 @@
-﻿using lisa_new.Domain.Entities;
+﻿using Lisa.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace lisa_new.Infrastructure.Data.Configurations;
+namespace Lisa.Infrastructure.Data.Configurations;
 
 public class TodoItemConfiguration : IEntityTypeConfiguration<TodoItem>
 {

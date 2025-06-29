@@ -1,4 +1,4 @@
-﻿namespace lisa_new.Domain.Exceptions;
+﻿namespace Lisa.Domain.Exceptions;
 
 public class UnsupportedColourException : Exception
 {

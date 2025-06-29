@@ -1,6 +1,6 @@
 ﻿using MediatR;
 
-namespace lisa_new.Domain.Common;
+namespace Lisa.Domain.Common;
 
 public abstract class BaseEvent : INotification
 {

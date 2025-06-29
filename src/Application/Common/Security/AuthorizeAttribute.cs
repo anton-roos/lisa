@@ -1,4 +1,4 @@
-﻿namespace lisa_new.Application.Common.Security;
+﻿namespace Lisa.Application.Common.Security;
 
 /// <summary>
 /// Specifies the class this attribute is applied to requires authorization.

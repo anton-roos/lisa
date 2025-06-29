@@ -1,6 +1,6 @@
-﻿using lisa_new.Domain.Entities;
+﻿using Lisa.Domain.Entities;
 
-namespace lisa_new.Application.TodoLists.Queries.GetTodos;
+namespace Lisa.Application.TodoLists.Queries.GetTodos;
 
 public class TodoItemDto
 {

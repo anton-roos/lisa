@@ -1,10 +1,10 @@
-﻿using lisa_new.Application.TodoLists.Commands.CreateTodoList;
-using lisa_new.Application.TodoLists.Commands.DeleteTodoList;
-using lisa_new.Application.TodoLists.Commands.UpdateTodoList;
-using lisa_new.Application.TodoLists.Queries.GetTodos;
+﻿using Lisa.Application.TodoLists.Commands.CreateTodoList;
+using Lisa.Application.TodoLists.Commands.DeleteTodoList;
+using Lisa.Application.TodoLists.Commands.UpdateTodoList;
+using Lisa.Application.TodoLists.Queries.GetTodos;
 using Microsoft.AspNetCore.Http.HttpResults;
 
-namespace lisa_new.Web.Endpoints;
+namespace Web.Endpoints;
 
 public class TodoLists : EndpointGroupBase
 {

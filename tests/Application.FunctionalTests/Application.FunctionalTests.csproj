@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <RootNamespace>lisa_new.Application.FunctionalTests</RootNamespace>
-        <AssemblyName>lisa_new.Application.FunctionalTests</AssemblyName>
+        <RootNamespace>Lisa.Application.FunctionalTests</RootNamespace>
+        <AssemblyName>Lisa.Application.FunctionalTests</AssemblyName>
     </PropertyGroup>
 
     <ItemGroup>

@@ -1,6 +1,6 @@
-﻿using lisa_new.Domain.Entities;
+﻿using Lisa.Domain.Entities;
 
-namespace lisa_new.Application.Common.Interfaces;
+namespace Lisa.Application.Common.Interfaces;
 
 public interface IApplicationDbContext
 {

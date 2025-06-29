@@ -1,6 +1,6 @@
-﻿using ValidationException = lisa_new.Application.Common.Exceptions.ValidationException;
+﻿using ValidationException = Lisa.Application.Common.Exceptions.ValidationException;
 
-namespace lisa_new.Application.Common.Behaviours;
+namespace Lisa.Application.Common.Behaviours;
 
 public class ValidationBehaviour<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
      where TRequest : notnull

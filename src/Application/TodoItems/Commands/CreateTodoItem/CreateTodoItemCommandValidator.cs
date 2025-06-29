@@ -1,4 +1,4 @@
-﻿namespace lisa_new.Application.TodoItems.Commands.CreateTodoItem;
+﻿namespace Lisa.Application.TodoItems.Commands.CreateTodoItem;
 
 public class CreateTodoItemCommandValidator : AbstractValidator<CreateTodoItemCommand>
 {

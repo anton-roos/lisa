@@ -1,11 +1,11 @@
-﻿using lisa_new.Application.Common.Behaviours;
-using lisa_new.Application.Common.Interfaces;
-using lisa_new.Application.TodoItems.Commands.CreateTodoItem;
+﻿using Lisa.Application.Common.Behaviours;
+using Lisa.Application.Common.Interfaces;
+using Lisa.Application.TodoItems.Commands.CreateTodoItem;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 
-namespace lisa_new.Application.UnitTests.Common.Behaviours;
+namespace Lisa.Application.UnitTests.Common.Behaviours;
 
 public class RequestLoggerTests
 {

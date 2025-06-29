@@ -1,6 +1,6 @@
-﻿using lisa_new.Application.Common.Models;
+﻿using Lisa.Application.Common.Models;
 
-namespace lisa_new.Application.Common.Mappings;
+namespace Lisa.Application.Common.Mappings;
 
 public static class MappingExtensions
 {

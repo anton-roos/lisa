@@ -1,4 +1,4 @@
-﻿namespace lisa_new.Application.WeatherForecasts.Queries.GetWeatherForecasts;
+﻿namespace Lisa.Application.WeatherForecasts.Queries.GetWeatherForecasts;
 
 public record GetWeatherForecastsQuery : IRequest<IEnumerable<WeatherForecast>>;
 

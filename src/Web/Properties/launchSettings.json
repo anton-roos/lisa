@@ -8,7 +8,7 @@
     }
   },
   "profiles": {
-    "lisa_new.Web": {
+    "Lisa.Web": {
       "commandName": "Project",
       "launchBrowser": true,
       "applicationUrl": "https://localhost:5001;http://localhost:5000",

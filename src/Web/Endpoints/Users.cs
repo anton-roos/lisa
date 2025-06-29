@@ -1,6 +1,6 @@
-﻿using lisa_new.Infrastructure.Identity;
+﻿using Lisa.Infrastructure.Identity;
 
-namespace lisa_new.Web.Endpoints;
+namespace Lisa.Web.Endpoints;
 
 public class Users : EndpointGroupBase
 {

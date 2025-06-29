@@ -1,4 +1,4 @@
-﻿namespace lisa_new.Application.FunctionalTests;
+﻿namespace Lisa.Application.FunctionalTests;
 
 using static Testing;
 

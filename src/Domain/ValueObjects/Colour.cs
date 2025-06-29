@@ -1,4 +1,4 @@
-﻿namespace lisa_new.Domain.ValueObjects;
+﻿namespace Lisa.Domain.ValueObjects;
 
 public class Colour(string code) : ValueObject
 {

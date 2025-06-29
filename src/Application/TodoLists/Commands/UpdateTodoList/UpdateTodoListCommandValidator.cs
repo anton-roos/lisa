@@ -1,6 +1,6 @@
-﻿using lisa_new.Application.Common.Interfaces;
+﻿using Lisa.Application.Common.Interfaces;
 
-namespace lisa_new.Application.TodoLists.Commands.UpdateTodoList;
+namespace Lisa.Application.TodoLists.Commands.UpdateTodoList;
 
 public class UpdateTodoListCommandValidator : AbstractValidator<UpdateTodoListCommand>
 {

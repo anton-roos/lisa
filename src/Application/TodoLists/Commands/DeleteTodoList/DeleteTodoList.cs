@@ -1,6 +1,6 @@
-﻿using lisa_new.Application.Common.Interfaces;
+﻿using Lisa.Application.Common.Interfaces;
 
-namespace lisa_new.Application.TodoLists.Commands.DeleteTodoList;
+namespace Lisa.Application.TodoLists.Commands.DeleteTodoList;
 
 public record DeleteTodoListCommand(int Id) : IRequest;
 

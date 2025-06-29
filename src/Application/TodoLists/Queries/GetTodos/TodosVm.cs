@@ -1,6 +1,6 @@
-﻿using lisa_new.Application.Common.Models;
+﻿using Lisa.Application.Common.Models;
 
-namespace lisa_new.Application.TodoLists.Queries.GetTodos;
+namespace Lisa.Application.TodoLists.Queries.GetTodos;
 
 public class TodosVm
 {

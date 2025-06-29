@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
-namespace lisa_new.Web.Infrastructure;
+namespace Lisa.Web.Infrastructure;
 
 public static class IEndpointRouteBuilderExtensions
 {

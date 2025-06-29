@@ -1,6 +1,6 @@
 ﻿using System.Data.Common;
 
-namespace lisa_new.Application.FunctionalTests;
+namespace Lisa.Application.FunctionalTests;
 
 public interface ITestDatabase
 {

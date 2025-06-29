@@ -1,16 +1,16 @@
 ﻿using System.Data.Common;
-using lisa_new.Infrastructure.Data;
+using Lisa.Infrastructure.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Respawn;
 using Testcontainers.MsSql;
 
-namespace lisa_new.Application.FunctionalTests;
+namespace Lisa.Application.FunctionalTests;
 
 public class SqlTestcontainersTestDatabase : ITestDatabase
 {
-    private const string DefaultDatabase = "lisa_newTestDb";
+    private const string DefaultDatabase = "LisaTestDb";
     private readonly MsSqlContainer _container;
     private DbConnection _connection = null!;
     private string _connectionString = null!;

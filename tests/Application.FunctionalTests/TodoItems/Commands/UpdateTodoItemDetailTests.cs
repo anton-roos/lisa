@@ -1,11 +1,11 @@
-﻿using lisa_new.Application.TodoItems.Commands.CreateTodoItem;
-using lisa_new.Application.TodoItems.Commands.UpdateTodoItem;
-using lisa_new.Application.TodoItems.Commands.UpdateTodoItemDetail;
-using lisa_new.Application.TodoLists.Commands.CreateTodoList;
-using lisa_new.Domain.Entities;
-using lisa_new.Domain.Enums;
+﻿using Lisa.Application.TodoItems.Commands.CreateTodoItem;
+using Lisa.Application.TodoItems.Commands.UpdateTodoItem;
+using Lisa.Application.TodoItems.Commands.UpdateTodoItemDetail;
+using Lisa.Application.TodoLists.Commands.CreateTodoList;
+using Lisa.Domain.Entities;
+using Lisa.Domain.Enums;
 
-namespace lisa_new.Application.FunctionalTests.TodoItems.Commands;
+namespace Lisa.Application.FunctionalTests.TodoItems.Commands;
 
 using static Testing;
 

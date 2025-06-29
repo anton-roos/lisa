@@ -1,6 +1,6 @@
 ﻿using System.Data.Common;
-using lisa_new.Application.Common.Interfaces;
-using lisa_new.Infrastructure.Data;
+using Lisa.Application.Common.Interfaces;
+using Lisa.Infrastructure.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace lisa_new.Application.FunctionalTests;
+namespace Lisa.Application.FunctionalTests;
 
 using static Testing;
 

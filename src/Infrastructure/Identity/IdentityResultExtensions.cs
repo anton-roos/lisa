@@ -1,7 +1,7 @@
-﻿using lisa_new.Application.Common.Models;
+﻿using Lisa.Application.Common.Models;
 using Microsoft.AspNetCore.Identity;
 
-namespace lisa_new.Infrastructure.Identity;
+namespace Lisa.Infrastructure.Identity;
 
 public static class IdentityResultExtensions
 {

@@ -1,11 +1,11 @@
 ﻿using System.Reflection;
-using lisa_new.Application.Common.Interfaces;
-using lisa_new.Domain.Entities;
-using lisa_new.Infrastructure.Identity;
+using Lisa.Application.Common.Interfaces;
+using Lisa.Domain.Entities;
+using Lisa.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace lisa_new.Infrastructure.Data;
+namespace Lisa.Infrastructure.Data;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplicationDbContext
 {

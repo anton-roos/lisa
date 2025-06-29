@@ -1,7 +1,7 @@
-﻿using lisa_new.Application.Common.Interfaces;
-using lisa_new.Domain.Enums;
+﻿using Lisa.Application.Common.Interfaces;
+using Lisa.Domain.Enums;
 
-namespace lisa_new.Application.TodoItems.Commands.UpdateTodoItemDetail;
+namespace Lisa.Application.TodoItems.Commands.UpdateTodoItemDetail;
 
 public record UpdateTodoItemDetailCommand : IRequest
 {

@@ -1,7 +1,7 @@
-﻿using lisa_new.Domain.Events;
+﻿using Lisa.Domain.Events;
 using Microsoft.Extensions.Logging;
 
-namespace lisa_new.Application.TodoItems.EventHandlers;
+namespace Lisa.Application.TodoItems.EventHandlers;
 
 public class TodoItemCreatedEventHandler : INotificationHandler<TodoItemCreatedEvent>
 {
@@ -14,7 +14,7 @@ public class TodoItemCreatedEventHandler : INotificationHandler<TodoItemCreatedE
 
     public Task Handle(TodoItemCreatedEvent notification, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("lisa_new Domain Event: {DomainEvent}", notification.GetType().Name);
+        _logger.LogInformation("Lisa Domain Event: {DomainEvent}", notification.GetType().Name);
 
         return Task.CompletedTask;
     }

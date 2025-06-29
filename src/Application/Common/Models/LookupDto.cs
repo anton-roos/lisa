@@ -1,6 +1,6 @@
-﻿using lisa_new.Domain.Entities;
+﻿using Lisa.Domain.Entities;
 
-namespace lisa_new.Application.Common.Models;
+namespace Lisa.Application.Common.Models;
 
 public class LookupDto
 {

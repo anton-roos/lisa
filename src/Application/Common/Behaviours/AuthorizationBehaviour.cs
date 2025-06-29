@@ -1,9 +1,9 @@
 ﻿using System.Reflection;
-using lisa_new.Application.Common.Exceptions;
-using lisa_new.Application.Common.Interfaces;
-using lisa_new.Application.Common.Security;
+using Lisa.Application.Common.Exceptions;
+using Lisa.Application.Common.Interfaces;
+using Lisa.Application.Common.Security;
 
-namespace lisa_new.Application.Common.Behaviours;
+namespace Lisa.Application.Common.Behaviours;
 
 public class AuthorizationBehaviour<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse> where TRequest : notnull
 {

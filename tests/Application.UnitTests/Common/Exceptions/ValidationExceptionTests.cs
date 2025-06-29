@@ -1,9 +1,9 @@
-﻿using lisa_new.Application.Common.Exceptions;
+﻿using Lisa.Application.Common.Exceptions;
 using FluentAssertions;
 using FluentValidation.Results;
 using NUnit.Framework;
 
-namespace lisa_new.Application.UnitTests.Common.Exceptions;
+namespace Lisa.Application.UnitTests.Common.Exceptions;
 
 public class ValidationExceptionTests
 {

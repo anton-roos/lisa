@@ -1,8 +1,8 @@
-﻿using lisa_new.Application.Common.Exceptions;
+﻿using Lisa.Application.Common.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
-namespace lisa_new.Web.Infrastructure;
+namespace Lisa.Web.Infrastructure;
 
 public class CustomExceptionHandler : IExceptionHandler
 {

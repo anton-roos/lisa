@@ -1,10 +1,10 @@
-﻿using lisa_new.Application.Common.Interfaces;
-using lisa_new.Domain.Common;
+﻿using Lisa.Application.Common.Interfaces;
+using Lisa.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
-namespace lisa_new.Infrastructure.Data.Interceptors;
+namespace Lisa.Infrastructure.Data.Interceptors;
 
 public class AuditableEntityInterceptor : SaveChangesInterceptor
 {

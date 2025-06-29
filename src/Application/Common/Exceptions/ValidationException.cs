@@ -1,6 +1,6 @@
 ﻿using FluentValidation.Results;
 
-namespace lisa_new.Application.Common.Exceptions;
+namespace Lisa.Application.Common.Exceptions;
 
 public class ValidationException : Exception
 {

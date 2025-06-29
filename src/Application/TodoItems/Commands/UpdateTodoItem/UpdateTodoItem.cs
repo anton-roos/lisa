@@ -1,6 +1,6 @@
-﻿using lisa_new.Application.Common.Interfaces;
+﻿using Lisa.Application.Common.Interfaces;
 
-namespace lisa_new.Application.TodoItems.Commands.UpdateTodoItem;
+namespace Lisa.Application.TodoItems.Commands.UpdateTodoItem;
 
 public record UpdateTodoItemCommand : IRequest
 {

@@ -1,4 +1,4 @@
-﻿namespace lisa_new.Application.TodoItems.Queries.GetTodoItemsWithPagination;
+﻿namespace Lisa.Application.TodoItems.Queries.GetTodoItemsWithPagination;
 
 public class GetTodoItemsWithPaginationQueryValidator : AbstractValidator<GetTodoItemsWithPaginationQuery>
 {

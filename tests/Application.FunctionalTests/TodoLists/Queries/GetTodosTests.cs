@@ -1,8 +1,8 @@
-﻿using lisa_new.Application.TodoLists.Queries.GetTodos;
-using lisa_new.Domain.Entities;
-using lisa_new.Domain.ValueObjects;
+﻿using Lisa.Application.TodoLists.Queries.GetTodos;
+using Lisa.Domain.Entities;
+using Lisa.Domain.ValueObjects;
 
-namespace lisa_new.Application.FunctionalTests.TodoLists.Queries;
+namespace Lisa.Application.FunctionalTests.TodoLists.Queries;
 
 using static Testing;
 

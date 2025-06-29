@@ -1,12 +1,12 @@
-﻿using lisa_new.Application.Common.Models;
-using lisa_new.Application.TodoItems.Commands.CreateTodoItem;
-using lisa_new.Application.TodoItems.Commands.DeleteTodoItem;
-using lisa_new.Application.TodoItems.Commands.UpdateTodoItem;
-using lisa_new.Application.TodoItems.Commands.UpdateTodoItemDetail;
-using lisa_new.Application.TodoItems.Queries.GetTodoItemsWithPagination;
+﻿using Lisa.Application.Common.Models;
+using Lisa.Application.TodoItems.Commands.CreateTodoItem;
+using Lisa.Application.TodoItems.Commands.DeleteTodoItem;
+using Lisa.Application.TodoItems.Commands.UpdateTodoItem;
+using Lisa.Application.TodoItems.Commands.UpdateTodoItemDetail;
+using Lisa.Application.TodoItems.Queries.GetTodoItemsWithPagination;
 using Microsoft.AspNetCore.Http.HttpResults;
 
-namespace lisa_new.Web.Endpoints;
+namespace Lisa.Web.Endpoints;
 
 public class TodoItems : EndpointGroupBase
 {

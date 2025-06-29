@@ -1,12 +1,12 @@
-﻿using lisa_new.Domain.Constants;
-using lisa_new.Infrastructure.Data;
-using lisa_new.Infrastructure.Identity;
+﻿using Lisa.Domain.Constants;
+using Lisa.Infrastructure.Data;
+using Lisa.Infrastructure.Identity;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace lisa_new.Application.FunctionalTests;
+namespace Lisa.Application.FunctionalTests;
 
 [SetUpFixture]
 public partial class Testing

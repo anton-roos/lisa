@@ -1,4 +1,4 @@
-﻿namespace lisa_new.Application.Common.Interfaces;
+﻿namespace Lisa.Application.Common.Interfaces;
 
 public interface IUser
 {

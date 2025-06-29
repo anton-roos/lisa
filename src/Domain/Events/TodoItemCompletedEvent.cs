@@ -1,4 +1,4 @@
-﻿namespace lisa_new.Domain.Events;
+﻿namespace Lisa.Domain.Events;
 
 public class TodoItemCompletedEvent : BaseEvent
 {

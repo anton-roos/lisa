@@ -1,7 +1,7 @@
 ﻿using Azure.Identity;
-using lisa_new.Application.Common.Interfaces;
-using lisa_new.Infrastructure.Data;
-using lisa_new.Web.Services;
+using Lisa.Application.Common.Interfaces;
+using Lisa.Infrastructure.Data;
+using Lisa.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 
 using NSwag;
@@ -32,7 +32,7 @@ public static class DependencyInjection
 
         builder.Services.AddOpenApiDocument((configure, sp) =>
         {
-            configure.Title = "lisa_new API";
+            configure.Title = "Lisa API";
 
             // Add JWT
             configure.AddSecurity("JWT", Enumerable.Empty<string>(), new OpenApiSecurityScheme

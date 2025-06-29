@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics;
-using lisa_new.Application.Common.Interfaces;
+using Lisa.Application.Common.Interfaces;
 using Microsoft.Extensions.Logging;
 
-namespace lisa_new.Application.Common.Behaviours;
+namespace Lisa.Application.Common.Behaviours;
 
 public class PerformanceBehaviour<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse> where TRequest : notnull
 {
@@ -44,7 +44,7 @@ public class PerformanceBehaviour<TRequest, TResponse> : IPipelineBehavior<TRequ
                 userName = await _identityService.GetUserNameAsync(userId);
             }
 
-            _logger.LogWarning("lisa_new Long Running Request: {Name} ({ElapsedMilliseconds} milliseconds) {@UserId} {@UserName} {@Request}",
+            _logger.LogWarning("Lisa Long Running Request: {Name} ({ElapsedMilliseconds} milliseconds) {@UserId} {@UserName} {@Request}",
                 requestName, elapsedMilliseconds, userId, userName, request);
         }
 

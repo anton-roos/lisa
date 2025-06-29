@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <RootNamespace>lisa_new.Infrastructure.IntegrationTests</RootNamespace>
-        <AssemblyName>lisa_new.Infrastructure.IntegrationTests</AssemblyName>
+        <RootNamespace>Lisa.Infrastructure.IntegrationTests</RootNamespace>
+        <AssemblyName>Lisa.Infrastructure.IntegrationTests</AssemblyName>
     </PropertyGroup>
 
     <ItemGroup>

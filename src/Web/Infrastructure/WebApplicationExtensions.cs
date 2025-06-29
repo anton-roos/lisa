@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace lisa_new.Web.Infrastructure;
+namespace Lisa.Web.Infrastructure;
 
 public static class WebApplicationExtensions
 {

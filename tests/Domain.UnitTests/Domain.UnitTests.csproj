@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <RootNamespace>lisa_new.Domain.UnitTests</RootNamespace>
-        <AssemblyName>lisa_new.Domain.UnitTests</AssemblyName>
+        <RootNamespace>Lisa.Domain.UnitTests</RootNamespace>
+        <AssemblyName>Lisa.Domain.UnitTests</AssemblyName>
     </PropertyGroup>
 
     <ItemGroup>

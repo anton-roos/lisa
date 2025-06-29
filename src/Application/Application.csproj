@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>lisa_new.Application</RootNamespace>
-    <AssemblyName>lisa_new.Application</AssemblyName>
+    <RootNamespace>Lisa.Application</RootNamespace>
+    <AssemblyName>Lisa.Application</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

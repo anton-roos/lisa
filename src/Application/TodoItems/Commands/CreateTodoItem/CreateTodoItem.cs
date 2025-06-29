@@ -1,8 +1,8 @@
-﻿using lisa_new.Application.Common.Interfaces;
-using lisa_new.Domain.Entities;
-using lisa_new.Domain.Events;
+﻿using Lisa.Application.Common.Interfaces;
+using Lisa.Domain.Entities;
+using Lisa.Domain.Events;
 
-namespace lisa_new.Application.TodoItems.Commands.CreateTodoItem;
+namespace Lisa.Application.TodoItems.Commands.CreateTodoItem;
 
 public record CreateTodoItemCommand : IRequest<int>
 {

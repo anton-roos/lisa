@@ -1,4 +1,4 @@
-﻿namespace lisa_new.Web.Infrastructure;
+﻿namespace Lisa.Web.Infrastructure;
 
 public abstract class EndpointGroupBase
 {

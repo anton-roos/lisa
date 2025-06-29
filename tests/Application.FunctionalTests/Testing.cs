@@ -1,4 +1,5 @@
 ﻿using Lisa.Domain.Constants;
+using Lisa.Domain.Entities;
 using Lisa.Infrastructure.Data;
 using Lisa.Infrastructure.Identity;
 using MediatR;
@@ -14,7 +15,7 @@ public partial class Testing
     private static ITestDatabase _database = null!;
     private static CustomWebApplicationFactory _factory = null!;
     private static IServiceScopeFactory _scopeFactory = null!;
-    private static string? _userId;
+    private static Guid? _userId;
 
     [OneTimeSetUp]
     public async Task RunBeforeAnyTests()
@@ -44,28 +45,28 @@ public partial class Testing
         await mediator.Send(request);
     }
 
-    public static string? GetUserId()
+    public static Guid? GetUserId()
     {
         return _userId;
     }
 
-    public static async Task<string> RunAsDefaultUserAsync()
+    public static async Task<Guid?> RunAsDefaultUserAsync()
     {
         return await RunAsUserAsync("test@local", "Testing1234!", Array.Empty<string>());
     }
 
-    public static async Task<string> RunAsAdministratorAsync()
+    public static async Task<Guid?> RunAsAdministratorAsync()
     {
         return await RunAsUserAsync("administrator@local", "Administrator1234!", new[] { Roles.Administrator });
     }
 
-    public static async Task<string> RunAsUserAsync(string userName, string password, string[] roles)
+    public static async Task<Guid?> RunAsUserAsync(string userName, string password, string[] roles)
     {
         using var scope = _scopeFactory.CreateScope();
 
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
 
-        var user = new ApplicationUser { UserName = userName, Email = userName };
+        var user = new User { UserName = userName, Email = userName };
 
         var result = await userManager.CreateAsync(user, password);
 
@@ -111,7 +112,7 @@ public partial class Testing
     {
         using var scope = _scopeFactory.CreateScope();
 
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var context = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
 
         return await context.FindAsync<TEntity>(keyValues);
     }
@@ -121,7 +122,7 @@ public partial class Testing
     {
         using var scope = _scopeFactory.CreateScope();
 
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var context = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
 
         context.Add(entity);
 
@@ -132,7 +133,7 @@ public partial class Testing
     {
         using var scope = _scopeFactory.CreateScope();
 
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var context = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
 
         return await context.Set<TEntity>().CountAsync();
     }

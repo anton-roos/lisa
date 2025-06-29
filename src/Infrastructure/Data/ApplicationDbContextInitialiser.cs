@@ -14,7 +14,7 @@ public static class InitialiserExtensions
     {
         builder.UseAsyncSeeding(async (context, _, ct) =>
         {
-            var initialiser = serviceProvider.GetRequiredService<ApplicationDbContextInitialiser>();
+            var initialiser = serviceProvider.GetRequiredService<LisaDbContextInitialiser>();
 
             await initialiser.SeedAsync();
         });
@@ -24,20 +24,20 @@ public static class InitialiserExtensions
     {
         using var scope = app.Services.CreateScope();
 
-        var initialiser = scope.ServiceProvider.GetRequiredService<ApplicationDbContextInitialiser>();
+        var initialiser = scope.ServiceProvider.GetRequiredService<LisaDbContextInitialiser>();
 
         await initialiser.InitialiseAsync();
     }
 }
 
-public class ApplicationDbContextInitialiser
+public class LisaDbContextInitialiser
 {
-    private readonly ILogger<ApplicationDbContextInitialiser> _logger;
+    private readonly ILogger<LisaDbContextInitialiser> _logger;
     private readonly LisaDbContext _context;
     private readonly UserManager<User> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
 
-    public ApplicationDbContextInitialiser(ILogger<ApplicationDbContextInitialiser> logger, LisaDbContext context, UserManager<User> userManager, RoleManager<IdentityRole> roleManager)
+    public LisaDbContextInitialiser(ILogger<LisaDbContextInitialiser> logger, LisaDbContext context, UserManager<User> userManager, RoleManager<IdentityRole> roleManager)
     {
         _logger = logger;
         _context = context;

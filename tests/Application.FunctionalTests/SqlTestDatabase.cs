@@ -32,12 +32,12 @@ public class SqlTestDatabase : ITestDatabase
     {
         _connection = new SqlConnection(_connectionString);
 
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+        var options = new DbContextOptionsBuilder<LisaDbContext>()
             .UseSqlServer(_connectionString)
             .ConfigureWarnings(warnings => warnings.Log(RelationalEventId.PendingModelChangesWarning))
             .Options;
 
-        var context = new ApplicationDbContext(options);
+        var context = new LisaDbContext(options);
 
         context.Database.EnsureDeleted();
         context.Database.Migrate();

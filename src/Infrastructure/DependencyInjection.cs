@@ -31,7 +31,7 @@ public static class DependencyInjection
 
         builder.Services.AddScoped<ILisaDbContext>(provider => provider.GetRequiredService<LisaDbContext>());
 
-        builder.Services.AddScoped<ApplicationDbContextInitialiser>();
+        builder.Services.AddScoped<LisaDbContextInitialiser>();
 
         builder.Services.AddAuthentication()
             .AddBearerToken(IdentityConstants.BearerScheme);

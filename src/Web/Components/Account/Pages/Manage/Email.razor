@@ -3,12 +3,13 @@
 @using System.ComponentModel.DataAnnotations
 @using System.Text
 @using System.Text.Encodings.Web
+@using Lisa.Domain.Entities
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
-@using Lisa.Data
+ 
 
-@inject UserManager<ApplicationUser> UserManager
-@inject IEmailSender<ApplicationUser> EmailSender
+@inject UserManager<User> UserManager
+@inject IEmailSender<User> EmailSender
 @inject IdentityUserAccessor UserAccessor
 @inject NavigationManager NavigationManager
 
@@ -55,7 +56,7 @@
 
 @code {
     private string? message;
-    private ApplicationUser user = default!;
+    private User user = default!;
     private string? email;
     private bool isEmailConfirmed;
 

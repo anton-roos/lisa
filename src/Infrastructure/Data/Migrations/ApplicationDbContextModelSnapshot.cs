@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Lisa.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ILisaDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    partial class LisaDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -100,7 +100,7 @@ namespace Lisa.Infrastructure.Data.Migrations
                 b.ToTable("TodoLists");
             });
 
-            modelBuilder.Entity("Lisa.Infrastructure.Identity.ApplicationUser", b =>
+            modelBuilder.Entity("Lisa.Infrastructure.Identity.User", b =>
             {
                 b.Property<string>("Id")
                     .HasColumnType("nvarchar(450)");
@@ -343,7 +343,7 @@ namespace Lisa.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
             {
-                b.HasOne("Lisa.Infrastructure.Identity.ApplicationUser", null)
+                b.HasOne("Lisa.Infrastructure.Identity.User", null)
                     .WithMany()
                     .HasForeignKey("UserId")
                     .OnDelete(DeleteBehavior.Cascade)
@@ -352,7 +352,7 @@ namespace Lisa.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
             {
-                b.HasOne("Lisa.Infrastructure.Identity.ApplicationUser", null)
+                b.HasOne("Lisa.Infrastructure.Identity.User", null)
                     .WithMany()
                     .HasForeignKey("UserId")
                     .OnDelete(DeleteBehavior.Cascade)
@@ -367,7 +367,7 @@ namespace Lisa.Infrastructure.Data.Migrations
                     .OnDelete(DeleteBehavior.Cascade)
                     .IsRequired();
 
-                b.HasOne("Lisa.Infrastructure.Identity.ApplicationUser", null)
+                b.HasOne("Lisa.Infrastructure.Identity.User", null)
                     .WithMany()
                     .HasForeignKey("UserId")
                     .OnDelete(DeleteBehavior.Cascade)
@@ -376,7 +376,7 @@ namespace Lisa.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
             {
-                b.HasOne("Lisa.Infrastructure.Identity.ApplicationUser", null)
+                b.HasOne("Lisa.Infrastructure.Identity.User", null)
                     .WithMany()
                     .HasForeignKey("UserId")
                     .OnDelete(DeleteBehavior.Cascade)

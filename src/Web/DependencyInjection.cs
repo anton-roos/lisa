@@ -19,7 +19,7 @@ public static class DependencyInjection
 
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddHealthChecks()
-            .AddDbContextCheck<ApplicationDbContext>();
+            .AddDbContextCheck<LisaDbContext>();
 
         builder.Services.AddExceptionHandler<CustomExceptionHandler>();
 

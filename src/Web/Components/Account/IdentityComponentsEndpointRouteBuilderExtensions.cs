@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using System.Text.Json;
-using Lisa.Components.Account.Pages;
-using Lisa.Components.Account.Pages.Manage;
 using Lisa.Data;
+using Lisa.Web.Components.Account.Pages;
+using Lisa.Web.Components.Account.Pages.Manage;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http.Extensions;

@@ -1,6 +1,11 @@
 using Lisa.Components.Account;
 using Lisa.Infrastructure.Data;
+using Lisa.Web.Data;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.EntityFrameworkCore;
+using Lisa.Data;
+using Microsoft.AspNetCore.Identity;
+using Lisa.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,10 +17,8 @@ builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
-
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+builder.Services.AddDbContextFactory<LisaDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Lisa")));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 
@@ -30,7 +33,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
-    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddEntityFrameworkStores<LisaDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
 

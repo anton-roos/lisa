@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.AspNetCore.Identity;
 
-namespace Lisa.Models.Entities;
+namespace Lisa.Domain.Entities;
 
 public class User : IdentityUser<Guid>
 {

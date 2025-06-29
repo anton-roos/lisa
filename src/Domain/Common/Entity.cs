@@ -1,4 +1,4 @@
-namespace Lisa.Models;
+namespace Lisa.Domain.Common;
 
 public class Entity
 {

@@ -1,6 +1,6 @@
-using System;
+using Lisa.Models;
 
-namespace Lisa.Models.Entities;
+namespace Lisa.Domain.Entities;
 
 public class AttendanceSession : Entity
 {

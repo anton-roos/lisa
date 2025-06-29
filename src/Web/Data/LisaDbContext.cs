@@ -1,4 +1,5 @@
 using Lisa.Application.Interfaces;
+using Lisa.Domain.Entities;
 using Lisa.Models.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;

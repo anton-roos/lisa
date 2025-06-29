@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
-using Lisa.Interfaces;
 
-namespace Lisa.Models.Entities;
+namespace Lisa.Domain.Entities;
 
 public class Period : IValidatable
 {

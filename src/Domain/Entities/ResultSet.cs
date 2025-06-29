@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Lisa.Models.Entities;
+namespace Lisa.Domain.Entities;
 
 public class ResultSet
 {

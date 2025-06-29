@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
-using Lisa.Enums;
 
-namespace Lisa.Models.Entities;
+namespace Lisa.Domain.Entities;
 
 public class Learner
 {

@@ -1,4 +1,4 @@
-namespace Lisa.Models.Entities;
+namespace Lisa.Domain.Entities;
 public class SchoolGrade
 {
     public Guid Id { get; set; }

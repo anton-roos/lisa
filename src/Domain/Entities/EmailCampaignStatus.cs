@@ -1,4 +1,4 @@
-namespace Lisa.Models.Entities;
+namespace Lisa.Domain.Entities;
 
 public enum EmailCampaignStatus
 {

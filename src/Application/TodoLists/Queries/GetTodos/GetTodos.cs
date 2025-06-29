@@ -10,10 +10,10 @@ public record GetTodosQuery : IRequest<TodosVm>;
 
 public class GetTodosQueryHandler : IRequestHandler<GetTodosQuery, TodosVm>
 {
-    private readonly IApplicationDbContext _context;
+    private readonly ILisaDbContext _context;
     private readonly IMapper _mapper;
 
-    public GetTodosQueryHandler(IApplicationDbContext context, IMapper mapper)
+    public GetTodosQueryHandler(ILisaDbContext context, IMapper mapper)
     {
         _context = context;
         _mapper = mapper;

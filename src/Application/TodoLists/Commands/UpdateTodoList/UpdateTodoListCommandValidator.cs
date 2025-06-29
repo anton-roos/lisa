@@ -4,9 +4,9 @@ namespace Lisa.Application.TodoLists.Commands.UpdateTodoList;
 
 public class UpdateTodoListCommandValidator : AbstractValidator<UpdateTodoListCommand>
 {
-    private readonly IApplicationDbContext _context;
+    private readonly ILisaDbContext _context;
 
-    public UpdateTodoListCommandValidator(IApplicationDbContext context)
+    public UpdateTodoListCommandValidator(ILisaDbContext context)
     {
         _context = context;
 

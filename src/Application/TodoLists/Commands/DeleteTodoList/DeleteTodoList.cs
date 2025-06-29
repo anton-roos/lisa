@@ -6,9 +6,9 @@ public record DeleteTodoListCommand(int Id) : IRequest;
 
 public class DeleteTodoListCommandHandler : IRequestHandler<DeleteTodoListCommand>
 {
-    private readonly IApplicationDbContext _context;
+    private readonly ILisaDbContext _context;
 
-    public DeleteTodoListCommandHandler(IApplicationDbContext context)
+    public DeleteTodoListCommandHandler(ILisaDbContext context)
     {
         _context = context;
     }

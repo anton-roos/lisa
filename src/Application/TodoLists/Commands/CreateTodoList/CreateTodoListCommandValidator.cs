@@ -4,9 +4,9 @@ namespace Lisa.Application.TodoLists.Commands.CreateTodoList;
 
 public class CreateTodoListCommandValidator : AbstractValidator<CreateTodoListCommand>
 {
-    private readonly IApplicationDbContext _context;
+    private readonly ILisaDbContext _context;
 
-    public CreateTodoListCommandValidator(IApplicationDbContext context)
+    public CreateTodoListCommandValidator(ILisaDbContext context)
     {
         _context = context;
 

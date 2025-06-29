@@ -1,6 +1,5 @@
 using Lisa.Components.Account;
 using Lisa.Infrastructure.Data;
-using Lisa.Web.Data;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;

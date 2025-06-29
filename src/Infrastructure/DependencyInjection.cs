@@ -1,5 +1,6 @@
 ﻿using Lisa.Application.Common.Interfaces;
 using Lisa.Domain.Constants;
+using Lisa.Domain.Entities;
 using Lisa.Infrastructure.Data;
 using Lisa.Infrastructure.Data.Interceptors;
 using Lisa.Infrastructure.Identity;
@@ -21,14 +22,14 @@ public static class DependencyInjection
         builder.Services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();
         builder.Services.AddScoped<ISaveChangesInterceptor, DispatchDomainEventsInterceptor>();
 
-        builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
+        builder.Services.AddDbContext<LisaDbContext>((sp, options) =>
         {
             options.AddInterceptors(sp.GetServices<ISaveChangesInterceptor>());
             options.UseSqlServer(connectionString).AddAsyncSeeding(sp);
         });
 
 
-        builder.Services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+        builder.Services.AddScoped<ILisaDbContext>(provider => provider.GetRequiredService<LisaDbContext>());
 
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
 
@@ -38,9 +39,9 @@ public static class DependencyInjection
         builder.Services.AddAuthorizationBuilder();
 
         builder.Services
-            .AddIdentityCore<ApplicationUser>()
+            .AddIdentityCore<User>()
             .AddRoles<IdentityRole>()
-            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddEntityFrameworkStores<LisaDbContext>()
             .AddApiEndpoints();
 
         builder.Services.AddSingleton(TimeProvider.System);

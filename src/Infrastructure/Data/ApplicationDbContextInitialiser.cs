@@ -35,9 +35,9 @@ public class LisaDbContextInitialiser
     private readonly ILogger<LisaDbContextInitialiser> _logger;
     private readonly LisaDbContext _context;
     private readonly UserManager<User> _userManager;
-    private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly RoleManager<IdentityRole<Guid>> _roleManager;
 
-    public LisaDbContextInitialiser(ILogger<LisaDbContextInitialiser> logger, LisaDbContext context, UserManager<User> userManager, RoleManager<IdentityRole> roleManager)
+    public LisaDbContextInitialiser(ILogger<LisaDbContextInitialiser> logger, LisaDbContext context, UserManager<User> userManager, RoleManager<IdentityRole<Guid>> roleManager)
     {
         _logger = logger;
         _context = context;
@@ -74,7 +74,7 @@ public class LisaDbContextInitialiser
     public async Task TrySeedAsync()
     {
         // Default roles
-        var administratorRole = new IdentityRole(Roles.Administrator);
+        var administratorRole = new IdentityRole<Guid>(Roles.Administrator);
 
         if (_roleManager.Roles.All(r => r.Name != administratorRole.Name))
         {

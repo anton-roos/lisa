@@ -1,24 +1,24 @@
 ﻿using System.Data.Common;
 using Lisa.Infrastructure.Data;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Npgsql;
 using Respawn;
-using Testcontainers.MsSql;
+using Testcontainers.PostgreSql;
 
 namespace Lisa.Application.FunctionalTests;
 
-public class SqlTestcontainersTestDatabase : ITestDatabase
+public class PostgreSqlTestcontainersTestDatabase : ITestDatabase
 {
-    private const string DefaultDatabase = "LisaTestDb";
-    private readonly MsSqlContainer _container;
+    private const string DefaultDatabase = "lisatestdb";
+    private readonly PostgreSqlContainer _container;
     private DbConnection _connection = null!;
     private string _connectionString = null!;
     private Respawner _respawner = null!;
 
-    public SqlTestcontainersTestDatabase()
+    public PostgreSqlTestcontainersTestDatabase()
     {
-        _container = new MsSqlBuilder()
+        _container = new PostgreSqlBuilder()
             .WithAutoRemove(true)
             .Build();
     }
@@ -26,19 +26,13 @@ public class SqlTestcontainersTestDatabase : ITestDatabase
     public async Task InitialiseAsync()
     {
         await _container.StartAsync();
-        await _container.ExecScriptAsync($"CREATE DATABASE {DefaultDatabase}");
 
-        var builder = new SqlConnectionStringBuilder(_container.GetConnectionString())
-        {
-            InitialCatalog = DefaultDatabase
-        };
+        _connectionString = _container.GetConnectionString();
 
-        _connectionString = builder.ConnectionString;
-
-        _connection = new SqlConnection(_connectionString);
+        _connection = new NpgsqlConnection(_connectionString);
 
         var options = new DbContextOptionsBuilder<LisaDbContext>()
-            .UseSqlServer(_connectionString)
+            .UseNpgsql(_connectionString)
             .ConfigureWarnings(warnings => warnings.Log(RelationalEventId.PendingModelChangesWarning))
             .Options;
 
@@ -48,6 +42,7 @@ public class SqlTestcontainersTestDatabase : ITestDatabase
 
         _respawner = await Respawner.CreateAsync(_connectionString, new RespawnerOptions
         {
+            DbAdapter = DbAdapter.Postgres,
             TablesToIgnore = ["__EFMigrationsHistory"]
         });
     }

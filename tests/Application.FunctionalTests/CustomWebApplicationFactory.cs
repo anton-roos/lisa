@@ -36,7 +36,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 .AddDbContext<LisaDbContext>((sp, options) =>
                 {
                     options.AddInterceptors(sp.GetServices<ISaveChangesInterceptor>());
-                    options.UseSqlServer(_connection);
+                    options.UseNpgsql(_connection);
                 });
         });
     }

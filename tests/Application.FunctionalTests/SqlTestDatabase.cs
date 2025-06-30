@@ -1,20 +1,20 @@
 ﻿using System.Data.Common;
 using Lisa.Infrastructure.Data;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
+using Npgsql;
 using Respawn;
 
 namespace Lisa.Application.FunctionalTests;
 
-public class SqlTestDatabase : ITestDatabase
+public class PostgreSqlTestDatabase : ITestDatabase
 {
     private readonly string _connectionString = null!;
-    private SqlConnection _connection = null!;
+    private NpgsqlConnection _connection = null!;
     private Respawner _respawner = null!;
 
-    public SqlTestDatabase()
+    public PostgreSqlTestDatabase()
     {
         var configuration = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json")
@@ -30,10 +30,10 @@ public class SqlTestDatabase : ITestDatabase
 
     public async Task InitialiseAsync()
     {
-        _connection = new SqlConnection(_connectionString);
+        _connection = new NpgsqlConnection(_connectionString);
 
         var options = new DbContextOptionsBuilder<LisaDbContext>()
-            .UseSqlServer(_connectionString)
+            .UseNpgsql(_connectionString)
             .ConfigureWarnings(warnings => warnings.Log(RelationalEventId.PendingModelChangesWarning))
             .Options;
 
@@ -44,6 +44,7 @@ public class SqlTestDatabase : ITestDatabase
 
         _respawner = await Respawner.CreateAsync(_connectionString, new RespawnerOptions
         {
+            DbAdapter = DbAdapter.Postgres,
             TablesToIgnore = ["__EFMigrationsHistory"]
         });
     }

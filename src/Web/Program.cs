@@ -1,7 +1,6 @@
 using Lisa.Components.Account;
 using Lisa.Infrastructure.Data;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Lisa.Web.Components;
 using Lisa.Domain.Entities;
@@ -16,10 +15,7 @@ builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
-builder.Services.AddDbContextFactory<LisaDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Lisa")));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-
 
 builder.Services.AddAuthentication(options =>
     {
@@ -27,14 +23,6 @@ builder.Services.AddAuthentication(options =>
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
     })
     .AddIdentityCookies();
-
-
-//builder.Services.AddSingleton<IEmailSender<User>, IdentityNoOpEmailSender>();
-
-builder.Services.AddIdentityCore<User>(options => options.SignIn.RequireConfirmedAccount = true)
-    .AddEntityFrameworkStores<LisaDbContext>()
-    .AddSignInManager()
-    .AddDefaultTokenProviders();
 
 
 // Add services to the container.
@@ -61,7 +49,7 @@ else
 app.UseHealthChecks("/health");
 app.UseHttpsRedirection();
 app.UseAntiforgery();
-app.MapStaticAssets();
+
 app.UseStaticFiles();
 
 app.MapRazorComponents<App>()

@@ -25,7 +25,7 @@ public static class DependencyInjection
         builder.Services.AddDbContext<LisaDbContext>((sp, options) =>
         {
             options.AddInterceptors(sp.GetServices<ISaveChangesInterceptor>());
-            options.UseSqlServer(connectionString).AddAsyncSeeding(sp);
+            options.UseNpgsql(connectionString);
         });
 
 
@@ -40,8 +40,10 @@ public static class DependencyInjection
 
         builder.Services
             .AddIdentityCore<User>()
-            .AddRoles<IdentityRole>()
+            .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<LisaDbContext>()
+            .AddSignInManager()
+            .AddDefaultTokenProviders()
             .AddApiEndpoints();
 
         builder.Services.AddSingleton(TimeProvider.System);

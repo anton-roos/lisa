@@ -50,6 +50,12 @@ To run the tests:
 dotnet test
 ```
 
+## Migrations
+```bash
+dotnet ef database update --project src/Infrastructure --startup-project src/Web
+dotnet ef migrations add MIGRATION_NAME --project src/Infrastructure --startup-project src/Web
+```
+
 ## User Types
  - System Administrator
  - Principal

@@ -8,7 +8,7 @@
       "preLaunchTask": "Build Lisa",
       "program": "dotnet",
       "args": [
-        "${workspaceFolder}/Lisa/bin/Debug/net9.0/Lisa.dll"
+        "${workspaceFolder}/src/Web/bin/Debug/net9.0/Lisa.Web.dll"
       ],
       "cwd": "${workspaceFolder}/Lisa",
       "stopAtEntry": false,

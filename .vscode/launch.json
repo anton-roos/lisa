@@ -10,12 +10,15 @@
       "args": [
         "${workspaceFolder}/src/Web/bin/Debug/net9.0/Lisa.Web.dll"
       ],
-      "cwd": "${workspaceFolder}/Lisa",
+      "cwd": "${workspaceFolder}/src/Web",
       "stopAtEntry": false,
       "serverReadyAction": {
         "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
         "uriFormat": "%s",
         "action": "openExternally"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }
   ]

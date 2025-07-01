@@ -1,0 +1,159 @@
+@page "/learners/details/{LearnerId:guid}"
+@using Lisa.Models.Entities
+@inject LearnerService LearnerService
+@inject NavigationManager Navigation
+
+<PageTitle>Learner Details</PageTitle>
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+    <Authorized>
+        <h3>Learner Details</h3>
+
+        @if (_learner == null)
+        {
+            <p>Loading Learner...</p>
+        }
+        else
+        {
+            <dl class="row">
+                <dt class="col-sm-2">Code</dt>
+                <dd class="col-sm-10">@_learner.Code</dd>
+
+                <dt class="col-sm-2">Surname</dt>
+                <dd class="col-sm-10">@_learner.Surname</dd>
+
+                <dt class="col-sm-2">Name</dt>
+                <dd class="col-sm-10">@_learner.Name</dd>
+
+                <dt class="col-sm-2">Gender</dt>
+                <dd class="col-sm-10">@_learner.Gender</dd>
+
+                <dt class="col-sm-2">Active?</dt>
+                <dd class="col-sm-10">@_learner.Active</dd>
+
+                <dt class="col-sm-2">Created At</dt>
+                <dd class="col-sm-10">@_learner.CreatedAt</dd>
+
+                <dt class="col-sm-2">Updated At</dt>
+                <dd class="col-sm-10">@_learner.UpdatedAt</dd>
+            </dl>
+
+            <h4>Register Class</h4>
+            @if (_learner.RegisterClass == null)
+            {
+                <p>No register class assigned.</p>
+            }
+            else
+            {
+                <p>@_learner.RegisterClass.Name (Grade: @_learner.RegisterClass.SchoolGrade?.SystemGrade.Name)</p>
+            }
+
+            <h4>Care Group</h4>
+            @if (_learner.CareGroup == null)
+            {
+                <p>No care group assigned.</p>
+            }
+            else
+            {
+                <p>@_learner.CareGroup.Name</p>
+            }
+
+            <h4>Subjects</h4>
+            @if (_learner.LearnerSubjects == null)
+            {
+                <p>No subjects found for this Leaner.</p>
+            }
+            else
+            {
+                @foreach (var ls in _learner.LearnerSubjects)
+                {
+                    <p>@ls.Subject.Name</p>
+                }
+            }
+            <h4>Medical Deatails</h4>
+            <dl class="row">
+                <dt class="col-sm-2">Medical Aid Name</dt>
+                <dd class="col-sm-10">@_learner.MedicalAidName</dd>
+            
+                <dt class="col-sm-2">Medical Aid Number</dt>
+                <dd class="col-sm-10">@_learner.MedicalAidNumber</dd>
+
+                <dt class="col-sm-2">Medical Aid Plan</dt>
+                <dd class="col-sm-10">@_learner.MedicalAidPlan</dd>
+
+                <dt class="col-sm-2">Allergies</dt>
+                <dd class="col-sm-10">@_learner.Allergies</dd>
+
+                <dt class="col-sm-2">Medical Ailments</dt>
+                <dd class="col-sm-10">@_learner.MedicalAilments</dd>
+
+                <dt class="col-sm-2">Medical Instructions</dt>
+                <dd class="col-sm-10">@_learner.MedicalInstructions</dd>
+
+                <dt class="col-sm-2">Dietary Requirements</dt>
+                <dd class="col-sm-10">@_learner.DietaryRequirements</dd>
+
+                <dt class="col-sm-2">Medical Transport</dt>
+                <dd class="col-sm-10">@_learner.MedicalTransport</dd>
+
+            </dl>
+
+            <h4>Parents</h4>
+            @if (_learner.Parents == null || !_learner.Parents.Any())
+            {
+                <p>No parents associated.</p>
+            }
+            else
+            {
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Surname</th>
+                            <th>Name</th>
+                            <th>Relationship</th>
+                            <th>Primary Email</th>
+                            <th>Secondary Email</th>
+                            <th>Primary Number</th>
+                            <th>Secondary Number</th>
+                            <th>WhatsApp Number</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var lp in _learner.Parents)
+                        {
+                            <tr>
+                                <td>@(lp.Surname ?? "Unknown")</td>
+                                <td>@(lp.Name ?? "Unkown")</td>
+                                <td>@(lp.Relationship ?? "Unknown")</td>
+                                <td>@(lp.PrimaryEmail ?? "Unknown")</td>
+                                <td>@(lp.SecondaryEmail ?? "Unknown")</td>
+                                <td>@(lp.PrimaryCellNumber ?? "Unknown")</td>
+                                <td>@(lp.SecondaryCellNumber ?? "Unknown")</td>
+                                <td>@(lp.WhatsAppNumber ?? "Unknown")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+
+            <button class="btn btn-secondary" @onclick="GoBack">Back</button>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter] public Guid LearnerId { get; set; }
+    private Learner? _learner;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _learner = await LearnerService.GetByIdAsync(LearnerId);
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/learners");
+    }
+}

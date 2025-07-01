@@ -1,0 +1,13 @@
+.color-box
+{
+    width: 20px;
+    height: 20px;
+    border: 1px solid black;
+    display: inline-block;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.align-middle {
+    vertical-align: middle !important;
+}

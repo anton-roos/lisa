@@ -1,10 +1,10 @@
-using Lisa.Components.Account;
 using Lisa.Infrastructure.Data;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Lisa.Web.Components;
 using Lisa.Domain.Entities;
 using MudBlazor.Services;
+using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity;
 
 var builder = WebApplication.CreateBuilder(args);
 

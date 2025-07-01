@@ -1,0 +1,13 @@
+@page "/access-denied"
+@inject NavigationManager NavigationManager
+
+<h1>Access Denied</h1>
+<p>You do not have permission to view this page.</p>
+<button @onclick="NavigateHome">Go back</button>
+
+@code {
+    private void NavigateHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}

@@ -1,0 +1,28 @@
+@typeparam TEntity
+@inherits ComponentBase
+
+<td class="align-middle">
+    <button type="button" class="btn btn-primary btn-sm" @onclick="() => OnView.InvokeAsync(Entity)">
+        <i class="bi bi-eye"></i>
+    </button>
+    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => OnEdit.InvokeAsync(Entity)">
+        <i class="bi bi-pencil-fill"></i>
+    </button>
+    <button type="button" class="btn btn-danger btn-sm" @onclick="() => OnDelete.InvokeAsync(Entity)">
+        <i class="bi bi-trash3-fill"></i>
+    </button>
+</td>
+
+@code {
+    [Parameter]
+    public TEntity Entity { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<TEntity> OnView { get; set; }
+
+    [Parameter]
+    public EventCallback<TEntity> OnEdit { get; set; }
+
+    [Parameter]
+    public EventCallback<TEntity> OnDelete { get; set; }
+}

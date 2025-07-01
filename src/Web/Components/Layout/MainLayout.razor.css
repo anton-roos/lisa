@@ -1,15 +1,30 @@
 .page {
-    position: relative;
     display: flex;
-    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
 }
 
 main {
-    flex: 1;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+#header {
+    flex-shrink: 0;
+    height: 60px;
+    z-index: 10;
+}
+
+.content {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-top: 10px;
 }
 
 .sidebar {
-    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+    background-image: linear-gradient(180deg, #2a133a 0%, #4E246C 70%);
 }
 
 .top-row {
@@ -21,22 +36,22 @@ main {
     align-items: center;
 }
 
-    .top-row ::deep a, .top-row ::deep .btn-link {
-        white-space: nowrap;
-        margin-left: 1.5rem;
-        text-decoration: none;
-    }
+.top-row ::deep a, .top-row ::deep .btn-link {
+    white-space: nowrap;
+    margin-left: 1.5rem;
+    text-decoration: none;
+}
 
-    .top-row ::deep a:hover, .top-row ::deep .btn-link:hover {
-        text-decoration: underline;
-    }
+.top-row ::deep a:hover, .top-row ::deep .btn-link:hover {
+    text-decoration: underline;
+}
 
-    .top-row ::deep a:first-child {
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+.top-row ::deep a:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
-@media (max-width: 640.98px) {
+@media (max-width: 599px) {
     .top-row {
         justify-content: space-between;
     }
@@ -44,9 +59,13 @@ main {
     .top-row ::deep a, .top-row ::deep .btn-link {
         margin-left: 0;
     }
+
+    .sidebar {
+        display: none;
+    }
 }
 
-@media (min-width: 641px) {
+@media (min-width: 600px) {
     .page {
         flex-direction: row;
     }
@@ -90,9 +109,15 @@ main {
     z-index: 1000;
 }
 
-    #blazor-error-ui .dismiss {
-        cursor: pointer;
-        position: absolute;
-        right: 0.75rem;
-        top: 0.5rem;
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}
+
+@media (max-width: 599px) {
+    main {
+        padding-bottom: 60px;
     }
+}

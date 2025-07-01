@@ -1,0 +1,124 @@
+@page "/users/delete/{UserId:guid}"
+@using Lisa.Models.Entities
+@inject NavigationManager Navigation
+@inject IJSRuntime JsRuntime
+@inject UserService UserService
+
+<PageTitle>Delete User</PageTitle>
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+    <Authorized>
+        <h3>Delete User</h3>
+        @if (_isLoading)
+        {
+            <p>Loading...</p>
+        }
+        else if (_user == null)
+        {
+            <p>User not found.</p>
+        }
+        else
+        {
+            <div>
+                <p>
+                    Are you sure you want to delete
+                    <strong>@_user.Surname @_user.Name</strong>?
+                </p>
+
+                @if (_user.Roles.Contains(Roles.Teacher) && _hasRegisterClasses)
+                {
+                    <p>
+                        This teacher is assigned to one or more Register Classes.
+                        You must transfer these classes to another teacher before deletion.
+                    </p>
+                    <div class="py-3">
+                        <InputSelect class="form-select" id="SelectedTeacherId" TValue="string" @bind-Value="_selectedTeacherId">
+                            <option value="">-- Select Replacement Teacher --</option>
+                            @foreach (var t in _availableTeachers)
+                            {
+                                <option value="@t.Id">@t.Surname @t.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+                }
+
+                <button class="btn btn-danger" @onclick="ConfirmDelete"
+                        disabled="@(_user.Roles.Contains(Roles.Teacher) && _hasRegisterClasses && string.IsNullOrEmpty(_selectedTeacherId))">
+                    Delete User
+                </button>
+                <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter]
+    public Guid UserId { get; set; }
+
+    private User? _user;
+    private bool _isLoading = true;
+    private bool _hasRegisterClasses;
+    private List<User> _availableTeachers = [];
+    private string _selectedTeacherId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            // Get the user (which may be a teacher)
+            _user = await UserService.GetByIdAsync(UserId);
+            if (_user != null && _user.Roles.Contains(Roles.Teacher))
+            {
+                // Check if this teacher has any register classes
+                _hasRegisterClasses = await UserService.HasRegisterClassesAsync(UserId);
+                if (_hasRegisterClasses)
+                {
+                    // Get available teachers (other than this one) to transfer classes
+                    _availableTeachers = await UserService.GetAvailableTeachersAsync(UserId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            if (_user != null && _user.Roles.Contains(Roles.Teacher) && _hasRegisterClasses && !string.IsNullOrEmpty(_selectedTeacherId))
+            {
+                // Transfer register classes from this teacher to the selected replacement
+                await UserService.TransferRegisterClassesAsync(UserId, Guid.Parse(_selectedTeacherId));
+            }
+            var deleted = await UserService.DeleteAsync(UserId);
+            if (deleted)
+            {
+                Navigation.NavigateTo("/users");
+            }
+            else
+            {
+                await JsRuntime.InvokeVoidAsync("alert", "Failed to delete user.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/users");
+    }
+}

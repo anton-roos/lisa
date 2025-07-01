@@ -1,0 +1,60 @@
+@page "/subjects/add"
+@using Lisa.Models.Entities
+@inject SubjectService SubjectService
+@inject NavigationManager Navigation
+
+<h2>Add Subject</h2>
+
+<EditForm Model="_newSubject" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <InputText class="form-control" @bind-Value="_newSubject.Name" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Code</label>
+        <InputText class="form-control" @bind-Value="_newSubject.Code" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Description</label>
+        <InputText class="form-control" @bind-Value="_newSubject.Description" />
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger">@_errorMessage</div>
+    }
+
+    <button class="btn btn-primary" type="submit">Save</button>
+    <button class="btn btn-secondary" type="button" @onclick="Cancel">Cancel</button>
+</EditForm>
+
+@code {
+    private readonly Subject _newSubject = new();
+    private string _errorMessage = string.Empty;
+
+    private async Task HandleValidSubmit()
+    {
+        if (_newSubject.Code is not null)
+        {
+            var existingSubject = await SubjectService.GetByCodeAsync(_newSubject.Code);
+            if (existingSubject != null)
+            {
+                _errorMessage = "A subject with this code already exists.";
+                return;
+            }
+        }
+
+        await SubjectService.CreateAsync(_newSubject);
+        Navigation.NavigateTo("/subjects");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/subjects");
+    }
+}

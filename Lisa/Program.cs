@@ -1,11 +1,11 @@
 using Lisa.Components;
-using Lisa.Data;
+using Lisa.Infrastructure.Data;
 using Lisa.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Lisa.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Lisa.Models.Entities;
+using Lisa.Domain.Models.Entities;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Serilog;
 using Lisa.Repositories;

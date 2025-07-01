@@ -1,6 +1,12 @@
-﻿namespace Lisa.Domain.Constants;
+namespace Lisa.Domain.Constants;
 
-public abstract class Roles
+public static class Roles
 {
-    public const string Administrator = nameof(Administrator);
+    public const string SystemAdministrator = "System Administrator";
+    public const string Principal = "Principal";
+    public const string Administrator = "Administrator";
+    public const string SchoolManagement = "School Management";
+    public const string Teacher = "Teacher";
+    public const string Attendance = "Attendance";
+    public const string Reception = "Reception";
 }

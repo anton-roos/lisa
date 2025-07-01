@@ -1,0 +1,60 @@
+@page "/subjects/edit/{SubjectId:int}"
+@using Lisa.Models.Entities
+@inject SubjectService SubjectService
+@inject NavigationManager Navigation
+
+<h2>Edit Subject</h2>
+
+<EditForm Model="_editableSubject" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <InputText class="form-control" @bind-Value="_editableSubject.Name" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Code</label>
+        <InputText class="form-control" @bind-Value="_editableSubject.Code" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Description</label>
+        <InputText class="form-control" @bind-Value="_editableSubject.Description" />
+    </div>
+
+    <button class="btn btn-primary" type="submit">Save</button>
+    <button class="btn btn-secondary" type="button" @onclick="Cancel">Cancel</button>
+</EditForm>
+
+@code {
+    [Parameter]
+    public int SubjectId { get; set; }
+
+    private Subject _editableSubject = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var existing = await SubjectService.GetByIdAsync(SubjectId);
+        if (existing != null)
+        {
+            _editableSubject = existing;
+        }
+        else
+        {
+            Navigation.NavigateTo("/subjects");
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        await SubjectService.UpdateAsync(_editableSubject);
+        Navigation.NavigateTo("/subjects");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/subjects");
+    }
+}

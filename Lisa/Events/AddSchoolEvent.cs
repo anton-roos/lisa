@@ -1,4 +1,4 @@
-using Lisa.Models.Entities;
+using Lisa.Domain.Models.Entities;
 
 namespace Lisa.Events;
 

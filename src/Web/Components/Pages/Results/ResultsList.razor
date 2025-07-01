@@ -1,0 +1,436 @@
+@page "/results"
+@using Lisa.Models.Entities
+@inject ResultService ResultService
+@inject SchoolService SchoolService
+@inject SchoolGradeService SchoolGradeService
+@inject SubjectService SubjectService
+@inject NavigationManager Navigation
+@inject UserService UserService
+@inject LearnerService LearnerService
+
+@inherits EventAwareComponentBase
+
+<AuthorizeView
+    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
+    <Authorized>
+        <PageTitle>Results</PageTitle>
+        <h3>Results</h3>
+
+        @if (_selectedSchool == null)
+        {
+            <div class="alert alert-info">Please select a school to view results.</div>
+        }
+        else
+        {
+            @* Date Range Filter - Only visible when a school is selected *@
+            <div class="mb-3">
+                <label><strong>Filter by Date Range:</strong></label>
+                <div class="d-flex align-items-center">
+                    <InputDate class="form-control me-2" TValue="DateTime ?" Value="_fromDate"
+                        ValueChanged="OnFromDateChanged" ValueExpression="() => _fromDate" placeholder="From Date" />
+                    <button class="btn btn-secondary me-2" @onclick="ClearFromDate">Clear</button>
+                    <InputDate class="form-control me-2" TValue="DateTime ?" Value="_toDate" ValueChanged="OnToDateChanged"
+                        ValueExpression="() => _toDate" placeholder="To Date" />
+                    <button class="btn btn-secondary" @onclick="ClearToDate">Clear</button>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label><strong>View Results by:</strong></label>
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="viewMode" id="viewByGrade" value="Grade"
+                        checked="@(ViewMode == "Grade")" @onchange="@(_ => SetViewMode("Grade"))" />
+                    <label class="btn btn-outline-secondary" for="viewByGrade">Grade</label>
+
+                    <input type="radio" class="btn-check" name="viewMode" id="viewBySubject" value="Subject"
+                        checked="@(ViewMode == "Subject")" @onchange="@(_ => SetViewMode("Subject"))" />
+                    <label class="btn btn-outline-secondary" for="viewBySubject">Subject</label>
+
+                    <input type="radio" class="btn-check" name="viewMode" id="viewByTeacher" value="Teacher"
+                        checked="@(ViewMode == "Teacher")" @onchange="@(_ => SetViewMode("Teacher"))" />
+                    <label class="btn btn-outline-secondary" for="viewByTeacher">Teacher</label>
+                </div>
+            </div>
+
+            @if (ViewMode == "Grade")
+            {
+                <div class="mb-3">
+                    <label><strong>Select Grade:</strong></label>
+                    <InputSelect class="form-select" TValue="Guid ?" Value="@_gradeId" ValueChanged="OnGradeChange"
+                        ValueExpression="() => _gradeId">
+                        <option value="">-- Select Grade --</option>
+                        @foreach (var grade in _schoolGrades)
+                        {
+                            <option value="@grade.Id">@grade.SystemGrade.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <GroupedResultsComponent GroupedResults="@GroupedResults" OnResultClick="ViewResult"
+                    GetResultSetStatusColor="GetResultSetStatusColor" />
+            }
+
+            @if (ViewMode == "Subject")
+            {
+                <div class="mb-3">
+                    <label><strong>Select Subject:</strong></label>
+                    <InputSelect class="form-select" TValue="int?" Value="@_subjectId" ValueChanged="OnSubjectChange"
+                        ValueExpression="() => _subjectId">
+                        <option value="">-- Select Subject --</option>
+                        @foreach (var subject in _subjects)
+                        {
+                            <option value="@subject.Id">@subject.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                @if (_subjectId is not null)
+                {
+                    <div class="mb-3">
+                        <label><strong>Select Grade:</strong></label>
+                        <div class="d-flex flex-wrap">
+                            @if (_availableGradesForSubject is not null)
+                            {
+                                foreach (var grade in _availableGradesForSubject)
+                                {
+                                    <button class="btn btn-sm @(_selectedGrades.Contains(grade) ? "btn-success" : "btn-outline-success")"
+                                        @onclick="() => ToggleGradeSelection(grade)">
+                                        @FormatGrade(grade)
+                                    </button>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+
+                <GroupedResultsComponent GroupedResults="@GroupedResults" OnResultClick="ViewResult"
+                    GetResultSetStatusColor="GetResultSetStatusColor" />
+            }
+
+            @if (ViewMode == "Teacher")
+            {
+                <div class="mb-3">
+                    <label><strong>Select Teacher:</strong></label>
+                    <InputSelect class="form-select" TValue="Guid ?" Value="@_teacherId" ValueChanged="OnTeacherChange"
+                        ValueExpression="() => _teacherId">
+                        <option value="">-- Select Teacher --</option>
+                        @foreach (var teacher in _teachers)
+                        {
+                            <option value="@teacher.Id">@teacher.Abbreviation @teacher.Surname</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <GroupedResultsComponent GroupedResults="@GroupedResults" OnResultClick="ViewResult"
+                    GetResultSetStatusColor="GetResultSetStatusColor" />
+            }
+
+            @if (ViewMode == "Learner")
+            {
+                @if (_learnersLoading)
+                {
+                    <p>Loading learners...</p>
+                }
+                else
+                {
+                    <div class="mb-3">
+                        <label><strong>Search Learner:</strong></label>
+                        <InputText class="form-control" @oninput="OnInputChange" @bind-Value="_learnerSearchText"
+                            placeholder="Enter learner name..." />
+                    </div>
+                    <div class="d-flex flex-column">
+                        @if (FilteredLearners.Any())
+                        {
+                            @foreach (var learner in FilteredLearners)
+                            {
+                                <div class="card mb-2" style="cursor:pointer" @onclick="() => ViewLearner(learner.Id)">
+                                    <div class="card-body">
+                                        <h5 class="card-title">@learner.Name @learner.Surname</h5>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="alert alert-secondary">No Learners Found</div>
+                        }
+                    </div>
+                }
+            }
+
+            @if (_loading)
+            {
+                <div class="text-center p-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Loading results...</p>
+                </div>
+            }
+            else
+            {
+                @* The existing content for displaying results goes here *@
+            }
+        }
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private string ViewMode { get; set; } = "Grade";
+    private List<ResultSet?> _resultsSet = [];
+    private Dictionary<string, List<ResultSet?>> GroupedResults { get; set; } = new();
+    private List<SchoolGrade> _schoolGrades = [];
+    private List<Subject> _subjects = [];
+    private List<User> _teachers = [];
+    private List<int>? _availableGradesForSubject = [];
+    private readonly HashSet<int> _selectedGrades = [];
+    private bool _loading;
+    private School? _selectedSchool;
+    private Guid? _gradeId, _teacherId;
+    private int? _subjectId;
+
+    // New date filter properties
+    private DateTime? _fromDate;
+    private DateTime? _toDate;
+
+    private List<Learner> _learners = [];
+    private bool _learnersLoading = false;
+    private string _learnerSearchText = "";
+    private Guid? _learnerGradeId;
+
+    private IEnumerable<Learner> FilteredLearners => _learners
+    .Where(u => string.IsNullOrWhiteSpace(_learnerSearchText) ||
+    ($"{u.Name} {u.Surname}".Contains(_learnerSearchText, StringComparison.OrdinalIgnoreCase)))
+    .Where(u => !_learnerGradeId.HasValue);
+
+    protected override async Task OnInitializedAsync()
+    {
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        await LoadFilters();
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected && payload is School school)
+        {
+            _selectedSchool = school;
+            await LoadFilters();
+        }
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task SetViewMode(string mode)
+    {
+        ViewMode = mode;
+        _selectedGrades.Clear();
+        _gradeId = null;
+        _subjectId = null;
+        _teacherId = null;
+        _learnerSearchText = "";
+        _learnerGradeId = null;
+        GroupedResults.Clear();
+
+        if (mode == "Learner" && (_learners == null || !_learners.Any()))
+        {
+            _learnersLoading = true;
+            await LoadLearners();
+            _learnersLoading = false;
+        }
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Loads result sets based on the current filters including date range.
+    /// </summary>
+    private async Task LoadResults()
+    {
+        _loading = true;
+
+        if (_selectedSchool is null)
+        {
+            _loading = false;
+            return;
+        }
+
+        switch (ViewMode)
+        {
+            case "Subject":
+                _resultsSet = (await ResultService.GetResultsByFiltersAsync(
+                _selectedSchool.Id,
+                null,
+                _subjectId,
+                null,
+                null,
+                _fromDate,
+                _toDate))
+                .OrderBy(r => r!.AssessmentDate)
+                .ToList();
+
+                GroupedResults = _resultsSet
+                .GroupBy(r => $"{r!.Subject!.Name!} - {r.SchoolGrade!.SystemGrade.Name!}")
+                .ToDictionary(g => g.Key, g => g.ToList());
+                break;
+            case "Grade":
+                _resultsSet = (await ResultService.GetResultsByFiltersAsync(
+                _selectedSchool.Id,
+                _gradeId,
+                null,
+                null,
+                null,
+                _fromDate,
+                _toDate))
+                .OrderBy(r => r?.AssessmentDate)
+                .ToList();
+
+                GroupedResults = _resultsSet
+                .GroupBy(r => r!.Subject!.Name)
+                .ToDictionary(g => g.Key!, g => g.ToList());
+                break;
+            case "Teacher":
+                _resultsSet = (await ResultService.GetResultsByFiltersAsync(
+                _selectedSchool.Id,
+                null,
+                null,
+                _teacherId,
+                null,
+                _fromDate,
+                _toDate))
+                .OrderBy(r => r!.AssessmentDate)
+                .ToList();
+
+                GroupedResults = _resultsSet
+                .GroupBy(r => new { r!.Teacher!.Abbreviation, r.Subject!.Name })
+                .ToDictionary(g => $"{g.Key.Abbreviation} - {g.Key.Name}", g => g.ToList());
+                break;
+        }
+
+        _loading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadLearners()
+    {
+        if (_selectedSchool != null)
+        {
+            _learners = await LearnerService.GetBySchoolAsync(_selectedSchool.Id);
+        }
+    }
+
+    private async Task LoadFilters()
+    {
+        if (_selectedSchool != null)
+        {
+            _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+            _subjects = await SubjectService.GetAllAsync();
+            _teachers = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], _selectedSchool.Id);
+        }
+    }
+
+    private async Task ToggleGradeSelection(int gradeId)
+    {
+        if (_selectedGrades.Contains(gradeId))
+        {
+            _selectedGrades.Remove(gradeId);
+        }
+        else
+        {
+            _selectedGrades.Add(gradeId);
+        }
+
+        await LoadResults();
+    }
+
+    private async Task OnSubjectChange(int? value)
+    {
+        _subjectId = value;
+        if (value.HasValue)
+        {
+            var subject = await SubjectService.GetByIdAsync(value.Value);
+            if (subject != null)
+                _availableGradesForSubject = subject.GradesApplicable;
+        }
+        else
+        {
+            _availableGradesForSubject?.Clear();
+        }
+
+        _selectedGrades.Clear();
+        await LoadResults();
+    }
+
+    private async Task OnGradeChange(Guid? value)
+    {
+        _gradeId = value;
+        await LoadResults();
+    }
+
+    private async Task OnTeacherChange(Guid? value)
+    {
+        _teacherId = value;
+        await LoadResults();
+    }
+
+    private async Task OnDateChanged(ChangeEventArgs? e)
+    {
+        await LoadResults();
+    }
+
+    private async Task ClearFromDate()
+    {
+        _fromDate = null;
+        await LoadResults();
+    }
+
+    private async Task ClearToDate()
+    {
+        _toDate = null;
+        await LoadResults();
+    }
+
+    private void OnInputChange(ChangeEventArgs? e)
+    {
+        _learnerSearchText = e?.Value?.ToString() ?? string.Empty;
+    }
+
+    private void EditResult(Guid resultSetId)
+    {
+        Navigation.NavigateTo($"results/manage/{resultSetId}");
+    }
+
+    private void ViewResult(Guid resultSetId)
+    {
+        Navigation.NavigateTo($"results/{resultSetId}");
+    }
+
+    private void ViewLearner(Guid learnerId)
+    {
+        Navigation.NavigateTo($"learners/{learnerId}");
+    }
+
+    private string FormatGrade(int grade) =>
+    grade switch
+    {
+        -2 => "Gr RRR",
+        -1 => "Gr RR",
+        0 => "Gr R",
+        _ => $"Gr {grade}"
+    };
+
+    private static string GetResultSetStatusColor(ResultSet set) =>
+    set.Status == ResultSetStatus.Draft ? "secondary" :
+    set.AssessmentDate is null ? "warning" :
+    set.Status == ResultSetStatus.Submitted ? "success" : "secondary";
+
+    private async Task OnFromDateChanged(DateTime? value)
+    {
+        _fromDate = value;
+        await LoadResults();
+    }
+
+    private async Task OnToDateChanged(DateTime? value)
+    {
+        _toDate = value;
+        await LoadResults();
+    }
+}

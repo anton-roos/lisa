@@ -1,0 +1,204 @@
+@page "/subjects"
+@using Lisa.Models.Entities
+@inject NavigationManager Navigation
+@inject SubjectService SubjectService
+
+<AuthorizeView Roles="@Roles.SystemAdministrator">
+    <Authorized>
+        <h3>Subjects</h3>
+
+        <div class="d-flex">
+            <button class="btn btn-primary mb-3 me-3" @onclick="AddSubject">Add Subject</button>
+            <div>
+                <InputText class="form-control" @bind-Value="_searchText" @oninput="OnInputChange"
+                    placeholder="Type to filter subjects..." />
+            </div>
+        </div>
+
+        @if (_subjects == null)
+        {
+            <p>Loading subjects...</p>
+        }
+        else if (!FilteredSubjects.Any())
+        {
+            <p>No subjects found matching your search.</p>
+        }
+        else
+        {
+            <div class="list-group">
+                @foreach (var subject in FilteredSubjects)
+                {
+                    <div class="list-group-item d-flex justify-content-start align-items-center subject-row"
+                        @ondragover="OnDragOver" @ondragover:preventDefault="true" @ondrop="(_) => OnDrop(subject)"
+                        @ondrop:preventDefault="true">
+                        <div>
+                            @if (string.IsNullOrWhiteSpace(_searchText))
+                            {
+                                <button class="btn btn-sm btn-secondary me-1 drag-handle" draggable="true"
+                                    @ondragstart="(_) => OnDragStart(subject)">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </button>
+                            }
+                        </div>
+                        <div class="col-md-3 col-12 mb-2 mb-md-0">
+                            <strong>@subject.Name</strong>
+                        </div>
+                        <div class="col-md-2 col-12 mb-2 mb-md-0">
+                            @subject.Code
+                        </div>
+                        <div class="col-md-2 col-12 mb-2 mb-md-0">
+                            <div class="d-flex flex-wrap gap-2">
+                                <Pill Color="info">@GetFirstAndLastGrade(subject)</Pill>
+                                <Pill Color="@GetPillColorForSubjectType(subject.SubjectType)">
+                                    @GetPillTextForSubjectType(subject.SubjectType)
+                                </Pill>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-12 d-flex justify-content-end">
+                            <ActionButtons TEntity="Subject" Entity="subject" OnView="ViewSubject" OnEdit="EditSubject"
+                                OnDelete="DeleteSubject" />
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<Subject>? _subjects;
+    private string _searchText = string.Empty;
+    private Subject? _draggedSubject;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _subjects = await SubjectService.GetAllAsync();
+    }
+
+    private IEnumerable<Subject> FilteredSubjects
+    => _subjects?.Where(s =>
+    string.IsNullOrWhiteSpace(_searchText)
+    || (s.Name ?? "").Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+    || (s.Code ?? "").Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+    || (s.Description ?? "").Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+    ) ?? [];
+
+    private void AddSubject()
+    {
+        Navigation.NavigateTo("/subjects/add");
+    }
+
+    private void ViewSubject(Subject subject)
+    {
+        Navigation.NavigateTo($"/subjects/details/{subject.Id}");
+    }
+
+    private void EditSubject(Subject subject)
+    {
+        Navigation.NavigateTo($"/subjects/edit/{subject.Id}");
+    }
+
+    private async Task DeleteSubject(Subject? subject)
+    {
+        if (subject is not null)
+        {
+            await SubjectService.DeleteAsync(subject.Id);
+            _subjects = await SubjectService.GetAllAsync();
+        }
+    }
+
+    private void OnInputChange(ChangeEventArgs e)
+    {
+        _searchText = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private string GetPillColorForSubjectType(SubjectType subjectType) => subjectType switch
+    {
+        SubjectType.Compulsory => "primary",
+        SubjectType.Combination => "danger",
+        SubjectType.MathCombination => "success",
+        _ => ""
+    };
+
+    private string GetPillTextForSubjectType(SubjectType subjectType) => subjectType switch
+    {
+        SubjectType.Compulsory => "Compulsory",
+        SubjectType.Combination => "Combination",
+        SubjectType.MathCombination => "Math",
+        _ => ""
+    };
+
+    private string GetFirstAndLastGrade(Subject subject)
+    {
+        if (subject.GradesApplicable == null || !subject.GradesApplicable.Any())
+            return string.Empty;
+
+        var firstGrade = subject.GradesApplicable.First();
+        var lastGrade = subject.GradesApplicable.Last();
+
+        var firstGradeName = GetGradeName(firstGrade);
+        var lastGradeName = GetGradeName(lastGrade);
+
+        return firstGrade == lastGrade
+        ? $"Gr {firstGradeName}"
+        : $"Gr {firstGradeName} - {lastGradeName}";
+    }
+
+    private string GetGradeName(int grade) => grade switch
+    {
+        -2 => "RRR",
+        -1 => "RR",
+        0 => "R",
+        _ => grade.ToString()
+    };
+
+    private void OnDragStart(Subject subject)
+    {
+        _draggedSubject = subject;
+    }
+
+    private static void OnDragOver(DragEventArgs e)
+    {
+        e.DataTransfer.DropEffect = "move";
+    }
+
+    private async Task OnDrop(Subject targetSubject)
+    {
+        if (_draggedSubject == null || _draggedSubject == targetSubject)
+        {
+            return;
+        }
+
+        if (_subjects is not null)
+        {
+            var oldIndex = _subjects.IndexOf(_draggedSubject);
+            var newIndex = _subjects.IndexOf(targetSubject);
+
+            if (oldIndex < newIndex) newIndex--;
+            if (newIndex < 0) newIndex = 0;
+
+            _subjects.RemoveAt(oldIndex);
+            _subjects.Insert(newIndex, _draggedSubject);
+        }
+
+        await SaveOrderChanges();
+
+        _draggedSubject = null;
+    }
+
+    private async Task SaveOrderChanges()
+    {
+        if (_subjects is not null)
+            for (var i = 0; i < _subjects.Count; i++)
+            {
+                _subjects[i].Order = i;
+            }
+
+        if (_subjects != null) await SubjectService.UpdateOrderAsync(_subjects);
+        _subjects = await SubjectService.GetAllAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+}

@@ -1,0 +1,29 @@
+@page "/event"
+@inherits EventAwareComponentBase
+
+<h3>Example Page</h3>
+<p>Last event: @LastEvent</p>
+<p>Payload: @LastPayload</p>
+
+@code {
+    private string? LastEvent { get; set; }
+    private string? LastPayload { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Subscribe to events
+        SubscribeToEvent(UiEvents.SchoolsUpdated);
+        SubscribeToEvent(UiEvents.SchoolSelected);
+
+        base.OnInitialized();
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        // Handle the events and update the state
+        LastEvent = eventName;
+        LastPayload = payload?.ToString();
+
+        await base.HandleEventAsync(eventName, payload); // Ensure state change
+    }
+}

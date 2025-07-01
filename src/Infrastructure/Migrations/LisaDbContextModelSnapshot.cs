@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Lisa.Infrastructure.Migrations
+namespace Lisa.Migrations
 {
     [DbContext(typeof(LisaDbContext))]
     partial class LisaDbContextModelSnapshot : ModelSnapshot
@@ -25,20 +25,35 @@ namespace Lisa.Infrastructure.Migrations
 
             modelBuilder.Entity("CareGroupUser", b =>
                 {
-                    b.Property<Guid>("CareGroupsId")
+                    b.Property<Guid>("CareGroupId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("UsersId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("CareGroupsId", "UsersId");
+                    b.HasKey("CareGroupId", "UserId");
 
-                    b.HasIndex("UsersId");
+                    b.HasIndex("UserId");
 
                     b.ToTable("CareGroupUser");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.AssessmentType", b =>
+            modelBuilder.Entity("CombinationSubject", b =>
+                {
+                    b.Property<Guid>("CombinationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("CombinationId", "SubjectId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.ToTable("CombinationSubject");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.AssessmentType", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -52,10 +67,150 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AssessmentType");
+                    b.ToTable("AssessmentTypes");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.CareGroup", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.Attendance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("End")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("Start")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId", "Start");
+
+                    b.ToTable("Attendances");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.AttendanceRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AttendanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttendanceType")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("CellPhoneCollected")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("CellPhoneModel")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("CellPhoneReturned")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("CellPhoneReturnedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("End")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("LearnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("Start")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttendanceId");
+
+                    b.HasIndex("LearnerId", "Start");
+
+                    b.ToTable("AttendanceRecords");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.AuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActivityType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("EntityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AuditLogs");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.CareGroup", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -70,12 +225,15 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Name")
+                        .IsUnique();
+
                     b.HasIndex("SchoolId");
 
-                    b.ToTable("CareGroup");
+                    b.ToTable("CareGroups");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.Combination", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.Combination", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -101,26 +259,27 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasIndex("SchoolGradeId");
 
-                    b.ToTable("Combination");
+                    b.ToTable("Combinations");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.EmailCampaign", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.EmailCampaign", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
-                        .HasColumnType("text");
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<DateTime?>("FromDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<int>("RecipientTemplate")
                         .HasColumnType("integer");
@@ -128,11 +287,14 @@ namespace Lisa.Infrastructure.Migrations
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("SubjectLine")
-                        .HasColumnType("text");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<DateTime?>("ToDate")
                         .HasColumnType("timestamp with time zone");
@@ -148,13 +310,12 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("EmailCampaign");
+                    b.ToTable("EmailCampaigns", (string)null);
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.EmailRecipient", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.EmailRecipient", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("BouncedAt")
@@ -167,7 +328,9 @@ namespace Lisa.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("EmailAddress")
-                        .HasColumnType("text");
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<Guid?>("EmailCampaignId")
                         .HasColumnType("uuid");
@@ -181,8 +344,10 @@ namespace Lisa.Infrastructure.Migrations
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<DateTime?>("UnsubscribedAt")
                         .HasColumnType("timestamp with time zone");
@@ -203,10 +368,67 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("EmailRecipient");
+                    b.ToTable("EmailRecipients", (string)null);
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.Learner", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.EmailTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .HasMaxLength(8192)
+                        .HasColumnType("character varying(8192)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModelType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EmailTemplates");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.EventLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EventData")
+                        .HasMaxLength(8192)
+                        .HasColumnType("character varying(8192)");
+
+                    b.Property<string>("EventType")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EventLogs");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.Learner", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -226,7 +448,8 @@ namespace Lisa.Infrastructure.Migrations
                         .HasColumnType("character varying(30)");
 
                     b.Property<string>("Code")
-                        .HasColumnType("text");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<Guid?>("CombinationId")
                         .HasColumnType("uuid");
@@ -287,16 +510,18 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasIndex("CareGroupId");
 
+                    b.HasIndex("Code");
+
                     b.HasIndex("CombinationId");
 
                     b.HasIndex("RegisterClassId");
 
                     b.HasIndex("SchoolId");
 
-                    b.ToTable("Learner");
+                    b.ToTable("Learners");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.LearnerSubject", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.LearnerSubject", b =>
                 {
                     b.Property<Guid>("LearnerId")
                         .HasColumnType("uuid");
@@ -316,10 +541,10 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasIndex("SubjectId");
 
-                    b.ToTable("LearnerSubject");
+                    b.ToTable("LearnerSubjects");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.Parent", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.Parent", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -364,10 +589,14 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasIndex("LearnerId");
 
-                    b.ToTable("Parent");
+                    b.HasIndex("PrimaryEmail");
+
+                    b.HasIndex("SecondaryEmail");
+
+                    b.ToTable("Parents");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.Period", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.Period", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -390,7 +619,9 @@ namespace Lisa.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Status")
-                        .HasColumnType("integer");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<int>("SubjectId")
                         .HasColumnType("integer");
@@ -406,12 +637,16 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasIndex("SubjectId");
 
-                    b.HasIndex("TeacherId");
+                    b.HasIndex("TeacherId", "StartTime", "EndTime")
+                        .IsUnique();
 
-                    b.ToTable("Period");
+                    b.ToTable("Periods", t =>
+                        {
+                            t.HasCheckConstraint("CK_Period_StartTime_EndTime", "\"StartTime\" < \"EndTime\"");
+                        });
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.RegisterClass", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.RegisterClass", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -432,16 +667,18 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Name");
+
                     b.HasIndex("SchoolGradeId");
 
                     b.HasIndex("SchoolId");
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RegisterClass");
+                    b.ToTable("RegisterClasses");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.Result", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.Result", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -472,10 +709,10 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasIndex("ResultSetId");
 
-                    b.ToTable("Result");
+                    b.ToTable("Results");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.ResultSet", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.ResultSet", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -488,16 +725,15 @@ namespace Lisa.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<int>("AssessmentTypeId")
-                        .HasColumnType("integer");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<string>("AssessmentTypeName")
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
                     b.Property<Guid>("CapturedById")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("CapturedByUserId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
@@ -522,7 +758,7 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasIndex("AssessmentTypeId");
 
-                    b.HasIndex("CapturedByUserId");
+                    b.HasIndex("CapturedById");
 
                     b.HasIndex("SchoolGradeId");
 
@@ -530,10 +766,10 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasIndex("TeacherId");
 
-                    b.ToTable("ResultSet");
+                    b.ToTable("ResultSets");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.School", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.School", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -558,8 +794,8 @@ namespace Lisa.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("ShortName")
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("SmtpEmail")
                         .HasMaxLength(256)
@@ -586,10 +822,13 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasIndex("SchoolTypeId");
 
-                    b.ToTable("School");
+                    b.HasIndex("ShortName")
+                        .IsUnique();
+
+                    b.ToTable("Schools");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.SchoolCurriculum", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.SchoolCurriculum", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -605,10 +844,10 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SchoolCurriculum");
+                    b.ToTable("SchoolCurriculums");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.SchoolGrade", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.SchoolGrade", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -622,14 +861,15 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SchoolId");
-
                     b.HasIndex("SystemGradeId");
 
-                    b.ToTable("SchoolGrade");
+                    b.HasIndex("SchoolId", "SystemGradeId")
+                        .IsUnique();
+
+                    b.ToTable("SchoolGrades");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.SchoolType", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.SchoolType", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -641,10 +881,10 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SchoolType");
+                    b.ToTable("SchoolTypes");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.Subject", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.Subject", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -653,11 +893,8 @@ namespace Lisa.Infrastructure.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Code")
-                        .HasMaxLength(16)
-                        .HasColumnType("character varying(16)");
-
-                    b.Property<Guid?>("CombinationId")
-                        .HasColumnType("uuid");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("Description")
                         .HasMaxLength(64)
@@ -673,22 +910,19 @@ namespace Lisa.Infrastructure.Migrations
                     b.Property<int>("Order")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("RegisterClassId")
-                        .HasColumnType("uuid");
-
                     b.Property<int>("SubjectType")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CombinationId");
+                    b.HasIndex("Code");
 
-                    b.HasIndex("RegisterClassId");
+                    b.HasIndex("Name");
 
-                    b.ToTable("Subject");
+                    b.ToTable("Subjects");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.SystemGrade", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.SystemGrade", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -714,10 +948,13 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SystemGrade");
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("SystemGrades");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.TeacherSubject", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.TeacherSubject", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -738,94 +975,18 @@ namespace Lisa.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("TeacherSubject");
+                    b.ToTable("TeacherSubjects");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.TodoItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTimeOffset>("Created")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("Done")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTimeOffset>("LastModified")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("LastModifiedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("ListId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("text");
-
-                    b.Property<int>("Priority")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("Reminder")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ListId");
-
-                    b.ToTable("TodoItems");
-                });
-
-            modelBuilder.Entity("Lisa.Domain.Entities.TodoList", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTimeOffset>("Created")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("LastModified")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("LastModifiedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("TodoLists");
-                });
-
-            modelBuilder.Entity("Lisa.Domain.Entities.User", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("Abbreviation")
-                        .HasColumnType("text");
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)");
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("integer");
@@ -875,7 +1036,8 @@ namespace Lisa.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Surname")
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
@@ -889,6 +1051,8 @@ namespace Lisa.Infrastructure.Migrations
                         .HasColumnType("character varying(256)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Abbreviation");
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
@@ -1032,24 +1196,84 @@ namespace Lisa.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("RegisterClassCompulsorySubject", b =>
+                {
+                    b.Property<Guid>("RegisterClassId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("RegisterClassId", "SubjectId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.ToTable("RegisterClassCompulsorySubject");
+                });
+
             modelBuilder.Entity("CareGroupUser", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.CareGroup", null)
+                    b.HasOne("Lisa.Models.Entities.CareGroup", null)
                         .WithMany()
-                        .HasForeignKey("CareGroupsId")
+                        .HasForeignKey("CareGroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Lisa.Domain.Entities.User", null)
+                    b.HasOne("Lisa.Models.Entities.User", null)
                         .WithMany()
-                        .HasForeignKey("UsersId")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.CareGroup", b =>
+            modelBuilder.Entity("CombinationSubject", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.School", "School")
+                    b.HasOne("Lisa.Models.Entities.Combination", null)
+                        .WithMany()
+                        .HasForeignKey("CombinationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.Subject", null)
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.Attendance", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("School");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.AttendanceRecord", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.Attendance", "Attendance")
+                        .WithMany("AttendanceRecords")
+                        .HasForeignKey("AttendanceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.Learner", "Learner")
+                        .WithMany()
+                        .HasForeignKey("LearnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Attendance");
+
+                    b.Navigation("Learner");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.CareGroup", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.School", "School")
                         .WithMany("CareGroups")
                         .HasForeignKey("SchoolId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1058,9 +1282,9 @@ namespace Lisa.Infrastructure.Migrations
                     b.Navigation("School");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.Combination", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.Combination", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.SchoolGrade", "SchoolGrade")
+                    b.HasOne("Lisa.Models.Entities.SchoolGrade", "SchoolGrade")
                         .WithMany("Combinations")
                         .HasForeignKey("SchoolGradeId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1069,23 +1293,27 @@ namespace Lisa.Infrastructure.Migrations
                     b.Navigation("SchoolGrade");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.EmailRecipient", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.EmailRecipient", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.EmailCampaign", "EmailCampaign")
+                    b.HasOne("Lisa.Models.Entities.EmailCampaign", "EmailCampaign")
                         .WithMany("EmailRecipients")
-                        .HasForeignKey("EmailCampaignId");
+                        .HasForeignKey("EmailCampaignId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("Lisa.Domain.Entities.Learner", "Learner")
+                    b.HasOne("Lisa.Models.Entities.Learner", "Learner")
                         .WithMany("EmailReceipts")
-                        .HasForeignKey("LearnerId");
+                        .HasForeignKey("LearnerId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Lisa.Domain.Entities.Parent", "Parent")
+                    b.HasOne("Lisa.Models.Entities.Parent", "Parent")
                         .WithMany("EmailReceipts")
-                        .HasForeignKey("ParentId");
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Lisa.Domain.Entities.User", "User")
+                    b.HasOne("Lisa.Models.Entities.User", "User")
                         .WithMany("EmailReceipts")
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("EmailCampaign");
 
@@ -1096,21 +1324,24 @@ namespace Lisa.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.Learner", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.Learner", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.CareGroup", "CareGroup")
+                    b.HasOne("Lisa.Models.Entities.CareGroup", "CareGroup")
                         .WithMany("CareGroupMembers")
-                        .HasForeignKey("CareGroupId");
+                        .HasForeignKey("CareGroupId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Lisa.Domain.Entities.Combination", "Combination")
+                    b.HasOne("Lisa.Models.Entities.Combination", "Combination")
                         .WithMany()
-                        .HasForeignKey("CombinationId");
+                        .HasForeignKey("CombinationId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Lisa.Domain.Entities.RegisterClass", "RegisterClass")
+                    b.HasOne("Lisa.Models.Entities.RegisterClass", "RegisterClass")
                         .WithMany("Learners")
-                        .HasForeignKey("RegisterClassId");
+                        .HasForeignKey("RegisterClassId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Lisa.Domain.Entities.School", "School")
+                    b.HasOne("Lisa.Models.Entities.School", "School")
                         .WithMany("Learners")
                         .HasForeignKey("SchoolId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1125,20 +1356,20 @@ namespace Lisa.Infrastructure.Migrations
                     b.Navigation("School");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.LearnerSubject", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.LearnerSubject", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.Combination", "Combination")
+                    b.HasOne("Lisa.Models.Entities.Combination", "Combination")
                         .WithMany()
                         .HasForeignKey("CombinationId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Lisa.Domain.Entities.Learner", "Learner")
+                    b.HasOne("Lisa.Models.Entities.Learner", "Learner")
                         .WithMany("LearnerSubjects")
                         .HasForeignKey("LearnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Lisa.Domain.Entities.Subject", "Subject")
+                    b.HasOne("Lisa.Models.Entities.Subject", "Subject")
                         .WithMany()
                         .HasForeignKey("SubjectId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1151,9 +1382,9 @@ namespace Lisa.Infrastructure.Migrations
                     b.Navigation("Subject");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.Parent", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.Parent", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.Learner", "Learner")
+                    b.HasOne("Lisa.Models.Entities.Learner", "Learner")
                         .WithMany("Parents")
                         .HasForeignKey("LearnerId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1162,28 +1393,29 @@ namespace Lisa.Infrastructure.Migrations
                     b.Navigation("Learner");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.Period", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.Period", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.SchoolGrade", "SchoolGrade")
+                    b.HasOne("Lisa.Models.Entities.SchoolGrade", "SchoolGrade")
                         .WithMany()
                         .HasForeignKey("SchoolGradeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Lisa.Domain.Entities.School", "School")
+                    b.HasOne("Lisa.Models.Entities.School", "School")
                         .WithMany("Periods")
-                        .HasForeignKey("SchoolId");
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("Lisa.Domain.Entities.Subject", "Subject")
+                    b.HasOne("Lisa.Models.Entities.Subject", "Subject")
                         .WithMany()
                         .HasForeignKey("SubjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Lisa.Domain.Entities.User", "Teacher")
+                    b.HasOne("Lisa.Models.Entities.User", "Teacher")
                         .WithMany("Periods")
                         .HasForeignKey("TeacherId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.SetNull)
                         .IsRequired();
 
                     b.Navigation("School");
@@ -1195,22 +1427,22 @@ namespace Lisa.Infrastructure.Migrations
                     b.Navigation("Teacher");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.RegisterClass", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.RegisterClass", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.SchoolGrade", "SchoolGrade")
+                    b.HasOne("Lisa.Models.Entities.SchoolGrade", "SchoolGrade")
                         .WithMany("RegisterClasses")
                         .HasForeignKey("SchoolGradeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Lisa.Domain.Entities.School", null)
+                    b.HasOne("Lisa.Models.Entities.School", null)
                         .WithMany("RegisterClasses")
                         .HasForeignKey("SchoolId");
 
-                    b.HasOne("Lisa.Domain.Entities.User", "User")
+                    b.HasOne("Lisa.Models.Entities.User", "User")
                         .WithMany("RegisterClasses")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("SchoolGrade");
@@ -1218,15 +1450,15 @@ namespace Lisa.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.Result", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.Result", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.Learner", "Learner")
+                    b.HasOne("Lisa.Models.Entities.Learner", "Learner")
                         .WithMany("Results")
                         .HasForeignKey("LearnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Lisa.Domain.Entities.ResultSet", "ResultSet")
+                    b.HasOne("Lisa.Models.Entities.ResultSet", "ResultSet")
                         .WithMany("Results")
                         .HasForeignKey("ResultSetId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1237,31 +1469,34 @@ namespace Lisa.Infrastructure.Migrations
                     b.Navigation("ResultSet");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.ResultSet", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.ResultSet", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.AssessmentType", "AssessmentType")
+                    b.HasOne("Lisa.Models.Entities.AssessmentType", "AssessmentType")
                         .WithMany()
                         .HasForeignKey("AssessmentTypeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Lisa.Domain.Entities.User", "CapturedByUser")
+                    b.HasOne("Lisa.Models.Entities.User", "CapturedByUser")
                         .WithMany()
-                        .HasForeignKey("CapturedByUserId");
+                        .HasForeignKey("CapturedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
-                    b.HasOne("Lisa.Domain.Entities.SchoolGrade", "SchoolGrade")
+                    b.HasOne("Lisa.Models.Entities.SchoolGrade", "SchoolGrade")
                         .WithMany()
                         .HasForeignKey("SchoolGradeId");
 
-                    b.HasOne("Lisa.Domain.Entities.Subject", "Subject")
+                    b.HasOne("Lisa.Models.Entities.Subject", "Subject")
                         .WithMany()
                         .HasForeignKey("SubjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Lisa.Domain.Entities.User", "Teacher")
+                    b.HasOne("Lisa.Models.Entities.User", "Teacher")
                         .WithMany()
-                        .HasForeignKey("TeacherId");
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("AssessmentType");
 
@@ -1274,15 +1509,15 @@ namespace Lisa.Infrastructure.Migrations
                     b.Navigation("Teacher");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.School", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.School", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.SchoolCurriculum", "Curriculum")
+                    b.HasOne("Lisa.Models.Entities.SchoolCurriculum", "Curriculum")
                         .WithMany()
                         .HasForeignKey("SchoolCurriculumId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Lisa.Domain.Entities.SchoolType", "SchoolType")
+                    b.HasOne("Lisa.Models.Entities.SchoolType", "SchoolType")
                         .WithMany()
                         .HasForeignKey("SchoolTypeId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1293,18 +1528,18 @@ namespace Lisa.Infrastructure.Migrations
                     b.Navigation("SchoolType");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.SchoolGrade", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.SchoolGrade", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.School", "School")
+                    b.HasOne("Lisa.Models.Entities.School", "School")
                         .WithMany("SchoolGrades")
                         .HasForeignKey("SchoolId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Lisa.Domain.Entities.SystemGrade", "SystemGrade")
+                    b.HasOne("Lisa.Models.Entities.SystemGrade", "SystemGrade")
                         .WithMany()
                         .HasForeignKey("SystemGradeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("School");
@@ -1312,26 +1547,15 @@ namespace Lisa.Infrastructure.Migrations
                     b.Navigation("SystemGrade");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.Subject", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.TeacherSubject", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.Combination", null)
-                        .WithMany("Subjects")
-                        .HasForeignKey("CombinationId");
-
-                    b.HasOne("Lisa.Domain.Entities.RegisterClass", null)
-                        .WithMany("CompulsorySubjects")
-                        .HasForeignKey("RegisterClassId");
-                });
-
-            modelBuilder.Entity("Lisa.Domain.Entities.TeacherSubject", b =>
-                {
-                    b.HasOne("Lisa.Domain.Entities.Subject", "Subject")
+                    b.HasOne("Lisa.Models.Entities.Subject", "Subject")
                         .WithMany()
                         .HasForeignKey("SubjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Lisa.Domain.Entities.User", "User")
+                    b.HasOne("Lisa.Models.Entities.User", "User")
                         .WithMany("Subjects")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1342,45 +1566,12 @@ namespace Lisa.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.TodoItem", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.User", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.TodoList", "List")
-                        .WithMany("Items")
-                        .HasForeignKey("ListId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("List");
-                });
-
-            modelBuilder.Entity("Lisa.Domain.Entities.TodoList", b =>
-                {
-                    b.OwnsOne("Lisa.Domain.ValueObjects.Colour", "Colour", b1 =>
-                        {
-                            b1.Property<int>("TodoListId")
-                                .HasColumnType("integer");
-
-                            b1.Property<string>("Code")
-                                .IsRequired()
-                                .HasColumnType("text");
-
-                            b1.HasKey("TodoListId");
-
-                            b1.ToTable("TodoLists");
-
-                            b1.WithOwner()
-                                .HasForeignKey("TodoListId");
-                        });
-
-                    b.Navigation("Colour")
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Lisa.Domain.Entities.User", b =>
-                {
-                    b.HasOne("Lisa.Domain.Entities.School", "School")
+                    b.HasOne("Lisa.Models.Entities.School", "School")
                         .WithMany("Staff")
-                        .HasForeignKey("SchoolId");
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("School");
                 });
@@ -1396,7 +1587,7 @@ namespace Lisa.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.User", null)
+                    b.HasOne("Lisa.Models.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1405,7 +1596,7 @@ namespace Lisa.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.User", null)
+                    b.HasOne("Lisa.Models.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1420,7 +1611,7 @@ namespace Lisa.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Lisa.Domain.Entities.User", null)
+                    b.HasOne("Lisa.Models.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1429,29 +1620,44 @@ namespace Lisa.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
                 {
-                    b.HasOne("Lisa.Domain.Entities.User", null)
+                    b.HasOne("Lisa.Models.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.CareGroup", b =>
+            modelBuilder.Entity("RegisterClassCompulsorySubject", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.RegisterClass", null)
+                        .WithMany()
+                        .HasForeignKey("RegisterClassId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.Subject", null)
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.Attendance", b =>
+                {
+                    b.Navigation("AttendanceRecords");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.CareGroup", b =>
                 {
                     b.Navigation("CareGroupMembers");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.Combination", b =>
-                {
-                    b.Navigation("Subjects");
-                });
-
-            modelBuilder.Entity("Lisa.Domain.Entities.EmailCampaign", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.EmailCampaign", b =>
                 {
                     b.Navigation("EmailRecipients");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.Learner", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.Learner", b =>
                 {
                     b.Navigation("EmailReceipts");
 
@@ -1462,24 +1668,22 @@ namespace Lisa.Infrastructure.Migrations
                     b.Navigation("Results");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.Parent", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.Parent", b =>
                 {
                     b.Navigation("EmailReceipts");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.RegisterClass", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.RegisterClass", b =>
                 {
-                    b.Navigation("CompulsorySubjects");
-
                     b.Navigation("Learners");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.ResultSet", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.ResultSet", b =>
                 {
                     b.Navigation("Results");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.School", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.School", b =>
                 {
                     b.Navigation("CareGroups");
 
@@ -1494,19 +1698,14 @@ namespace Lisa.Infrastructure.Migrations
                     b.Navigation("Staff");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.SchoolGrade", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.SchoolGrade", b =>
                 {
                     b.Navigation("Combinations");
 
                     b.Navigation("RegisterClasses");
                 });
 
-            modelBuilder.Entity("Lisa.Domain.Entities.TodoList", b =>
-                {
-                    b.Navigation("Items");
-                });
-
-            modelBuilder.Entity("Lisa.Domain.Entities.User", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.User", b =>
                 {
                     b.Navigation("EmailReceipts");
 

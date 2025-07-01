@@ -1,0 +1,105 @@
+@page "/register-class/details/{RegisterClassId:guid}"
+@using Lisa.Models.Entities
+@inject NavigationManager Navigation
+@inject RegisterClassService RegisterClassService
+
+<PageTitle>Care Group Details</PageTitle>
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+    <Authorized>
+        <h3>Register Class Details</h3>
+
+        @if (_registerClass == null)
+        {
+            <p>Loading...</p>
+        }
+        else
+        {
+            <dl class="row">
+                <dt class="col-sm-2">Class Name</dt>
+                <dd class="col-sm-10">@_registerClass.Name</dd>
+
+                <dt class="col-sm-2">Grade</dt>
+                <dd class="col-sm-10">@_registerClass.SchoolGrade?.SystemGrade.Name</dd>
+
+                <dt class="col-sm-2">Teacher</dt>
+                <dd class="col-sm-10">
+                    @($"{_registerClass.User?.Surname} {_registerClass.User?.Name}")
+                </dd>
+                <dt class="col-sm-2">Math/Math Lit Selection Enabled?</dt>
+                <dd>@(_registerClass.SchoolGrade is { SystemGrade.MathGrade: true } ? "Yes" : "No")</dd>
+                <dt>Compulsory Subjects</dt>
+                <dd>
+                    <ul>
+                        @if (_registerClass.CompulsorySubjects != null)
+                        {
+                            @foreach (var subject in _registerClass.CompulsorySubjects)
+                            {
+                                <li>@subject.Name</li>
+                            }
+                        }
+                    </ul>
+                </dd>
+            </dl>
+
+            <h4>Enrolled Learners</h4>
+            @if (_registerClass.Learners == null || _registerClass.Learners.Count == 0)
+            {
+                <p>No learners in this class.</p>
+            }
+            else
+            {
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Full Name</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var learner in _registerClass.Learners)
+                        {
+                            <tr>
+                                <td>@($"{learner.Surname} {learner.Name}")</td>
+                                <td>
+                                    <button class="btn btn-primary" @onclick="() => ViewLearner(learner.Id)">
+                                        View Learner
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+            }
+
+
+            <button class="btn btn-secondary" @onclick="GoBack">Back</button>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
+
+@code {
+    [Parameter]
+    public Guid RegisterClassId { get; set; }
+
+    private RegisterClass? _registerClass;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _registerClass = await RegisterClassService.GetByIdAsync(RegisterClassId);
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/register-class");
+    }
+
+    private void ViewLearner(Guid learnerId)
+    {
+        Navigation.NavigateTo($"/learners/details/{learnerId}");
+    }
+}

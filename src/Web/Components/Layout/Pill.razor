@@ -1,0 +1,30 @@
+<span class="@CssClass @Class">
+    @ChildContent
+</span>
+
+@code {
+    /// <summary>
+    /// Content to display inside the pill.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// The color variant for the pill (e.g., "primary", "success", "danger").  
+    /// Assumes you have corresponding CSS classes (Bootstrap is used in this example).
+    /// </summary>
+    [Parameter]
+    public string Color { get; set; } = "primary";
+    
+    [Parameter]
+    public string Class { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Any additional CSS classes.
+    /// </summary>
+    [Parameter]
+    public string? AdditionalClasses { get; set; }
+
+    private string CssClass =>
+        $"badge rounded-pill bg-{Color} {AdditionalClasses}".Trim();
+}

@@ -1,0 +1,117 @@
+@page "/users/details/{UserId:guid}"
+@using Lisa.Models.Entities
+@inject NavigationManager Navigation
+@inject UserService UserService
+
+<PageTitle>User Details</PageTitle>
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+    <Authorized>
+        <h3>User Details</h3>
+
+        @if (_user == null)
+        {
+            <p>Loading user...</p>
+        }
+        else
+        {
+            <dl class="row">
+                <dt class="col-sm-2">Surname</dt>
+                <dd class="col-sm-10">@_user.Surname</dd>
+
+                <dt class="col-sm-2">Abbreviation</dt>
+                <dd class="col-sm-10">@_user.Abbreviation</dd>
+
+                <dt class="col-sm-2">Name</dt>
+                <dd class="col-sm-10">@_user.Name</dd>
+
+                <dt class="col-sm-2">Email</dt>
+                <dd class="col-sm-10">@_user.Email</dd>
+
+                <dt class="col-sm-2">Roles</dt>
+                <dd class="col-sm-10">@string.Join(", ", _user.Roles)</dd>
+            </dl>
+
+            @if (_user.Roles.Contains(Roles.Teacher))
+            {
+                <h4>Teacher Details</h4>
+                <dl class="row">
+                    <dt class="col-sm-2">Care Groups</dt>
+                    <dd class="col-sm-10">
+                        <ul>
+                            @if (_user.CareGroups == null || !_user.CareGroups.Any())
+                            {
+                                <li>No care groups assigned.</li>
+                            }
+                            else
+                            {
+                                @foreach (var cg in _user.CareGroups)
+                                {
+                                    <li>@cg.Name</li>
+                                }
+                            }
+
+                        </ul>
+                    </dd>
+
+                    <dt class="col-sm-2">Register Classes</dt>
+                    <dd class="col-sm-10">
+                        @if (_user.RegisterClasses == null || !_user.RegisterClasses.Any())
+                        {
+                            <p>No register classes.</p>
+                        }
+                        else
+                        {
+                            <ul>
+                                @foreach (var rc in _user.RegisterClasses)
+                                {
+                                    <li>@rc.Name (Grade: @rc.SchoolGrade?.SystemGrade.Name)</li>
+                                }
+                            </ul>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-2">Periods</dt>
+                    <dd class="col-sm-10">
+
+                        @if (_user.Periods == null || !_user.Periods.Any())
+                        {
+                            <p>No periods assigned.</p>
+                        }
+                        else
+                        {
+                            <ul>
+                                @foreach (var period in _user.Periods)
+                                {
+                                    <li>@($"{period.StartTime} - {period.EndTime}")</li>
+                                }
+                            </ul>
+                        }
+                    </dd>
+                </dl>
+            }
+
+            <button class="btn btn-secondary" @onclick="GoBack">Back</button>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
+
+@code {
+    [Parameter]
+    public Guid UserId { get; set; }
+
+    private User? _user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _user = await UserService.GetByIdAsync(UserId);
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/users");
+    }
+}

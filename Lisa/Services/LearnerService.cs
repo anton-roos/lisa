@@ -239,6 +239,24 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         }
     }
 
+    public async Task<Learner?> GetLearnerWithParentsAsync(Guid? learnerId)
+    {
+        try
+        {
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+
+            return await context.Learners
+                .Include(l => l.Parents)
+                .Include(l => l.LearnerSubjects)
+                .FirstOrDefaultAsync(l => l.Id == learnerId);
+        }
+        catch
+        {
+            logger.LogError("Error retrieving learner with parents for ID {LearnerId}.", learnerId);
+            return null;
+        }
+    }
+
     private static async Task<Learner?> GetLearnerWithParentsAsync(LisaDbContext context, Guid? learnerId)
     {
         return await context.Learners

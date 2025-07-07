@@ -9,7 +9,7 @@
 @inject IJSRuntime JSRuntime
 @inherits EventAwareComponentBase
 
-<PageTitle>Leave Early History</PageTitle>
+<PageTitle>Leave Early</PageTitle>
 
 @if (_selectedSchool == null)
 {
@@ -22,7 +22,7 @@ else
 {
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2>Leave Early History</h2>
+            <h2>Leave Early</h2>
             <button class="btn btn-primary" @onclick="NavigateToLeaveEarly">
                 <i class="oi oi-plus"></i> New Leave Early
             </button>
@@ -108,14 +108,7 @@ else
                                     <td>@record.LearnerName</td>
                                     <td>@record.ClassName</td>
                                     <td>
-                                        @if (record.IsEarlyLeave)
-                                        {
-                                            <span class="badge bg-warning">Early</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-success">Normal</span>
-                                        }
+                                        <span class="badge bg-warning">Early</span>
                                     </td>
                                     <td>@GetPermissionMethod(record.Notes)</td>
                                     <td>@GetPickupMethod(record.Notes)</td>
@@ -194,10 +187,7 @@ else
 
                                     <dt class="col-sm-4">Early Leave</dt>
                                     <dd class="col-sm-8">
-                                        @if (SelectedRecord.IsEarlyLeave)
-                                        {
-                                            <span class="badge bg-warning">Yes</span>
-                                        }
+                                        
                                         else
                                         {
                                             <span class="badge bg-success">No</span>
@@ -308,39 +298,6 @@ else
             var toDateUtc = ToDate.HasValue
             ?ToDate.Value.AddDays(1).AddTicks(-1)
             : DateTime.UtcNow;
-
-            // var attendances = await AttendanceService.GetLeaveEarlyAttendancesAsync(
-            // _selectedSchool.Id,
-            // fromDateUtc,
-            // toDateUtc,
-            // Guid.TryParse(SelectedClassId, out var classId) ? classId : (Guid?)null,
-            // LearnerSearchTerm,
-            // (CurrentPage - 1) * PageSize,
-            // PageSize
-            // );
-            //
-            // // Get total count for pagination
-            // TotalRecords = await AttendanceService.GetLeaveEarlyAttendancesCountAsync(
-            // _selectedSchool.Id,
-            // fromDateUtc,
-            // toDateUtc,
-            // Guid.TryParse(SelectedClassId, out var countClassId) ? countClassId : (Guid?)null,
-            // LearnerSearchTerm
-            // );
-            //
-            // // Map to view model
-            // LeaveEarlyRecords = attendances.Select(a => new LeaveEarlyRecord
-            // {
-            //     Id = a.Id,
-            //     LearnerId = a.LearnerId,
-            //     LearnerName = $"{a.Learner?.Name} {a.Learner?.Surname}",
-            //     ClassName = a.Learner?.RegisterClass?.Name ?? "Unknown",
-            //     Date = a.Date,
-            //     SignOutTime = a.SignOutTime,
-            //     IsEarlyLeave = a.IsEarlyLeave,
-            //     Notes = a.Notes ?? "",
-            //     RecordedByUser = a.RecordedByUser?.Name ?? "Unknown"
-            // }).ToList();
         }
         catch (Exception ex)
         {
@@ -429,7 +386,6 @@ else
         public string ClassName { get; set; } = "";
         public DateTime Date { get; set; }
         public DateTime? SignOutTime { get; set; }
-        public bool IsEarlyLeave { get; set; }
         public string Notes { get; set; } = "";
         public string RecordedByUser { get; set; } = "";
     }

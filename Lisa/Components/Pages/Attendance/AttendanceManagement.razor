@@ -173,6 +173,7 @@
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CancelPhoneReturn">Cancel</button>
                     <button class="btn btn-success" @onclick="ConfirmPhoneReturn">Yes, Phone Returned</button>
+                    <button class="btn btn-warning" @onclick="SignOutWithoutPhoneReturn">Sign Out Without Returning Phone</button>
                 </div>
             </div>
         </div>
@@ -428,6 +429,9 @@
 
                 // Sync toggle state with actual phone collected state
                 _toggleValues[record.LearnerId] = record.CellPhoneCollected;
+                
+                // Load phone return status from database
+                _phoneReturnedMap[record.LearnerId] = record.CellPhoneReturned;
             }
         }
 
@@ -977,15 +981,15 @@
             }
         }
 
-        if (record != null && record.CellPhoneCollected)
+        if (record != null && record.CellPhoneCollected && !record.CellPhoneReturned)
         {
-            record.CellPhoneCollected = false;
-            record.CellPhoneModel = null;
+            // Mark phone as returned but keep it as collected
+            record.CellPhoneReturned = true;
+            record.CellPhoneReturnedAt = TimeHelpers.GetCurrentTime();
             record.UpdatedAt = TimeHelpers.GetCurrentTime();
             // Save changes to backend
             await AttendanceRecordService.UpdateAsync(record);
-            // Update toggle state and mark phone as returned
-            _toggleValues[learner.Id] = false;
+            // Update in-memory state
             _phoneReturnedMap[learner.Id] = true;
         }
     }

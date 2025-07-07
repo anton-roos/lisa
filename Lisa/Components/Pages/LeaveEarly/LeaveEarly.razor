@@ -40,28 +40,15 @@ else
                 <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">School End Time</h5>
-                        @if (EndTimeConfirmed)
-                        {
-                            <div class="attendance-status active">
-                                <div class="d-flex align-items-center">
-                                    <i class="oi oi-check me-2"></i>
-                                    <div>
-                                        <div>School closes at <strong>@EndTime?.ToString("HH:mm")</strong></div>
-                                        <small class="text-muted">End time confirmed for @(SelectedLearner?.RegisterClass?.SchoolGrade?.SystemGrade?.Name ?? "selected grade")</small>
-                                    </div>
+                        <div class="attendance-status active">
+                            <div class="d-flex align-items-center">
+                                <i class="oi oi-check me-2"></i>
+                                <div>
+                                    <div>School closes at <strong>@EndTime?.ToString("HH:mm")</strong></div>
+                                    <small class="text-muted">End time confirmed for @(SelectedLearner?.RegisterClass?.SchoolGrade?.SystemGrade?.Name ?? "selected grade")</small>
                                 </div>
                             </div>
-                        }
-                        else
-                        {
-                            <div class="input-group">
-                                <input type="time" @bind="EndTime" class="form-control"/>
-                                <button class="btn btn-primary" @onclick="ConfirmEndTime">
-                                    Confirm
-                                </button>
-                            </div>
-                            <small class="text-muted">Please set and confirm the school closing time</small>
-                        }
+                        </div>
                     </div>
                 </div>
             </div>

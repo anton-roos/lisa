@@ -103,6 +103,7 @@
                                                         ToggleChecked="@(_toggleValues.TryGetValue(learner.Id, out var toggled) && toggled)"
                                                         IsSignOut="@_isSignOut"
                                                         IsAlreadySignedOut="@(_isSignOut && _signOutTimeMap.ContainsKey(learner.Id))"
+                                                        PhoneReturned="@(_phoneReturnedMap.TryGetValue(learner.Id, out var returned) && returned)"
                                                         OnToggleAttendance="@( () => ToggleAttendance(learner, registerClass) )"
                                                         OnTogglePhone="@( () => ToggleCellPhoneCollected(learner) )" />
                                                 }
@@ -153,6 +154,32 @@
     <div class="modal-backdrop fade show"></div>
 }
 
+@if (_showPhoneReturnModal && _pendingSignOutLearner != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Phone Return</h5>
+                    <button type="button" class="btn-close" @onclick="CancelPhoneReturn"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Did <b>@_pendingSignOutLearner.Name @_pendingSignOutLearner.Surname</b> collect their cellphone?</p>
+                    @if (_learnerToAttendanceRecordMap.TryGetValue(_pendingSignOutLearner.Id, out var record) && !string.IsNullOrEmpty(record.CellPhoneModel))
+                    {
+                        <p class="text-muted small">Collection Notes: @record.CellPhoneModel</p>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelPhoneReturn">Cancel</button>
+                    <button class="btn btn-success" @onclick="ConfirmPhoneReturn">Yes, Phone Returned</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 @code {
     [Parameter] public Guid? AttendanceId { get; set; }
 
@@ -178,6 +205,10 @@
     private bool isLoading = true;
     private bool _isSignOut;
 
+    // Phone return modal variables
+    private bool _showPhoneReturnModal = false;
+    private Learner? _pendingSignOutLearner;
+
     private class AttendanceData
     {
         public bool IsPresent { get; set; } = false;
@@ -188,6 +219,7 @@
 
     private Dictionary<Guid, DateTime> _signOutTimeMap = new();
     private Dictionary<Guid, bool> _earlyLeaveMap = new();
+    private Dictionary<Guid, bool> _phoneReturnedMap = new();
 
     protected override async Task OnParametersSetAsync()
     {
@@ -348,6 +380,7 @@
         _toggleValues.Clear();  // clear previous toggle states
         _signOutTimeMap.Clear();
         _earlyLeaveMap.Clear();
+        _phoneReturnedMap.Clear();
 
         // Initialize attendance data and dummy toggle values for all learners first
         foreach (var learnerGroup in _registerClassLearners)
@@ -358,6 +391,7 @@
                 _toggleValues[learner.Id] = false;  // default toggle
                 // Don't initialize _signOutTimeMap - only add entries when there's an actual sign-out
                 _earlyLeaveMap[learner.Id] = false;
+                _phoneReturnedMap[learner.Id] = false;
             }
         }
 
@@ -443,6 +477,7 @@
         _registerClassFilters = ["All"];
         _registerClassNameToIdMap.Clear();
         _toggleValues.Clear();  // clear previous toggle states
+        _phoneReturnedMap.Clear();
 
         // Sort register classes by SystemGrade sequence number
         var sortedRegisterClasses = _registerClasses
@@ -476,6 +511,7 @@
             {
                 _attendanceData[learner.Id] = new AttendanceData();
                 _toggleValues[learner.Id] = false;  // initialize toggle state
+                _phoneReturnedMap[learner.Id] = false;  // initialize phone return state
             }
         }
 
@@ -511,6 +547,17 @@
             if (_attendanceData.TryGetValue(learner.Id, out var outData) && outData.IsPresent)
             {
                 Console.WriteLine($"Learner {learner.Name} is present and can sign out");
+                
+                // Check if learner has a collected phone that needs to be returned
+                if (IsCellPhoneCollected(learner))
+                {
+                    Console.WriteLine($"Learner {learner.Name} has collected phone - showing return modal");
+                    _pendingSignOutLearner = learner;
+                    _showPhoneReturnModal = true;
+                    await InvokeAsync(StateHasChanged);
+                    return;
+                }
+                
                 Console.WriteLine($"Saving sign-out record for {learner.Name}");
                 await SaveSignOutRecord(learner.Id);
                 // Update UI immediately without full reload
@@ -877,5 +924,69 @@
         _pendingPhoneModel = string.Empty;
         _pendingToggleValue = false;
         InvokeAsync(StateHasChanged);
+    }
+
+    // Phone return modal methods
+    private async Task ConfirmPhoneReturn()
+    {
+        if (_pendingSignOutLearner != null)
+        {
+            // Mark phone as returned and sign out learner
+            await ReturnPhone(_pendingSignOutLearner);
+            await SaveSignOutRecord(_pendingSignOutLearner.Id);
+            await InvokeAsync(StateHasChanged);
+        }
+        _showPhoneReturnModal = false;
+        _pendingSignOutLearner = null;
+    }
+
+    private async Task SignOutWithoutPhoneReturn()
+    {
+        if (_pendingSignOutLearner != null)
+        {
+            // Sign out learner without returning phone (phone remains collected)
+            await SaveSignOutRecord(_pendingSignOutLearner.Id);
+            await InvokeAsync(StateHasChanged);
+        }
+        _showPhoneReturnModal = false;
+        _pendingSignOutLearner = null;
+    }
+
+    private void CancelPhoneReturn()
+    {
+        _showPhoneReturnModal = false;
+        _pendingSignOutLearner = null;
+    }
+
+    private async Task ReturnPhone(Learner learner)
+    {
+        if (!_attendanceData.TryGetValue(learner.Id, out var data) || !data.AttendanceId.HasValue)
+            return;
+
+        AttendanceRecord? record = null;
+        if (_learnerToAttendanceRecordMap.TryGetValue(learner.Id, out var cachedRecord))
+        {
+            record = cachedRecord;
+        }
+        else
+        {
+            record = await AttendanceRecordService.GetByIdAsync(data.AttendanceId.Value);
+            if (record != null)
+            {
+                _learnerToAttendanceRecordMap[learner.Id] = record;
+            }
+        }
+
+        if (record != null && record.CellPhoneCollected)
+        {
+            record.CellPhoneCollected = false;
+            record.CellPhoneModel = null;
+            record.UpdatedAt = TimeHelpers.GetCurrentTime();
+            // Save changes to backend
+            await AttendanceRecordService.UpdateAsync(record);
+            // Update toggle state and mark phone as returned
+            _toggleValues[learner.Id] = false;
+            _phoneReturnedMap[learner.Id] = true;
+        }
     }
 }

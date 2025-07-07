@@ -39,21 +39,41 @@
         @if (PillColor != "absent" && ShowPhoneToggle)
         {
             <div class="d-flex align-items-center" @onclick:stopPropagation="true">
-                @if (CellPhoneCollected)
+                @if (IsSignOut)
                 {
-                    <div class="toggle-switch disabled me-2">
-                        <input type="checkbox" checked disabled />
-                        <span class="slider collected"></span>
-                    </div>
-                    <span>Cellphone @if(!string.IsNullOrWhiteSpace(CellPhoneModel)) {<span class="text-muted small ms-1">(@CellPhoneModel)</span>}</span>
+                    @* Sign-out mode: show collection status instead of toggles *@
+                    @if (PhoneReturned)
+                    {
+                        <span><strong>Cellphone Returned</strong></span>
+                    }
+                    else if (CellPhoneCollected)
+                    {
+                        <span><strong>Collected:</strong> @CellPhoneModel</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">No phone collected</span>
+                    }
                 }
                 else
                 {
-                    <div class="toggle-switch me-2" @onclick="async () => await OnTogglePhone.InvokeAsync(null)">
-                        <input type="checkbox" checked="@ToggleChecked" />
-                        <span class="slider"></span>
-                    </div>
-                    <span>Cellphone</span>
+                    @* Sign-in mode: show toggles *@
+                    @if (CellPhoneCollected)
+                    {
+                        <div class="toggle-switch disabled me-2">
+                            <input type="checkbox" checked disabled />
+                            <span class="slider collected"></span>
+                        </div>
+                        <span>Cellphone @if(!string.IsNullOrWhiteSpace(CellPhoneModel)) {<span class="text-muted small ms-1">(@CellPhoneModel)</span>}</span>
+                    }
+                    else
+                    {
+                        <div class="toggle-switch me-2" @onclick="async () => await OnTogglePhone.InvokeAsync(null)">
+                            <input type="checkbox" checked="@ToggleChecked" />
+                            <span class="slider"></span>
+                        </div>
+                        <span>Cellphone</span>
+                    }
                 }
             </div>
         }
@@ -72,4 +92,5 @@
     [Parameter] public EventCallback OnTogglePhone { get; set; }
     [Parameter] public bool IsSignOut { get; set; }
     [Parameter] public bool IsAlreadySignedOut { get; set; } = false;
+    [Parameter] public bool PhoneReturned { get; set; } = false;
 }

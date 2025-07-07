@@ -180,6 +180,7 @@ public class AttendanceRecordService(
             existingRecord.End = attendanceRecord.End;
             existingRecord.Notes = attendanceRecord.Notes;
             existingRecord.CellPhoneCollected = attendanceRecord.CellPhoneCollected;
+            existingRecord.CellPhoneModel = attendanceRecord.CellPhoneModel;
             existingRecord.CellPhoneReturned = attendanceRecord.CellPhoneReturned;
             existingRecord.CellPhoneReturnedAt = attendanceRecord.CellPhoneReturnedAt;
             existingRecord.UpdatedAt = DateTime.UtcNow;

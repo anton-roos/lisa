@@ -16,12 +16,12 @@ This implementation adds start and end time functionality to School Grades and i
 - **Early Leave Detection**: The system intelligently determines if a learner is leaving early based on their grade's end time
 - **Improved Messaging**: Attendance records now indicate whether a departure was "early" or "normal"
 
-### 3. Sign In/Out Module Integration (`/attendance`)
+### 3. Sign In/Out Module Integration (`/sign-in-and-out`)
 - **School-Wide Time Defaults**: Attendance session times are pre-populated based on all active school grades
 - **Intelligent Time Selection**: Uses the earliest start time and latest end time from all grades as defaults
 - **Visual Indicators**: Clear messaging shows that times are based on school grade settings
 
-### 4. Attendance History Enhancement (`/attendance/details/{id}`)
+### 4. Attendance History Enhancement (`/sign-in-and-out/{id}`)
 - **Early Leave Badges**: Attendance records display visual badges indicating:
   - **"Left Early"** (orange badge) - for learners who left before their grade's end time
   - **"Full Day"** (green badge) - for learners who stayed until or after their grade's end time
@@ -65,7 +65,7 @@ This implementation adds start and end time functionality to School Grades and i
    - Times are automatically saved when changed
 
 2. **Managing Attendance Sessions**:
-   - Go to `/attendance`
+   - Go to `/sign-in-and-out`
    - Times will auto-populate based on your school grades
    - Adjust if needed and confirm to start the session
 
@@ -76,7 +76,7 @@ This implementation adds start and end time functionality to School Grades and i
 
 ### For Staff Members
 1. **Viewing Attendance History**:
-   - Check `/attendance/details/{sessionId}` for detailed records
+   - Check `/sign-in-and-out/details/{sessionId}` for detailed records
    - Look for early leave indicators in the Status column
    - Use this information for reporting and follow-up
 

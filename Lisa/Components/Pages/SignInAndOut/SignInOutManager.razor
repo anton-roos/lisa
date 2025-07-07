@@ -1,5 +1,5 @@
-@page "/attendance/sign-in/{AttendanceId:guid}"
-@page "/attendance/sign-out/{AttendanceId:guid}"
+@page "/sign-in-and-out/sign-in/{AttendanceId:guid}"
+@page "/sign-in-and-out/sign-out/{AttendanceId:guid}"
 @using Lisa.Models.Entities
 @using Lisa.Helpers
 @inject SchoolService SchoolService
@@ -226,7 +226,7 @@
     {
         // Determine if current route is sign-out
         var relativePath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-        _isSignOut = relativePath.StartsWith("attendance/sign-out/", StringComparison.OrdinalIgnoreCase);
+        _isSignOut = relativePath.StartsWith("sign-in-and-out/sign-out/", StringComparison.OrdinalIgnoreCase);
 
         // Load session by ID or existing session for sign-in
         if (AttendanceId.HasValue)
@@ -252,7 +252,7 @@
     {
         // Update _isSignOut based on new URL
         var relativePath = NavigationManager.ToBaseRelativePath(e.Location);
-        _isSignOut = relativePath.StartsWith("attendance/sign-out/", StringComparison.OrdinalIgnoreCase);
+        _isSignOut = relativePath.StartsWith("sign-in-and-out/sign-out/", StringComparison.OrdinalIgnoreCase);
         // Reload session data for both sign-in and sign-out views
         if (AttendanceId.HasValue)
         {
@@ -341,7 +341,7 @@
 
         if (existingSession != null)
         {
-            NavigationManager.NavigateTo($"/attendance/sign-in/{existingSession.Id}");
+            NavigationManager.NavigateTo($"/sign-in-and-out/sign-in/{existingSession.Id}");
         }
     }
 
@@ -351,7 +351,7 @@
 
         if (_currentSession == null)
         {
-            NavigationManager.NavigateTo("/attendance/sign-in");
+            NavigationManager.NavigateTo("/sign-in-and-out/sign-in");
             return;
         }
 
@@ -441,12 +441,12 @@
 
     private void NavigateToAttendanceHome()
     {
-        NavigationManager.NavigateTo("/attendance");
+        NavigationManager.NavigateTo("/sign-in-and-out");
     }
 
     private void NavigateToSignOut()
     {
-        NavigationManager.NavigateTo($"/attendance/sign-out/{AttendanceId}");
+        NavigationManager.NavigateTo($"/sign-in-and-out/sign-out/{AttendanceId}");
     }
 
     // This method is no longer used as time confirmation happens at the component level
@@ -468,7 +468,7 @@
         {
             await CreateInitialAttendanceAsync();
             await LoadLearners();
-            NavigationManager.NavigateTo($"/attendance/sign-in/{_currentSession.Id}");
+            NavigationManager.NavigateTo($"/sign-in-and-out/sign-in/{_currentSession.Id}");
         }
     }
 

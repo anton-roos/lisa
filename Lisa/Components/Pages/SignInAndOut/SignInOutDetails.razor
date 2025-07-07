@@ -1,4 +1,4 @@
-@page "/attendance/details/{AttendanceId:guid}"
+@page "/sign-in-and-out/details/{AttendanceId:guid}"
 @using Lisa.Models.Entities
 @using Lisa.Helpers
 @using Lisa.Enums
@@ -238,6 +238,6 @@
 
     private void NavigateBack()
     {
-        NavigationManager.NavigateTo("/attendance");
+        NavigationManager.NavigateTo("/sign-in-and-out");
     }
 }

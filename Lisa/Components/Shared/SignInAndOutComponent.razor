@@ -474,11 +474,11 @@
     {
         if (_todayAttendance != null)
         {
-            NavigationManager.NavigateTo($"/attendance/sign-in/{_todayAttendance.Id}");
+            NavigationManager.NavigateTo($"/sign-in-and-out/sign-in/{_todayAttendance.Id}");
         }
         else
         {
-            NavigationManager.NavigateTo("/attendance");
+            NavigationManager.NavigateTo("/sign-in-and-out");
         }
     }
 
@@ -486,11 +486,11 @@
     {
         if (_todayAttendance is not null)
         {
-            NavigationManager.NavigateTo($"/attendance/sign-out/{_todayAttendance.Id}");
+            NavigationManager.NavigateTo($"/sign-in-and-out/sign-out/{_todayAttendance.Id}");
         }
         else
         {
-            NavigationManager.NavigateTo("/attendance");
+            NavigationManager.NavigateTo("/sign-in-and-out");
         }
     }    private async Task ConfirmTimes()
     {
@@ -540,7 +540,7 @@
 
     private void ViewAttendanceDetails(Guid attendanceId)
     {
-        NavigationManager.NavigateTo($"/attendance/details/{attendanceId}");
+        NavigationManager.NavigateTo($"/sign-in-and-out/details/{attendanceId}");
     }
 
     private void ToggleGradeOverrides()

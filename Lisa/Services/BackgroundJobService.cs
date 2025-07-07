@@ -1,12 +1,11 @@
 using System.Threading.Channels;
-using Microsoft.Extensions.Hosting;
 
 namespace Lisa.Services;
 
-public class BackgroundJobService(IServiceProvider serviceProvider, ILogger<BackgroundJobService> logger) 
+public class BackgroundJobService(IServiceProvider serviceProvider, ILogger<BackgroundJobService> logger)
     : BackgroundService
 {
-    private readonly Channel<Func<IServiceProvider, CancellationToken, Task>> _channel = 
+    private readonly Channel<Func<IServiceProvider, CancellationToken, Task>> _channel =
         Channel.CreateUnbounded<Func<IServiceProvider, CancellationToken, Task>>();
 
     public async Task QueueJobAsync(Func<IServiceProvider, CancellationToken, Task> job)

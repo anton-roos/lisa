@@ -1,5 +1,3 @@
-using System;
-
 namespace Lisa.Models.Entities;
 
 public class AttendanceSession : Entity
@@ -11,7 +9,7 @@ public class AttendanceSession : Entity
     public DateTime? EndTime { get; set; }
     public Guid? CreatedByUserId { get; set; }
     public User? CreatedByUser { get; set; }
-    
+
     // Collection of attendances associated with this session
     public ICollection<Attendance> Attendances { get; set; } = [];
 }

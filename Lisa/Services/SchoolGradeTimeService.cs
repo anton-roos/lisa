@@ -1,5 +1,4 @@
 using Lisa.Data;
-using Lisa.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
@@ -25,10 +24,10 @@ public class SchoolGradeTimeService(
                 var schoolGrade = learner.RegisterClass.SchoolGrade;
                 var startTime = schoolGrade.StartTime ?? new TimeOnly(8, 0);
                 var endTime = schoolGrade.EndTime ?? new TimeOnly(14, 0);
-                
-                logger.LogInformation("Retrieved school grade times for learner {LearnerId}: Start {StartTime}, End {EndTime}", 
+
+                logger.LogInformation("Retrieved school grade times for learner {LearnerId}: Start {StartTime}, End {EndTime}",
                     learnerId, startTime, endTime);
-                
+
                 return (startTime, endTime);
             }
 
@@ -55,10 +54,10 @@ public class SchoolGradeTimeService(
             {
                 var startTime = schoolGrade.StartTime ?? new TimeOnly(8, 0);
                 var endTime = schoolGrade.EndTime ?? new TimeOnly(14, 0);
-                
-                logger.LogInformation("Retrieved school grade times for school grade {SchoolGradeId}: Start {StartTime}, End {EndTime}", 
+
+                logger.LogInformation("Retrieved school grade times for school grade {SchoolGradeId}: Start {StartTime}, End {EndTime}",
                     schoolGradeId, startTime, endTime);
-                
+
                 return (startTime, endTime);
             }
 
@@ -76,7 +75,7 @@ public class SchoolGradeTimeService(
     {
         var (startTime, endTime) = await GetSchoolGradeTimesForLearnerAsync(learnerId);
         var currentTime = TimeOnly.FromDateTime(DateTime.Now);
-        
+
         return currentTime >= startTime && currentTime <= endTime;
     }
 

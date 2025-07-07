@@ -1,10 +1,4 @@
-﻿using Lisa.Models.Entities;
-using Lisa.Models.ViewModels;
-using System.Xml.Linq;
-using System;
-using System.Collections.Generic;
-
-namespace Lisa.Services;
+﻿namespace Lisa.Services;
 public class TemplateRenderService
 (
     ILogger<EmailRendererService> logger,

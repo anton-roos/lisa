@@ -1,7 +1,7 @@
+using Lisa.Models.Entities;
 using System.Net;
 using System.Net.Mail;
 using System.Net.Sockets;
-using Lisa.Models.Entities;
 
 namespace Lisa.Services;
 

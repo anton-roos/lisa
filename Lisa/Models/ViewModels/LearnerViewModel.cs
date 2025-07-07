@@ -1,6 +1,6 @@
-using System.ComponentModel.DataAnnotations;
 using Lisa.Enums;
 using Lisa.Models.Entities;
+using System.ComponentModel.DataAnnotations;
 
 namespace Lisa.Models.ViewModels;
 

@@ -1,20 +1,20 @@
+using DinkToPdf;
+using DinkToPdf.Contracts;
 using Lisa.Components;
 using Lisa.Data;
-using Lisa.Services;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
-using Lisa.Middleware;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Lisa.Models.Entities;
-using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
-using Serilog;
-using Lisa.Repositories;
 using Lisa.Events;
+using Lisa.Middleware;
+using Lisa.Models.Entities;
+using Lisa.Repositories;
+using Lisa.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using MudBlazor.Services;
-using DinkToPdf.Contracts;
-using DinkToPdf;
+using Serilog;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 

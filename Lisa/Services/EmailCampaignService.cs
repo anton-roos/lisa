@@ -1,10 +1,10 @@
-using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
 using Lisa.Data;
 using Lisa.Enums;
 using Lisa.Models.EmailModels;
 using Lisa.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 
 namespace Lisa.Services;
 

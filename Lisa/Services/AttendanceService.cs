@@ -17,10 +17,10 @@ public partial class AttendanceService(
         var attendance = await dbContext.Attendances
             .Include(a => a.School)
             .Include(a => a.AttendanceRecords)
-            .FirstOrDefaultAsync(a => a.Start.Date == today 
+            .FirstOrDefaultAsync(a => a.Start.Date == today
                                       && a.SchoolId == schoolId
                                       && a.Type == AttendanceType.CheckIn);
-        
+
         return attendance;
     }
 

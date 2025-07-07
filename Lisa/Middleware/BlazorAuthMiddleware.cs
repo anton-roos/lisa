@@ -1,6 +1,6 @@
-using System.Collections.Concurrent;
 using Lisa.Models.Entities;
 using Microsoft.AspNetCore.Identity;
+using System.Collections.Concurrent;
 
 namespace Lisa.Middleware;
 

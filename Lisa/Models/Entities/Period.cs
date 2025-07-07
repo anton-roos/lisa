@@ -1,5 +1,5 @@
-using System.ComponentModel.DataAnnotations;
 using Lisa.Interfaces;
+using System.ComponentModel.DataAnnotations;
 
 namespace Lisa.Models.Entities;
 

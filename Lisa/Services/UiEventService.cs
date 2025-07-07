@@ -1,5 +1,5 @@
-using System.Collections.Concurrent;
 using Lisa.Interfaces;
+using System.Collections.Concurrent;
 
 namespace Lisa.Services;
 

@@ -1,8 +1,8 @@
-using System.Globalization;
 using Lisa.Data;
 using Lisa.Models.EmailModels;
 using Lisa.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace Lisa.Services;
 

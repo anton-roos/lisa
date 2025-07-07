@@ -7,7 +7,7 @@ namespace Lisa.Services;
 public class AssessmentTypeService
 (
     IDbContextFactory<LisaDbContext> dbContextFactory
-)   
+)
 {
     public async Task<List<AssessmentType>> GetAssessmentTypesAsync()
     {

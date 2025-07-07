@@ -41,7 +41,7 @@ public class SchoolGradeService
 
             existingGrade.StartTime = grade.StartTime;
             existingGrade.EndTime = grade.EndTime;
-            
+
             await context.SaveChangesAsync();
             logger.LogInformation("Updated grade: {GradeId}", grade.Id);
             return existingGrade;

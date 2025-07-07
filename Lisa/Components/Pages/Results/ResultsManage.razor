@@ -19,9 +19,7 @@
 
         @if (_selectedSchool == null && !IsEdit)
         {
-            <div class="alert alert-info" role="alert">
-                Please select a school to capture results.
-            </div>
+            <NoSchoolSelected Message="Please select a school to capture results." />
         }
         else if (ViewModel.Loading)
         {

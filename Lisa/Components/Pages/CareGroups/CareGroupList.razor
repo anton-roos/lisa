@@ -12,9 +12,7 @@
 
         @if (_selectedSchool == null)
         {
-            <div class="alert alert-info">
-                Please select a school to view care groups.
-            </div>
+            <NoSchoolSelected Message="Please select a school to to view care groups." />
         }
         else if (_careGroups == null)
         {

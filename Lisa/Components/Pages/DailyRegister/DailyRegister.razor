@@ -15,10 +15,7 @@
 
 @if (_selectedSchool == null)
 {
-    <div class="alert alert-warning">
-        <h4><i class="oi oi-warning"></i> No School Selected</h4>
-        <p>Please select a school from the dropdown at the top of the page before proceeding.</p>
-    </div>
+    <NoSchoolSelected Message="Please select a school from the dropdown at the top of the page before proceeding." />
 }
 else
 {

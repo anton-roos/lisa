@@ -16,19 +16,16 @@
 @inherits EventAwareComponentBase
 
 <PageTitle>Leave Early</PageTitle>
+<h3>Leave Early</h3>
 
 @if (_selectedSchool == null)
 {
-    <div class="alert alert-warning">
-        <h4><i class="oi oi-warning"></i> No School Selected</h4>
-        <p>Please select a school from the dropdown at the top of the page before proceeding.</p>
-    </div>
+    <NoSchoolSelected Message="Please select a school to process leave early." />
 }
 else
 {
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h1>Leave Early</h1>
             <button class="btn btn-info" @onclick="ViewLeaveEarlyHistory">
                 <i class="oi oi-list"></i> View History
             </button>

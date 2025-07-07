@@ -93,17 +93,15 @@
         <div class="col-md-12">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                    <h3 class="mb-1">Attendance Management</h3>
+                    <h3 class="mb-1">Sign In / Out</h3>
                     <p class="text-muted mb-0">@DateTime.UtcNow.ToString("dd MMMM yyyy")</p>
                 </div>
             </div>
 
             @if (_selectedSchool == null)
             {
-                <div class="alert alert-warning mb-3">
-                    <h4><i class="bi bi-exclamation-triangle"></i> No School Selected</h4>
-                    <p>Please select a school from the dropdown at the top of the page before proceeding.</p>
-                </div>            }
+                <NoSchoolSelected Message="Please select a school to to manage sign in and out." />
+            }
             else
             {
                 @if (_todayAttendance == null)

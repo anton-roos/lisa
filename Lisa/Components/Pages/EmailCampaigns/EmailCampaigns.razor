@@ -10,15 +10,13 @@
 <PageTitle>Email Campaigns</PageTitle>
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
     <Authorized>
-        @if (_selectedSchool == null)
+        <h3>Email Campaigns for @_selectedSchool?.ShortName</h3>
+        @if (_selectedSchool is null)
         {
-            <div class="alert alert-info">
-                Please select a school to view email campaigns.
-            </div>
+            <NoSchoolSelected Message="Please select a school to view email campaigns." />
         }
         else if (_emailCampaignList?.Count == 0)
         {
-            <h3>Email Campaigns for @_selectedSchool?.ShortName</h3>
             <div class="alert alert-info">
                 No campaigns found for this school.
             </div>

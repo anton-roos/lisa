@@ -10,12 +10,9 @@
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>Subject Combinations</h3>
-
         @if (_selectedSchool == null)
         {
-            <div class="alert alert-info">
-                Please select a school to view subject combinations.
-            </div>
+             <NoSchoolSelected Message=" Please select a school to view subject combinations." />
         }
         else if (_subjectCombinations == null)
         {

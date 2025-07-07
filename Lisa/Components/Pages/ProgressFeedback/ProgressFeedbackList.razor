@@ -21,7 +21,11 @@
 
 <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
     <Authorized>
-        @if (_selectedSchool != null)
+        @if (_selectedSchool is null)
+        {
+            <NoSchoolSelected Message="Please select a school to view progress feedback." />
+        }
+        else
         {
             <div class="row mb-3">
                 <div class="col-md-4">
@@ -145,13 +149,6 @@
                 </table>
             }
         }
-        else
-        {
-            <div class="alert alert-info">
-                Please select a school to view learners.
-            </div>
-        }
-
     </Authorized>
     <NotAuthorized>
         <Unauthorized />

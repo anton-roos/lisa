@@ -10,9 +10,7 @@
         <h3>Manage Grades for @_selectedSchool?.ShortName</h3>
         @if (_selectedSchool == null)
         {
-            <div class="alert alert-warning">
-                No school selected. Please select a school first.
-            </div>
+            <NoSchoolSelected Message="Please select a school to manage grades." />
         }
         else if (_loading)
         {

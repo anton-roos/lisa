@@ -8,9 +8,13 @@
 <PageTitle>Learners</PageTitle>
 <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
     <Authorized>
-        @if (_selectedSchool != null)
+        <h3>Learners</h3>
+        @if (_selectedSchool is null)
         {
-            <h3>Learners for @_selectedSchool.ShortName</h3>
+            <NoSchoolSelected Message="Please select a school to view learners." />
+        }
+        else
+        {
             <div class="row mb-3">
                 <div class="col-12 col-md-3 mb-2">
                     <label for="gradeFilter" class="form-label">Filter by Grade</label>
@@ -137,12 +141,7 @@
                 </div>
             }
         }
-        else
-        {
-            <div class="alert alert-info">
-                Please select a school to view learners.
-            </div>
-        }
+        
     </Authorized>
     <NotAuthorized>
         <Unauthorized />

@@ -9,22 +9,19 @@
 <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
         <h3>Staff</h3>
-        <button class="btn btn-primary mb-3" @onclick="GoToAddUser" disabled="@(_selectedSchool == null)">
-            Add Staff Member
-        </button>
-
         @if (_selectedSchool == null)
         {
-            <div class="alert alert-warning">
-                No school selected. Please select a school first.
-            </div>
+            <NoSchoolSelected Message="Please select a school to to manage staff." />
         }
         else if (_users == null)
         {
-            <p>Loading...</p>
+            <LoadingSpinner />
         }
         else
         {
+            <button class="btn btn-primary mb-3" @onclick="GoToAddUser" disabled="@(_selectedSchool == null)">
+                Add Staff Member
+             </button>
             <div class="mb-3 d-flex flex-wrap align-items-center">
                 <!-- Search Filter -->
                 <div class="me-3">

@@ -15,16 +15,13 @@
 <PageTitle>Send Communication</PageTitle>
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
     <Authorized>
-        @if (_selectedSchool == null)
+        <h3>Send Communication</h3>
+        @if (_selectedSchool is null)
         {
-            <div class="alert alert-info">
-                Please select a school to send communication.
-            </div>
+            <NoSchoolSelected Message="Please select a school to send communication." />
         }
         else
         {
-            <h3>Send Communication</h3>
-
             <div class="row mb-3">
 
                 <div class="col-md-4">

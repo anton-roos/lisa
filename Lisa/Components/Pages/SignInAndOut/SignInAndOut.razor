@@ -10,7 +10,7 @@
 
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Attendance}")">
     <Authorized>
-        <AttendanceComponent @key="_selectedSchool?.Id" SelectedSchool="@_selectedSchool" />
+        <SignInAndOutComponent @key="_selectedSchool?.Id" SelectedSchool="@_selectedSchool" />
     </Authorized>
     <NotAuthorized>
         <Unauthenticated />

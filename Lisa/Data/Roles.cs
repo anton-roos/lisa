@@ -9,4 +9,5 @@ static class Roles
     public const string Teacher = "Teacher";
     public const string Attendance = "Attendance";
     public const string Reception = "Reception";
+    public const string GateOfficer = "GateOfficer";
 }

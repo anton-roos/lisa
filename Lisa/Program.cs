@@ -124,6 +124,7 @@ builder.Services.AddSingleton<IConverter>(new SynchronizedConverter(new PdfTools
 builder.Services.AddScoped<CareGroupService>();
 builder.Services.AddScoped<CombinationService>();
 builder.Services.AddScoped<SchoolGradeService>();
+builder.Services.AddScoped<SchoolGradeTimeService>();
 builder.Services.AddScoped<LearnerService>();
 builder.Services.AddScoped<RegisterClassService>();
 builder.Services.AddScoped<SubjectService>();

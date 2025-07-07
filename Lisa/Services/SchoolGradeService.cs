@@ -27,6 +27,32 @@ public class SchoolGradeService
         }
     }
 
+    public async Task<SchoolGrade?> UpdateAsync(SchoolGrade grade)
+    {
+        try
+        {
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+            var existingGrade = await context.SchoolGrades.FindAsync(grade.Id);
+            if (existingGrade == null)
+            {
+                logger.LogWarning("Attempted to update grade {GradeId}, but it does not exist.", grade.Id);
+                return null;
+            }
+
+            existingGrade.StartTime = grade.StartTime;
+            existingGrade.EndTime = grade.EndTime;
+            
+            await context.SaveChangesAsync();
+            logger.LogInformation("Updated grade: {GradeId}", grade.Id);
+            return existingGrade;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating grade: {GradeId}", grade.Id);
+            throw;
+        }
+    }
+
     public async Task<SchoolGrade?> GetByIdAsync(Guid id)
     {
         await using var context = await dbContextFactory.CreateDbContextAsync();

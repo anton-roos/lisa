@@ -3,6 +3,7 @@
 @using Lisa.Helpers
 @using Lisa.Enums
 @inject SchoolService SchoolService
+@inject SchoolGradeTimeService SchoolGradeTimeService
 @inject AttendanceService AttendanceService
 @inject AttendanceRecordService AttendanceRecordService
 @inject NavigationManager NavigationManager
@@ -99,6 +100,7 @@
                                         <th>Learner</th>
                                         <th>Sign-in Time</th>
                                         <th>Sign-out Time</th>
+                                        <th>Status</th>
                                         <th>Phone</th>
                                         <th>Notes</th>
                                     </tr>
@@ -127,6 +129,12 @@
                                                 {
                                                     <span class="text-muted">-</span>
                                                 }
+                                            </td>
+                                            <td>
+                                                @{
+                                                    var statusBadge = GetAttendanceStatusBadge(record);
+                                                }
+                                                @statusBadge
                                             </td>
                                             <td>
                                                 @if (record.CellPhoneCollected)
@@ -188,7 +196,46 @@
             _notSignedOutCount = _checkedInCount - _checkedOutCount;
         }
     }
-    
+
+    private RenderFragment GetAttendanceStatusBadge(AttendanceRecord record)
+    {
+        return __builder =>
+        {
+            if (record.Start.HasValue && record.End.HasValue)
+            {
+                // Check if this was an early leave
+                if (record.Learner != null)
+                {
+                    var leaveTime = TimeOnly.FromDateTime(TimeHelpers.ConvertToLocal(record.End.Value));
+                    var task = SchoolGradeTimeService.IsEarlyLeaveAsync(record.Learner.Id, leaveTime);
+                    task.Wait(); // Note: This is not ideal but needed for synchronous rendering
+                    var isEarlyLeave = task.Result;
+                    
+                    if (isEarlyLeave)
+                    {
+                        <span class="badge bg-warning text-dark">Left Early</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success">Full Day</span>
+                    }
+                }
+                else
+                {
+                    <span class="badge bg-success">Completed</span>
+                }
+            }
+            else if (record.Start.HasValue)
+            {
+                <span class="badge bg-primary">Present</span>
+            }
+            else
+            {
+                <span class="badge bg-secondary">No Record</span>
+            }
+        };
+    }
+
     private void NavigateBack()
     {
         NavigationManager.NavigateTo("/attendance");

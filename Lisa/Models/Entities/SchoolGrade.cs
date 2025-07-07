@@ -6,6 +6,8 @@ public class SchoolGrade
     public SystemGrade SystemGrade { get; set; } = null!;
     public Guid SchoolId { get; set; }
     public School? School { get; set; }
+    public TimeOnly? StartTime { get; set; }
+    public TimeOnly? EndTime { get; set; }
     public ICollection<RegisterClass>? RegisterClasses { get; set; }
     public ICollection<Combination>? Combinations { get; set; }
 }

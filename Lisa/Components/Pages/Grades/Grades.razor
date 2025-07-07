@@ -48,8 +48,29 @@
                                         }" ValueExpression="() => isChecked">
                             </Switch>
                         </div>
-                        <div class="col-1">
+                        <div class="col-2">
                             <strong>@systemGrade.Name</strong>
+                        </div>
+                        <div class="col-2">
+                            @{
+                                var schoolGrade = _schoolGrades.FirstOrDefault(sg => sg.SystemGradeId == systemGrade.Id);
+                                var startTime = schoolGrade?.StartTime?.ToString("HH:mm") ?? "08:00";
+                                var endTime = schoolGrade?.EndTime?.ToString("HH:mm") ?? "14:00";
+                            }
+                            <div class="mb-2">
+                                <label class="form-label small">Start Time:</label>
+                                <input type="time" class="form-control form-control-sm" 
+                                       value="@startTime" 
+                                       disabled="@(!isChecked)"
+                                       @onchange="@(async (e) => await UpdateSchoolGradeTime(systemGrade.Id, e.Value?.ToString(), true))" />
+                            </div>
+                            <div>
+                                <label class="form-label small">End Time:</label>
+                                <input type="time" class="form-control form-control-sm" 
+                                       value="@endTime" 
+                                       disabled="@(!isChecked)"
+                                       @onchange="@(async (e) => await UpdateSchoolGradeTime(systemGrade.Id, e.Value?.ToString(), false))" />
+                            </div>
                         </div>
                         <div class="col-3">
                             @if (systemGrade.MathGrade)
@@ -134,7 +155,9 @@
                     {
                         Id = Guid.NewGuid(),
                         SchoolId = _selectedSchool.Id,
-                        SystemGradeId = systemGradeId
+                        SystemGradeId = systemGradeId,
+                        StartTime = new TimeOnly(8, 0),
+                        EndTime = new TimeOnly(14, 0)
                     };
 
                 await SchoolGradeService.CreateAsync(newSchoolGrade);
@@ -167,6 +190,36 @@
                 _loading = false;
                 await InvokeAsync(StateHasChanged);
             }
+        }
+    }
+
+    private async Task UpdateSchoolGradeTime(int systemGradeId, string? timeValue, bool isStartTime)
+    {
+        if (_selectedSchool == null || string.IsNullOrEmpty(timeValue))
+        {
+            return;
+        }
+
+        var existingSchoolGrade = await SchoolGradeService.GetBySystemGradeAndSchoolAsync(systemGradeId, _selectedSchool.Id);
+        if (existingSchoolGrade == null)
+        {
+            return;
+        }
+
+        if (TimeOnly.TryParse(timeValue, out var parsedTime))
+        {
+            var schoolGradeToUpdate = new SchoolGrade
+            {
+                Id = existingSchoolGrade.Id,
+                SchoolId = existingSchoolGrade.SchoolId,
+                SystemGradeId = existingSchoolGrade.SystemGradeId,
+                StartTime = isStartTime ? parsedTime : existingSchoolGrade.StartTime,
+                EndTime = isStartTime ? existingSchoolGrade.EndTime : parsedTime
+            };
+
+            await SchoolGradeService.UpdateAsync(schoolGradeToUpdate);
+            await LoadGrades();
+            await InvokeAsync(StateHasChanged);
         }
     }
 

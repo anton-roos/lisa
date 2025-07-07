@@ -3,6 +3,8 @@
 @using Lisa.Enums
 @using Microsoft.AspNetCore.Components
 @inject SchoolService SchoolService
+@inject SchoolGradeService SchoolGradeService
+@inject SchoolGradeTimeService SchoolGradeTimeService
 @inject RegisterClassService RegisterClassService
 @inject LearnerService LearnerService
 @inject AttendanceService AttendanceService
@@ -109,6 +111,7 @@
                     <div class="card mb-4">
                         <div class="card-header">
                             <h5 class="mb-0">Set School Day Times</h5>
+                            <small class="text-muted">Times auto-populated from school grade settings</small>
                         </div>
                         <div class="card-body">
                             <div class="row">
@@ -125,6 +128,66 @@
                                 Confirm Times
                             </button>
                         </div>
+                    </div>
+
+                    <!-- Grade-specific time overrides section -->
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">Grade-Specific Time Overrides for Today</h6>
+                                <small class="text-muted">Override default times for specific grades</small>
+                            </div>
+                            <button class="btn btn-outline-secondary btn-sm" @onclick="ToggleGradeOverrides">
+                                <i class="bi @(_showGradeOverrides ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                            </button>
+                        </div>
+                        @if (_showGradeOverrides)
+                        {
+                            <div class="card-body">
+                                @if (_schoolGrades.Any())
+                                {
+                                    <div class="row">
+                                        @foreach (var schoolGrade in _schoolGrades.OrderBy(sg => sg.SystemGrade.SequenceNumber))
+                                        {
+                                            <div class="col-md-6 mb-3">
+                                                <div class="grade-override-section">
+                                                    <h6 class="fw-bold">@schoolGrade.SystemGrade.Name</h6>
+                                                    <div class="row">
+                                                        <div class="col-6">
+                                                            <label class="form-label small">Start Time</label>
+                                                            <input type="time" class="form-control form-control-sm grade-override-time-input" 
+                                                                   value="@GetGradeOverrideStartTime(schoolGrade.Id)" 
+                                                                   @onchange="@(async (e) => await SetGradeOverrideTime(schoolGrade.Id, e.Value?.ToString(), true))" />
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <label class="form-label small">End Time</label>
+                                                            <input type="time" class="form-control form-control-sm grade-override-time-input" 
+                                                                   value="@GetGradeOverrideEndTime(schoolGrade.Id)" 
+                                                                   @onchange="@(async (e) => await SetGradeOverrideTime(schoolGrade.Id, e.Value?.ToString(), false))" />
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-2">
+                                                        <small class="text-muted">
+                                                            Default: @(schoolGrade.StartTime?.ToString("HH:mm") ?? "08:00") - @(schoolGrade.EndTime?.ToString("HH:mm") ?? "14:00")
+                                                        </small>
+                                                        @if (_gradeTimeOverrides.ContainsKey(schoolGrade.Id))
+                                                        {
+                                                            <button class="btn btn-link btn-sm p-0 ms-2 btn-reset-override" @onclick="@(() => ClearGradeOverride(schoolGrade.Id))">
+                                                                <small>Reset to default</small>
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted">No grades configured for this school.</p>
+                                }
+                            </div>
+                        }
                     </div>
                 }
 
@@ -282,14 +345,53 @@
     private TimeOnly _endTimeOnly = new TimeOnly(14, 0); // Default to 2:00 PM
     private bool _isTimeConfirmed = false;
 
+    // Grade override variables
+    private bool _showGradeOverrides = false;
+    private List<SchoolGrade> _schoolGrades = new();
+    private Dictionary<Guid, (TimeOnly start, TimeOnly end)> _gradeTimeOverrides = new();
+    private List<Attendance> _recentAttendances = new();
+
+    private async Task LoadSchoolDefaultTimes()
+    {
+        if (_selectedSchool == null) return;
+
+        try
+        {
+            // Get all school grades for the selected school to determine default times
+            var schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+            
+            if (schoolGrades.Any())
+            {
+                // Get the earliest start time and latest end time from all grades
+                var earliestStart = schoolGrades
+                    .Where(sg => sg.StartTime.HasValue)
+                    .Select(sg => sg.StartTime!.Value)
+                    .DefaultIfEmpty(new TimeOnly(7, 0))
+                    .Min();
+                
+                var latestEnd = schoolGrades
+                    .Where(sg => sg.EndTime.HasValue)
+                    .Select(sg => sg.EndTime!.Value)
+                    .DefaultIfEmpty(new TimeOnly(14, 0))
+                    .Max();
+
+                _startTimeOnly = earliestStart;
+                _endTimeOnly = latestEnd;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error and use defaults
+            Console.WriteLine($"Error loading school default times: {ex.Message}");
+        }
+    }
+
     private class AttendanceStats
     {
         public int CheckedInCount { get; set; }
         public int CheckedOutCount { get; set; }
         public int AbsentCount { get; set; }
     }
-
-    private List<Attendance> _recentAttendances = new();
     
     protected override async Task OnInitializedAsync()
     {
@@ -313,10 +415,16 @@
             _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         }
 
+        // Load school default times based on school grades
+        await LoadSchoolDefaultTimes();
+
         await InvokeAsync(StateHasChanged);
 
         if (_selectedSchool != null)
         {
+            // Load school grades for overrides
+            _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+            
             var todayAttendance = await AttendanceService.GetTodaysAttendance(_selectedSchool.Id);
 
             if (todayAttendance != null)
@@ -433,5 +541,100 @@
     private void ViewAttendanceDetails(Guid attendanceId)
     {
         NavigationManager.NavigateTo($"/attendance/details/{attendanceId}");
+    }
+
+    private void ToggleGradeOverrides()
+    {
+        _showGradeOverrides = !_showGradeOverrides;
+    }
+
+    private string GetGradeOverrideStartTime(Guid schoolGradeId)
+    {
+        if (_gradeTimeOverrides.TryGetValue(schoolGradeId, out var overrideTimes))
+        {
+            return overrideTimes.start.ToString("HH:mm");
+        }
+
+        var schoolGrade = _schoolGrades.FirstOrDefault(sg => sg.Id == schoolGradeId);
+        return schoolGrade?.StartTime?.ToString("HH:mm") ?? "08:00";
+    }
+
+    private string GetGradeOverrideEndTime(Guid schoolGradeId)
+    {
+        if (_gradeTimeOverrides.TryGetValue(schoolGradeId, out var overrideTimes))
+        {
+            return overrideTimes.end.ToString("HH:mm");
+        }
+
+        var schoolGrade = _schoolGrades.FirstOrDefault(sg => sg.Id == schoolGradeId);
+        return schoolGrade?.EndTime?.ToString("HH:mm") ?? "14:00";
+    }
+
+    private async Task SetGradeOverrideTime(Guid schoolGradeId, string? timeValue, bool isStartTime)
+    {
+        if (string.IsNullOrEmpty(timeValue)) return;
+
+        if (TimeOnly.TryParse(timeValue, out var parsedTime))
+        {
+            if (!_gradeTimeOverrides.ContainsKey(schoolGradeId))
+            {
+                var schoolGrade = _schoolGrades.FirstOrDefault(sg => sg.Id == schoolGradeId);
+                var defaultStart = schoolGrade?.StartTime ?? new TimeOnly(8, 0);
+                var defaultEnd = schoolGrade?.EndTime ?? new TimeOnly(14, 0);
+                _gradeTimeOverrides[schoolGradeId] = (defaultStart, defaultEnd);
+            }
+
+            var current = _gradeTimeOverrides[schoolGradeId];
+            if (isStartTime)
+            {
+                _gradeTimeOverrides[schoolGradeId] = (parsedTime, current.end);
+            }
+            else
+            {
+                _gradeTimeOverrides[schoolGradeId] = (current.start, parsedTime);
+            }
+
+            // Update the main school times to reflect the new range
+            await UpdateMainSchoolTimes();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void ClearGradeOverride(Guid schoolGradeId)
+    {
+        _gradeTimeOverrides.Remove(schoolGradeId);
+        _ = Task.Run(async () =>
+        {
+            await UpdateMainSchoolTimes();
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private async Task UpdateMainSchoolTimes()
+    {
+        if (!_schoolGrades.Any()) return;
+
+        var allStartTimes = new List<TimeOnly>();
+        var allEndTimes = new List<TimeOnly>();
+
+        foreach (var schoolGrade in _schoolGrades)
+        {
+            if (_gradeTimeOverrides.TryGetValue(schoolGrade.Id, out var overrideTimes))
+            {
+                allStartTimes.Add(overrideTimes.start);
+                allEndTimes.Add(overrideTimes.end);
+            }
+            else
+            {
+                allStartTimes.Add(schoolGrade.StartTime ?? new TimeOnly(8, 0));
+                allEndTimes.Add(schoolGrade.EndTime ?? new TimeOnly(14, 0));
+            }
+        }
+
+        if (allStartTimes.Any() && allEndTimes.Any())
+        {
+            _startTimeOnly = allStartTimes.Min();
+            _endTimeOnly = allEndTimes.Max();
+        }
     }
 }

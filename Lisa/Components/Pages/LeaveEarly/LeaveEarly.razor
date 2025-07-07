@@ -1,4 +1,3 @@
-@page "/leave-early"
 @page "/leave-early/{LearnerId:guid?}"
 @using Lisa.Models.Entities
 @using Lisa.Helpers
@@ -8,6 +7,7 @@
 @inject AttendanceService AttendanceService
 @inject AttendanceRecordService AttendanceRecordService
 @inject SchoolService SchoolService
+@inject SchoolGradeTimeService SchoolGradeTimeService
 @inject EmailService EmailService
 @inject AuditService AuditService
 @inject RegisterClassService RegisterClassService
@@ -47,7 +47,7 @@ else
                                     <i class="oi oi-check me-2"></i>
                                     <div>
                                         <div>School closes at <strong>@EndTime?.ToString("HH:mm")</strong></div>
-                                        <small class="text-muted">End time confirmed</small>
+                                        <small class="text-muted">End time confirmed for @(SelectedLearner?.RegisterClass?.SchoolGrade?.SystemGrade?.Name ?? "selected grade")</small>
                                     </div>
                                 </div>
                             </div>
@@ -578,12 +578,19 @@ else
         SelectedGrade = grade;
     }
 
-    private void SelectLearner(Learner learner)
+    private async Task SelectLearner(Learner learner)
     {
         SelectedLearner = learner;
 
+        // Load the school grade times for this learner
+        var (startTime, endTime) = await SchoolGradeTimeService.GetSchoolGradeTimesForLearnerAsync(learner.Id);
+        EndTime = endTime;
+        EndTimeConfirmed = false; // Reset confirmation when learner changes
+        
+        await InvokeAsync(StateHasChanged);
+
         // Load parent contacts for the selected learner
-        LoadParentContacts(learner.Id);
+        await LoadParentContacts(learner.Id);
     }
 
     private async Task LoadParentContacts(Guid learnerId)
@@ -610,7 +617,7 @@ else
 
     private async Task ProcessLearnerLeft()
     {
-        if (_currentSession == null || _selectedSchool == null) return;
+        if (_currentSession == null || _selectedSchool == null || SelectedLearner == null) return;
 
         if (!LearnerAttendanceStatus.TryGetValue(SelectedLearner.Id, out var isPresent) || !isPresent)
         {
@@ -618,16 +625,20 @@ else
             return;
         }
 
+        var currentTime = TimeOnly.FromDateTime(DateTime.Now);
+        var isEarlyLeave = await SchoolGradeTimeService.IsEarlyLeaveAsync(SelectedLearner.Id, currentTime);
+        var leaveType = isEarlyLeave ? "early" : "normal";
+
         // Create or update the attendance record for the learner
         var record = new AttendanceRecord
         {
             Id = Guid.NewGuid(),
             LearnerId = SelectedLearner.Id,
             AttendanceId = _currentSession.Id,
-            AttendanceType = AttendanceType.CheckIn,
+            AttendanceType = AttendanceType.CheckOut,
             Start = DateTime.UtcNow,
             End = DateTime.UtcNow,
-            Notes = $"Left early. Permission: {SelectedPermissionMethod}. Pickup: {SelectedPickupOption}. {Notes}",
+            Notes = $"Left {leaveType}. Permission: {SelectedPermissionMethod}. Pickup: {SelectedPickupOption}. {Notes}",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };

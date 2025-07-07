@@ -192,3 +192,117 @@ h1:focus {
 .slider.collected {
     background-color: #4CAF50 !important;
 }
+
+/* School Grade Time Styles */
+.school-grade-time-input {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    transition: all 0.15s ease-in-out;
+}
+
+.school-grade-time-input:focus {
+    background-color: white;
+    border-color: #4E246C;
+    box-shadow: 0 0 0 0.2rem rgba(78, 36, 108, 0.25);
+}
+
+.school-grade-time-input:disabled {
+    background-color: #e9ecef;
+    opacity: 0.65;
+}
+
+.grade-time-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.grade-time-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+}
+
+/* Early Leave Badge Styles */
+.badge.bg-warning {
+    --bs-bg-opacity: 1;
+    background-color: rgba(255, 193, 7, var(--bs-bg-opacity)) !important;
+    color: #000 !important;
+}
+
+.badge.bg-success {
+    --bs-bg-opacity: 1;
+    background-color: rgba(25, 135, 84, var(--bs-bg-opacity)) !important;
+}
+
+.badge.bg-primary {
+    --bs-bg-opacity: 1;
+    background-color: rgba(13, 110, 253, var(--bs-bg-opacity)) !important;
+}
+
+/* Grade Override Styles */
+.grade-override-section {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.grade-override-section:hover {
+    background-color: #e9ecef;
+}
+
+.grade-override-section h6 {
+    color: #4E246C;
+    margin-bottom: 0.75rem;
+}
+
+.grade-override-time-input {
+    background-color: white;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.grade-override-time-input:focus {
+    border-color: #4E246C;
+    box-shadow: 0 0 0 0.2rem rgba(78, 36, 108, 0.25);
+}
+
+.btn-reset-override {
+    color: #6c757d;
+    text-decoration: none;
+    font-size: 0.75rem;
+}
+
+.btn-reset-override:hover {
+    color: #4E246C;
+    text-decoration: underline;
+}
+
+/* Collapsible Section Animations */
+.collapsible-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease-in-out;
+}
+
+/* Enhanced List Group Items for Grades */
+.list-group-item.grade-item {
+    transition: all 0.2s ease-in-out;
+    border-left: 4px solid transparent;
+}
+
+.list-group-item.grade-item:hover {
+    background-color: #f8f9fa;
+    border-left-color: #4E246C;
+}
+
+.list-group-item.grade-item.active {
+    background-color: #e7f3ff;
+    border-left-color: #4E246C;
+}

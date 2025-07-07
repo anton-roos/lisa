@@ -116,15 +116,24 @@ h1:focus {
 }
 
 .pill.present {
-    background-color: #198754;
+    background-color: #198754; /* Green for present/on-time */
+    color: white;
+}
+
+.pill.on-time {
+    background-color: #198754; /* Green for on-time */
+    color: white;
 }
 
 .pill.absent {
-    background-color: #dc3545;
+    background-color: #fd7e14; /* Orange color for absent */
+    color: white;
 }
 
 .pill.late {
-    background-color: #fd7e14;
+    background-color: white;
+    color: #dc3545; /* Red text */
+    border: 2px solid #dc3545; /* Red border outline */
 }
 
 .pill.early-leave {

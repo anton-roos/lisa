@@ -1,12 +1,12 @@
 @using Lisa.Models.Entities
 @using Lisa.Helpers
 
-<div class="card mb-3 shadow-sm rounded border-0 bg-light">
+<div class="card mb-3 shadow-sm rounded border-0 bg-light" style="cursor: pointer;" @onclick="@(async () => await OnToggleAttendance.InvokeAsync(null))">
     <div class="card-body">
         <div class="d-flex align-items-center justify-content-between mb-2">
             <div style="min-width: 150px;">@Learner.Name @Learner.Surname</div>
             <div class="pill-container">
-                <div class="pill @PillColor @(IsSignOut ? "signout" : "")" @onclick="async () => await OnToggleAttendance.InvokeAsync(null)">
+                <div class="pill @PillColor @(IsSignOut ? "signout" : "")">
                     @if (IsSignOut)
                     {
                         @switch (PillColor)
@@ -33,7 +33,7 @@
         </div>
         @if (PillColor != "absent" && ShowPhoneToggle)
         {
-            <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center" @onclick:stopPropagation="true">
                 @if (CellPhoneCollected)
                 {
                     <div class="toggle-switch disabled me-2">

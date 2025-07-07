@@ -4,28 +4,59 @@
     display: flex;
     justify-content: flex-end;
     min-width: 100px;
-    /* Ensure consistent width */
 }
 
 .phone-button-container {
     min-width: 120px;
-    /* Ensure consistent width for the button area */
     display: flex;
     justify-content: flex-start;
 }
 
-.on-time {
+/* Pill styles for attendance states */
+.pill.present-not-signed-out {
+    background-color: #fd7e14; /* Orange for not signed out yet */
     color: white;
-    background-color: #198754; /* Green for on-time */
 }
 
-.late {
+.pill.on-time-signout {
+    background-color: #198754; /* Green for after-hours sign-out */
+    color: white;
+}
+
+.pill.early-signout {
     background-color: white;
     color: #dc3545; /* Red text */
     border: 2px solid #dc3545; /* Red border outline */
 }
 
-.absent {
+.pill.not-at-school {
+    background-color: #6c757d; /* Gray for not at school */
+    color: white;
+}
+
+.pill.leave-early {
+    background-color: white;
+    color: #dc3545; /* Red text */
+    border: 2px solid #dc3545; /* Red border outline */
+}
+
+.pill.present {
+    background-color: #198754; /* Green for present */
+    color: white;
+}
+
+.pill.on-time {
+    background-color: #198754; /* Green for on-time */
+    color: white;
+}
+
+.pill.late {
+    background-color: white;
+    color: #dc3545; /* Red text */
+    border: 2px solid #dc3545; /* Red border outline */
+}
+
+.pill.absent {
     background-color: #fd7e14; /* Orange for absent */
     color: white;
 }
@@ -132,42 +163,39 @@ input:checked+.slider:before {
     display: inline-block;
     min-width: 100px;
     text-align: center;
-    cursor: pointer;
     font-weight: bold;
 }
-
 
 .pill-container {
     display: flex;
     justify-content: flex-end;
     min-width: 100px;
-    /* Ensure consistent width */
 }
 
 .phone-button-container {
     min-width: 120px;
-    /* Ensure consistent width for the button area */
     display: flex;
     justify-content: flex-start;
 }
 
-.present {
+/* Additional pill styles for duplication prevention */
+.pill.present {
     background-color: #198754; /* Green for present */
     color: white;
 }
 
-.not-at-school {
+.pill.not-at-school {
     background-color: #6c757d; /* Gray for not at school */
     color: white;
 }
 
-.early-leave {
+.pill.early-leave {
     background-color: white;
     color: #dc3545; /* Red text */
     border: 2px solid #dc3545; /* Red border outline */
 }
 
-.left {
+.pill.left {
     background-color: #2196F3;
     color: white;
 }

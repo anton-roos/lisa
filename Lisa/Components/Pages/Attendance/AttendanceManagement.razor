@@ -84,16 +84,17 @@
                                                 @foreach (var learner in _registerClassLearners[registerClass]
                                                     .Where(l => string.IsNullOrEmpty(_searchText) || $"{l.Name} {l.Surname}".ToLower().Contains(_searchText.ToLower()))
                                                     .Where(l => _isSignOut ? 
+                                                        // For sign-out: show learners who signed in OR have already signed out
                                                         (_attendanceData.TryGetValue(l.Id, out var d) && d.IsPresent) || 
-                                                        (_signOutTimeMap.ContainsKey(l.Id) && _signOutTimeMap[l.Id] != default) 
+                                                        _signOutTimeMap.ContainsKey(l.Id)
                                                         : true))
                                                 {
                                                     <LearnerAttendanceCard
                                                         Learner="learner"
                                                         PillColor="@GetPillColor(learner)"
                                                         SignInTime="@(
-                                                            _isSignOut && _signOutTimeMap.TryGetValue(learner.Id, out var so) && so != default
-                                                                ? so
+                                                            _isSignOut && _signOutTimeMap.ContainsKey(learner.Id)
+                                                                ? _signOutTimeMap[learner.Id]
                                                                 : (_attendanceData.TryGetValue(learner.Id, out var dt) ? dt.SignInTime : DateTime.MinValue)
                                                         )"
                                                         ShowPhoneToggle="true"
@@ -101,6 +102,7 @@
                                                         CellPhoneModel="@(_learnerToAttendanceRecordMap.TryGetValue(learner.Id, out var rec) ? rec.CellPhoneModel : null)"
                                                         ToggleChecked="@(_toggleValues.TryGetValue(learner.Id, out var toggled) && toggled)"
                                                         IsSignOut="@_isSignOut"
+                                                        IsAlreadySignedOut="@(_isSignOut && _signOutTimeMap.ContainsKey(learner.Id))"
                                                         OnToggleAttendance="@( () => ToggleAttendance(learner, registerClass) )"
                                                         OnTogglePhone="@( () => ToggleCellPhoneCollected(learner) )" />
                                                 }
@@ -354,7 +356,7 @@
             {
                 _attendanceData[learner.Id] = new AttendanceData();
                 _toggleValues[learner.Id] = false;  // default toggle
-                _signOutTimeMap[learner.Id] = default;
+                // Don't initialize _signOutTimeMap - only add entries when there's an actual sign-out
                 _earlyLeaveMap[learner.Id] = false;
             }
         }
@@ -489,15 +491,34 @@
     {
         if (_currentSession == null) return;
 
+        // Debug logging
+        Console.WriteLine($"ToggleAttendance called for {learner.Name} {learner.Surname}, IsSignOut: {_isSignOut}");
+
         // Handle sign-out separately
         if (_isSignOut)
         {
-            // Only allow sign-out if learner has checked in
-            if (_attendanceData.TryGetValue(learner.Id, out var outData) && outData.AttendanceId.HasValue)
+            Console.WriteLine($"Sign-out mode - checking attendance data for {learner.Name}");
+            
+            // Check if already signed out - if so, do nothing (learner is just displayed for status)
+            if (_signOutTimeMap.ContainsKey(learner.Id))
             {
+                Console.WriteLine($"Learner {learner.Name} already signed out at {_signOutTimeMap[learner.Id]} - no action needed");
+                // Already signed out, just return - this is for display purposes only
+                return;
+            }
+            
+            // Only allow sign-out if learner has checked in and hasn't already signed out
+            if (_attendanceData.TryGetValue(learner.Id, out var outData) && outData.IsPresent)
+            {
+                Console.WriteLine($"Learner {learner.Name} is present and can sign out");
+                Console.WriteLine($"Saving sign-out record for {learner.Name}");
                 await SaveSignOutRecord(learner.Id);
-                // Refresh to hide signed-out learner
-                await LoadAttendanceData();
+                // Update UI immediately without full reload
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                Console.WriteLine($"Learner {learner.Name} not present or no attendance data - cannot sign out");
             }
             return;
         }
@@ -602,20 +623,29 @@
             }
             
             // Check if they have already signed out or left early
-            if (_signOutTimeMap.ContainsKey(learner.Id) && _signOutTimeMap[learner.Id] != default)
+            if (_signOutTimeMap.ContainsKey(learner.Id))
             {
-                // Check if it was early leave
+                var signOutTime = _signOutTimeMap[learner.Id];
+                
+                // Check if it was early leave based on notes
                 if (_earlyLeaveMap.TryGetValue(learner.Id, out var isEarlyLeave) && isEarlyLeave)
                 {
                     return "leave-early";
                 }
                 
-                // Regular sign-out - show as present (green) if after school hours
-                return "present";
+                // Check if sign-out was before school end time (assume 15:00 for now)
+                var schoolEndTime = signOutTime.Date.AddHours(15); // 3 PM
+                if (signOutTime < schoolEndTime)
+                {
+                    return "early-signout"; // New category for early sign-out
+                }
+                
+                // Regular sign-out after school hours - show as on-time
+                return "on-time-signout";
             }
             
-            // They signed in but haven't signed out yet - show as present
-            return "present";
+            // They signed in but haven't signed out yet - show as present (orange)
+            return "present-not-signed-out";
         }
         
         // Original sign-in logic

@@ -1,8 +1,10 @@
 @using Lisa.Models.Entities
 @using Lisa.Helpers
 
-<div class="card mb-3 shadow-sm rounded border-0 bg-light" style="cursor: pointer;" @onclick="@(async () => await OnToggleAttendance.InvokeAsync(null))">
-    <div class="card-body">
+<div class="card mb-3 shadow-sm rounded border-0 bg-light" 
+     style="cursor: @(IsAlreadySignedOut ? "default" : "pointer");" 
+     @onclick="@(IsAlreadySignedOut ? null : () => OnToggleAttendance.InvokeAsync(null))">
+    <div class="card-body @(IsAlreadySignedOut ? "opacity-75" : "")">
         <div class="d-flex align-items-center justify-content-between mb-2">
             <div style="min-width: 150px;">@Learner.Name @Learner.Surname</div>
             <div class="pill-container">
@@ -13,9 +15,11 @@
                         {
                             case "absent": <text>Absent</text>; break;
                             case "not-at-school": <text>Not at School</text>; break;
-                            case "present": <text>Present</text>; break;
+                            case "present-not-signed-out": <text>Present</text>; break;
+                            case "on-time-signout": <text>@TimeHelpers.ConvertToLocal(SignInTime).ToString("HH:mm")</text>; break;
+                            case "early-signout": <text>@TimeHelpers.ConvertToLocal(SignInTime).ToString("HH:mm")</text>; break;
                             case "leave-early": <text>Left Early</text>; break;
-                            default: <text>On time</text>; break;
+                            default: <text>@(IsAlreadySignedOut ? "Signed Out" : "On time")</text>; break;
                         }
                     }
                     else
@@ -67,4 +71,5 @@
     [Parameter] public EventCallback OnToggleAttendance { get; set; }
     [Parameter] public EventCallback OnTogglePhone { get; set; }
     [Parameter] public bool IsSignOut { get; set; }
+    [Parameter] public bool IsAlreadySignedOut { get; set; } = false;
 }

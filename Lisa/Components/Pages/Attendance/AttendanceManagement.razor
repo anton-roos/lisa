@@ -83,7 +83,10 @@
                                             <div class="d-flex flex-column">
                                                 @foreach (var learner in _registerClassLearners[registerClass]
                                                     .Where(l => string.IsNullOrEmpty(_searchText) || $"{l.Name} {l.Surname}".ToLower().Contains(_searchText.ToLower()))
-                                                    .Where(l => _isSignOut ? _attendanceData.TryGetValue(l.Id, out var d) && d.IsPresent : true))
+                                                    .Where(l => _isSignOut ? 
+                                                        (_attendanceData.TryGetValue(l.Id, out var d) && d.IsPresent) || 
+                                                        (_signOutTimeMap.ContainsKey(l.Id) && _signOutTimeMap[l.Id] != default) 
+                                                        : true))
                                                 {
                                                     <LearnerAttendanceCard
                                                         Learner="learner"
@@ -182,6 +185,7 @@
     }
 
     private Dictionary<Guid, DateTime> _signOutTimeMap = new();
+    private Dictionary<Guid, bool> _earlyLeaveMap = new();
 
     protected override async Task OnParametersSetAsync()
     {
@@ -341,6 +345,7 @@
         _learnerToAttendanceRecordMap.Clear();
         _toggleValues.Clear();  // clear previous toggle states
         _signOutTimeMap.Clear();
+        _earlyLeaveMap.Clear();
 
         // Initialize attendance data and dummy toggle values for all learners first
         foreach (var learnerGroup in _registerClassLearners)
@@ -350,6 +355,7 @@
                 _attendanceData[learner.Id] = new AttendanceData();
                 _toggleValues[learner.Id] = false;  // default toggle
                 _signOutTimeMap[learner.Id] = default;
+                _earlyLeaveMap[learner.Id] = false;
             }
         }
 
@@ -360,6 +366,15 @@
             {
                 // Track checkout time
                 _signOutTimeMap[record.LearnerId] = record.Start ?? DateTime.UtcNow;
+                
+                // Check if this was an early leave based on notes
+                if (!string.IsNullOrEmpty(record.Notes) && 
+                    (record.Notes.Contains("Left early", StringComparison.OrdinalIgnoreCase) ||
+                     record.Notes.Contains("early leave", StringComparison.OrdinalIgnoreCase)))
+                {
+                    _earlyLeaveMap[record.LearnerId] = true;
+                }
+                
                 continue;
             }
             // Skip non-check-in records
@@ -577,6 +592,33 @@
 
     private string GetPillColor(Learner learner)
     {
+        if (_isSignOut)
+        {
+            // For sign-out, we need different logic
+            if (!_attendanceData.ContainsKey(learner.Id) || !_attendanceData[learner.Id].IsPresent)
+            {
+                // Never signed in
+                return "not-at-school";
+            }
+            
+            // Check if they have already signed out or left early
+            if (_signOutTimeMap.ContainsKey(learner.Id) && _signOutTimeMap[learner.Id] != default)
+            {
+                // Check if it was early leave
+                if (_earlyLeaveMap.TryGetValue(learner.Id, out var isEarlyLeave) && isEarlyLeave)
+                {
+                    return "leave-early";
+                }
+                
+                // Regular sign-out - show as present (green) if after school hours
+                return "present";
+            }
+            
+            // They signed in but haven't signed out yet - show as present
+            return "present";
+        }
+        
+        // Original sign-in logic
         if (!_attendanceData.ContainsKey(learner.Id) || !_attendanceData[learner.Id].IsPresent)
         {
             return "absent";

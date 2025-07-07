@@ -157,7 +157,7 @@ input:checked+.slider:before {
 }
 
 .not-at-school {
-    background-color: #fd7e14; /* Orange for not at school/absent */
+    background-color: #6c757d; /* Gray for not at school */
     color: white;
 }
 

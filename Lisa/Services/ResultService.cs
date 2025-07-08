@@ -19,7 +19,9 @@ public class ResultService
             DateTime? assessmentDate = null;
             if (viewModel.AssessmentDate is not null)
             {
-                assessmentDate = viewModel.AssessmentDate!.Value;
+                assessmentDate = viewModel.AssessmentDate.Value.Kind == DateTimeKind.Utc 
+                    ? viewModel.AssessmentDate.Value
+                    : DateTime.SpecifyKind(viewModel.AssessmentDate.Value, DateTimeKind.Utc);
             }
 
             var resultSet = new ResultSet
@@ -100,7 +102,9 @@ public class ResultService
 
             if (viewModel.AssessmentDate is not null)
             {
-                existingResultSet.AssessmentDate = viewModel.AssessmentDate!.Value;
+                existingResultSet.AssessmentDate = viewModel.AssessmentDate.Value.Kind == DateTimeKind.Utc 
+                    ? viewModel.AssessmentDate.Value
+                    : DateTime.SpecifyKind(viewModel.AssessmentDate.Value, DateTimeKind.Utc);
             }
             existingResultSet.AssessmentTypeId = viewModel.AssessmentType?.Id ?? 0;
             existingResultSet.AssessmentTopic = viewModel.AssessmentTopic;
@@ -297,12 +301,18 @@ public class ResultService
 
             if (fromDate.HasValue)
             {
-                query = query.Where(rs => rs.AssessmentDate != null && rs.AssessmentDate >= fromDate.Value);
+                var utcFromDate = fromDate.Value.Kind == DateTimeKind.Utc 
+                    ? fromDate.Value 
+                    : DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
+                query = query.Where(rs => rs.AssessmentDate != null && rs.AssessmentDate >= utcFromDate);
             }
 
             if (toDate.HasValue)
             {
-                query = query.Where(rs => rs.AssessmentDate != null && rs.AssessmentDate <= toDate.Value);
+                var utcToDate = toDate.Value.Kind == DateTimeKind.Utc 
+                    ? toDate.Value.AddDays(1).AddTicks(-1) // End of day
+                    : DateTime.SpecifyKind(toDate.Value.AddDays(1).AddTicks(-1), DateTimeKind.Utc);
+                query = query.Where(rs => rs.AssessmentDate != null && rs.AssessmentDate <= utcToDate);
             }
 
             return await query.ToListAsync();

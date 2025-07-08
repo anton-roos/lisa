@@ -119,6 +119,21 @@
               @oninput="async (ChangeEventArgs e) => await OnLearnerSearchChanged(e.Value?.ToString() ?? string.Empty)"
               placeholder="Enter learner name..." />
         </div>
+        
+        <div class="mb-3">
+            <label><strong>Assessment Type:</strong></label>
+            <InputSelect class="form-select"
+                         TValue="int?"
+                         Value="AssessmentTypeId"
+                         ValueChanged="OnAssessmentTypeChanged"
+                         ValueExpression="() => AssessmentTypeId">
+                <option value="">-- All Assessment Types --</option>
+                @foreach (var at in AssessmentTypes)
+                {
+                    <option value="@at.Id">@at.Name</option>
+                }
+            </InputSelect>
+        </div>
     }
 </div>
 
@@ -131,11 +146,13 @@
     [Parameter] public DateTime? FromDate { get; set; }
     [Parameter] public DateTime? ToDate { get; set; }
     [Parameter] public string LearnerSearchText { get; set; } = "";
+    [Parameter] public int? AssessmentTypeId { get; set; }
 
     // Data sources
     [Parameter] public List<SchoolGrade> SchoolGrades { get; set; } = new();
     [Parameter] public List<Subject> Subjects { get; set; } = new();
     [Parameter] public List<User> Teachers { get; set; } = new();
+    [Parameter] public List<AssessmentType> AssessmentTypes { get; set; } = new();
     [Parameter] public List<int>? AvailableGradesForSubject { get; set; }
 
     // Callback when any filter changes
@@ -180,6 +197,11 @@
         LearnerSearchText = newText;
         await NotifyChange();
     }
+    private async Task OnAssessmentTypeChanged(int? value)
+    {
+        AssessmentTypeId = value;
+        await NotifyChange();
+    }
     private async Task OnToggleGradeSelection(int grade)
     {
         if (SelectedGrades.Contains(grade)) SelectedGrades.Remove(grade);
@@ -202,7 +224,8 @@
             FromDate = FromDate,
             ToDate = ToDate,
             SelectedGrades = SelectedGrades.ToList(),
-            LearnerSearchText = LearnerSearchText
+            LearnerSearchText = LearnerSearchText,
+            AssessmentTypeId = AssessmentTypeId
         };
         await OnFilterChanged.InvokeAsync(criteria);
     }
@@ -218,6 +241,7 @@
         public DateTime? ToDate { get; set; }
         public List<int>? SelectedGrades { get; set; }
         public string? LearnerSearchText { get; set; }
+        public int? AssessmentTypeId { get; set; }
     }
 
     private string FormatGrade(int grade) =>

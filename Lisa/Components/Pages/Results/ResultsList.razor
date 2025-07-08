@@ -71,7 +71,14 @@
             }
             else if (ViewMode == "Learner")
             {
-               <LearnerList Learners="FilteredLearners" OnSelect="ViewLearner" />
+               @if (_learnersLoading)
+               {
+                   <LoadingSpinner />
+               }
+               else
+               {
+                   <LearnerList Learners="FilteredLearners" OnSelect="ViewLearner" />
+               }
             }
             else
             {
@@ -103,22 +110,40 @@
 
     private IEnumerable<Learner> FilteredLearners =>
     _learners
-      .Where(u => string.IsNullOrWhiteSpace(LearnerSearchText)
+      .Where(u => string.IsNullOrWhiteSpace(_learnerSearchText)
                   || $"{u.Name} {u.Surname}"
-                     .Contains(LearnerSearchText, StringComparison.OrdinalIgnoreCase))
-      .Where(u => !LearnerGradeId.HasValue || u.RegisterClass?.SchoolGradeId == LearnerGradeId);
+                     .Contains(_learnerSearchText, StringComparison.OrdinalIgnoreCase))
+      .Where(u => !_learnerGradeId.HasValue || u.RegisterClass?.SchoolGradeId == _learnerGradeId);
 
     async Task OnFiltersChanged(ResultFilter.FilterCriteria c)
     {
         ViewMode = c.ViewMode;
         GradeId = c.GradeId;
         SubjectId = c.SubjectId;
+        TeacherId = c.TeacherId;
+        FromDate = c.FromDate;
+        ToDate = c.ToDate;
+        LearnerGradeId = c.GradeId;
+        LearnerSearchText = c.LearnerSearchText ?? "";
+        
+        // Update local state variables
+        _learnerGradeId = c.GradeId;
+        _learnerSearchText = c.LearnerSearchText ?? "";
 
         if (c.ViewMode == "Learner")
         {
-            _learnersLoading = true;
-            _learners = await LearnerService.GetBySchoolAsync(_selectedSchool!.Id);
-            _learnersLoading = false;
+            // Only load learners if we don't have them yet or if the grade filter changed
+            if (!_learners.Any() || _learnerGradeId != c.GradeId)
+            {
+                _learnersLoading = true;
+                StateHasChanged(); // Trigger UI update to show loading state
+                _learners = await LearnerService.GetBySchoolAsync(_selectedSchool!.Id);
+                _learnersLoading = false;
+            }
+            
+            // For search text changes, just trigger a re-render without reloading data
+            StateHasChanged();
+            return; // Don't call UpdateAndLoadAsync for learner view mode
         }
 
         if (SubjectId.HasValue)
@@ -130,11 +155,7 @@
         {
             _availableGradesForSubject = null;
         }
-        TeacherId = c.TeacherId;
-        FromDate = c.FromDate;
-        ToDate = c.ToDate;
-        LearnerGradeId = c.GradeId;
-        LearnerSearchText = c.LearnerSearchText ?? "";
+        
         _selectedGrades = new HashSet<int>(c.SelectedGrades ?? Enumerable.Empty<int>());
         
         await UpdateAndLoadAsync();
@@ -167,8 +188,8 @@
             ["subjectId"] = SubjectId?.ToString(),
             ["fromDate"] = FromDate?.ToString("yyyy-MM-dd"),
             ["toDate"] = ToDate?.ToString("yyyy-MM-dd"),
-            ["learnerGradeId"] = LearnerGradeId?.ToString(),
-            ["learnerSearchText"] = LearnerSearchText
+            ["learnerGradeId"] = _learnerGradeId?.ToString(),
+            ["learnerSearchText"] = _learnerSearchText
         };
 
         var encoded = string.Join("&", query
@@ -186,7 +207,17 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        // Sync local state with query parameters
+        _learnerSearchText = LearnerSearchText ?? "";
+        _learnerGradeId = LearnerGradeId;
+        
         if (!_schoolGrades.Any()) await LoadFilters();
+
+        // Load learners if we're in learner view mode
+        if (ViewMode == "Learner" && _selectedSchool != null && !_learners.Any())
+        {
+            await LoadLearners();
+        }
 
         await LoadResults();
     }    

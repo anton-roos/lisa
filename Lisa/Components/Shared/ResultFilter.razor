@@ -111,20 +111,12 @@
     {
         <div class="mb-3">
             <label><strong>Search Learner:</strong></label>
-            @* <InputText class="form-control"
-                       Value="@LearnerSearchText"
-                       ValueChanged="OnLearnerSearchChanged"
-                       oninput="@OnLearnerSearchChanged(LearnerSearchText)"
-                       ValueExpression="() => LearnerSearchText"
-                       placeholder="Enter learner name..." /> *@
             <InputText
               class="form-control"
-              @bind-Value="LearnerSearchText"
-              @oninput="async (ChangeEventArgs e) =>
-              {
-                // LearnerSearchText is already updated by the bind above
-                await NotifyChange();
-              }"
+              Value="@LearnerSearchText"
+              ValueChanged="OnLearnerSearchChanged"
+              ValueExpression="() => LearnerSearchText"
+              @oninput="async (ChangeEventArgs e) => await OnLearnerSearchChanged(e.Value?.ToString() ?? string.Empty)"
               placeholder="Enter learner name..." />
         </div>
     }

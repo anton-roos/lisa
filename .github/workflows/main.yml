@@ -7,17 +7,13 @@ on:
       - main
 
 jobs:
-  # ─── Stage 1: Build & Publish ─────────────────────────────────────────────
   build:
     name: 🔨 Build & Publish
     runs-on: [self-hosted, windows]
-
     outputs:
       publish-dir: ${{ steps.publish.outputs.publish-dir }}
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Restore & Build
         run: |
@@ -28,51 +24,48 @@ jobs:
         id: publish
         shell: pwsh
         run: |
-          # assign a PS variable
-          $out = 'publish'
-          # publish into that folder
-          dotnet publish --configuration Release --output $out
-          # export the path as an output
-          Write-Output "::set-output name=publish-dir::$PWD\$out"
+          $outFolder = Join-Path $env:GITHUB_WORKSPACE 'publish'
+          dotnet publish --configuration Release --output $outFolder
 
-
-  # ─── Stage 2: Deploy to QA ────────────────────────────────────────────────
+          # Write the full path into GITHUB_OUTPUT
+          "publish-dir=$outFolder" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          
   deploy-qa:
     name: 🚧 Deploy → QA
     needs: build
     runs-on: [self-hosted, windows]
-    # no environment protection here, it fires automatically
     env:
       SITE_PATH: ${{ secrets.IIS_QA_SITE_PATH }}
       APP_POOL:  ${{ secrets.IIS_QA_APP_POOL }}
-
+      SRC:       ${{ needs.build.outputs.publish-dir }}
     steps:
-      - name: Deploy to QA IIS
+      - name: Debug paths
         shell: pwsh
         run: |
-          $src  = "${{ needs.build.outputs.publish-dir }}"
-          $dest = "${{ env.SITE_PATH }}"
-          robocopy $src $dest /MIR /XF appsettings.json /R:3 /W:5
-          & "$env:windir\System32\inetsrv\appcmd.exe" list apppool
-          & "$env:windir\System32\inetsrv\appcmd.exe" recycle apppool /apppool.name:${{ env.APP_POOL }}
+          Write-Host "→ Source publish folder: $env:SRC"
+          Write-Host "→ Destination IIS folder: $env:SITE_PATH"
+          Write-Host "→ Contents of publish folder:"
+          Get-ChildItem -Recurse $env:SRC | Select-Object FullName | Write-Host
 
-
-  # ─── Stage 3: Deploy to Prod (manual approval) ────────────────────────────
-  deploy-prod:
-    name: 🚀 Deploy → Prod
-    needs: deploy-qa
-    runs-on: [self-hosted, windows]
-    environment: production    # ← this ties to GitHub Environment “production”
-
-    env:
-      SITE_PATH: ${{ secrets.IIS_PROD_SITE_PATH }}   # e.g. C:\Sites\lisa_prd
-      APP_POOL:  ${{ secrets.IIS_PROD_APP_POOL }}    # e.g. dceg-learn.co.za
-
-    steps:
-      - name: Deploy to Prod IIS
+      - name: Copy to QA IIS (robocopy)
         shell: pwsh
         run: |
-          $src  = "${{ needs.build.outputs.publish-dir }}"
-          $dest = "${{ env.SITE_PATH }}"
-          robocopy $src $dest /MIR /XF appsettings.json /R:3 /W:5
-          & "$env:windir\System32\inetsrv\appcmd.exe" recycle apppool /apppool.name:${{ env.APP_POOL }}
+          $log = Join-Path $env:GITHUB_WORKSPACE 'robocopy.log'
+          robocopy $env:SRC $env:SITE_PATH /MIR /XF appsettings.json /R:3 /W:5 /LOG:$log
+          Write-Host "Robocopy exit code: $LASTEXITCODE"
+          if ($LASTEXITCODE -ge 8) {
+            Write-Host "❌ Robocopy reported a failure. See log below:"
+            Get-Content $log | Write-Host
+            exit $LASTEXITCODE
+          }
+
+      - name: Verify deploy
+        shell: pwsh
+        run: |
+          Write-Host "→ Files now in IIS site folder:"
+          Get-ChildItem -Recurse $env:SITE_PATH | Select-Object FullName | Write-Host
+
+      - name: Recycle IIS App Pool
+        shell: pwsh
+        run: |
+          & "$env:windir\System32\inetsrv\appcmd.exe" recycle apppool "$env:APP_POOL"

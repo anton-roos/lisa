@@ -53,6 +53,7 @@ jobs:
           $src  = "${{ needs.build.outputs.publish-dir }}"
           $dest = "${{ env.SITE_PATH }}"
           robocopy $src $dest /MIR /XF appsettings.json /R:3 /W:5
+          & "$env:windir\System32\inetsrv\appcmd.exe" list apppool
           & "$env:windir\System32\inetsrv\appcmd.exe" recycle apppool /apppool.name:${{ env.APP_POOL }}
 
 

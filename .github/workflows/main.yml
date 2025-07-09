@@ -30,42 +30,36 @@ jobs:
           # Write the full path into GITHUB_OUTPUT
           "publish-dir=$outFolder" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           
-  deploy-qa:
-    name: 🚧 Deploy → QA
-    needs: build
-    runs-on: [self-hosted, windows]
-    env:
-      SITE_PATH: ${{ secrets.IIS_QA_SITE_PATH }}
-      APP_POOL:  ${{ secrets.IIS_QA_APP_POOL }}
-      SRC:       ${{ needs.build.outputs.publish-dir }}
-    steps:
-      - name: Debug paths
-        shell: pwsh
-        run: |
-          Write-Host "→ Source publish folder: $env:SRC"
-          Write-Host "→ Destination IIS folder: $env:SITE_PATH"
-          Write-Host "→ Contents of publish folder:"
-          Get-ChildItem -Recurse $env:SRC | Select-Object FullName | Write-Host
+    deploy-qa:
+    # … keep your existing settings …
+      steps:
+        - name: Stop QA App Pool
+          shell: pwsh
+          run: |
+            Write-Host "Stopping App Pool: $env:APP_POOL"
+            & "$env:windir\System32\inetsrv\appcmd.exe" stop apppool "$env:APP_POOL"
 
-      - name: Copy to QA IIS (robocopy)
-        shell: pwsh
-        run: |
-          $log = Join-Path $env:GITHUB_WORKSPACE 'robocopy.log'
-          robocopy $env:SRC $env:SITE_PATH /MIR /XF appsettings.json /R:3 /W:5 /LOG:$log
-          Write-Host "Robocopy exit code: $LASTEXITCODE"
-          if ($LASTEXITCODE -ge 8) {
-            Write-Host "❌ Robocopy reported a failure. See log below:"
-            Get-Content $log | Write-Host
-            exit $LASTEXITCODE
-          }
+        - name: Deploy to QA IIS (robocopy)
+          shell: pwsh
+          run: |
+            $log = Join-Path $env:GITHUB_WORKSPACE 'robocopy.log'
+            Write-Host "Copying from $env:SRC to $env:SITE_PATH"
+            robocopy $env:SRC $env:SITE_PATH /MIR /XF appsettings.json /R:3 /W:5 /LOG:$log
+            Write-Host "Robocopy exit code: $LASTEXITCODE"
+            if ($LASTEXITCODE -ge 8) {
+              Write-Host "❌ Robocopy failure—see log:"
+              Get-Content $log | Write-Host
+              exit $LASTEXITCODE
+            }
 
-      - name: Verify deploy
-        shell: pwsh
-        run: |
-          Write-Host "→ Files now in IIS site folder:"
-          Get-ChildItem -Recurse $env:SITE_PATH | Select-Object FullName | Write-Host
+        - name: Start QA App Pool
+          shell: pwsh
+          run: |
+            Write-Host "Starting App Pool: $env:APP_POOL"
+            & "$env:windir\System32\inetsrv\appcmd.exe" start apppool "$env:APP_POOL"
 
-      - name: Recycle IIS App Pool
-        shell: pwsh
-        run: |
-          & "$env:windir\System32\inetsrv\appcmd.exe" recycle apppool "$env:APP_POOL"
+        - name: Verify deploy
+          shell: pwsh
+          run: |
+            Write-Host "✅ Files now in IIS folder:"
+            Get-ChildItem -Recurse $env:SITE_PATH | Select-Object FullName | Write-Host

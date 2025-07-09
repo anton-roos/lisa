@@ -27,6 +27,12 @@ else if (!Learners.Any())
 }
 else
 {
+    <div class="mb-3">
+        <small class="text-muted">
+            Showing results for @Learners.Count() learner(s). Each learner shows up to 6 most recent results per subject.
+        </small>
+    </div>
+    
     <div class="row">
         @foreach (var learner in Learners)
         {
@@ -112,8 +118,8 @@ else
                         }
                         else
                         {
-                            <div class="text-center text-muted">
-                                <small>No results found</small>
+                            <div class="text-center text-muted p-3">
+                                <small>No results found for the selected criteria</small>
                             </div>
                         }
                     </div>
@@ -128,9 +134,7 @@ else
     {
         return score switch
         {
-            >= 80 => "success",
-            >= 70 => "info", 
-            >= 50 => "warning",
+            >= 50 => "success",
             _ => "danger"
         };
     }

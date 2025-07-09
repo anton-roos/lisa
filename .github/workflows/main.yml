@@ -19,11 +19,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Setup .NET 9
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: '9.0.x'
-
       - name: Restore & Build
         run: |
           dotnet restore
@@ -31,10 +26,15 @@ jobs:
 
       - name: Publish
         id: publish
+        shell: pwsh
         run: |
-          OUT=publish
-          dotnet publish --configuration Release --output $OUT
-          echo "::set-output name=publish-dir::$PWD\\$OUT"
+          # assign a PS variable
+          $out = 'publish'
+          # publish into that folder
+          dotnet publish --configuration Release --output $out
+          # export the path as an output
+          Write-Output "::set-output name=publish-dir::$PWD\$out"
+
 
   # ─── Stage 2: Deploy to QA ────────────────────────────────────────────────
   deploy-qa:

@@ -43,8 +43,8 @@ jobs:
     runs-on: [self-hosted, windows]
     # no environment protection here, it fires automatically
     env:
-      SITE_PATH: ${{ secrets.IIS_QA_SITE_PATH }}     # e.g. C:\Sites\lisa_qa
-      APP_POOL:  ${{ secrets.IIS_QA_APP_POOL }}      # e.g. dceg-lis.co.za
+      SITE_PATH: ${{ secrets.IIS_QA_SITE_PATH }}
+      APP_POOL:  ${{ secrets.IIS_QA_APP_POOL }}
 
     steps:
       - name: Deploy to QA IIS

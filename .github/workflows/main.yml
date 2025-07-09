@@ -53,8 +53,8 @@ jobs:
           $src  = "${{ needs.build.outputs.publish-dir }}"
           $dest = "${{ env.SITE_PATH }}"
           robocopy $src $dest /MIR /XF appsettings.json /R:3 /W:5
-          Import-Module WebAdministration
-          Restart-WebAppPool -Name ${{ env.APP_POOL }}
+          & "$env:windir\System32\inetsrv\appcmd.exe" recycle apppool /apppool.name:$APP_POOL
+
 
   # ─── Stage 3: Deploy to Prod (manual approval) ────────────────────────────
   deploy-prod:
@@ -74,5 +74,4 @@ jobs:
           $src  = "${{ needs.build.outputs.publish-dir }}"
           $dest = "${{ env.SITE_PATH }}"
           robocopy $src $dest /MIR /XF appsettings.json /R:3 /W:5
-          Import-Module WebAdministration
-          Restart-WebAppPool -Name ${{ env.APP_POOL }}
+          & "$env:windir\System32\inetsrv\appcmd.exe" recycle apppool /apppool.name:$APP_POOL

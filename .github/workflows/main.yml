@@ -1,4 +1,5 @@
-name: Echo Workflow
+# .github/workflows/deploy-iis.yml
+name: CI/CD - Build → QA → Prod
 
 on:
   push:
@@ -6,12 +7,72 @@ on:
       - main
 
 jobs:
-  echo:
-    runs-on: ubuntu-latest
+  # ─── Stage 1: Build & Publish ─────────────────────────────────────────────
+  build:
+    name: 🔨 Build & Publish
+    runs-on: [self-hosted, windows]
+
+    outputs:
+      publish-dir: ${{ steps.publish.outputs.publish-dir }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - name: Echo message
-        run: echo "Hello from GitHub Actions!"
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore & Build
+        run: |
+          dotnet restore
+          dotnet build --configuration Release
+
+      - name: Publish
+        id: publish
+        run: |
+          OUT=publish
+          dotnet publish --configuration Release --output $OUT
+          echo "::set-output name=publish-dir::$PWD\\$OUT"
+
+  # ─── Stage 2: Deploy to QA ────────────────────────────────────────────────
+  deploy-qa:
+    name: 🚧 Deploy → QA
+    needs: build
+    runs-on: [self-hosted, windows]
+    # no environment protection here, it fires automatically
+    env:
+      SITE_PATH: ${{ secrets.IIS_QA_SITE_PATH }}     # e.g. C:\Sites\lisa_qa
+      APP_POOL:  ${{ secrets.IIS_QA_APP_POOL }}      # e.g. dceg-lis.co.za
+
+    steps:
+      - name: Deploy to QA IIS
+        shell: pwsh
+        run: |
+          $src  = "${{ needs.build.outputs.publish-dir }}"
+          $dest = "${{ env.SITE_PATH }}"
+          robocopy $src $dest /MIR /XF appsettings.json /R:3 /W:5
+          Import-Module WebAdministration
+          Restart-WebAppPool -Name ${{ env.APP_POOL }}
+
+  # ─── Stage 3: Deploy to Prod (manual approval) ────────────────────────────
+  deploy-prod:
+    name: 🚀 Deploy → Prod
+    needs: deploy-qa
+    runs-on: [self-hosted, windows]
+    environment: production    # ← this ties to GitHub Environment “production”
+
+    env:
+      SITE_PATH: ${{ secrets.IIS_PROD_SITE_PATH }}   # e.g. C:\Sites\lisa_prd
+      APP_POOL:  ${{ secrets.IIS_PROD_APP_POOL }}    # e.g. dceg-learn.co.za
+
+    steps:
+      - name: Deploy to Prod IIS
+        shell: pwsh
+        run: |
+          $src  = "${{ needs.build.outputs.publish-dir }}"
+          $dest = "${{ env.SITE_PATH }}"
+          robocopy $src $dest /MIR /XF appsettings.json /R:3 /W:5
+          Import-Module WebAdministration
+          Restart-WebAppPool -Name ${{ env.APP_POOL }}

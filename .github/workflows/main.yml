@@ -77,6 +77,9 @@ jobs:
           } else {
             Write-Host "✅ Robocopy completed successfully (exit code: $exitCode)"
           }
+          
+          # Ensure PowerShell exits with success code
+          exit 0
 
       - name: Start QA App Pool
         shell: pwsh

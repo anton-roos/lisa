@@ -71,10 +71,6 @@ Email Campaigns – SA, Principal, SchoolManagement
  1. Setup the System Administrator (When app runs with DB Seed)
  2. Setup the School
  
-# Deleting Entities
-## Skool
-As ’n Skool delete word, delete dit (cascade) ook Principals, Administrators, SchoolManagements, Teachers, Grades en Learners.
-Die Skool het ’n unieke ShortName nie langer as 20 karakters nie.
 
 ## SchoolGrade
 Link na School met OnDelete.Cascade → as die Skool delete word, word alle Grades ook delete.

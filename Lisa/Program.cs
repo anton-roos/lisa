@@ -149,6 +149,7 @@ builder.Services.AddScoped<AssessmentTypeService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<AttendanceRecordService>();
 builder.Services.AddScoped<TemplateRenderService>();
+builder.Services.AddScoped<LeaveEarlyService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();

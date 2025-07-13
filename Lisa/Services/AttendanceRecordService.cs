@@ -218,4 +218,57 @@ public class AttendanceRecordService(
 
         return true;
     }
+
+    public async Task<List<AttendanceRecord>> GetTodaysLeaveEarlyAttendancesAsync(
+    Guid schoolId,
+
+    Guid? registerClassId = null,
+    Guid? gradeId = null,
+    string? searchTerm = null,
+    int skip = 0,
+    int take = 50)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+
+
+        //var today = DateTime.UtcNow.Date;
+        var today = DateTime.SpecifyKind(new DateTime(2025, 6, 18), DateTimeKind.Utc);
+        var tomorrow = today.AddDays(1);
+
+        var query = dbContext.AttendanceRecords
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(ar => ar.Attendance)
+            .Include(ar => ar.Learner!)
+            .ThenInclude(l => l.RegisterClass)
+            .Where(a =>
+                a.Attendance.SchoolId == schoolId &&
+                a.AttendanceType == AttendanceType.CheckIn &&
+                a.CreatedAt >= today &&
+                a.CreatedAt < tomorrow); // only today's check-ins
+
+        if (gradeId.HasValue)
+        {
+            query = query.Where(ar => ar.Learner!.RegisterClass!.SchoolGradeId == gradeId.Value);
+        }
+
+        if (registerClassId.HasValue)
+        {
+            query = query.Where(ar => ar.Learner!.RegisterClassId == registerClassId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.ToLower();
+            query = query.Where(a =>
+                (a.Learner!.Name != null && a.Learner.Name.ToLower().Contains(term)) ||
+                (a.Learner.Surname != null && a.Learner.Surname.ToLower().Contains(term)));
+        }
+
+        return await query
+            .OrderByDescending(a => a.CreatedAt)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync();
+    }
 }

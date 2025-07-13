@@ -37,6 +37,7 @@ public class LisaDbContext
     public DbSet<Attendance> Attendances { get; set; } = null!;
     public DbSet<AttendanceRecord> AttendanceRecords { get; set; } = null!;
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
+    //public DbSet<LeaveEarly> LeaveEarlies { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -456,7 +457,25 @@ public class LisaDbContext
                   .HasForeignKey(a => a.AttendanceId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
-    }
+
+        //modelBuilder.Entity<LeaveEarly>(entity =>
+        //{
+        //    entity.HasOne(le => le.AttendanceRecord)
+        //          .WithMany()
+        //          .HasForeignKey(le => le.AttendenceRecordId)
+        //          .OnDelete(DeleteBehavior.Restrict);
+
+        //    entity.HasOne(le => le.Learner)
+        //          .WithMany()
+        //          .HasForeignKey(le => le.LearnerId)
+        //          .OnDelete(DeleteBehavior.Restrict);
+
+        //    entity.HasOne(le => le.SchoolGrade)
+        //          .WithMany()
+        //          .HasForeignKey(le => le.SchoolGradeId)
+        //          .OnDelete(DeleteBehavior.Restrict);
+        //});
+        }
 
     public override int SaveChanges()
     {

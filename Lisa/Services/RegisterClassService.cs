@@ -31,6 +31,21 @@ public class RegisterClassService
             return null;
         }
     }
+    public async Task<List<RegisterClass>> GetByGradeIdAsync(Guid gradeId)
+    {
+        try
+        {
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+            return await context.RegisterClasses
+                .Where(rc => rc.SchoolGradeId == gradeId)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error fetching RegisterClass with ID: {schoolId}", gradeId);
+            return [];
+        }
+    }
 
     public async Task<List<RegisterClass>> GetBySchoolIdAsync(Guid schoolId)
     {

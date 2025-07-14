@@ -10,11 +10,10 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<LisaDbCont
         var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json")
-            .AddJsonFile($"appsettings.Development.json", optional: true)
             .Build();
 
         // Get connection string from configuration
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        var connectionString = configuration.GetConnectionString("Lisa");
 
         // Create logger factory for design time
         var loggerFactory = LoggerFactory.Create(builder =>

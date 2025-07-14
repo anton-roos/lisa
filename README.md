@@ -66,37 +66,11 @@ Email Campaigns – SA, Principal, SchoolManagement
  - Can monitor period behaviour
  - Can manage period attendance
 
-# Credentials
-
-## Impact
-portali@impactindependent.co.za
-Portal@II
-
-## Destiny
-portalDISK@destiny-kemptonpark.co.za
-Portal@DISK
-
-## Greenacres
-portalGA@broadlands-schools.co.za
-Portal@GA
-
-## Broadlands
-portalBL@broadlands-schools.co.za
-Portal@BL
-
-## DCEG
-portalDCEG@dcegroup.co.za
-Portal@DCEG
-
 # Workflow
  1. Seed the Database (Roles, Admin User, School Types)
  1. Setup the System Administrator (When app runs with DB Seed)
  2. Setup the School
  
-# Deleting Entities
-## Skool
-As ’n Skool delete word, delete dit (cascade) ook Principals, Administrators, SchoolManagements, Teachers, Grades en Learners.
-Die Skool het ’n unieke ShortName nie langer as 20 karakters nie.
 
 ## SchoolGrade
 Link na School met OnDelete.Cascade → as die Skool delete word, word alle Grades ook delete.

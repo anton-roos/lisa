@@ -6,6 +6,7 @@
 @inject SubjectService SubjectService
 @inject NavigationManager Navigation
 @inject UserService UserService
+@inject AssessmentTypeService AssessmentTypeService
 @inject LearnerService LearnerService
 
 @inherits EventAwareComponentBase
@@ -35,6 +36,12 @@
 
     [Parameter, SupplyParameterFromQuery]
     public string LearnerSearchText { get; set; } = "";
+
+    [Parameter, SupplyParameterFromQuery]
+    public int? AssessmentTypeId { get; set; }
+
+    [Parameter, SupplyParameterFromQuery]
+    public string? SelectedGrades { get; set; }
 }
 
 
@@ -59,10 +66,13 @@
                 FromDate="@FromDate"
                 ToDate="@ToDate"
                 LearnerSearchText="@LearnerSearchText"
+                AssessmentTypeId="@AssessmentTypeId"
                 SchoolGrades="@_schoolGrades"
                 Subjects="@_subjects"
                 Teachers="@_teachers"
+                AssessmentTypes="@_assessmentTypes"
                 AvailableGradesForSubject="@_availableGradesForSubject"
+                SelectedGrades="@_selectedGrades"
                 OnFilterChanged="@OnFiltersChanged" 
             />
             @if (_loading)
@@ -73,11 +83,21 @@
             {
                @if (_learnersLoading)
                {
-                   <LoadingSpinner />
+                   <div class="d-flex justify-content-center p-4">
+                       <LoadingSpinner />
+                       <span class="ms-2">Loading learner results...</span>
+                   </div>
                }
                else
                {
-                   <LearnerList Learners="FilteredLearners" OnSelect="ViewLearner" />
+                   <LearnerResultsCards 
+                       Learners="FilteredLearners" 
+                       LearnerResults="@_learnerResults"
+                       OnLearnerClick="ViewLearner"
+                       OnResultClick="ViewResult"
+                       GetResultSetStatusColor="GetResultSetStatusColor"
+                       RequireDateRange="true"
+                       HasValidDateRange="@(FromDate.HasValue && ToDate.HasValue)" />
                }
             }
             else
@@ -98,22 +118,26 @@
     private List<SchoolGrade> _schoolGrades = [];
     private List<Subject> _subjects = [];
     private List<User> _teachers = [];
+    private List<AssessmentType> _assessmentTypes = [];
     private List<int>? _availableGradesForSubject = [];
     private HashSet<int> _selectedGrades = [];
     private bool _loading;
     private School? _selectedSchool;
 
     private List<Learner> _learners = [];
+    private Dictionary<Guid, List<ResultSet>> _learnerResults = new();
     private bool _learnersLoading = false;
     private string _learnerSearchText = "";
     private Guid? _learnerGradeId;
+    private int? _assessmentTypeId;
 
     private IEnumerable<Learner> FilteredLearners =>
     _learners
       .Where(u => string.IsNullOrWhiteSpace(_learnerSearchText)
                   || $"{u.Name} {u.Surname}"
                      .Contains(_learnerSearchText, StringComparison.OrdinalIgnoreCase))
-      .Where(u => !_learnerGradeId.HasValue || u.RegisterClass?.SchoolGradeId == _learnerGradeId);
+      .Where(u => !_learnerGradeId.HasValue || u.RegisterClass?.SchoolGradeId == _learnerGradeId)
+      .Where(u => !_selectedGrades.Any() || (u.RegisterClass?.SchoolGrade?.SystemGrade?.Id != null && _selectedGrades.Contains(u.RegisterClass.SchoolGrade.SystemGrade.Id)));
 
     async Task OnFiltersChanged(ResultFilter.FilterCriteria c)
     {
@@ -125,10 +149,13 @@
         ToDate = c.ToDate;
         LearnerGradeId = c.GradeId;
         LearnerSearchText = c.LearnerSearchText ?? "";
+        AssessmentTypeId = c.AssessmentTypeId;
         
         // Update local state variables
         _learnerGradeId = c.GradeId;
         _learnerSearchText = c.LearnerSearchText ?? "";
+        _assessmentTypeId = c.AssessmentTypeId;
+        _selectedGrades = new HashSet<int>(c.SelectedGrades ?? Enumerable.Empty<int>());
 
         if (c.ViewMode == "Learner")
         {
@@ -138,6 +165,15 @@
                 _learnersLoading = true;
                 StateHasChanged(); // Trigger UI update to show loading state
                 _learners = await LearnerService.GetBySchoolAsync(_selectedSchool!.Id);
+                _learnersLoading = false;
+            }
+            
+            // Load learner results if we have valid date range
+            if (FromDate.HasValue && ToDate.HasValue && _selectedSchool != null)
+            {
+                _learnersLoading = true;
+                StateHasChanged();
+                await LoadLearnerResults();
                 _learnersLoading = false;
             }
             
@@ -155,8 +191,6 @@
         {
             _availableGradesForSubject = null;
         }
-        
-        _selectedGrades = new HashSet<int>(c.SelectedGrades ?? Enumerable.Empty<int>());
         
         await UpdateAndLoadAsync();
     }
@@ -189,7 +223,9 @@
             ["fromDate"] = FromDate?.ToString("yyyy-MM-dd"),
             ["toDate"] = ToDate?.ToString("yyyy-MM-dd"),
             ["learnerGradeId"] = _learnerGradeId?.ToString(),
-            ["learnerSearchText"] = _learnerSearchText
+            ["learnerSearchText"] = _learnerSearchText,
+            ["assessmentTypeId"] = _assessmentTypeId?.ToString(),
+            ["selectedGrades"] = _selectedGrades.Any() ? string.Join(",", _selectedGrades) : null
         };
 
         var encoded = string.Join("&", query
@@ -210,13 +246,37 @@
         // Sync local state with query parameters
         _learnerSearchText = LearnerSearchText ?? "";
         _learnerGradeId = LearnerGradeId;
+        _assessmentTypeId = AssessmentTypeId;
+        
+        // Parse selected grades from URL parameter
+        if (!string.IsNullOrWhiteSpace(SelectedGrades))
+        {
+            _selectedGrades = new HashSet<int>(
+                SelectedGrades.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Where(s => int.TryParse(s, out _))
+                .Select(int.Parse)
+            );
+        }
+        else
+        {
+            _selectedGrades.Clear();
+        }
         
         if (!_schoolGrades.Any()) await LoadFilters();
 
         // Load learners if we're in learner view mode
-        if (ViewMode == "Learner" && _selectedSchool != null && !_learners.Any())
+        if (ViewMode == "Learner" && _selectedSchool != null)
         {
-            await LoadLearners();
+            if (!_learners.Any())
+            {
+                await LoadLearners();
+            }
+            
+            // Load learner results if we have valid date range
+            if (FromDate.HasValue && ToDate.HasValue)
+            {
+                await LoadLearnerResults();
+            }
         }
 
         await LoadResults();
@@ -243,6 +303,7 @@
                 null,
                 FromDate,
                 ToDate))
+                .Where(r => !_selectedGrades.Any() || (r?.SchoolGrade?.SystemGrade?.Id != null && _selectedGrades.Contains(r.SchoolGrade.SystemGrade.Id)))
                 .OrderBy(r => r!.AssessmentDate)
                 .ToList();
 
@@ -275,6 +336,7 @@
                 null,
                 FromDate,
                 ToDate))
+                .Where(r => !_selectedGrades.Any() || (r?.SchoolGrade?.SystemGrade?.Id != null && _selectedGrades.Contains(r.SchoolGrade.SystemGrade.Id)))
                 .OrderBy(r => r!.AssessmentDate)
                 .ToList();
 
@@ -303,6 +365,45 @@
             _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
             _subjects = await SubjectService.GetAllAsync();
             _teachers = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], _selectedSchool.Id);
+            _assessmentTypes = await AssessmentTypeService.GetAssessmentTypesAsync();
+        }
+    }
+
+    private async Task LoadLearnerResults()
+    {
+        if (_selectedSchool == null || !FromDate.HasValue || !ToDate.HasValue) return;
+
+        _learnerResults.Clear();
+
+        foreach (var learner in FilteredLearners) // Use filtered learners to respect grade selection
+        {
+            var results = await ResultService.GetResultsByFiltersAsync(
+                _selectedSchool.Id,
+                null, // Don't filter by grade at the result level - we're using FilteredLearners
+                null, // Don't filter by subject
+                null, // Don't filter by teacher
+                learner.Id,
+                FromDate,
+                ToDate
+            );
+
+            // Filter by assessment type if specified
+            if (_assessmentTypeId.HasValue)
+            {
+                results = results.Where(r => r.AssessmentTypeId == _assessmentTypeId.Value).ToList();
+            }
+
+            // Take the last 6 results per subject for each learner
+            var learnerResultsBySubject = results
+                .GroupBy(r => r.Subject?.Name ?? "Unknown")
+                .SelectMany(g => g.OrderByDescending(r => r.AssessmentDate).Take(6))
+                .OrderByDescending(r => r.AssessmentDate)
+                .ToList();
+
+            if (learnerResultsBySubject.Any())
+            {
+                _learnerResults[learner.Id] = learnerResultsBySubject;
+            }
         }
     }
 

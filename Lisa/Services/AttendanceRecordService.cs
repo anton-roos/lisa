@@ -5,9 +5,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class AttendanceRecordService(
+public class AttendanceRecordService
+(
     IDbContextFactory<LisaDbContext> dbContextFactory,
-    ILogger<AttendanceService> logger)
+    ILogger<AttendanceService> logger
+)
 {
     public async Task CreateAsync(AttendanceRecord attendanceRecord)
     {

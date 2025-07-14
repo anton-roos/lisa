@@ -78,10 +78,10 @@
         {
             <div class="mb-3">
                 <label><strong>Choose Grades:</strong></label>
-                <div class="d-flex flex-wrap">
+                <div class="d-flex flex-wrap gap-2">
                     @foreach (var grade in AvailableGradesForSubject)
                     {
-                        <button class="btn btn-sm @(SelectedGrades.Contains(grade) ? "btn-success" : "btn-outline-success")"
+                        <button class="btn btn-sm @(_localSelectedGrades.Contains(grade) ? "btn-success" : "btn-outline-success")"
                                 @onclick="() => OnToggleGradeSelection(grade)">
                             @(FormatGrade(grade))
                         </button>
@@ -106,6 +106,22 @@
                 }
             </InputSelect>
         </div>
+        
+        @if (SchoolGrades?.Any() == true)
+        {
+            <div class="mb-3">
+                <label><strong>Choose Grades:</strong></label>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var grade in SchoolGrades.OrderBy(g => g.SystemGrade.SequenceNumber))
+                    {
+                        <button class="btn btn-sm @(_localSelectedGrades.Contains(grade.SystemGrade.Id) ? "btn-success" : "btn-outline-success")"
+                                @onclick="() => OnToggleGradeSelection(grade.SystemGrade.Id)">
+                            @(FormatGrade(grade.SystemGrade.Id))
+                        </button>
+                    }
+                </div>
+            </div>
+        }
     }
     else if (ViewMode == "Learner")
     {
@@ -119,6 +135,37 @@
               @oninput="async (ChangeEventArgs e) => await OnLearnerSearchChanged(e.Value?.ToString() ?? string.Empty)"
               placeholder="Enter learner name..." />
         </div>
+        
+        <div class="mb-3">
+            <label><strong>Assessment Type:</strong></label>
+            <InputSelect class="form-select"
+                         TValue="int?"
+                         Value="AssessmentTypeId"
+                         ValueChanged="OnAssessmentTypeChanged"
+                         ValueExpression="() => AssessmentTypeId">
+                <option value="">-- All Assessment Types --</option>
+                @foreach (var at in AssessmentTypes)
+                {
+                    <option value="@at.Id">@at.Name</option>
+                }
+            </InputSelect>
+        </div>
+        
+        @if (SchoolGrades?.Any() == true)
+        {
+            <div class="mb-3">
+                <label><strong>Choose Grades:</strong></label>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var grade in SchoolGrades.OrderBy(g => g.SystemGrade.SequenceNumber))
+                    {
+                        <button class="btn btn-sm @(_localSelectedGrades.Contains(grade.SystemGrade.Id) ? "btn-success" : "btn-outline-success")"
+                                @onclick="() => OnToggleGradeSelection(grade.SystemGrade.Id)">
+                            @(FormatGrade(grade.SystemGrade.Id))
+                        </button>
+                    }
+                </div>
+            </div>
+        }
     }
 </div>
 
@@ -131,23 +178,40 @@
     [Parameter] public DateTime? FromDate { get; set; }
     [Parameter] public DateTime? ToDate { get; set; }
     [Parameter] public string LearnerSearchText { get; set; } = "";
+    [Parameter] public int? AssessmentTypeId { get; set; }
 
     // Data sources
     [Parameter] public List<SchoolGrade> SchoolGrades { get; set; } = new();
     [Parameter] public List<Subject> Subjects { get; set; } = new();
     [Parameter] public List<User> Teachers { get; set; } = new();
+    [Parameter] public List<AssessmentType> AssessmentTypes { get; set; } = new();
     [Parameter] public List<int>? AvailableGradesForSubject { get; set; }
+    [Parameter] public HashSet<int> SelectedGrades { get; set; } = new();
 
     // Callback when any filter changes
     [Parameter] public EventCallback<FilterCriteria> OnFilterChanged { get; set; }
 
-    private readonly HashSet<int> SelectedGrades = new();
+    private readonly HashSet<int> _localSelectedGrades = new();
+
+    protected override Task OnParametersSetAsync()
+    {
+        // Sync local selected grades with the parameter
+        _localSelectedGrades.Clear();
+        if (SelectedGrades?.Any() == true)
+        {
+            foreach (var grade in SelectedGrades)
+            {
+                _localSelectedGrades.Add(grade);
+            }
+        }
+        return Task.CompletedTask;
+    }
 
     // Helper methods
     private async Task OnViewModeChanged(string mode)
     {
         ViewMode = mode;
-        SelectedGrades.Clear();
+        _localSelectedGrades.Clear();
         await NotifyChange();
     }
     private async Task OnFromDateChanged(DateTime? value)
@@ -180,10 +244,15 @@
         LearnerSearchText = newText;
         await NotifyChange();
     }
+    private async Task OnAssessmentTypeChanged(int? value)
+    {
+        AssessmentTypeId = value;
+        await NotifyChange();
+    }
     private async Task OnToggleGradeSelection(int grade)
     {
-        if (SelectedGrades.Contains(grade)) SelectedGrades.Remove(grade);
-        else SelectedGrades.Add(grade);
+        if (_localSelectedGrades.Contains(grade)) _localSelectedGrades.Remove(grade);
+        else _localSelectedGrades.Add(grade);
         await NotifyChange();
     }
     private void ClearDate(string which)
@@ -201,8 +270,9 @@
             TeacherId = TeacherId,
             FromDate = FromDate,
             ToDate = ToDate,
-            SelectedGrades = SelectedGrades.ToList(),
-            LearnerSearchText = LearnerSearchText
+            SelectedGrades = _localSelectedGrades.ToList(),
+            LearnerSearchText = LearnerSearchText,
+            AssessmentTypeId = AssessmentTypeId
         };
         await OnFilterChanged.InvokeAsync(criteria);
     }
@@ -218,6 +288,7 @@
         public DateTime? ToDate { get; set; }
         public List<int>? SelectedGrades { get; set; }
         public string? LearnerSearchText { get; set; }
+        public int? AssessmentTypeId { get; set; }
     }
 
     private string FormatGrade(int grade) =>

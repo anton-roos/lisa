@@ -253,8 +253,8 @@ public class AttendanceRecordService
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
 
 
-        //var today = DateTime.UtcNow.Date;
-        var today = DateTime.SpecifyKind(new DateTime(2025, 6, 17), DateTimeKind.Utc);
+        var today = DateTime.UtcNow.Date;
+        //var today = DateTime.SpecifyKind(new DateTime(2025, 6, 17), DateTimeKind.Utc);
         var tomorrow = today.AddDays(1);
 
         var query = dbContext.AttendanceRecords

@@ -366,6 +366,7 @@
         else
         {
             selectedGradeId = null;
+            RegisterClasses = [];
         }
         SelectedClassId = null;
         await loadLeaveEarlyAttendances();
@@ -399,6 +400,7 @@
             IsLoading = false;
         }
     }
+
     private void OnSearchInputChanged(ChangeEventArgs e)
     {
         _debounceTimer?.Dispose();
@@ -481,7 +483,6 @@
     {
         try
         {
-
             if (_leaveEarlyFormModel.Date == default)
                 _leaveEarlyFormModel.Date = DateTime.UtcNow;
 
@@ -492,6 +493,7 @@
             bool isSaved= await LeaveEarlyService.SaveLeaveEarlyAsync(_leaveEarlyFormModel);
             if (isSaved)
             {
+                await _attendanceRecordService.SignOutAttendenceRecordAsync(_leaveEarlyFormModel.AttendenceRecordId);
                 var learner = await LearnerService.GetLearnerWithParentsAsync(_leaveEarlyFormModel.LearnerId);
                 if (learner != null && learner.Parents != null)
                 {
@@ -522,9 +524,6 @@
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Error saving LeaveEarly: {ex.Message}");
-
-            // Optional error toast
-            // ToastService.ShowError("Failed to save Leave Early record.");
         }
     }
 

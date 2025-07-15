@@ -92,6 +92,26 @@ public class AttendanceRecordService
         return true;
     }
 
+    public async Task<bool> SignOutAttendenceRecordAsync(Guid? attendanceRecordId)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var attendance = await dbContext.AttendanceRecords.FindAsync(attendanceRecordId);
+
+        if (attendance == null)
+        {
+            logger.LogWarning("Attempted to sign out non-existent attendance record {AttendanceId}", attendanceRecordId);
+            return false;
+        }
+
+        attendance.End = DateTime.UtcNow;
+        attendance.UpdatedAt = DateTime.UtcNow;
+
+        await dbContext.SaveChangesAsync();
+        logger.LogInformation("Recorded sign-out for attendance {AttendanceId}", attendanceRecordId);
+
+        return true;
+    }
+
     public async Task<bool> ClearSignOutAsync(Guid attendanceId)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -234,7 +254,7 @@ public class AttendanceRecordService
 
 
         //var today = DateTime.UtcNow.Date;
-        var today = DateTime.SpecifyKind(new DateTime(2025, 6, 18), DateTimeKind.Utc);
+        var today = DateTime.SpecifyKind(new DateTime(2025, 6, 17), DateTimeKind.Utc);
         var tomorrow = today.AddDays(1);
 
         var query = dbContext.AttendanceRecords
@@ -247,7 +267,7 @@ public class AttendanceRecordService
                 a.Attendance.SchoolId == schoolId &&
                 a.AttendanceType == AttendanceType.CheckIn &&
                 a.CreatedAt >= today &&
-                a.CreatedAt < tomorrow); // only today's check-ins
+                a.CreatedAt < tomorrow);
 
         if (gradeId.HasValue)
         {

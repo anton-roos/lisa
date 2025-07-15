@@ -12,10 +12,14 @@ namespace Lisa.Models.ViewModels
         public DateTime Date { get; set; }
         public TimeOnly? SignOutTime { get; set; }
 
-        [Required(AllowEmptyStrings = false, ErrorMessage = "Permission is required")]
+        [Required(ErrorMessage = "Permission type is required.")]
+        [EnumDataType(typeof(PermissionType), ErrorMessage = "Invalid permission type.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Please select a valid permission type.")]
         public PermissionType PermissionType { get; set; }
         public string? TelephonicNotes { get; set; }
-        [Required(AllowEmptyStrings = false, ErrorMessage = "PickUp Type is required")]
+        [Required(ErrorMessage = "Pick-up type is required.")]
+        [EnumDataType(typeof(PickUpType), ErrorMessage = "Invalid pick-up type.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Please select a valid pick-up type.")]
         public PickUpType PickUpType { get; set; }
         public string? PickupFamilyMemberIDNo { get; set; }
         public string? PickupFamilyMemberFirstname { get; set; }

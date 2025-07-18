@@ -622,7 +622,7 @@ else
             AttendanceType = AttendanceType.CheckOut,
             Start = DateTime.UtcNow,
             End = DateTime.UtcNow,
-            Notes = $"Left {leaveType}. Permission: {SelectedPermissionMethod}. Pickup: {SelectedPickupOption}. {Notes}",
+            Notes = isEarlyLeave ? $"Left early. Permission: {SelectedPermissionMethod}. Pickup: {SelectedPickupOption}. {Notes}" : $"Left normal. Permission: {SelectedPermissionMethod}. Pickup: {SelectedPickupOption}. {Notes}",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };

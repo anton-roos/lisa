@@ -105,6 +105,17 @@ public class AttendanceRecordService
 
         attendance.End = DateTime.UtcNow;
         attendance.UpdatedAt = DateTime.UtcNow;
+        
+        // Mark as early leave in notes so it appears correctly on sign-out page
+        if (string.IsNullOrEmpty(attendance.Notes))
+        {
+            attendance.Notes = "Left early";
+        }
+        else if (!attendance.Notes.Contains("Left early", StringComparison.OrdinalIgnoreCase) && 
+                 !attendance.Notes.Contains("early leave", StringComparison.OrdinalIgnoreCase))
+        {
+            attendance.Notes = $"Left early. {attendance.Notes}";
+        }
 
         await dbContext.SaveChangesAsync();
         logger.LogInformation("Recorded sign-out for attendance {AttendanceId}", attendanceRecordId);

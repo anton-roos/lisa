@@ -493,7 +493,31 @@
             bool isSaved= await LeaveEarlyService.SaveLeaveEarlyAsync(_leaveEarlyFormModel);
             if (isSaved)
             {
-                await _attendanceRecordService.SignOutAttendenceRecordAsync(_leaveEarlyFormModel.AttendenceRecordId);
+                // Create a proper checkout attendance record instead of modifying the existing one
+                if (_leaveEarlyFormModel.AttendenceRecordId.HasValue && _leaveEarlyFormModel.LearnerId.HasValue)
+                {
+                    // Get the current session to link the checkout record
+                    var existingRecord = await _attendanceRecordService.GetByIdAsync(_leaveEarlyFormModel.AttendenceRecordId.Value);
+                    if (existingRecord != null)
+                    {
+                        // Create a new checkout record
+                        var checkoutRecord = new AttendanceRecord
+                        {
+                            Id = Guid.NewGuid(),
+                            LearnerId = _leaveEarlyFormModel.LearnerId.Value,
+                            AttendanceId = existingRecord.AttendanceId,
+                            AttendanceType = AttendanceType.CheckOut,
+                            Start = DateTime.UtcNow,
+                            End = DateTime.UtcNow,
+                            Notes = "Left early",
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        
+                        await _attendanceRecordService.CreateAsync(checkoutRecord);
+                    }
+                }
+                
                 var learner = await LearnerService.GetLearnerWithParentsAsync(_leaveEarlyFormModel.LearnerId);
                 if (learner != null && learner.Parents != null)
                 {

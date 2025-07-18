@@ -4,7 +4,7 @@
     {
       "label": "Build Lisa",
       "type": "shell",
-      "command": "dotnet build Lisa/Lisa.csproj",
+      "command": "dotnet build src/Lisa.csproj",
       "problemMatcher": "$msCompile",
       "group": {
         "kind": "build",

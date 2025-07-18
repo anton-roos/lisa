@@ -117,8 +117,28 @@ else
                                 <td>
                                     @{
                                         var status = GetAttendanceStatus(learner);
-                                        var pillClass = $"pill {status.ToLower().Replace(" ", "-")}";
+                                        var pillClass = "pill";
                                         var canLeaveEarly = status == "Present";
+                                        
+                                        // Determine appropriate CSS class based on status
+                                        if (status.StartsWith("Left Early"))
+                                        {
+                                            pillClass += " left-early";
+                                            canLeaveEarly = false; // Can't process someone who already left early
+                                        }
+                                        else if (status.StartsWith("Departed"))
+                                        {
+                                            pillClass += " departed";
+                                            canLeaveEarly = false; // Can't process someone who already departed
+                                        }
+                                        else if (status == "Present")
+                                        {
+                                            pillClass += " present";
+                                        }
+                                        else
+                                        {
+                                            pillClass += " not-at-school";
+                                        }
                                     }
                                     <div class="@pillClass">
                                         <span>@status</span>
@@ -128,7 +148,18 @@ else
                                     <button class="btn @(canLeaveEarly ? "btn-primary" : "btn-secondary") btn-sm"
                                             @onclick="() => SelectLearner(learner)"
                                             disabled="@(!canLeaveEarly)">
-                                        @(canLeaveEarly ? "Process Leave Early" : "Not Checked In")
+                                        @if (status.StartsWith("Left Early") || status.StartsWith("Departed"))
+                                        {
+                                            <text>Already Left</text>
+                                        }
+                                        else if (canLeaveEarly)
+                                        {
+                                            <text>Process Leave Early</text>
+                                        }
+                                        else
+                                        {
+                                            <text>Not Checked In</text>
+                                        }
                                     </button>
                                 </td>
                             </tr>
@@ -159,7 +190,25 @@ else
                     <div class="mb-3">
                         @{
                             var status = GetAttendanceStatus(SelectedLearner);
-                            var pillClass = $"pill {status.ToLower().Replace(" ", "-")}";
+                            var pillClass = "pill";
+                            
+                            // Determine appropriate CSS class based on status
+                            if (status.StartsWith("Left Early"))
+                            {
+                                pillClass += " left-early";
+                            }
+                            else if (status.StartsWith("Departed"))
+                            {
+                                pillClass += " departed";
+                            }
+                            else if (status == "Present")
+                            {
+                                pillClass += " present";
+                            }
+                            else
+                            {
+                                pillClass += " not-at-school";
+                            }
                         }
                         <div class="@pillClass d-inline-block">
                             <span>@status</span>
@@ -358,6 +407,17 @@ else
         color: black;
     }
 
+    .left-early {
+        background-color: white;
+        color: #dc3545; /* Red text */
+        border: 2px solid #dc3545; /* Red border outline */
+    }
+
+    .departed {
+        background-color: #198754; /* Green for normal departure */
+        color: white;
+    }
+
     .left {
         background-color: #2196F3;
         color: white;
@@ -388,6 +448,8 @@ else
     private List<Learner> AllLearners { get; set; } = [];
     private List<string> GradeFilters { get; set; } = ["All"];
     private Dictionary<Guid, bool> LearnerAttendanceStatus { get; set; } = new();
+    private Dictionary<Guid, DateTime> LearnerDepartureTime { get; set; } = new();
+    private Dictionary<Guid, bool> LearnerLeftEarly { get; set; } = new();
     private bool IsLoading { get; set; } = false;
 
     private IEnumerable<Learner> FilteredLearners => AllLearners
@@ -490,6 +552,8 @@ else
 
         // Clear existing data
         LearnerAttendanceStatus.Clear();
+        LearnerDepartureTime.Clear();
+        LearnerLeftEarly.Clear();
 
         // Get all attendance records for the current session
         var sessionWithRecords = await AttendanceService.GetAsync(_currentSession.Id);
@@ -501,11 +565,23 @@ else
             // Mark learners with a record as present (checked in)
             foreach (var record in sessionWithRecords.AttendanceRecords)
             {
-                // Only consider learners who have checked in (Start has a value)
-                if (record.Start.HasValue && record.AttendanceType == AttendanceType.CheckIn)
+                if (record.AttendanceType == AttendanceType.CheckIn && record.Start.HasValue)
                 {
                     LearnerAttendanceStatus[record.LearnerId] = true;
                     Console.WriteLine($"Learner {record.LearnerId} is marked as present (has checked in)");
+                }
+                else if (record.AttendanceType == AttendanceType.CheckOut && record.Start.HasValue)
+                {
+                    LearnerDepartureTime[record.LearnerId] = record.Start.Value;
+                    
+                    // Check if it was an early departure
+                    if (!string.IsNullOrEmpty(record.Notes) && 
+                        (record.Notes.Contains("Left early", StringComparison.OrdinalIgnoreCase) ||
+                         record.Notes.Contains("early leave", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        LearnerLeftEarly[record.LearnerId] = true;
+                        Console.WriteLine($"Learner {record.LearnerId} left early at {record.Start.Value}");
+                    }
                 }
             }
 
@@ -520,6 +596,19 @@ else
     private string GetAttendanceStatus(Learner? learner)
     {
         if (learner == null) return "Not At School";
+
+        // Check if the learner has left early
+        if (LearnerLeftEarly.TryGetValue(learner.Id, out var leftEarly) && leftEarly && 
+            LearnerDepartureTime.TryGetValue(learner.Id, out var departureTime))
+        {
+            return $"Left Early {TimeHelpers.ConvertToLocal(departureTime):HH:mm}";
+        }
+
+        // Check if the learner has departed (but not early)
+        if (LearnerDepartureTime.TryGetValue(learner.Id, out var normalDepartureTime))
+        {
+            return $"Departed {TimeHelpers.ConvertToLocal(normalDepartureTime):HH:mm}";
+        }
 
         // Check if the learner has checked in today
         if (LearnerAttendanceStatus.TryGetValue(learner.Id, out var isPresent) && isPresent)

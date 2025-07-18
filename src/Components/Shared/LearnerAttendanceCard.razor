@@ -18,7 +18,7 @@
                             case "present-not-signed-out": <text>Present</text>; break;
                             case "on-time-signout": <text>@TimeHelpers.ConvertToLocal(SignInTime).ToString("HH:mm")</text>; break;
                             case "early-signout": <text>@TimeHelpers.ConvertToLocal(SignInTime).ToString("HH:mm")</text>; break;
-                            case "leave-early": <text>Left Early</text>; break;
+                            case "leave-early": <text>Left Early @TimeHelpers.ConvertToLocal(SignInTime).ToString("HH:mm")</text>; break;
                             default: <text>@(IsAlreadySignedOut ? "Signed Out" : "On time")</text>; break;
                         }
                     }

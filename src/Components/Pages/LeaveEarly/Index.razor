@@ -184,7 +184,20 @@
                     <button type="button" class="btn-close" @onclick="CancelLeaveEarlyModal" aria-label="Close"></button>
                 </div>
 
-                <div class="modal-body">
+                <div class="modal-body position-relative">
+                    @if (_isSubmittingLeaveEarly)
+                    {
+                        <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" 
+                             style="background-color: rgba(255, 255, 255, 0.8); z-index: 1000;">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary mb-2" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <div class="fw-medium">Processing leave early request...</div>
+                            </div>
+                        </div>
+                    }
+                    
                     <EditForm Model="_leaveEarlyFormModel" OnValidSubmit="OnSubmitLeaveEarlyForm">
                         <DataAnnotationsValidator />
                         <ValidationSummary />
@@ -270,13 +283,23 @@
 
                         <!-- Submit Button -->
                         <div class="text-end mt-4">
-                            <button type="submit" class="btn btn-primary px-4">Confirm Leave</button>
+                            @if (_isSubmittingLeaveEarly)
+                            {
+                                <button type="button" class="btn btn-primary px-4" disabled>
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    Processing...
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="submit" class="btn btn-primary px-4">Confirm Leave</button>
+                            }
                         </div>
                     </EditForm>
                 </div>
 
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" @onclick="CancelLeaveEarlyModal">Cancel</button>
+                    <button class="btn btn-secondary" @onclick="CancelLeaveEarlyModal" disabled="@_isSubmittingLeaveEarly">Cancel</button>
                 </div>
             </div>
         </div>
@@ -314,6 +337,7 @@
     private List<Parent> _ParentsRecord { get; set; } = new();
 
     private bool _showLeaveEarlyFormModal = false;
+    private bool _isSubmittingLeaveEarly = false;
     private LeaveEarlyViewModel _leaveEarlyFormModel { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
@@ -467,7 +491,8 @@
     private void CancelLeaveEarlyModal()
     {
         _showLeaveEarlyFormModal = false;
-        _leaveEarlyFormModel = null;
+        _isSubmittingLeaveEarly = false;
+        _leaveEarlyFormModel = new LeaveEarlyViewModel();
     }
 
     private string Capitalize(string? input)
@@ -483,6 +508,9 @@
     {
         try
         {
+            _isSubmittingLeaveEarly = true;
+            StateHasChanged(); // Force UI update to show loading state
+            
             if (_leaveEarlyFormModel.Date == default)
                 _leaveEarlyFormModel.Date = DateTime.UtcNow;
 
@@ -536,11 +564,10 @@
                     }
                 }
 
+                await loadLeaveEarlyAttendances();
 
-                    await loadLeaveEarlyAttendances();
-
+                // Close modal and reset form
                 _showLeaveEarlyFormModal = false;
-
                 _leaveEarlyFormModel = new LeaveEarlyViewModel();
             }
            
@@ -548,6 +575,12 @@
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Error saving LeaveEarly: {ex.Message}");
+        }
+        finally
+        {
+            _isSubmittingLeaveEarly = false;
+            StateHasChanged(); // Force UI update to hide loading state
+        }
         }
     }
 

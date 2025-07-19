@@ -135,6 +135,7 @@ builder.Services.AddScoped<UiEventService>();
 builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<DailyRegisterService>();
+builder.Services.AddScoped<AcademicDevelopmentClassService>();
 builder.Services.AddScoped<ProtectedSessionStorage>();
 builder.Services.AddSingleton<IEventBus, EventBus>();
 builder.Services.AddScoped<IEventLogRepository, EventLogRepository>();

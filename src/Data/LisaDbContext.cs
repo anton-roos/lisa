@@ -38,6 +38,7 @@ public class LisaDbContext
     public DbSet<AttendanceRecord> AttendanceRecords { get; set; } = null!;
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
     public DbSet<LeaveEarly> LeaveEarlies { get; set; } = null!;
+    public DbSet<AcademicDevelopmentClass> AcademicDevelopmentClasses { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -475,6 +476,53 @@ public class LisaDbContext
                  .HasForeignKey(le => le.SchoolGradeId)
                  .OnDelete(DeleteBehavior.Restrict);
         });
+
+        // Academic Development Classes
+        modelBuilder.Entity<AcademicDevelopmentClass>(entity =>
+        {
+            entity.HasKey(adc => adc.Id);
+
+            entity.Property(adc => adc.DateTime)
+                .IsRequired()
+                .HasConversion(
+                    v => v.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(v, DateTimeKind.Utc) : v.ToUniversalTime(),
+                    v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+
+            entity.Property(adc => adc.CreatedAt)
+                .HasConversion(
+                    v => v.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(v, DateTimeKind.Utc) : v.ToUniversalTime(),
+                    v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+
+            entity.Property(adc => adc.UpdatedAt)
+                .HasConversion(
+                    v => v.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(v, DateTimeKind.Utc) : v.ToUniversalTime(),
+                    v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+
+            entity.HasOne(adc => adc.SchoolGrade)
+                .WithMany()
+                .HasForeignKey(adc => adc.SchoolGradeId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired();
+
+            entity.HasOne(adc => adc.Subject)
+                .WithMany()
+                .HasForeignKey(adc => adc.SubjectId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired();
+
+            entity.HasOne(adc => adc.Teacher)
+                .WithMany()
+                .HasForeignKey(adc => adc.TeacherId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(adc => adc.School)
+                .WithMany()
+                .HasForeignKey(adc => adc.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
+
+            entity.HasIndex(adc => new { adc.SchoolId, adc.DateTime });
+        });
         }
 
     public override int SaveChanges()
@@ -498,6 +546,20 @@ public class LisaDbContext
             if (entry.State == EntityState.Added)
             {
                 entry.Entity.CreatedAt = DateTime.UtcNow;
+            }
+
+            if (entry.State == EntityState.Modified)
+            {
+                entry.Entity.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        foreach (var entry in ChangeTracker.Entries<AcademicDevelopmentClass>())
+        {
+            if (entry.State == EntityState.Added)
+            {
+                entry.Entity.CreatedAt = DateTime.UtcNow;
+                entry.Entity.UpdatedAt = DateTime.UtcNow;
             }
 
             if (entry.State == EntityState.Modified)

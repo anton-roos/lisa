@@ -193,12 +193,17 @@ Changelog
 -- Fixed Inactive Learners getting sent Progress Feedback
 -- Fixed Date Oredering on Progress Feedbacks
 
-[x] State Management and Navigation
-[x] Progress Feedback (Printing)
-[] Sign in / out completion
-[] Daily Attedance completion
-[] Leave Early completion
-[] Per Period Attendance
-[] ADI (Creation Module)
+[] State Management (Results)
+[] Progress Feedback (Printing) Font smaller Print on one page
+[] Attendance if not signed in. Create a special record that says not sign in but present. (Active not at school for being present)
 [] ADI (Attendance Module + Adhoc Learners) Build on Per Period
-[] Reporting and Communication for Attendance
+[] Reporting and Communication (WA + Email + Print) for Attendance
+[] Clean up and refactor
+
+Daily Register --> Daily Attendance
+Add Period 1 - 12 to the per period attendance
+Stop Period automatically called after 30 mins
+Start with fresh list
+Stop Period functions like a submit button
+(ADI) - Academic Development Improvement
+(MAP) - Matric Achievement Project

@@ -1,5 +1,6 @@
 @page "/results/{ResultSetId:guid}"
 @using Lisa.Models.Entities
+@using Microsoft.AspNetCore.WebUtilities
 @inject NavigationManager Navigation
 @inject ResultService ResultService
 @inject ILogger<ResultsDetails> Logger
@@ -103,7 +104,72 @@
         }
     }
 
-    private void GoBack() => Navigation.NavigateTo("/results");
+    private void GoBack()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var uriParams = QueryHelpers.ParseQuery(uri.Query);
+
+        var queryParams = new List<string>();
+        string queryString = "/results";
+
+        // Preserve all filter parameters that were passed to this details page
+        if (uriParams.TryGetValue("viewMode", out var viewModeParam))
+        {
+            queryParams.Add($"viewMode={viewModeParam}");
+        }
+
+        if (uriParams.TryGetValue("gradeId", out var gradeIdParam))
+        {
+            queryParams.Add($"gradeId={gradeIdParam}");
+        }
+
+        if (uriParams.TryGetValue("subjectId", out var subjectIdParam))
+        {
+            queryParams.Add($"subjectId={subjectIdParam}");
+        }
+
+        if (uriParams.TryGetValue("teacherId", out var teacherIdParam))
+        {
+            queryParams.Add($"teacherId={teacherIdParam}");
+        }
+
+        if (uriParams.TryGetValue("fromDate", out var fromDateParam))
+        {
+            queryParams.Add($"fromDate={fromDateParam}");
+        }
+
+        if (uriParams.TryGetValue("toDate", out var toDateParam))
+        {
+            queryParams.Add($"toDate={toDateParam}");
+        }
+
+        if (uriParams.TryGetValue("learnerGradeId", out var learnerGradeIdParam))
+        {
+            queryParams.Add($"learnerGradeId={learnerGradeIdParam}");
+        }
+
+        if (uriParams.TryGetValue("learnerSearchText", out var learnerSearchTextParam))
+        {
+            queryParams.Add($"learnerSearchText={learnerSearchTextParam}");
+        }
+
+        if (uriParams.TryGetValue("assessmentTypeId", out var assessmentTypeIdParam))
+        {
+            queryParams.Add($"assessmentTypeId={assessmentTypeIdParam}");
+        }
+
+        if (uriParams.TryGetValue("selectedGrades", out var selectedGradesParam))
+        {
+            queryParams.Add($"selectedGrades={selectedGradesParam}");
+        }
+
+        if (queryParams.Any())
+        {
+            queryString += $"?{string.Join("&", queryParams)}";
+        }
+
+        Navigation.NavigateTo(queryString);
+    }
     private void Edit() => Navigation.NavigateTo($"/results/manage/{ResultSetId}");
     private async Task Delete()
     {

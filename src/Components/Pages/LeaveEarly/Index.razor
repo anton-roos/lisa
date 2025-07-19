@@ -509,7 +509,7 @@
         try
         {
             _isSubmittingLeaveEarly = true;
-            StateHasChanged(); // Force UI update to show loading state
+            await InvokeAsync(StateHasChanged); // Force UI update to show loading state
             
             if (_leaveEarlyFormModel.Date == default)
                 _leaveEarlyFormModel.Date = DateTime.UtcNow;
@@ -543,28 +543,33 @@
                         };
                         
                         await _attendanceRecordService.CreateAsync(checkoutRecord);
+                        
+                        // Update the existing record in our local list to show they've left
+                        var recordToUpdate = _leaveEarlyRecords.FirstOrDefault(r => r.Id == _leaveEarlyFormModel.AttendenceRecordId.Value);
+                        if (recordToUpdate != null)
+                        {
+                            recordToUpdate.End = DateTime.UtcNow;
+                        }
                     }
                 }
                 
                 var learner = await LearnerService.GetLearnerWithParentsAsync(_leaveEarlyFormModel.LearnerId);
                 if (learner != null && learner.Parents != null)
                 {
-                    _ParentsRecord = learner.Parents.ToList();
-                    @if (_ParentsRecord?.Any() == true)
+                    foreach (var contact in learner.Parents)
                     {
-                        @foreach (var contact in _ParentsRecord)
+                        if (!string.IsNullOrEmpty(contact.PrimaryEmail))
                         {
-                            if (contact.PrimaryEmail != null)
-                            {
-                                var emailBody = GenerateLeaveEarlyEmailBody(_leaveEarlyFormModel, learner, _selectedSchool);
-                                var subject = $"Early Leave Notification for {learner.Name} {learner.Surname}";
-                                await EmailService.SendEmailAsync(contact.PrimaryEmail, subject, emailBody, _selectedSchool.Id);
-                            }
+                            var emailBody = GenerateLeaveEarlyEmailBody(_leaveEarlyFormModel, learner, _selectedSchool);
+                            var subject = $"Leave Early Notification for {learner.Name} {learner.Surname}";
+                            await EmailService.SendEmailAsync(contact.PrimaryEmail, subject, emailBody, _selectedSchool.Id);
                         }
                     }
                 }
 
+                // Reload the data to ensure UI is current
                 await loadLeaveEarlyAttendances();
+                await InvokeAsync(StateHasChanged);
 
                 // Close modal and reset form
                 _showLeaveEarlyFormModal = false;
@@ -579,7 +584,7 @@
         finally
         {
             _isSubmittingLeaveEarly = false;
-            StateHasChanged(); // Force UI update to hide loading state
+            await InvokeAsync(StateHasChanged); // Force UI update to hide loading state
         }
     }
 

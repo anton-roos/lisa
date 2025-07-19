@@ -581,7 +581,6 @@
             _isSubmittingLeaveEarly = false;
             StateHasChanged(); // Force UI update to hide loading state
         }
-        }
     }
 
     private string GenerateLeaveEarlyEmailBody(LeaveEarlyViewModel leave, Learner learner, School school)
@@ -620,5 +619,4 @@
 
         return body;
     }
-
 }

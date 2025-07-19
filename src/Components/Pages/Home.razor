@@ -1,6 +1,7 @@
 ﻿@page "/"
 @rendermode InteractiveServer
 @using Lisa.Models.Entities
+@using Lisa.Components.Shared
 @inject SchoolService SchoolService
 @inject LearnerService LearnerService
 @inject ResultService ResultService
@@ -125,7 +126,7 @@
                                     <div class="card-body">
                                         <div class="row">
                                             <div class="col-md-8">
-                                                <AttendanceComponent />
+                                                <SignInAndOutComponent @key="_selectedSchool?.Id" SelectedSchool="@_selectedSchool" />
                                             </div>
                                         </div>
                                     </div>

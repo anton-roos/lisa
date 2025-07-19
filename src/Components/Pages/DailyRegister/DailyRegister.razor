@@ -1,11 +1,14 @@
 @page "/daily-register"
 @using Lisa.Models.Entities
 @using System.Security.Claims
+@using Lisa.Enums
 @inject SchoolService SchoolService
 @inject DailyRegisterService DailyRegisterService
 @inject RegisterClassService RegisterClassService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject LearnerService LearnerService
+@inject AttendanceService AttendanceService
+@inject AttendanceRecordService AttendanceRecordService
 @inject ILogger<DailyRegister> Logger
 @inherits EventAwareComponentBase
 
@@ -50,6 +53,19 @@ else
     }
     else if (SelectedRegisterClassId != Guid.Empty)
     {
+        @if (_todayAttendanceSession == null)
+        {
+            <div class="alert alert-warning">
+                <i class="oi oi-warning me-2"></i>
+                <strong>No attendance session found for today.</strong><br />
+                Attendance must be started from the Sign In/Out page before the daily register can be used.
+                <a href="/sign-in-and-out" class="btn btn-outline-primary btn-sm ms-2">
+                    <i class="oi oi-external-link"></i> Go to Sign In/Out
+                </a>
+            </div>
+        }
+        else
+        {
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
@@ -86,14 +102,16 @@ else
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var learner in FilteredLearners)
+                                @* Show learners who signed in first *@
+                                @foreach (var learner in FilteredSignedInLearners)
                                 {
                                     <tr>
                                         <td>@learner.Surname @learner.Name</td>
                                         <td>
                                             @{
-                                                var isPresent = _attendanceData.TryGetValue(learner.Id, out var attendance);
-                                                var pillClass = isPresent ? "present" : "absent";
+                                                var isDailyRegisterPresent = _dailyAttendanceData.TryGetValue(learner.Id, out var dailyAttendance) && 
+                                                                              dailyAttendance.Notes?.Contains("Present") == true;
+                                                var pillClass = isDailyRegisterPresent ? "present" : "absent";
                                                 var isProcessing = _processingLearnerIds.Contains(learner.Id);
                                             }
                                             <div @onclick="() => ToggleAttendance(learner)"
@@ -106,11 +124,32 @@ else
                                                 }
                                                 else
                                                 {
-                                                    @(isPresent ? "Present" : "Absent")
+                                                    @(isDailyRegisterPresent ? "Present" : "Absent")
                                                 }
                                             </div>
                                         </td>
                                     </tr>
+                                }
+                                
+                                @* Show learners who didn't sign in at the bottom with muted pills *@
+                                @if (FilteredNotSignedInLearners.Any())
+                                {
+                                    <tr>
+                                        <td colspan="2" class="pt-4">
+                                            <h6 class="text-muted">Not at School (Did not sign in)</h6>
+                                        </td>
+                                    </tr>
+                                    @foreach (var learner in FilteredNotSignedInLearners)
+                                    {
+                                        <tr class="opacity-75">
+                                            <td>@learner.Surname @learner.Name</td>
+                                            <td>
+                                                <div class="pill not-present" style="cursor: default;">
+                                                    Not Present
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
                                 }
                             </tbody>
                         </table>
@@ -118,6 +157,7 @@ else
                 }
             </div>
         </div>
+        }
     }
     else
     {
@@ -148,6 +188,12 @@ else
         color: white;
     }
 
+    .not-present {
+        background-color: #6c757d; /* Muted gray for not present */
+        color: white;
+        opacity: 0.7;
+    }
+
     .processing {
         opacity: 0.7;
         pointer-events: none;
@@ -163,14 +209,24 @@ else
     private bool IsLoading { get; set; } = false;
     private Guid SelectedRegisterClassId { get; set; } = Guid.Empty;
     private Guid? _currentUserId;
-    private Dictionary<Guid, AttendanceRecord> _attendanceData = new();
+    private Attendance? _todayAttendanceSession;
+    private Dictionary<Guid, AttendanceRecord> _attendanceData = new(); // Who signed in today
+    private Dictionary<Guid, AttendanceRecord> _dailyAttendanceData = new(); // Daily register attendance
     private HashSet<Guid> _processingLearnerIds = [];
 
-    private IEnumerable<Learner> FilteredLearners => _learners
-    .Where(l => string.IsNullOrEmpty(_searchTerm) ||
-    $"{l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
-    .OrderBy(l => l.Surname)
-    .ThenBy(l => l.Name);
+    private IEnumerable<Learner> FilteredSignedInLearners => _learners
+        .Where(l => _attendanceData.ContainsKey(l.Id)) // Only learners who signed in
+        .Where(l => string.IsNullOrEmpty(_searchTerm) ||
+            $"{l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(l => l.Surname)
+        .ThenBy(l => l.Name);
+
+    private IEnumerable<Learner> FilteredNotSignedInLearners => _learners
+        .Where(l => !_attendanceData.ContainsKey(l.Id)) // Only learners who didn't sign in
+        .Where(l => string.IsNullOrEmpty(_searchTerm) ||
+            $"{l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(l => l.Surname)
+        .ThenBy(l => l.Name);
 
     protected override async Task OnInitializedAsync()
     {
@@ -207,6 +263,8 @@ else
             _selectedRegisterClass = null;
             _learners.Clear();
             _attendanceData.Clear();
+            _dailyAttendanceData.Clear();
+            _todayAttendanceSession = null;
         }
 
         await base.HandleEventAsync(eventName, payload);
@@ -246,12 +304,47 @@ else
             _selectedRegisterClass = _registerClasses.FirstOrDefault(rc => rc.Id == registerClassId);
             _learners = await LearnerService.GetByRegisterClassAsync(registerClassId);
 
-            // Get today's attendance records for these learners
-            var learnerIds = _learners.Select(l => l.Id).ToList();
-            // _attendanceData = await AttendanceRecordService.Get(
-            // registerClassId,
-            // learnerIds,
-            // DateTime.UtcNow.Date);
+            // Load today's attendance session to see who signed in
+            // Use the same logic as SignInAndOut component - try both methods
+            var todayAttendance = await AttendanceService.GetTodaysAttendance(_selectedSchool.Id);
+            if (todayAttendance != null)
+            {
+                var activeAttendance = await AttendanceService.GetTodaysAttendanceAsync(_selectedSchool.Id);
+                _todayAttendanceSession = activeAttendance ?? todayAttendance;
+            }
+
+            // Clear previous data
+            _attendanceData.Clear();
+            _dailyAttendanceData.Clear();
+
+            if (_todayAttendanceSession?.AttendanceRecords != null)
+            {
+                // Process attendance records to identify who signed in
+                foreach (var record in _todayAttendanceSession.AttendanceRecords)
+                {
+                    if (record.AttendanceType == AttendanceType.CheckIn && record.Start.HasValue)
+                    {
+                        // This learner signed in today
+                        var learner = _learners.FirstOrDefault(l => l.Id == record.LearnerId);
+                        if (learner != null)
+                        {
+                            _attendanceData[learner.Id] = record;
+                        }
+                    }
+                    else if (record.AttendanceType == AttendanceType.Register && record.Start.HasValue)
+                    {
+                        // This learner has been marked present/absent in daily register
+                        var learner = _learners.FirstOrDefault(l => l.Id == record.LearnerId);
+                        if (learner != null)
+                        {
+                            _dailyAttendanceData[learner.Id] = record;
+                        }
+                    }
+                }
+            }
+
+            Logger.LogInformation("Loaded {LearnerCount} learners for register class {RegisterClassId}. {SignedInCount} signed in today.", 
+                _learners.Count, registerClassId, _attendanceData.Count);
         }
         catch (Exception ex)
         {
@@ -266,8 +359,15 @@ else
 
     private async Task ToggleAttendance(Learner learner)
     {
-        if (_selectedSchool == null || _selectedRegisterClass == null) return;
+        if (_selectedSchool == null || _selectedRegisterClass == null || _todayAttendanceSession == null) return;
         if (_processingLearnerIds.Contains(learner.Id)) return; // Prevent double-clicks
+        
+        // Only allow attendance toggle for learners who signed in
+        if (!_attendanceData.ContainsKey(learner.Id))
+        {
+            Logger.LogWarning("Cannot toggle attendance for learner {LearnerId} who did not sign in today", learner.Id);
+            return;
+        }
 
         try
         {
@@ -275,31 +375,48 @@ else
             _processingLearnerIds.Add(learner.Id);
             await InvokeAsync(StateHasChanged);
 
-            // // Determine current attendance status
-            // var isCurrentlyPresent = _attendanceData.TryGetValue(learner.Id, out var existingAttendance) &&
-            //                          existingAttendance.IsPresent;
+            // Determine current daily register attendance status
+            var isCurrentlyPresent = _dailyAttendanceData.TryGetValue(learner.Id, out var existingDailyAttendance) &&
+                                     existingDailyAttendance.Notes?.Contains("Present") == true;
 
-            // // Toggle attendance
-            // var newAttendanceStatus = !isCurrentlyPresent;
+            // Toggle attendance
+            var newAttendanceStatus = !isCurrentlyPresent;
 
-            // Record the new attendance - this immediately updates the database
-            // var attendance = await DailyRegisterService.RecordAttendanceAsync(
-            // learner.Id,
-            // _selectedSchool.Id,
-            // _selectedRegisterClass.Id,
-            // newAttendanceStatus,
-            // _currentUserId);
+            // Create or update the daily register attendance record
+            var dailyAttendanceRecord = new AttendanceRecord
+            {
+                Id = existingDailyAttendance?.Id ?? Guid.NewGuid(),
+                LearnerId = learner.Id,
+                AttendanceId = _todayAttendanceSession.Id,
+                AttendanceType = AttendanceType.Register,
+                Start = DateTime.UtcNow,
+                Notes = newAttendanceStatus ? "Present" : "Absent",
+                CreatedAt = existingDailyAttendance?.CreatedAt ?? DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CreatedBy = existingDailyAttendance?.CreatedBy ?? _currentUserId,
+                UpdatedBy = _currentUserId
+            };
+
+            // Save to database
+            if (existingDailyAttendance == null)
+            {
+                await AttendanceRecordService.CreateAsync(dailyAttendanceRecord);
+            }
+            else
+            {
+                await AttendanceRecordService.UpdateAsync(dailyAttendanceRecord);
+            }
 
             // Update our local cache
-            // _attendanceData[learner.Id] = attendance;
-            //
-            // // Log the successful update for debugging/audit
-            // Logger.LogInformation("Attendance for learner {LearnerId} updated to {Status}",
-            // learner.Id, newAttendanceStatus ? "Present" : "Absent");
+            _dailyAttendanceData[learner.Id] = dailyAttendanceRecord;
+
+            // Log the successful update for debugging/audit
+            Logger.LogInformation("Daily register attendance for learner {LearnerId} updated to {Status}",
+                learner.Id, newAttendanceStatus ? "Present" : "Absent");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error toggling attendance for learner {LearnerId}", learner.Id);
+            Logger.LogError(ex, "Error toggling daily register attendance for learner {LearnerId}", learner.Id);
         }
         finally
         {
@@ -333,7 +450,9 @@ else
             SelectedRegisterClassId = Guid.Empty;
             _learners.Clear();
             _attendanceData.Clear();
+            _dailyAttendanceData.Clear();
             _selectedRegisterClass = null;
+            _todayAttendanceSession = null;
             await InvokeAsync(StateHasChanged);
         }
     }

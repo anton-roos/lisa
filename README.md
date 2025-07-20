@@ -1,5 +1,7 @@
 # Learner Information System Administrator (LISA)
 
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/anton-roos/lisa?utm_source=oss&utm_medium=github&utm_campaign=anton-roos%2Flisa&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+
 ## User Types
  - System Administrator
  - Principal

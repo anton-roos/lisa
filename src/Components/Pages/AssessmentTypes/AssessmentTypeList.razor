@@ -2,14 +2,18 @@
 @using Lisa.Models.Entities
 @inject AssessmentTypeService AssessmentTypeService
 @inject NavigationManager Navigation
-@inject IJSRuntime JSRuntime
+@inject IJSRuntime JsRuntime
 
 <PageTitle>Assessment Types</PageTitle>
 <h3>Assessment Types</h3>
 
-@if (AssessmentTypes == null)
+@if (_loading)
 {
-    <p>Loading...</p>
+    <div class="d-flex justify-content-center my-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
 }
 else if (!AssessmentTypes.Any())
 {
@@ -46,7 +50,8 @@ else
 </div>
 
 @code {
-    private List<AssessmentType>? AssessmentTypes { get; set; }
+    private List<AssessmentType> AssessmentTypes { get; set; } = [];
+    private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -55,7 +60,16 @@ else
 
     private async Task LoadAssessmentTypes()
     {
-        AssessmentTypes = await AssessmentTypeService.GetAssessmentTypesAsync();
+        try
+        {
+            _loading = true;
+            AssessmentTypes = await AssessmentTypeService.GetAssessmentTypesAsync();
+        }
+        finally
+        {
+            _loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private void EditAssessmentType(int id)
@@ -70,11 +84,21 @@ else
 
     private async Task DeleteAssessmentType(int id)
     {
-        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete assessment type {id}?");
+        var confirmed = await JsRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete assessment type {id}?");
         if (confirmed)
         {
-            await AssessmentTypeService.DeleteAssessmentTypeAsync(id);
-            await LoadAssessmentTypes();
+            try
+            {
+                _loading = true;
+                await InvokeAsync(StateHasChanged);
+                await AssessmentTypeService.DeleteAssessmentTypeAsync(id);
+                await LoadAssessmentTypes();
+            }
+            finally
+            {
+                _loading = false;
+                await InvokeAsync(StateHasChanged);
+            }
         }
     }
 }

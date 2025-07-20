@@ -1,5 +1,7 @@
 # Learner Information System Administrator (LISA)
 
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/anton-roos/lisa?utm_source=oss&utm_medium=github&utm_campaign=anton-roos%2Flisa&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+
 ## User Types
  - System Administrator
  - Principal
@@ -195,7 +197,7 @@ Changelog
 
 [X] State Management (Results)
 [X] Progress Feedback (Printing) Font smaller Print on one page
-[] Attendance if not signed in. Create a special record that says not sign in but present. (Active not at school for being present)
+[X] Attendance if not signed in. Create a special record that says not sign in but present. (Active not at school for being present)
 [] ADI (Attendance Module + Adhoc Learners) Build on Per Period
 [] Reporting and Communication (WA + Email + Print) for Attendance
 [] Clean up and refactor

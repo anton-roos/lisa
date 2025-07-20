@@ -2,9 +2,7 @@
 public class TemplateRenderService
 (
     ILogger<EmailRendererService> logger,
-    ProgressFeedbackService progressFeedbackService,
-    UserService userService,
-    RazorLightViewToStringRenderer razorViewToStringRenderer
+    ProgressFeedbackService progressFeedbackService
 )
 {
     public async Task<string> RenderProgressFeedbackAsync(List<Guid> learnerIds, DateTime? fromDate = null, DateTime? toDate = null)
@@ -26,7 +24,7 @@ public class TemplateRenderService
 
             var viewKey = "Lisa.Templates._ProgressFeedbackTemplate.cshtml";
 
-            var renderedHtml = await razorViewToStringRenderer.RenderViewToStringAsync(viewKey, feedback);
+            var renderedHtml = await RazorLightViewToStringRenderer.RenderViewToStringAsync(viewKey, feedback);
             foreach (var placeholder in placeHolders)
             {
                 if (renderedHtml.Contains(placeholder.Key))

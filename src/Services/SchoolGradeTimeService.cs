@@ -16,7 +16,7 @@ public class SchoolGradeTimeService(
             var learner = await context.Learners
                 .AsNoTracking()
                 .Include(l => l.RegisterClass)
-                .ThenInclude(rc => rc.SchoolGrade)
+                .ThenInclude(rc => rc!.SchoolGrade)
                 .FirstOrDefaultAsync(l => l.Id == learnerId);
 
             if (learner?.RegisterClass?.SchoolGrade != null)

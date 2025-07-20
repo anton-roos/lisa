@@ -8,7 +8,7 @@
     [Parameter] public EventCallback<Guid> OnResultClick { get; set; }
     [Parameter] public Func<ResultSet, string> GetResultSetStatusColor { get; set; } = _ => "secondary";
     [Parameter] public bool RequireDateRange { get; set; } = true;
-    [Parameter] public bool HasValidDateRange { get; set; } = false;
+    [Parameter] public bool HasValidDateRange { get; set; }
 }
 
 @if (RequireDateRange && !HasValidDateRange)
@@ -44,7 +44,7 @@ else
                                 @learner.Name @learner.Surname
                             </a>
                         </h6>
-                        @if (learner.RegisterClass?.SchoolGrade?.SystemGrade?.Name != null)
+                        @if (learner.RegisterClass?.SchoolGrade?.SystemGrade.Name != null)
                         {
                             <small class="text-muted">@learner.RegisterClass.SchoolGrade.SystemGrade.Name</small>
                         }

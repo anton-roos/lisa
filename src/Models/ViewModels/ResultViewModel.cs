@@ -10,7 +10,7 @@ public class ResultViewModel
     [Range(0, 100, ErrorMessage = "Score must be between 0 and 100.")]
     public int? Score { get; set; }
 
-    public bool Absent { get; set; } = false;
+    public bool Absent { get; set; }
     public string? AbsentReason { get; set; }
 
     [Required(ErrorMessage = "Please enter an Assessment Type.")]
@@ -26,7 +26,6 @@ public class ResultViewModel
 public class ResultsCaptureViewModel
 {
     public List<SchoolGrade> SchoolGrades { get; set; } = [];
-    public List<Subject> Subjects { get; set; } = [];
     public List<Subject> FilteredSubjects { get; set; } = [];
     public List<LearnerResultViewModel> LearnerResults { get; set; } = [];
     public SchoolGrade? SchoolGrade { get; set; } = new();

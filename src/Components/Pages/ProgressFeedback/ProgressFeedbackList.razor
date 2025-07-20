@@ -1,7 +1,6 @@
 ﻿@page "/progress-feedback"
 @using DinkToPdf
 @using DinkToPdf.Contracts
-@using Lisa.Models
 @using Lisa.Models.EmailModels
 @using Lisa.Models.Entities
 @using Microsoft.AspNetCore.WebUtilities
@@ -13,7 +12,7 @@
 @inject SchoolGradeService SchoolGradeService
 @inherits EventAwareComponentBase
 @inject IJSRuntime JsRuntime
-@inject TemplateRenderService templateRenderService
+@inject TemplateRenderService TemplateRenderService
 @inject IConverter Converter
 
 <PageTitle>Progress Feedback List</PageTitle>
@@ -139,7 +138,7 @@
                                         <i class="bi bi-eye"></i>
                                     </button>
                                     <button class="btn btn-danger btn-sm" data-bs-toggle='tooltip'
-                                    title='Download PDF' @onclick="()=>DownloadPDF(feedback.LearnerId)">
+                                    title='Download PDF' @onclick="()=>DownloadPdf(feedback.LearnerId)">
                                         <i class="bi bi-file-earmark-pdf"></i>
                                     </button>
                                 </td>
@@ -160,17 +159,15 @@
     private List<ProgressFeedbackListItem>? _filteredProgressFeedbackList;
     private School? _selectedSchool;
     private bool _isLoading;
-    private Guid? _selectedGradeId = null;
-    private int? _selectedSubjectId = null;
+    private Guid? _selectedGradeId;
+    private int? _selectedSubjectId;
     private string _searchTerm = "";
     private List<Subject> _subjects = [];
     private List<SchoolGrade> _grades = [];
-    private DateTime? _fromDate = null;
-    private DateTime? _toDate = null;
+    private DateTime? _fromDate;
+    private DateTime? _toDate;
     private List<Guid> _selectedLearnerIds = new();
     private const int MaxSelection = 10;
-    private string? _warningMessage;
-    private bool shouldTriggerPdf = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -182,36 +179,34 @@
             var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
             var uriParams = QueryHelpers.ParseQuery(uri.Query);
 
-            var queryParams = new List<string>();
-
-            if (uriParams.TryGetValue("fromDate", out var fromDateParam) &&
-                DateTime.TryParse(fromDateParam, out var parsedFromDate))
+            if (uriParams.TryGetValue("fromDate", out var fromDateParam) 
+                && DateTime.TryParse(fromDateParam, out var parsedFromDate))
             {
                 _fromDate = parsedFromDate.ToUniversalTime();
             }
 
-            if (uriParams.TryGetValue("toDate", out var toDateParam) &&
-                DateTime.TryParse(toDateParam, out var parsedToDate))
+            if (uriParams.TryGetValue("toDate", out var toDateParam) 
+                && DateTime.TryParse(toDateParam, out var parsedToDate))
             {
                 _toDate = parsedToDate.ToUniversalTime();
             }
 
-            if (uriParams.TryGetValue("grade", out var gradeParam) &&
-    Guid.TryParse(gradeParam, out var parsedGrade))
+            if (uriParams.TryGetValue("grade", out var gradeParam) 
+                && Guid.TryParse(gradeParam, out var parsedGrade))
             {
                 _selectedGradeId = parsedGrade;
             }
 
-            if (uriParams.TryGetValue("subject", out var subjectParam) &&
-                int.TryParse(subjectParam, out var parsedSubject))
+            if (uriParams.TryGetValue("subject", out var subjectParam) 
+                && int.TryParse(subjectParam, out var parsedSubject))
             {
                 _selectedSubjectId = parsedSubject;
             }
 
-            if (uriParams.TryGetValue("learner", out var learnerParam) &&
-            !StringValues.IsNullOrEmpty(learnerParam))
+            if (uriParams.TryGetValue("learner", out var learnerParam) 
+                && !StringValues.IsNullOrEmpty(learnerParam))
             {
-                _searchTerm = learnerParam;
+                _searchTerm = learnerParam!;
             }
             StateHasChanged();
             await LoadDropdowns();
@@ -275,7 +270,7 @@
 
     private async Task FilterChanged(ChangeEventArgs e)
     {
-        _searchTerm = e?.Value?.ToString() ?? string.Empty;
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
         FilterFeedbackInMemory();
         await InvokeAsync(StateHasChanged);
     }
@@ -399,39 +394,34 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task DownloadPDF(Guid learnerId)
+    private async Task DownloadPdf(Guid learnerId)
     {
         var learnerIds = new List<Guid> { learnerId };
-        var progressFeedbackHtml = await templateRenderService.RenderProgressFeedbackAsync(learnerIds, _fromDate, _toDate);
+        var progressFeedbackHtml = await TemplateRenderService.RenderProgressFeedbackAsync(learnerIds, _fromDate, _toDate);
         if (string.IsNullOrEmpty(progressFeedbackHtml))
             return;
 
-        await GeneratePDF(progressFeedbackHtml);
+        await GeneratePdf(progressFeedbackHtml);
     }
 
     private void ToggleLearnerId(Guid learnerId, ChangeEventArgs e)
     {
-        var isChecked = (bool)e.Value;
+        var isChecked = (bool)e.Value!;
 
         if (isChecked)
         {
-            // Check the limit
             if (_selectedLearnerIds.Count >= MaxSelection)
             {
-                _warningMessage = $"You can select up to {MaxSelection} learners.";
                 StateHasChanged();
-                return; // prevent selection
+                return;
             }
 
             if (!_selectedLearnerIds.Contains(learnerId))
                 _selectedLearnerIds.Add(learnerId);
-
-            _warningMessage = null;
         }
         else
         {
             _selectedLearnerIds.Remove(learnerId);
-            _warningMessage = null;
         }
     }
 
@@ -443,48 +433,26 @@
         .Select(pf => pf.LearnerId)
         .ToList();
 
-        var progressFeedbackHtml = await templateRenderService
-            .RenderProgressFeedbackAsync(learnerIds, _fromDate, _toDate);
+        var progressFeedbackHtml = await TemplateRenderService
+            .RenderProgressFeedbackAsync(learnerIds ?? [], _fromDate, _toDate);
 
         if (string.IsNullOrEmpty(progressFeedbackHtml))
             return;
 
-        await GeneratePDF(progressFeedbackHtml);
+        await GeneratePdf(progressFeedbackHtml);
     }
 
 
     private async Task HandleDownloadSelected()
     {
-        var progressFeedbackHtml = await templateRenderService.RenderProgressFeedbackAsync(_selectedLearnerIds, _fromDate, _toDate);
+        var progressFeedbackHtml = await TemplateRenderService.RenderProgressFeedbackAsync(_selectedLearnerIds, _fromDate, _toDate);
         if (string.IsNullOrEmpty(progressFeedbackHtml))
             return;
 
-        await GeneratePDF(progressFeedbackHtml);
+        await GeneratePdf(progressFeedbackHtml);
     }
 
-    // private async Task GeneratePDF(string htmlContent)
-    // {
-    //     var converter = new SynchronizedConverter(new PdfTools());
-    //     var doc = new HtmlToPdfDocument
-    //         {
-    //             GlobalSettings = new GlobalSettings
-    //             {
-    //                 PaperSize = PaperKind.A4,
-    //                 Orientation = DinkToPdf.Orientation.Portrait
-    //             },
-    //             Objects = { new ObjectSettings { HtmlContent = htmlContent } }
-    //         };
-    //     var fileBytes = converter.Convert(doc);
-
-    //     await JsRuntime.InvokeVoidAsync(
-    //         "downloadFileFromBytes",
-    //         "progress-feedback.pdf",
-    //         "application/pdf",
-    //         fileBytes
-    //     );
-    // }
-
-    private async Task GeneratePDF(string htmlContent)
+    private async Task GeneratePdf(string htmlContent)
     {
         var doc = new HtmlToPdfDocument
             {

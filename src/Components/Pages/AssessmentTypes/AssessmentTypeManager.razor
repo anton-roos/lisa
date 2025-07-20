@@ -6,19 +6,22 @@
 <PageTitle>Assessment Type Manager</PageTitle>
 <h3>@(IsEdit ? "Edit Assessment Type" : "Create Assessment Type")</h3>
 
-@if (loading)
+@if (_loading)
 {
     <p>Loading...</p>
 }
 else
 {
-    <EditForm Model="assessmentType" OnValidSubmit="HandleValidSubmit">
+    <EditForm Model="_assessmentType" OnValidSubmit="HandleValidSubmit">
         <DataAnnotationsValidator />
         <ValidationSummary />
 
         <div class="mb-3">
             <label for="name" class="form-label">Name</label>
-            <InputText id="name" class="form-control" @bind-Value="assessmentType.Name" />
+            @if (_assessmentType != null)
+            {
+                <InputText id="name" class="form-control" @bind-Value="_assessmentType.Name"/>
+            }
         </div>
 
         <button type="submit" class="btn btn-primary">@(IsEdit ? "Update" : "Create")</button>
@@ -28,19 +31,20 @@ else
 
 @code {
     [Parameter]
-    public int? assessmentTypeId { get; set; }
+    public int? AssessmentTypeId { get; set; }
 
-    private bool IsEdit => assessmentTypeId.HasValue;
-    private bool loading = false;
-    private AssessmentType assessmentType = new();
+    private bool IsEdit => AssessmentTypeId.HasValue;
+    private bool _loading;
+    private AssessmentType? _assessmentType = new();
 
     protected override async Task OnInitializedAsync()
     {
         if (IsEdit)
         {
-            loading = true;
-            assessmentType = await AssessmentTypeService.GetAssessmentTypeByIdAsync(assessmentTypeId.Value);
-            loading = false;
+            _loading = true;
+            if (AssessmentTypeId != null)
+                _assessmentType = await AssessmentTypeService.GetAssessmentTypeByIdAsync(AssessmentTypeId.Value);
+            _loading = false;
         }
     }
 
@@ -48,11 +52,11 @@ else
     {
         if (IsEdit)
         {
-            await AssessmentTypeService.UpdateAssessmentTypeAsync(assessmentType);
+            if (_assessmentType != null) await AssessmentTypeService.UpdateAssessmentTypeAsync(_assessmentType);
         }
         else
         {
-            await AssessmentTypeService.CreateAssessmentTypeAsync(assessmentType);
+            if (_assessmentType != null) await AssessmentTypeService.CreateAssessmentTypeAsync(_assessmentType);
         }
         Navigation.NavigateTo("/assessment-types");
     }

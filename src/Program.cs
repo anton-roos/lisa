@@ -2,7 +2,6 @@ using DinkToPdf;
 using DinkToPdf.Contracts;
 using Lisa.Components;
 using Lisa.Data;
-using Lisa.Events;
 using Lisa.Middleware;
 using Lisa.Models.Entities;
 using Lisa.Repositories;
@@ -137,7 +136,6 @@ builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<DailyRegisterService>();
 builder.Services.AddScoped<AcademicDevelopmentClassService>();
 builder.Services.AddScoped<ProtectedSessionStorage>();
-builder.Services.AddSingleton<IEventBus, EventBus>();
 builder.Services.AddScoped<IEventLogRepository, EventLogRepository>();
 builder.Services.AddSingleton<ILoginStore, InMemoryLoginStore>();
 builder.Services.AddScoped<SystemGradeService>();
@@ -146,7 +144,6 @@ builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<EmailCampaignService>();
 builder.Services.AddScoped<EmailRendererService>();
 builder.Services.AddScoped<ProgressFeedbackService>();
-builder.Services.AddScoped<RazorLightViewToStringRenderer>();
 builder.Services.AddScoped<AssessmentTypeService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<AttendanceRecordService>();
@@ -187,20 +184,6 @@ app.UseMiddleware<BlazorAuthMiddleware>();
 app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapControllers();
-
-var eventBus = app.Services.GetRequiredService<IEventBus>();
-try
-{
-    await eventBus.PublishAsync(new ApplicationStartedEvent
-    {
-        Environment = app.Environment.EnvironmentName,
-    });
-    Log.Information("Application started event published.");
-}
-catch (Exception ex)
-{
-    Log.Fatal(ex, "Error publishing application started event.");
-}
 
 try
 {

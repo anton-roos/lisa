@@ -1,5 +1,4 @@
 ﻿using Lisa.Enums;
-using Lisa.Models.Entities;
 using System.ComponentModel.DataAnnotations;
 
 namespace Lisa.Models.ViewModels
@@ -21,10 +20,10 @@ namespace Lisa.Models.ViewModels
         [EnumDataType(typeof(PickUpType), ErrorMessage = "Invalid pick-up type.")]
         [Range(1, int.MaxValue, ErrorMessage = "Please select a valid pick-up type.")]
         public PickUpType PickUpType { get; set; }
-        public string? PickupFamilyMemberIDNo { get; set; }
+        public string? PickupFamilyMemberIdNo { get; set; }
         public string? PickupFamilyMemberFirstname { get; set; }
         public string? PickupFamilyMemberSurname { get; set; }
-        public string? PickupUberTransportIDNo { get; set; }
+        public string? PickupUberTransportIdNo { get; set; }
         public string? PickupUberTransportRegNo { get; set; }
     }
 }

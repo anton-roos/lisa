@@ -132,8 +132,8 @@ public class EmailService(SchoolService schoolService, ILogger<EmailService> log
         var mailMessage = new MailMessage
         {
             From = new MailAddress(fromEmailAddress, senderName),
-            Subject = subject ?? "No Subject",
-            Body = body ?? string.Empty,
+            Subject = subject,
+            Body = body,
             IsBodyHtml = true,
             BodyEncoding = System.Text.Encoding.UTF8,
             Priority = MailPriority.Normal

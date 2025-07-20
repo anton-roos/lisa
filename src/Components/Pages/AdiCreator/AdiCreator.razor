@@ -38,9 +38,9 @@ else
                                 value="@(_adiModel.SchoolGradeId?.ToString() ?? "")"
                                 @onchange="@((e) => GradeSelectionChanged(e))">
                             <option value="">-- Select Grade --</option>
-                            @foreach (var grade in _schoolGrades.OrderBy(g => g.SystemGrade?.SequenceNumber))
+                            @foreach (var grade in _schoolGrades.OrderBy(g => g.SystemGrade.SequenceNumber))
                             {
-                                <option value="@grade.Id">@grade.SystemGrade?.Name</option>
+                                <option value="@grade.Id">@grade.SystemGrade.Name</option>
                             }
                         </select>
                         @if (_validationErrors.ContainsKey("Grade"))
@@ -147,7 +147,7 @@ else
                             {
                                 <tr>
                                     <td>@adi.DateTime.ToString("dd MMM yyyy HH:mm")</td>
-                                    <td>@adi.SchoolGrade?.SystemGrade?.Name</td>
+                                    <td>@adi.SchoolGrade?.SystemGrade.Name</td>
                                     <td>@adi.Subject?.Name</td>
                                     <td>@(adi.Teacher != null ? $"{adi.Teacher.Surname}, {adi.Teacher.Name}" : "Not assigned")</td>
                                     <td>
@@ -218,9 +218,9 @@ else
     private List<AcademicDevelopmentClass> _recentAdis = [];
     private AdiModel _adiModel = new();
     private Dictionary<string, string> _validationErrors = new();
-    private bool _isLoading = false;
-    private bool _showSuccessModal = false;
-    private bool _showErrorModal = false;
+    private bool _isLoading;
+    private bool _showSuccessModal;
+    private bool _showErrorModal;
     private string _errorMessage = "";
     private Guid? _currentUserId;
 

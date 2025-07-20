@@ -2,7 +2,6 @@
 @using Lisa.Models.Entities
 @inject NavigationManager Navigation
 @inject SchoolService SchoolService
-@inject IEventBus EventBus
 
 <AuthorizeView Roles="@($"{Roles.SystemAdministrator}")">
     <Authorized>
@@ -31,7 +30,6 @@
 
     private async Task HandleValidSubmit()
     {
-        await EventBus.PublishAsync(new AddSchoolEvent { School = _school });
         await SchoolService.AddSchoolAsync(_school);
         Navigation.NavigateTo("/schools");
     }

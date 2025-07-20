@@ -5,7 +5,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public partial class AttendanceService(
+public class AttendanceService
+(
     IDbContextFactory<LisaDbContext> dbContextFactory,
     ILogger<AttendanceService> logger
 )

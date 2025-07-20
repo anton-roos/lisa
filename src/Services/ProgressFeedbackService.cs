@@ -161,7 +161,7 @@ public class ProgressFeedbackService
                         .Take(6)
                         .ToList();
 
-                    if (filteredResults?.Count <= 0) continue;
+                    if (filteredResults.Count <= 0) continue;
 
                     var subjectName = filteredResults.First().ResultSet!.Subject!.Name!;
                     resultsBySubject[subjectName] = filteredResults;

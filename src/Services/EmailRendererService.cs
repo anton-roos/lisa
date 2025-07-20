@@ -2,14 +2,14 @@ using Lisa.Models.Entities;
 using Lisa.Models.ViewModels;
 
 namespace Lisa.Services;
+
 public class EmailRendererService
 (
     ILogger<EmailRendererService> logger,
     ProgressFeedbackService progressFeedbackService,
     UserService userService,
     LearnerService learnerService,
-    SchoolService schoolService,
-    RazorLightViewToStringRenderer razorViewToStringRenderer
+    SchoolService schoolService
 )
 {
     public async Task<string> RenderProgressFeedbackAsync(Guid learnerId, DateTime? fromDate = null, DateTime? toDate = null)
@@ -29,7 +29,7 @@ public class EmailRendererService
 
             var viewKey = "Lisa.Components.Pages.Shared._ProgressFeedback.cshtml";
 
-            var renderedHtml = await razorViewToStringRenderer.RenderViewToStringAsync(viewKey, model);
+            var renderedHtml = await RazorLightViewToStringRenderer.RenderViewToStringAsync(viewKey, model);
             return renderedHtml;
         }
         catch (Exception ex)
@@ -62,7 +62,7 @@ public class EmailRendererService
 
         var viewKey = "Lisa.Components.Pages.Shared._TestEmail.cshtml";
 
-        var renderedHtml = await razorViewToStringRenderer.RenderViewToStringAsync(viewKey, model);
+        var renderedHtml = await RazorLightViewToStringRenderer.RenderViewToStringAsync(viewKey, model);
         return renderedHtml;
     }
 
@@ -71,5 +71,4 @@ public class EmailRendererService
         await Task.Delay(1000);
         return string.Empty;
     }
-
 }

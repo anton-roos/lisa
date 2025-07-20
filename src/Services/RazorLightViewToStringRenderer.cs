@@ -1,15 +1,15 @@
 using RazorLight;
 
-namespace  Lisa.Services;
+namespace Lisa.Services;
 
-public class RazorLightViewToStringRenderer
+public static class RazorLightViewToStringRenderer
 {
-    private readonly RazorLightEngine _engine = new RazorLightEngineBuilder()
+    private static readonly RazorLightEngine _engine = new RazorLightEngineBuilder()
         .UseEmbeddedResourcesProject(typeof(RazorLightViewToStringRenderer))
         .UseMemoryCachingProvider()
         .Build();
 
-    public async Task<string> RenderViewToStringAsync<TModel>(string viewKey, TModel model)
+    public static async Task<string> RenderViewToStringAsync<TModel>(string viewKey, TModel model)
     {
         return await _engine.CompileRenderAsync(viewKey, model);
     }

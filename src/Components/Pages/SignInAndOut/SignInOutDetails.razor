@@ -197,7 +197,7 @@
 
     private RenderFragment GetAttendanceStatusBadge(AttendanceRecord record)
     {
-        return _ =>
+        return __builder =>
         {
             if (record.Start.HasValue && record.End.HasValue)
             {

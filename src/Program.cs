@@ -144,7 +144,6 @@ builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<EmailCampaignService>();
 builder.Services.AddScoped<EmailRendererService>();
 builder.Services.AddScoped<ProgressFeedbackService>();
-builder.Services.AddScoped<RazorLightViewToStringRenderer>();
 builder.Services.AddScoped<AssessmentTypeService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<AttendanceRecordService>();

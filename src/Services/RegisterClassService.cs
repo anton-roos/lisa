@@ -173,6 +173,7 @@ public class RegisterClassService
                 registerClass.UserId = model.TeacherId;
 
                 registerClass.CompulsorySubjects?.Clear();
+
                 foreach (var subject in selectedSubjects)
                 {
                     registerClass.CompulsorySubjects?.Add(subject);

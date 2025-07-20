@@ -553,8 +553,13 @@
         };
         await AttendanceRecordService.CreateAsync(signOut);
         
-        _currentSession.AttendanceRecords = new List<AttendanceRecord>();
+        if (_currentSession.AttendanceRecords == null)
+        {
+            _currentSession.AttendanceRecords = new List<AttendanceRecord>();
+        }
+        
         _currentSession.AttendanceRecords.Add(signOut);
+        
         _learnerToAttendanceRecordMap[learnerId] = signOut;
         _signOutTimeMap[learnerId] = signOut.Start ?? DateTime.UtcNow;
     }
@@ -799,5 +804,14 @@
             await AttendanceRecordService.UpdateAsync(record);
             _phoneReturnedMap[learner.Id] = true;
         }
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            NavigationManager.LocationChanged -= HandleLocationChanged;
+        }
+        base.Dispose(disposing);
     }
 }

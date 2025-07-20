@@ -10,6 +10,7 @@
 @inject AttendanceRecordService AttendanceRecordService
 @inject LeaveEarlyService LeaveEarlyService
 @inject EmailService EmailService
+@inject ILogger<Index> _logger
 @inherits EventAwareComponentBase
 
 <PageTitle>Leave Early</PageTitle>
@@ -532,6 +533,10 @@
                         {
                             recordToUpdate.End = DateTime.UtcNow;
                         }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Leave Early record not found for ID: {Id}", LeaveEarlyFormModel.AttendenceRecordId);
                     }
                 }
 

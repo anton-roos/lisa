@@ -144,8 +144,21 @@ else
                                         <tr class="opacity-75">
                                             <td>@learner.Surname @learner.Name</td>
                                             <td>
-                                                <div class="pill not-present" style="cursor: default;">
-                                                    Not Present
+                                                @{
+                                                    var isProcessing = _processingLearnerIds.Contains(learner.Id);
+                                                }
+                                                <div @onclick="() => CheckInFromRegister(learner)"
+                                                    class="pill not-present @(isProcessing ? "processing" : "")" style="cursor: pointer;">
+                                                    @if (isProcessing)
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm me-1" role="status"
+                                                            aria-hidden="true"></span>
+                                                        <span>Checking In...</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>Not Present</span>
+                                                    }
                                                 </div>
                                             </td>
                                         </tr>
@@ -192,6 +205,12 @@ else
         background-color: #6c757d; /* Muted gray for not present */
         color: white;
         opacity: 0.7;
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    .not-present:hover {
+        opacity: 1;
+        background-color: #5a6268;
     }
 
     .processing {
@@ -322,9 +341,9 @@ else
                 // Process attendance records to identify who signed in
                 foreach (var record in _todayAttendanceSession.AttendanceRecords)
                 {
-                    if (record.AttendanceType == AttendanceType.CheckIn && record.Start.HasValue)
+                    if ((record.AttendanceType == AttendanceType.CheckIn || record.AttendanceType == AttendanceType.CheckInFromRegister) && record.Start.HasValue)
                     {
-                        // This learner signed in today
+                        // This learner signed in today (either normally or via register)
                         var learner = _learners.FirstOrDefault(l => l.Id == record.LearnerId);
                         if (learner != null)
                         {
@@ -417,6 +436,82 @@ else
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error toggling daily register attendance for learner {LearnerId}", learner.Id);
+        }
+        finally
+        {
+            // Remove processing state
+            _processingLearnerIds.Remove(learner.Id);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task CheckInFromRegister(Learner learner)
+    {
+        if (_selectedSchool == null || _selectedRegisterClass == null || _todayAttendanceSession == null) return;
+        if (_processingLearnerIds.Contains(learner.Id)) return; // Prevent double-clicks
+        
+        // Only allow check-in for learners who haven't signed in
+        if (_attendanceData.ContainsKey(learner.Id))
+        {
+            Logger.LogWarning("Learner {LearnerId} has already signed in today", learner.Id);
+            return;
+        }
+
+        try
+        {
+            // Set processing state
+            _processingLearnerIds.Add(learner.Id);
+            await InvokeAsync(StateHasChanged);
+
+            // Create CheckInFromRegister attendance record
+            var checkInFromRegisterRecord = new AttendanceRecord
+            {
+                Id = Guid.NewGuid(),
+                LearnerId = learner.Id,
+                AttendanceId = _todayAttendanceSession.Id,
+                AttendanceType = AttendanceType.CheckInFromRegister,
+                Start = DateTime.UtcNow,
+                Notes = "Checked in via register class",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CreatedBy = _currentUserId,
+                UpdatedBy = _currentUserId
+            };
+
+            // Save to database
+            await AttendanceRecordService.CreateAsync(checkInFromRegisterRecord);
+
+            // Add to our local attendance data so the learner appears in the signed-in section
+            _attendanceData[learner.Id] = checkInFromRegisterRecord;
+
+            // Create a daily register attendance record marking them as present
+            var dailyAttendanceRecord = new AttendanceRecord
+            {
+                Id = Guid.NewGuid(),
+                LearnerId = learner.Id,
+                AttendanceId = _todayAttendanceSession.Id,
+                AttendanceType = AttendanceType.Register,
+                Start = DateTime.UtcNow,
+                Notes = "Present",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CreatedBy = _currentUserId,
+                UpdatedBy = _currentUserId
+            };
+
+            // Save daily attendance to database
+            await AttendanceRecordService.CreateAsync(dailyAttendanceRecord);
+
+            // Update our local cache
+            _dailyAttendanceData[learner.Id] = dailyAttendanceRecord;
+
+            // Log the successful check-in
+            Logger.LogInformation("Learner {LearnerId} checked in via register class",
+                learner.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error checking in learner {LearnerId} from register", learner.Id);
         }
         finally
         {

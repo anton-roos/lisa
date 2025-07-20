@@ -7,4 +7,5 @@ public enum AttendanceType
     Register,
     Period,
     Adi,
+    CheckInFromRegister
 }

@@ -193,8 +193,8 @@ Changelog
 -- Fixed Inactive Learners getting sent Progress Feedback
 -- Fixed Date Oredering on Progress Feedbacks
 
-[] State Management (Results)
-[] Progress Feedback (Printing) Font smaller Print on one page
+[X] State Management (Results)
+[X] Progress Feedback (Printing) Font smaller Print on one page
 [] Attendance if not signed in. Create a special record that says not sign in but present. (Active not at school for being present)
 [] ADI (Attendance Module + Adhoc Learners) Build on Per Period
 [] Reporting and Communication (WA + Email + Print) for Attendance

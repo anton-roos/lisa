@@ -32,12 +32,19 @@ public class Learner
     public School? School { get; set; }
     public ICollection<LearnerSubject>? LearnerSubjects { get; set; }
     public ICollection<EmailRecipient>? EmailReceipts { get; set; }
+    [MaxLength(64)]
     public string? MedicalAidName { get; set; }
+    [MaxLength(64)]
     public string? MedicalAidNumber { get; set; }
+    [MaxLength(64)]
     public string? MedicalAidPlan { get; set; }
+    [MaxLength(256)]
     public string? Allergies { get; set; }
+    [MaxLength(512)]
     public string? MedicalAilments { get; set; }
+    [MaxLength(512)]
     public string? MedicalInstructions { get; set; }
+    [MaxLength(512)]
     public string? DietaryRequirements { get; set; }
     public MedicalTransport MedicalTransport { get; set; }
     public Gender Gender { get; set; }

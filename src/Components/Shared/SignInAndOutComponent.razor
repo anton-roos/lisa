@@ -1,15 +1,8 @@
 @using Lisa.Models.Entities
-@using System.Security.Claims
-@using Lisa.Enums
-@using Microsoft.AspNetCore.Components
 @inject SchoolService SchoolService
 @inject SchoolGradeService SchoolGradeService
-@inject SchoolGradeTimeService SchoolGradeTimeService
-@inject RegisterClassService RegisterClassService
 @inject LearnerService LearnerService
 @inject AttendanceService AttendanceService
-@inject AttendanceRecordService AttendanceRecordService
-@inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 
 <style>
@@ -341,10 +334,10 @@
 
     private TimeOnly _startTimeOnly = new TimeOnly(7, 0); // Default to 7:00 AM
     private TimeOnly _endTimeOnly = new TimeOnly(14, 0); // Default to 2:00 PM
-    private bool _isTimeConfirmed = false;
+    private bool _isTimeConfirmed;
 
     // Grade override variables
-    private bool _showGradeOverrides = false;
+    private bool _showGradeOverrides;
     private List<SchoolGrade> _schoolGrades = new();
     private Dictionary<Guid, (TimeOnly start, TimeOnly end)> _gradeTimeOverrides = new();
     private List<Attendance> _recentAttendances = new();
@@ -399,7 +392,7 @@
     
     protected override async Task OnParametersSetAsync()
     {
-        if (SelectedSchool != null && !object.Equals(SelectedSchool, _selectedSchool))
+        if (SelectedSchool != null && !Equals(SelectedSchool, _selectedSchool))
         {
             _selectedSchool = SelectedSchool;
             await LoadDataAsync();
@@ -433,12 +426,12 @@
 
                 if (_todayAttendance != null)
                 {
-                    await LoadAttendanceStatsAsync(_todayAttendance.Id);
+                    await LoadAttendanceStatsAsync();
                 }
             }
             
             // Load recent attendances
-            _recentAttendances = await AttendanceService.GetRecentAttendancesAsync(_selectedSchool.Id, 10);
+            _recentAttendances = await AttendanceService.GetRecentAttendancesAsync(_selectedSchool.Id);
             
             // Remove today's attendance from the list if it exists
             if (_todayAttendance != null)
@@ -451,7 +444,7 @@
         }
     }
 
-    private async Task LoadAttendanceStatsAsync(Guid attendanceId)
+    private async Task LoadAttendanceStatsAsync()
     {
         if (_todayAttendance?.AttendanceRecords != null)
         {
@@ -528,8 +521,8 @@
     {
         var stats = new AttendanceStats
         {
-            CheckedInCount = attendance.AttendanceRecords?.Count(r => r.Start != null) ?? 0,
-            CheckedOutCount = attendance.AttendanceRecords?.Count(r => r.End != null) ?? 0,
+            CheckedInCount = attendance.AttendanceRecords.Count(r => r.Start != null),
+            CheckedOutCount = attendance.AttendanceRecords.Count(r => r.End != null),
             AbsentCount = 0
         };
         
@@ -592,8 +585,7 @@
                 _gradeTimeOverrides[schoolGradeId] = (current.start, parsedTime);
             }
 
-            // Update the main school times to reflect the new range
-            await UpdateMainSchoolTimes();
+            UpdateMainSchoolTimes();
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -603,12 +595,12 @@
         _gradeTimeOverrides.Remove(schoolGradeId);
         _ = Task.Run(async () =>
         {
-            await UpdateMainSchoolTimes();
+            UpdateMainSchoolTimes();
             await InvokeAsync(StateHasChanged);
         });
     }
 
-    private async Task UpdateMainSchoolTimes()
+    private void UpdateMainSchoolTimes()
     {
         if (!_schoolGrades.Any()) return;
 
@@ -633,6 +625,6 @@
         {
             _startTimeOnly = allStartTimes.Min();
             _endTimeOnly = allEndTimes.Max();
-        }
+        } 
     }
 }

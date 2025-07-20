@@ -1,6 +1,7 @@
 using Lisa.Repositories;
-using Newtonsoft.Json;
 using System.Collections.Concurrent;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Lisa.Services;
 
@@ -17,12 +18,13 @@ public class EventBus(IServiceProvider serviceProvider) : IEventBus
     {
         var eventType = typeof(TEvent).Name;
 
-        var settings = new JsonSerializerSettings
+        var options = new JsonSerializerOptions
         {
-            ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            ReferenceHandler = ReferenceHandler.IgnoreCycles,
+            WriteIndented = true
         };
 
-        var eventData = JsonConvert.SerializeObject(@event, settings);
+        var eventData = JsonSerializer.Serialize(@event, options);
 
         try
         {

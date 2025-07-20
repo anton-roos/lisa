@@ -83,7 +83,6 @@ public class DatabaseSeed
     private static async Task SeedAdmin(IServiceProvider serviceProvider, ILogger logger)
     {
         var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
-        var config = serviceProvider.GetRequiredService<IConfiguration>();
 
         var configuredPassword = DefaultAdminPassword;
 

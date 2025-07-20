@@ -8,6 +8,7 @@ public class ResultSet
     public DateTime? AssessmentDate { get; set; }
     [MaxLength(32)]
     public string? AssessmentTypeName { get; set; }
+    [MaxLength(128)]
     public string? AssessmentTopic { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -21,7 +22,7 @@ public class ResultSet
     public ResultSetStatus Status { get; set; }
     public Guid? SchoolGradeId { get; set; }
     public SchoolGrade? SchoolGrade { get; set; }
-    public int AssessmentTypeId { get; set; } = 0;
+    public int AssessmentTypeId { get; set; }
 
     // Navigation property
     public AssessmentType? AssessmentType { get; set; }

@@ -1,5 +1,4 @@
 ﻿@using Lisa.Models.EmailModels
-@using Lisa.Models.ViewModels
 @model IEnumerable<ProgressFeedback>
 
 <!DOCTYPE html>
@@ -49,9 +48,10 @@
 
 @foreach (var progressFeedback in Model)
 {
-    var firstResult = progressFeedback.ResultsBySubject?
-        .SelectMany(x => x.Value)?.FirstOrDefault();
-    var isAchievementRating = firstResult?.Learner?.RegisterClass?.SchoolGrade?.SystemGrade?.AchievementLevelRating ?? false;
+    var firstResult = progressFeedback.ResultsBySubject
+        .SelectMany(x => x.Value)
+        .FirstOrDefault();
+    var isAchievementRating = firstResult?.Learner?.RegisterClass?.SchoolGrade?.SystemGrade.AchievementLevelRating ?? false;
 
     <div class="learner-section" style="margin:0.8rem auto; max-width:600px;">
 
@@ -62,9 +62,10 @@
             <strong>To:</strong> {{toDate}}
         </p>
 
-        @if (progressFeedback?.ResultsBySubject != null && progressFeedback.ResultsBySubject.Any(x => x.Value != null && x.Value.Any()))
+        @if (progressFeedback.ResultsBySubject.Any(x => x.Value.Any()))
         {
-            foreach (var subjectGroup in progressFeedback.ResultsBySubject.Where(x => x.Value != null && x.Value.Any()))
+            foreach (var subjectGroup in progressFeedback.ResultsBySubject
+                         .Where(x => x.Value.Any()))
             {
                 <table style="margin-bottom:1.2rem; border:1px solid #ccc; font-size: 10px; width: 100%; border-collapse: collapse;">
                     <thead>
@@ -109,7 +110,7 @@
                                             if (result.Score == null)
                                                 text = "Absent";
                                             else if (isAchievementRating)
-                                                text = result.Score.ToString();
+                                                text = result.Score.ToString() ?? string.Empty;
                                             else
                                                 text = result.Score.Value + "%";
                                         

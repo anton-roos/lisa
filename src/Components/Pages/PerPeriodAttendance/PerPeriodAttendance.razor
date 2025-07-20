@@ -10,6 +10,7 @@
 @inject AttendanceService AttendanceService
 @inject AttendanceRecordService AttendanceRecordService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
 @inject ILogger<PerPeriodAttendance> Logger
 @inherits EventAwareComponentBase
 
@@ -31,16 +32,16 @@ else
                 <select id="gradeSelect" class="form-select" value="@(_selectedGrade?.Id.ToString() ?? "")"
                     @onchange="@((e) => GradeSelectionChanged(e))">
                     <option value="">-- Select Grade --</option>
-                    @foreach (var grade in _schoolGrades.OrderBy(g => g.SystemGrade?.SequenceNumber))
+                    @foreach (var grade in _schoolGrades.OrderBy(g => g.SystemGrade.SequenceNumber))
                     {
-                        <option value="@grade.Id">@grade.SystemGrade?.Name</option>
+                        <option value="@grade.Id">@grade.SystemGrade.Name</option>
                     }
                 </select>
             </div>
         </div>
 
         <!-- Subject Type Filter (for grades 10-12) -->
-        @if (_selectedGrade?.SystemGrade?.MathGrade == true || _selectedGrade?.SystemGrade?.CombinationGrade == true)
+        @if (_selectedGrade?.SystemGrade.MathGrade == true || _selectedGrade?.SystemGrade.CombinationGrade == true)
         {
             <div class="col-md-3">
                 <div class="form-group">
@@ -49,11 +50,11 @@ else
                         @onchange="@((e) => SubjectTypeSelectionChanged(e))">
                         <option value="">-- Select Type --</option>
                         <option value="@SubjectType.Compulsory">Compulsory</option>
-                        @if (_selectedGrade?.SystemGrade?.CombinationGrade == true)
+                        @if (_selectedGrade?.SystemGrade.CombinationGrade == true)
                         {
                             <option value="@SubjectType.Combination">Combination</option>
                         }
-                        @if (_selectedGrade?.SystemGrade?.MathGrade == true)
+                        @if (_selectedGrade?.SystemGrade.MathGrade == true)
                         {
                             <option value="@SubjectType.MathCombination">Math Combination</option>
                         }
@@ -116,9 +117,9 @@ else
                 <i class="oi oi-warning me-2"></i>
                 <strong>No attendance session found for today.</strong><br />
                 Attendance must be started from the Sign In/Out page before period attendance can be taken.
-                <a href="/sign-in-and-out" class="btn btn-outline-primary btn-sm ms-2">
+                <button class="btn btn-outline-primary btn-sm ms-2" @onclick="NavigateToSignInOut">
                     <i class="oi oi-external-link"></i> Go to Sign In/Out
-                </a>
+                </button>
             </div>
         }
         else
@@ -127,7 +128,7 @@ else
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         @_selectedSubject.Name
-                        @if (_selectedGrade?.SystemGrade?.Name != null)
+                        @if (_selectedGrade?.SystemGrade.Name != null)
                         {
                             <span class="badge bg-secondary ms-2">@_selectedGrade.SystemGrade.Name</span>
                         }
@@ -336,16 +337,16 @@ else
     private Subject? _selectedSubject;
     private List<Learner> _learners = [];
     private string _searchTerm = "";
-    private bool IsLoading { get; set; } = false;
+    private bool IsLoading { get; set; }
     private Guid? _currentUserId;
     private Attendance? _todayAttendanceSession;
     private Dictionary<Guid, AttendanceRecord> _attendanceData = new(); // Who signed in today
     private Dictionary<Guid, AttendanceRecord> _periodAttendanceData = new(); // Period attendance
     private HashSet<Guid> _processingLearnerIds = [];
-    private bool _periodStarted = false;
+    private bool _periodStarted;
     private DateTime? _periodStartTime;
-    private bool _processingPeriodStart = false;
-    private bool _processingPeriodStop = false;
+    private bool _processingPeriodStart;
+    private bool _processingPeriodStop;
 
     private IEnumerable<Learner> FilteredSignedInLearners => _learners
         .Where(l => _attendanceData.ContainsKey(l.Id)) // Only learners who signed in
@@ -446,7 +447,7 @@ else
             _periodStartTime = null;
 
             // For grades RRR-9, load subjects directly
-            if (_selectedGrade?.SystemGrade?.MathGrade != true && _selectedGrade?.SystemGrade?.CombinationGrade != true)
+            if (_selectedGrade?.SystemGrade.MathGrade != true && _selectedGrade?.SystemGrade.CombinationGrade != true)
             {
                 await LoadSubjectsForGrade();
             }
@@ -964,5 +965,10 @@ else
         }
         
         return "";
+    }
+
+    private void NavigateToSignInOut()
+    {
+        NavigationManager.NavigateTo("/sign-in-and-out");
     }
 }

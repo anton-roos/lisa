@@ -195,7 +195,7 @@ Changelog
 
 [X] State Management (Results)
 [X] Progress Feedback (Printing) Font smaller Print on one page
-[] Attendance if not signed in. Create a special record that says not sign in but present. (Active not at school for being present)
+[X] Attendance if not signed in. Create a special record that says not sign in but present. (Active not at school for being present)
 [] ADI (Attendance Module + Adhoc Learners) Build on Per Period
 [] Reporting and Communication (WA + Email + Print) for Attendance
 [] Clean up and refactor

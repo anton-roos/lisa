@@ -56,7 +56,7 @@
             </Authorized>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+        <AuthorizeView Context="_" Roles="@Roles.SystemAdministrator">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="subjects">
                     <span class="bi subject-icon" aria-hidden="true"></span> Subjects
@@ -64,7 +64,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext" Roles="@Roles.SystemAdministrator">
+        <AuthorizeView Context="_" Roles="@Roles.SystemAdministrator">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="assessment-types">
                     <span class="bi subject-icon" aria-hidden="true"></span> Assessment Types
@@ -72,7 +72,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator}")">
+        <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="sign-in-and-out">
                     <span class="bi attendance-icon" aria-hidden="true"></span> Sign In / Out
@@ -80,7 +80,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
+        <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="daily-register">
                     <span class="bi daily-register-icon" aria-hidden="true"></span> Daily Attendance
@@ -88,7 +88,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.Administrator},{Roles.Teacher}")">
+        <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.Administrator},{Roles.Teacher}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="per-period-attendance">
                     <span class="bi bi-clock" aria-hidden="true"></span> Per Period Attendance
@@ -96,7 +96,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.Reception}")">
+        <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.Reception}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="leave-early">
                     <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Leave Early
@@ -104,7 +104,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+        <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="combinations">
                     <span class="bi combination-icon" aria-hidden="true"></span> Combinations
@@ -112,7 +112,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext"
+        <AuthorizeView Context="_"
             Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
 
             <div class="nav-item px-3">
@@ -166,7 +166,7 @@
             </Authorized>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext"
+        <AuthorizeView Context="_"
             Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="communication">
@@ -175,7 +175,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext"
+        <AuthorizeView Context="_"
             Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="email-campaigns">
@@ -184,7 +184,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Context="authContext"
+        <AuthorizeView Context="_"
             Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="adi-creator">

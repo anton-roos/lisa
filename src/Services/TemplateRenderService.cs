@@ -3,7 +3,6 @@ public class TemplateRenderService
 (
     ILogger<EmailRendererService> logger,
     ProgressFeedbackService progressFeedbackService,
-    UserService userService,
     RazorLightViewToStringRenderer razorViewToStringRenderer
 )
 {

@@ -16,7 +16,7 @@
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
     <Authorized>
         <h3>Send Communication</h3>
-        @if (_selectedSchool is null)
+        @if (SelectedSchool is null)
         {
             <NoSchoolSelected Message="Please select a school to send communication." />
         }
@@ -27,24 +27,24 @@
                 <div class="col-md-4">
                     <label for="fromDate" class="form-label">From Date</label>
                     <input id="fromDate" type="date" class="form-control" @bind="_fromDate"
-                        @oninput="async (e) => await OnDateRangeChange()" />
+                        @oninput="async () => await OnDateRangeChange()" />
                 </div>
 
                 <div class="col-md-4">
                     <label for="toDate" class="form-label">To Date</label>
                     <input id="toDate" type="date" class="form-control" @bind="_toDate"
-                        @oninput="async (e) => await OnDateRangeChange()" />
+                        @oninput="async () => await OnDateRangeChange()" />
                 </div>
             </div>
-            <RecipientGroupSelector SelectedGroup="@_recipientGroup" OnGroupChanged="OnOptionChanged" />
+            <RecipientGroupSelector SelectedGroup="@RecipientGroup" OnGroupChanged="OnOptionChanged" />
 
-            @switch (_recipientGroup)
+            @switch (RecipientGroup)
             {
                 case RecipientGroup.School:
                     <div class="mb-3">
                         <label for="templateSelect">Select Template</label>
                         <InputSelect id="templateSelect" class="form-select" TValue="RecipientTemplate"
-                            @bind-Value="_recipientTemplate">
+                            @bind-Value="RecipientTemplate">
                             <option value="@RecipientTemplate.None">-- Select Template --</option>
                             @foreach (RecipientTemplate t in Enum.GetValues(typeof(RecipientTemplate)))
                             {
@@ -52,11 +52,11 @@
                             }
                         </InputSelect>
                     </div>
-                    @if (_recipientTemplate != RecipientTemplate.None)
+                    @if (RecipientTemplate != RecipientTemplate.None)
                     {
                         <div class="mb-3">
                             <label for="audienceSelect">Select Audience</label>
-                            <InputSelect id="audienceSelect" class="form-select" TValue="RecipientType" @bind-Value="_recipientType">
+                            <InputSelect id="audienceSelect" class="form-select" TValue="RecipientType" @bind-Value="RecipientType">
                                 <option value="@RecipientType.None">-- Select Audience --</option>
                                 @foreach (RecipientType audience in Enum.GetValues(typeof(RecipientType)))
                                 {
@@ -70,7 +70,7 @@
                     <div class="mb-3">
                         <label for="templateSelect">Select Template</label>
                         <InputSelect id="templateSelect" class="form-select" TValue="RecipientTemplate"
-                            @bind-Value="_recipientTemplate">
+                            @bind-Value="RecipientTemplate">
                             <option value="@RecipientTemplate.None">-- Select Template --</option>
                             @foreach (RecipientTemplate t in Enum.GetValues(typeof(RecipientTemplate)))
                             {
@@ -78,11 +78,11 @@
                             }
                         </InputSelect>
                     </div>
-                    @if (_recipientTemplate != RecipientTemplate.None)
+                    @if (RecipientTemplate != RecipientTemplate.None)
                     {
                         <div class="mb-3">
                             <label for="gradeSelect">Select Grade</label>
-                            <InputSelect id="gradeSelect" class="form-select" @bind-Value="_gradeId">
+                            <InputSelect id="gradeSelect" class="form-select" @bind-Value="GradeId">
                                 <option value="">-- Select Grade --</option>
                                 @foreach (var grade in _schoolGrades)
                                 {
@@ -91,11 +91,11 @@
                             </InputSelect>
                         </div>
 
-                        @if (_gradeId != null)
+                        @if (GradeId != null)
                         {
                             <div class="mb-3">
                                 <label for="audienceSelect">Select Audience</label>
-                                <InputSelect id="audienceSelect" class="form-select" TValue="RecipientType" @bind-Value="_recipientType">
+                                <InputSelect id="audienceSelect" class="form-select" TValue="RecipientType" @bind-Value="RecipientType">
                                     <option value="@RecipientType.None">-- Select Audience --</option>
                                     @foreach (RecipientType audience in Enum.GetValues(typeof(RecipientType)))
                                     {
@@ -110,7 +110,7 @@
                     <div class="mb-3">
                         <label for="templateSelect">Select Template</label>
                         <InputSelect id="templateSelect" class="form-select" TValue="RecipientTemplate"
-                            @bind-Value="_recipientTemplate">
+                            @bind-Value="RecipientTemplate">
                             <option value="@RecipientTemplate.None">-- Select Template --</option>
                             @foreach (RecipientTemplate t in Enum.GetValues(typeof(RecipientTemplate)))
                             {
@@ -118,11 +118,11 @@
                             }
                         </InputSelect>
                     </div>
-                    @if (_recipientTemplate != RecipientTemplate.None)
+                    @if (RecipientTemplate != RecipientTemplate.None)
                     {
                         <div class="mb-3">
                             <label for="audienceSelect">Select Audience</label>
-                            <InputSelect id="audienceSelect" class="form-select" TValue="RecipientType" @bind-Value="_recipientType">
+                            <InputSelect id="audienceSelect" class="form-select" TValue="RecipientType" @bind-Value="RecipientType">
                                 <option value="@RecipientType.None">-- Select Audience --</option>
                                 @foreach (RecipientType audience in Enum.GetValues(typeof(RecipientType)))
                                 {
@@ -131,11 +131,11 @@
                             </InputSelect>
                         </div>
 
-                        @if (_recipientType != RecipientType.None)
+                        @if (RecipientType != RecipientType.None)
                         {
                             <div class="mb-3">
                                 <label for="subjectSelect">Select Subject</label>
-                                <InputSelect id="subjectSelect" class="form-select" @bind-Value="_subjectId">
+                                <InputSelect id="subjectSelect" class="form-select" @bind-Value="SubjectId">
                                     <option value="0">-- Select Subject --</option>
                                     @foreach (var subject in _subjects)
                                     {
@@ -150,7 +150,7 @@
                     <div class="mb-3">
                         <label for="templateSelect">Select Template</label>
                         <InputSelect id="templateSelect" class="form-select" TValue="RecipientTemplate"
-                            @bind-Value="_recipientTemplate">
+                            @bind-Value="RecipientTemplate">
                             <option value="@RecipientTemplate.None">-- Select Template --</option>
                             @foreach (RecipientTemplate t in Enum.GetValues(typeof(RecipientTemplate)))
                             {
@@ -158,11 +158,11 @@
                             }
                         </InputSelect>
                     </div>
-                    @if (_recipientTemplate != RecipientTemplate.None)
+                    @if (RecipientTemplate != RecipientTemplate.None)
                     {
                         <div class="mb-3">
                             <label for="audienceSelect">Select Audience</label>
-                            <InputSelect id="audienceSelect" class="form-select" TValue="RecipientType" @bind-Value="_recipientType">
+                            <InputSelect id="audienceSelect" class="form-select" TValue="RecipientType" @bind-Value="RecipientType">
                                 <option value="@RecipientType.None">-- Select Audience --</option>
                                 @foreach (RecipientType audience in Enum.GetValues(typeof(RecipientType)))
                                 {
@@ -171,21 +171,21 @@
                             </InputSelect>
                         </div>
 
-                        @if (_recipientType != RecipientType.None)
+                        @if (RecipientType != RecipientType.None)
                         {
                             <div class="mb-3">
                                 <label for="learnerSearch">Search by Name:</label>
                                 <input id="learnerSearch" type="text" class="form-control" placeholder="Enter learner name..."
-                                    @bind="_searchTerm" @bind:event="oninput" />
+                                    @bind="SearchTerm" @bind:event="oninput" />
                             </div>
 
-                            @if (_isLoading)
+                            @if (IsLoading)
                             {
                                 <div class="text-center">
                                     <i class="bi bi-hourglass-split text-primary"></i> Loading...
                                 </div>
                             }
-                            else if (!_filteredLearners.Any())
+                            else if (!FilteredLearners.Any())
                             {
                                 <div class="text-center text-muted">No learners found.</div>
                             }
@@ -200,7 +200,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach (var learner in _filteredLearners)
+                                        @foreach (var learner in FilteredLearners)
                                         {
                                             <tr>
                                                 <td>@learner.Surname @learner.Name</td>
@@ -208,8 +208,8 @@
                                                 <td>
                                                     <button class="btn btn-primary btn-sm"
                                                         @onclick="async () => { SelectedLearner = learner; await CreateEmailCampaign(); }"
-                                                        disabled="@_isSending">
-                                                        @if (_isSending)
+                                                        disabled="@IsSending">
+                                                        @if (IsSending)
                                                         {
                                                             <i class="bi bi-hourglass-split">Sending...</i>
                                                         }
@@ -229,11 +229,11 @@
                     break;
             }
 
-            @if (_recipientGroup != RecipientGroup.Learner)
+            @if (RecipientGroup != RecipientGroup.Learner)
             {
                 <button type="button" class="btn btn-primary btn-sm mt-2" @onclick="CreateEmailCampaign"
-                    disabled="@(_isSendDisabled || _isSending)">
-                    @if (_isSending)
+                    disabled="@(IsSendDisabled || IsSending)">
+                    @if (IsSending)
                     {
                         <i class="bi bi-hourglass-split">Sending...</i>
                     }
@@ -244,9 +244,9 @@
                 </button>
             }
 
-            @if (!string.IsNullOrEmpty(_statusMessage))
+            @if (!string.IsNullOrEmpty(StatusMessage))
             {
-                <div class="alert alert-info mt-2">@_statusMessage</div>
+                <div class="alert alert-info mt-2">@StatusMessage</div>
             }
         }
     </Authorized>
@@ -256,29 +256,29 @@
 </AuthorizeView>
 
 @code {
-    private RecipientGroup _recipientGroup { get; set; } = RecipientGroup.School;
-    private string? _searchTerm { get; set; }
+    private RecipientGroup RecipientGroup { get; set; } = RecipientGroup.School;
+    private string? SearchTerm { get; set; }
     private List<Learner> _learners = [];
-    private IEnumerable<Learner> _filteredLearners => ApplyFilters();
-    private School? _selectedSchool { get; set; }
-    private Guid? _gradeId { get; set; }
-    private RecipientType _recipientType { get; set; } = RecipientType.None;
+    private IEnumerable<Learner> FilteredLearners => ApplyFilters();
+    private School? SelectedSchool { get; set; }
+    private Guid? GradeId { get; set; }
+    private RecipientType RecipientType { get; set; } = RecipientType.None;
     private List<SchoolGrade> _schoolGrades = [];
     private List<Subject> _subjects = [];
-    private int _subjectId { get; set; }
-    private RecipientTemplate _recipientTemplate { get; set; } = RecipientTemplate.None;
-    private bool _isSendDisabled => _recipientTemplate == RecipientTemplate.None;
-    private bool _isSending { get; set; }
-    private string? _statusMessage { get; set; }
-    private bool _isLoading { get; set; } = false;
+    private int SubjectId { get; set; }
+    private RecipientTemplate RecipientTemplate { get; set; } = RecipientTemplate.None;
+    private bool IsSendDisabled => RecipientTemplate == RecipientTemplate.None;
+    private bool IsSending { get; set; }
+    private string? StatusMessage { get; set; }
+    private bool IsLoading { get; set; } = false;
     public IEnumerable<Learner> Learners { get; set; } = [];
     public Learner? SelectedLearner { get; set; }
-    private DateTime? _fromDate = null;
-    private DateTime? _toDate = null;
+    private DateTime? _fromDate;
+    private DateTime? _toDate;
 
     protected override async Task OnInitializedAsync()
     {
-        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        SelectedSchool = await SchoolService.GetSelectedSchoolAsync();
         SubscribeToEvent(UiEvents.SchoolSelected);
         await LoadData();
         await base.OnInitializedAsync();
@@ -287,9 +287,9 @@
     {
         if (eventName == UiEvents.SchoolSelected && payload is School school)
         {
-            if (_selectedSchool?.Id != school.Id)
+            if (SelectedSchool?.Id != school.Id)
             {
-                _selectedSchool = school;
+                SelectedSchool = school;
                 await LoadData();
             }
         }
@@ -298,10 +298,10 @@
 
     private async Task LoadData()
     {
-        if (_selectedSchool == null) return;
+        if (SelectedSchool == null) return;
 
-        _learners = await LearnerService.GetBySchoolAsync(_selectedSchool.Id);
-        _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+        _learners = await LearnerService.GetBySchoolAsync(SelectedSchool.Id);
+        _schoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
         _subjects = await SubjectService.GetAllAsync();
     }
 
@@ -311,12 +311,12 @@
 
         var query = _learners.AsEnumerable();
 
-        if (_gradeId.HasValue)
-            query = query.Where(l => l.RegisterClass?.SchoolGrade?.Id == _gradeId);
+        if (GradeId.HasValue)
+            query = query.Where(l => l.RegisterClass?.SchoolGrade?.Id == GradeId);
 
-        if (!string.IsNullOrEmpty(_searchTerm))
+        if (!string.IsNullOrEmpty(SearchTerm))
         {
-            var term = _searchTerm.Trim().ToLower();
+            var term = SearchTerm.Trim().ToLower();
             query = query.Where(l => $"{l.Surname} {l.Name}".ToLower().Contains(term));
         }
 
@@ -325,64 +325,56 @@
 
     private void OnOptionChanged(RecipientGroup recipientGroup)
     {
-        _recipientTemplate = RecipientTemplate.None;
-        _recipientType = RecipientType.None;
-        _recipientGroup = recipientGroup;
+        RecipientTemplate = RecipientTemplate.None;
+        RecipientType = RecipientType.None;
+        RecipientGroup = recipientGroup;
     }
 
     private async Task CreateEmailCampaign()
     {
-        if (_recipientTemplate == RecipientTemplate.None || _selectedSchool == null)
+        if (RecipientTemplate == RecipientTemplate.None || SelectedSchool == null)
         {
-            _statusMessage = "Error: Please select a template and a school!";
+            StatusMessage = "Error: Please select a template and a school!";
             return;
         }
 
-        if (_recipientGroup == RecipientGroup.Learner)
+        if (RecipientGroup == RecipientGroup.Learner)
         {
             if (SelectedLearner == null)
             {
-                _statusMessage = "Error: Please select a learner to send communication to their parents.";
+                StatusMessage = "Error: Please select a learner to send communication to their parents.";
                 return;
             }
         }
 
         var communicationCommand = new CommunicationCommand
         {
-            RecipientGroup = _recipientGroup,
-            RecipientType = _recipientType,
-            RecipientTemplate = _recipientTemplate,
-            GradeId = _gradeId,
-            SubjectId = _subjectId,
-            SchoolId = _selectedSchool.Id,
-            LearnerId = _recipientGroup == RecipientGroup.Learner ? SelectedLearner?.Id : null,
+            RecipientGroup = RecipientGroup,
+            RecipientType = RecipientType,
+            RecipientTemplate = RecipientTemplate,
+            GradeId = GradeId,
+            SubjectId = SubjectId,
+            SchoolId = SelectedSchool.Id,
+            LearnerId = RecipientGroup == RecipientGroup.Learner ? SelectedLearner?.Id : null,
             FromDate = _fromDate,
             ToDate = _toDate
         };
 
-        _isSending = true;
-        _statusMessage = "Creating email campaign...";
+        IsSending = true;
+        StatusMessage = "Creating email campaign...";
 
         try
         {
             var result = await EmailCampaignService.CreateAsync(communicationCommand);
-            if (result is not null)
-            {
-                _statusMessage = "Campaign created successfully!";
-                NavigateToCampaign(result.Id);
-            }
-            else
-            {
-                _statusMessage = "Error: No recipients found!";
-            }
+            NavigateToCampaign(result.Id);
         }
         catch (Exception ex)
         {
-            _statusMessage = $"Error: {ex.Message}";
+            StatusMessage = $"Error: {ex.Message}";
         }
         finally
         {
-            _isSending = false;
+            IsSending = false;
         }
     }
 

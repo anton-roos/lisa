@@ -1,5 +1,4 @@
 ﻿using Lisa.Data;
-using Lisa.Enums;
 using Lisa.Models.Entities;
 using Lisa.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -23,10 +22,10 @@ namespace Lisa.Services
                 newLeave.PermissionType = leaveEarly.PermissionType;
                 newLeave.TelephonicNotes = leaveEarly.TelephonicNotes;
                 newLeave.PickUpType = leaveEarly.PickUpType;
-                newLeave.PickupFamilyMemberIDNo = leaveEarly.PickupFamilyMemberIDNo;
+                newLeave.PickupFamilyMemberIdNo = leaveEarly.PickupFamilyMemberIdNo;
                 newLeave.PickupFamilyMemberFirstname = leaveEarly.PickupFamilyMemberFirstname;
                 newLeave.PickupFamilyMemberSurname = leaveEarly.PickupFamilyMemberSurname;
-                newLeave.PickupUberTransportIDNo = leaveEarly.PickupUberTransportIDNo;
+                newLeave.PickupUberTransportIdNo = leaveEarly.PickupUberTransportIdNo;
                 newLeave.PickupUberTransportRegNo = leaveEarly.PickupUberTransportRegNo;
 
                 await context.LeaveEarlies.AddAsync(newLeave);

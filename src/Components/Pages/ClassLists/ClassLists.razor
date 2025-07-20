@@ -26,20 +26,20 @@
                 <label><strong>View Class List by:</strong></label>
                 <div class="btn-group" role="group">
                     <input type="radio" class="btn-check" name="viewMode" id="viewByCombination" value="Combination"
-                        checked="@(ViewMode == "Combination")" @onchange="@(_ => SetViewMode("Combination"))" />
+                        checked="@(_viewMode == "Combination")" @onchange="@(_ => SetViewMode("Combination"))" />
                     <label class="btn btn-outline-secondary" for="viewByCombination">Combination</label>
 
                     <input type="radio" class="btn-check" name="viewMode" id="viewByRegisterClass" value="RegisterClass"
-                        checked="@(ViewMode == "RegisterClass")" @onchange="@(_ => SetViewMode("RegisterClass"))" />
+                        checked="@(_viewMode == "RegisterClass")" @onchange="@(_ => SetViewMode("RegisterClass"))" />
                     <label class="btn btn-outline-secondary" for="viewByRegisterClass">Register Class</label>
 
                     <input type="radio" class="btn-check" name="viewMode" id="viewByCareGroup" value="CareGroup"
-                        checked="@(ViewMode == "CareGroup")" @onchange="@(_ => SetViewMode("CareGroup"))" />
+                        checked="@(_viewMode == "CareGroup")" @onchange="@(_ => SetViewMode("CareGroup"))" />
                     <label class="btn btn-outline-secondary" for="viewByCareGroup">Care Group</label>
                 </div>
             </div>
 
-            @if (ViewMode == "Combination")
+            @if (_viewMode == "Combination")
             {
                 <div class="mb-3">
                     <label><strong>Select Grade:</strong></label>
@@ -58,7 +58,7 @@
                     <div class="mb-3">
                         <label><strong>Select Combination:</strong></label>
                         <InputSelect class="form-select" TValue="string" Value="@_combinationId" ValueChanged="OnCombinationChange"
-                            ValueExpression="() => _combinationId">
+                            ValueExpression="() => _combinationId ?? string.Empty">
                             <option value="">-- Select Combination --</option>
                             @foreach (var combination in _filteredCombinations)
                             {
@@ -89,30 +89,35 @@
                 @if (_subjectId != null)
                 {
                     var grade = _schoolGrades.FirstOrDefault(g => g.Id == _gradeId);
-                    var subjectName = "";
+                    string combinationName;
+                    string subjectName;
+                    
                     if (_combinationId == "Math")
                     {
+                        combinationName = "Math";
                         subjectName = "Math";
                     }
                     else if (_combinationId == "MathLit")
                     {
+                        combinationName = "Math Literacy";
                         subjectName = "Math Literacy";
                     }
                     else
                     {
+                        var combination = _combinations.FirstOrDefault(c => _combinationId != null && 
+                                                                            c.Id == Guid.Parse(_combinationId));
                         var subject = _combinationSubjects.FirstOrDefault(s => s.Id == _subjectId);
+                        combinationName = combination?.Name ?? "";
                         subjectName = subject?.Name ?? "";
                     }
-                    var combinationName = _combinationId == "Math" || _combinationId == "MathLit"
-                    ? subjectName
-                    : _combinations.FirstOrDefault(c => c.Id == Guid.Parse(_combinationId))?.Name;
+                    
                     var title = $"{grade?.SystemGrade.Name} - {combinationName} - {subjectName}";
                     <div>
                         <LearnerListComponent Learners="@_learners" Title="@title" />
                     </div>
                 }
             }
-            else if (ViewMode == "RegisterClass")
+            else if (_viewMode == "RegisterClass")
             {
                 <div class="mb-3">
                     <label><strong>Select Grade:</strong></label>
@@ -145,11 +150,11 @@
                 {
                     var registerClass = _registerClasses.FirstOrDefault(c => c.Id == _registerClassId);
                     <div>
-                        <LearnerListComponent Learners="@_learners" Title="@registerClass.Name" />
+                        <LearnerListComponent Learners="@_learners" Title="@registerClass?.Name" />
                     </div>
                 }
             }
-            else if (ViewMode == "CareGroup")
+            else if (_viewMode == "CareGroup")
             {
                 <div class="mb-3">
                     <label><strong>Select Care Group:</strong></label>
@@ -167,7 +172,7 @@
                 {
                     var careGroup = _careGroups.FirstOrDefault(c => c.Id == _careGroupId);
                     <div>
-                        <LearnerListComponent Learners="@_learners" Title="@careGroup.Name" />
+                        <LearnerListComponent Learners="@_learners" Title="@careGroup?.Name" />
                     </div>
                 }
             }
@@ -180,7 +185,7 @@
 
 @code {
     private School? _selectedSchool;
-    private string ViewMode = "Combination";
+    private string _viewMode = "Combination";
 
     private List<SchoolGrade> _schoolGrades = [];
     private Guid? _gradeId;
@@ -248,7 +253,7 @@
 
     private void SetViewMode(string mode)
     {
-        ViewMode = mode;
+        _viewMode = mode;
         _gradeId = null;
         _combinationId = null;
         _subjectId = null;
@@ -287,7 +292,9 @@
             if (value == "Math" || value == "MathLit")
             {
                 var subjectName = value == "Math" ? "Mathematics" : "Mathematical Literacy";
-                var mathSubject = _subjects.FirstOrDefault(s => s.Name.Equals(subjectName, StringComparison.OrdinalIgnoreCase) && s.SubjectType == SubjectType.MathCombination);
+                var mathSubject = _subjects.FirstOrDefault(s => s.Name != null 
+                                            && s.Name.Equals(subjectName, StringComparison.OrdinalIgnoreCase) 
+                                            && s.SubjectType == SubjectType.MathCombination);
                 if (mathSubject != null)
                 {
                     _subjectId = mathSubject.Id;
@@ -342,7 +349,7 @@
         if (_selectedSchool == null)
             return;
 
-        if (ViewMode == "Combination")
+        if (_viewMode == "Combination")
         {
             // For math selections, load learners based on grade and subject.
             if (_gradeId != null && !string.IsNullOrEmpty(_combinationId) && _subjectId != null)
@@ -363,7 +370,7 @@
                 _learners.Clear();
             }
         }
-        else if (ViewMode == "RegisterClass")
+        else if (_viewMode == "RegisterClass")
         {
             if (_registerClassId != null)
             {
@@ -375,7 +382,7 @@
                 _learners.Clear();
             }
         }
-        else if (ViewMode == "CareGroup")
+        else if (_viewMode == "CareGroup")
         {
             if (_careGroupId != null)
             {

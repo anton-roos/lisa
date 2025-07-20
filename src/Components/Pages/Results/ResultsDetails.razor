@@ -45,7 +45,7 @@
                     <p><Pill Color="secondary">Draft</Pill></p>
                 }
                 <p><strong>Assessment Topic:</strong> @_resultSet.AssessmentTopic</p>
-                <p><strong>Assessment Type:</strong> @_resultSet.AssessmentType.Name</p>
+                <p><strong>Assessment Type:</strong> @_resultSet.AssessmentType?.Name</p>
                 <p><strong>Assessment Date:</strong> @_resultSet.AssessmentDate?.ToString("yyyy-MM-dd")</p>
                 <p><strong>Teacher:</strong>
                     <Pill Color="primary"> @_resultSet?.Teacher?.Abbreviation</Pill>

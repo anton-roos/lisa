@@ -1,7 +1,6 @@
 @page "/schools/delete/{id:guid?}"
 @using Lisa.Models.Entities
 @inject SchoolService SchoolService
-@inject IEventBus EventBus
 @inject NavigationManager NavigationManager
 
 <PageTitle>Confirm School Delete</PageTitle>
@@ -98,7 +97,6 @@
                     throw new Exception("School not found.");
                 }
 
-                await EventBus.PublishAsync(new DeleteSchoolEvent { School = School });
                 await SchoolService.DeleteSchoolAsync(School);
                 NavigationManager.NavigateTo("/schools");
             }

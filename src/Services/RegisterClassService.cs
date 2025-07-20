@@ -2,7 +2,6 @@ using Lisa.Data;
 using Lisa.Models.Entities;
 using Lisa.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
-using NuGet.Packaging;
 
 namespace Lisa.Services;
 
@@ -174,7 +173,10 @@ public class RegisterClassService
                 registerClass.UserId = model.TeacherId;
 
                 registerClass.CompulsorySubjects?.Clear();
-                registerClass.CompulsorySubjects.AddRange(selectedSubjects);
+                foreach (var subject in selectedSubjects)
+                {
+                    registerClass.CompulsorySubjects?.Add(subject);
+                }
             }
             else
             {

@@ -2,8 +2,8 @@
 @model ProgressFeedbackViewModel
 
 @{
-    var firstResult = Model?.Feedback?.ResultsBySubject?
-                         .SelectMany(x => x.Value)?.FirstOrDefault();
+    var firstResult = Model.Feedback?.ResultsBySubject
+                         .SelectMany(x => x.Value).FirstOrDefault();
     var isAchievementRating = firstResult?.Learner?.RegisterClass?.SchoolGrade?.SystemGrade.AchievementLevelRating ?? false;
 }
 
@@ -15,11 +15,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
 <body style="margin:0; padding:0;">
-    <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 1.5rem auto 0 auto; padding-left: 1rem; padding-right: 1rem; font-family: Arial, sans-serif;">
+    <table role="presentation" width="100%" style="max-width: 600px; margin: 1.5rem auto 0 auto; padding-left: 1rem; padding-right: 1rem; font-family: Arial, sans-serif;">
         <tr>
             <td style="vertical-align: top;">
                 <h3 style="margin: 0 0 1rem 0;">Progress Feedback</h3>
-                <p style="margin: 0 0 1rem 0;">Dear Parent of <strong>@Model?.Feedback?.LearnerName</strong></p>
+                <p style="margin: 0 0 1rem 0;">Dear Parent of <strong>@Model.Feedback?.LearnerName</strong></p>
                 @if (isAchievementRating)
                 {
                     <p style="margin: 0 0 1rem 0;">
@@ -40,18 +40,18 @@
                 </p>
                 <p style="margin: 0 0 1rem 0;">
                     Regards,<br />
-                    @foreach (var principal in Model?.Principals!)
+                    @foreach (var principal in Model.Principals!)
                     {
                         @principal.Name @principal.Surname <br />
                     }
                     Principal
                 </p>
 
-                @if (Model?.Feedback?.ResultsBySubject != null && Model.Feedback.ResultsBySubject.Any(x => x.Value != null && x.Value.Any()))
+                @if (Model.Feedback?.ResultsBySubject != null && Model.Feedback.ResultsBySubject.Any(x => x.Value.Any()))
                 {
-                    foreach (var subjectGroup in Model.Feedback.ResultsBySubject.Where(x => x.Value != null && x.Value.Any()))
+                    foreach (var subjectGroup in Model.Feedback.ResultsBySubject.Where(x => x.Value.Any()))
                     {
-                        <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="border: 1px solid rgba(0,0,0,0.125); border-radius: 0.25rem; margin-bottom: 1.5rem; background-color: #fff; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);">
+                        <table role="presentation" width="100%" style="border: 1px solid rgba(0,0,0,0.125); border-radius: 0.25rem; margin-bottom: 1.5rem; background-color: #fff; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);">
                             <tr>
                                 <td style="padding: 0.5rem 1rem; background-color: rgba(0, 0, 0, 0.03); border-bottom: 1px solid rgba(0, 0, 0, 0.125);">
                                     <h4 style="margin: 0;">@subjectGroup.Key</h4>
@@ -59,7 +59,7 @@
                             </tr>
                             <tr>
                                 <td style="padding: 1rem;">
-                                    <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom: 1rem; color: #212529; border-collapse: collapse; text-align: center;">
+                                    <table role="presentation" width="100%" style="margin-bottom: 1rem; color: #212529; border-collapse: collapse; text-align: center;">
                                         <thead>
                                             <tr>
                                                 @for (var i = 0; i < 3; i++)

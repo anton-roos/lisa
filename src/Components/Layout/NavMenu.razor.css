@@ -169,8 +169,15 @@
 
     .nav-scrollable {
         display: block;
+        height: calc(100vh - 5rem - 80px); /* Subtract top bar (3.5rem) and footer (60px) for extra spacing */
+        overflow-y: auto;
+    }
+}
 
-        height: calc(100vh - 3.5rem);
+/* Mobile nav adjustments */
+@media (max-width: 599px) {
+    .nav-scrollable {
+        height: calc(100vh - 3.5rem - 55px); /* Account for mobile footer height with extra spacing */
         overflow-y: auto;
     }
 }

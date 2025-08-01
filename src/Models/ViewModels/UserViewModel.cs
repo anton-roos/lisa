@@ -25,6 +25,5 @@ public class UserViewModel
     public List<string> SelectedRoles { get; set; } = [];
     public List<CareGroup> CareGroups { get; set; } = [];
     public List<Guid> SelectedCareGroupIds { get; set; } = [];
-    public string? PhoneNumber { get; set; }
     public List<TeacherSubject>? Subjects { get; set; }
 }

@@ -85,7 +85,6 @@
                {
                    <div class="d-flex justify-content-center p-4">
                        <LoadingSpinner />
-                       <span class="ms-2">Loading learner results...</span>
                    </div>
                }
                else
@@ -113,20 +112,20 @@
 </AuthorizeView>
 
 @code {
-    private List<ResultSet?> _resultsSet = [];
-    private Dictionary<string, List<ResultSet?>> GroupedResults { get; set; } = new();
+    private List<ResultSet> _resultsSet = [];
+    private Dictionary<string, List<ResultSet>> GroupedResults { get; set; } = new();
     private List<SchoolGrade> _schoolGrades = [];
     private List<Subject> _subjects = [];
     private List<User> _teachers = [];
     private List<AssessmentType> _assessmentTypes = [];
-    private List<int>? _availableGradesForSubject = [];
+    private List<int> _availableGradesForSubject = [];
     private HashSet<int> _selectedGrades = [];
     private bool _loading;
     private School? _selectedSchool;
 
     private List<Learner> _learners = [];
     private Dictionary<Guid, List<ResultSet>> _learnerResults = new();
-    private bool _learnersLoading = false;
+    private bool _learnersLoading;
     private string _learnerSearchText = "";
     private Guid? _learnerGradeId;
     private int? _assessmentTypeId;
@@ -137,7 +136,9 @@
                   || $"{u.Name} {u.Surname}"
                      .Contains(_learnerSearchText, StringComparison.OrdinalIgnoreCase))
       .Where(u => !_learnerGradeId.HasValue || u.RegisterClass?.SchoolGradeId == _learnerGradeId)
-      .Where(u => !_selectedGrades.Any() || (u.RegisterClass?.SchoolGrade?.SystemGrade?.Id != null && _selectedGrades.Contains(u.RegisterClass.SchoolGrade.SystemGrade.Id)));
+      .Where(u => !_selectedGrades.Any() 
+                || (u.RegisterClass?.SchoolGrade?.SystemGrade.Id != null 
+                && _selectedGrades.Contains(u.RegisterClass.SchoolGrade.SystemGrade.Id)));
 
     async Task OnFiltersChanged(ResultFilter.FilterCriteria c)
     {
@@ -185,11 +186,11 @@
         if (SubjectId.HasValue)
         {
             var subject = await SubjectService.GetByIdAsync(SubjectId.Value);
-            _availableGradesForSubject = subject?.GradesApplicable;
+            _availableGradesForSubject = subject?.GradesApplicable ?? [];
         }
         else
         {
-            _availableGradesForSubject = null;
+            _availableGradesForSubject = [];
         }
         
         await UpdateAndLoadAsync();
@@ -243,12 +244,10 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        // Sync local state with query parameters
-        _learnerSearchText = LearnerSearchText ?? "";
+        _learnerSearchText = LearnerSearchText;
         _learnerGradeId = LearnerGradeId;
         _assessmentTypeId = AssessmentTypeId;
         
-        // Parse selected grades from URL parameter
         if (!string.IsNullOrWhiteSpace(SelectedGrades))
         {
             _selectedGrades = new HashSet<int>(
@@ -303,12 +302,12 @@
                 null,
                 FromDate,
                 ToDate))
-                .Where(r => !_selectedGrades.Any() || (r?.SchoolGrade?.SystemGrade?.Id != null && _selectedGrades.Contains(r.SchoolGrade.SystemGrade.Id)))
-                .OrderBy(r => r!.AssessmentDate)
+                .Where(r => !_selectedGrades.Any() || (r.SchoolGrade?.SystemGrade.Id != null && _selectedGrades.Contains(r.SchoolGrade.SystemGrade.Id)))
+                .OrderBy(r => r.AssessmentDate)
                 .ToList();
 
                 GroupedResults = _resultsSet
-                .GroupBy(r => $"{r!.Subject!.Name!} - {r.SchoolGrade!.SystemGrade.Name!}")
+                .GroupBy(r => $"{r.Subject!.Name!} - {r.SchoolGrade!.SystemGrade.Name!}")
                 .ToDictionary(g => g.Key, g => g.ToList());
                 break;
             case "Grade":
@@ -320,11 +319,11 @@
                 null,
                 FromDate,
                 ToDate))
-                .OrderBy(r => r?.AssessmentDate)
+                .OrderBy(r => r.AssessmentDate)
                 .ToList();
 
                 GroupedResults = _resultsSet
-                .GroupBy(r => r!.Subject!.Name)
+                .GroupBy(r => r.Subject!.Name)
                 .ToDictionary(g => g.Key!, g => g.ToList());
                 break;
             case "Teacher":
@@ -336,12 +335,12 @@
                 null,
                 FromDate,
                 ToDate))
-                .Where(r => !_selectedGrades.Any() || (r?.SchoolGrade?.SystemGrade?.Id != null && _selectedGrades.Contains(r.SchoolGrade.SystemGrade.Id)))
-                .OrderBy(r => r!.AssessmentDate)
+                .Where(r => !_selectedGrades.Any() || (r.SchoolGrade?.SystemGrade.Id != null && _selectedGrades.Contains(r.SchoolGrade.SystemGrade.Id)))
+                .OrderBy(r => r.AssessmentDate)
                 .ToList();
 
                 GroupedResults = _resultsSet
-                .GroupBy(r => new { r?.Teacher?.Abbreviation, r?.Subject?.Name })
+                .GroupBy(r => new { r.Teacher?.Abbreviation, r.Subject?.Name })
                 .ToDictionary(g => $"{g.Key.Abbreviation} - {g.Key.Name}", g => g.ToList());
                 break;
         }
@@ -405,11 +404,6 @@
                 _learnerResults[learner.Id] = learnerResultsBySubject;
             }
         }
-    }
-
-    private void EditResult(Guid resultSetId)
-    {
-        Navigation.NavigateTo($"results/manage/{resultSetId}");
     }
 
     private void ViewLearner(Guid learnerId)

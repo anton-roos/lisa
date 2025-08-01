@@ -4,6 +4,11 @@ namespace Lisa.Models.Entities;
 
 public class School
 {
+    public School()
+    {
+        Id = Guid.NewGuid();
+    }
+
     public Guid Id { get; set; }
     [MaxLength(8)]
     public string? ShortName { get; set; }

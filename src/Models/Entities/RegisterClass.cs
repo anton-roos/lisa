@@ -4,6 +4,11 @@ namespace Lisa.Models.Entities;
 
 public class RegisterClass
 {
+    public RegisterClass()
+    {
+        Id = Guid.NewGuid();
+    }
+
     public Guid Id { get; set; }
     [MaxLength(32)]
     public string? Name { get; set; }

@@ -4,6 +4,11 @@ namespace Lisa.Models.Entities;
 
 public class Parent
 {
+    public Parent()
+    {
+        Id = Guid.NewGuid();
+    }
+
     public Guid Id { get; set; }
     [MaxLength(256)]
     public string? PrimaryEmail { get; set; }

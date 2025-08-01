@@ -1,4 +1,5 @@
 using Lisa.Data;
+using Lisa.Interfaces;
 using Lisa.Models.Entities;
 using Lisa.Models.ViewModels;
 using Microsoft.AspNetCore.Identity;
@@ -6,14 +7,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class UserService
-(
+public class UserService(
     UserManager<User> userManager,
     IDbContextFactory<LisaDbContext> dbContextFactory,
     ILogger<UserService> logger,
     UiEventService uiEventService,
     IPasswordHasher<User> passwordHasher
-)
+) : IUserService
 {
     public async Task<List<User>> GetAllByRoleAndSchoolAsync(string[] roles, Guid? schoolId)
     {
@@ -182,7 +182,6 @@ public class UserService
             existing.Abbreviation = user.Abbreviation;
             existing.Name = user.Name;
             existing.Email = user.Email;
-            existing.PhoneNumber = user.PhoneNumber;
             existing.SchoolId = user.SchoolId;
 
             existing.CareGroups?.Clear();
@@ -365,9 +364,9 @@ public class UserService
         }
     }
 
-    public async Task<List<User>?> GetLearnerPrincipal(Guid LearnerId)
+    public async Task<List<User>?> GetLearnerPrincipal(Guid learnerId)
     {
-        Guard.Against.Default(LearnerId, nameof(LearnerId), "Learner ID cannot be an empty GUID");
+        Guard.Against.Default(learnerId, nameof(learnerId), "Learner ID cannot be an empty GUID");
 
         try
         {
@@ -375,7 +374,7 @@ public class UserService
             var learner = await context.Learners
                 .Include(l => l.RegisterClass)
                 .ThenInclude(rc => rc!.User)
-                .FirstOrDefaultAsync(l => l.Id == LearnerId);
+                .FirstOrDefaultAsync(l => l.Id == learnerId);
 
             var principals = await GetAllByRoleAndSchoolAsync([Roles.Principal], learner?.SchoolId);
 
@@ -383,7 +382,7 @@ public class UserService
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error fetching learner principal for LearnerId: {LearnerId}", LearnerId);
+            logger.LogError(ex, "Error fetching learner principal for LearnerId: {LearnerId}", learnerId);
             return null;
         }
     }

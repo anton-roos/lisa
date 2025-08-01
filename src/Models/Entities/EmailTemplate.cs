@@ -13,5 +13,4 @@ public class EmailTemplate
     public string? Content { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    public string ModelType { get; set; } = string.Empty;
 }

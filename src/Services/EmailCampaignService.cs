@@ -17,12 +17,10 @@ public class EmailCampaignService
     LearnerService learnerService,
     UserService userService,
     EmailRendererService emailRendererService,
-    ResultService resultService,
     ProgressFeedbackService progressFeedbackService
 )
 {
-    private static readonly ConcurrentDictionary<Guid, CancellationTokenSource> _campaignIds = new();
-    private readonly ResultService _resultService = resultService;
+    private static readonly ConcurrentDictionary<Guid, CancellationTokenSource> CampaignIds = new();
     private const int BatchSize = 100;
     private const int ProgressComplete = 100;
     private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled); public async Task<EmailCampaign> CreateAsync(CommunicationCommand command)
@@ -101,13 +99,13 @@ public class EmailCampaignService
         campaign.Status = EmailCampaignStatus.Sending;
         await context.SaveChangesAsync();
 
-        if (_campaignIds.ContainsKey(campaignId))
+        if (CampaignIds.ContainsKey(campaignId))
         {
             logger.LogWarning("Campaign {CampaignId} is already running.", campaignId);
             tokenSource.Dispose();
             return;
         }
-        if (!_campaignIds.TryAdd(campaignId, tokenSource))
+        if (!CampaignIds.TryAdd(campaignId, tokenSource))
         {
             logger.LogWarning("Campaign {CampaignId} is already running.", campaignId);
             tokenSource.Dispose();
@@ -134,7 +132,7 @@ public class EmailCampaignService
         }
         finally
         {
-            if (_campaignIds.TryRemove(campaignId, out var cts))
+            if (CampaignIds.TryRemove(campaignId, out var cts))
             {
                 cts.Dispose();
             }
@@ -187,7 +185,7 @@ public class EmailCampaignService
 
     private bool TryCancelCampaign(Guid campaignId)
     {
-        if (_campaignIds.TryRemove(campaignId, out var tokenSource))
+        if (CampaignIds.TryRemove(campaignId, out var tokenSource))
         {
             try
             {
@@ -259,7 +257,8 @@ public class EmailCampaignService
     {
         var delayInterval = 0;
 
-        foreach (var recipient in batch)
+        var emailRecipients = batch as EmailRecipient[] ?? batch.ToArray();
+        foreach (var recipient in emailRecipients)
         {
             cancellationToken.ThrowIfCancellationRequested();
             await Task.Delay(TimeSpan.FromSeconds(delayInterval), cancellationToken);
@@ -267,7 +266,7 @@ public class EmailCampaignService
             delayInterval += 5;
         }
 
-        processedCount += batch.Count();
+        processedCount += emailRecipients.Count();
         var progress = CalculateProgress(processedCount, total);
         await uiEventService.PublishAsync(UiEvents.EmailCampaignProgressUpdated, new
         {
@@ -306,7 +305,7 @@ public class EmailCampaignService
             {
                 RecipientTemplate.ProgressFeedback when recipient.LearnerId.HasValue =>
                     await emailRendererService.RenderProgressFeedbackAsync(recipient.LearnerId.Value,
-                        campaign?.FromDate, campaign?.ToDate),
+                        campaign.FromDate, campaign.ToDate),
                 RecipientTemplate.Test when recipient.LearnerId.HasValue =>
                     await emailRendererService.RenderTestAsync(recipient.LearnerId.Value),
                 RecipientTemplate.Newsletter =>
@@ -320,8 +319,6 @@ public class EmailCampaignService
                 recipient.Status = EmailRecipientStatus.Bounced;
                 return;
             }
-
-
 
             await emailService.SendEmailAsync(recipient.EmailAddress, subject, body, campaign.SchoolId);
             recipient.Status = EmailRecipientStatus.Sent;
@@ -353,7 +350,6 @@ public class EmailCampaignService
             RecipientTemplate.ProgressFeedback => GenerateProgressRecipientsAsync,
             RecipientTemplate.Newsletter => GenerateNewsletterRecipientsAsync,
             RecipientTemplate.Test => GenerateProgressRecipientsAsync,
-            RecipientTemplate.None => GenerateNewsletterRecipientsAsync,
             _ => GenerateNewsletterRecipientsAsync
         };
 

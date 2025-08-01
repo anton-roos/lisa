@@ -2,10 +2,8 @@
 @using Lisa.Models.Entities
 @using Lisa.Helpers
 @using Lisa.Enums
-@inject SchoolService SchoolService
 @inject SchoolGradeTimeService SchoolGradeTimeService
 @inject AttendanceService AttendanceService
-@inject AttendanceRecordService AttendanceRecordService
 @inject NavigationManager NavigationManager
 
 <PageTitle>Attendance Details</PageTitle>
@@ -42,7 +40,7 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6">
-                                <p><strong>School:</strong> @_attendance.School?.LongName</p>
+                                <p><strong>School:</strong> @_attendance.School.LongName</p>
                                 <p><strong>Start Time:</strong> @_attendance.Start.ToString("dd/MM/yyyy HH:mm")</p>
                                 @if (_attendance.End.HasValue)
                                 {
@@ -85,7 +83,7 @@
                         <h5 class="mb-0">Attendance Records</h5>
                     </div>
                     <div class="card-body">
-                        @if (_attendance.AttendanceRecords == null || !_attendance.AttendanceRecords.Any())
+                        @if (!_attendance.AttendanceRecords.Any())
                         {
                             <div class="alert alert-info">
                                 <p class="mb-0">No attendance records found for this session.</p>

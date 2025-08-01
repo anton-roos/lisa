@@ -2,15 +2,13 @@
 @page "/sign-in-and-out/sign-out/{AttendanceId:guid}"
 @using Lisa.Models.Entities
 @using Lisa.Helpers
+@using Lisa.Enums
 @inject SchoolService SchoolService
 @inject RegisterClassService RegisterClassService
 @inject LearnerService LearnerService
 @inject AttendanceService AttendanceService
 @inject AttendanceRecordService AttendanceRecordService
-@inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
-@using System.Security.Claims
-@using Lisa.Enums
 
 @inherits EventAwareComponentBase
 
@@ -33,7 +31,7 @@
                 </button>
             }
 
-            @if (isLoading)
+            @if (_isLoading)
             {
                 <div class="overlay d-flex justify-content-center align-items-center">
                     <div class="spinner-border text-primary" role="status">
@@ -84,7 +82,6 @@
                                                 @foreach (var learner in _registerClassLearners[registerClass]
                                                     .Where(l => string.IsNullOrEmpty(_searchText) || $"{l.Name} {l.Surname}".ToLower().Contains(_searchText.ToLower()))
                                                     .Where(l => _isSignOut ? 
-                                                        // For sign-out: show learners who signed in OR have already signed out
                                                         (_attendanceData.TryGetValue(l.Id, out var d) && d.IsPresent) || 
                                                         _signOutTimeMap.ContainsKey(l.Id)
                                                         : true))
@@ -188,30 +185,25 @@
     private Dictionary<string, List<Learner>> _registerClassLearners = new();
     private Dictionary<Guid, AttendanceData> _attendanceData = new();
     private DateTime _startTime;
-    private TimeOnly _startTimeOnly = new TimeOnly(7, 0);
-    private bool _isStartTimeConfirmed = false;
     private DateTime _startTimeDateTime;
     private List<string> _registerClassFilters = ["All"];
     private string _selectedFilter = "All";
     private string _searchText = "";
     private Dictionary<string, Guid> _registerClassNameToIdMap = new();
-    private Guid? _currentUserId;
     private Attendance? _currentSession;
-    private bool _showPhoneModal = false;
+    private bool _showPhoneModal;
     private Learner? _pendingPhoneLearner;
     private string _pendingPhoneModel = string.Empty;
-    private bool _pendingToggleValue = false;
+    private bool _pendingToggleValue;
     private Dictionary<Guid, bool> _toggleValues = new Dictionary<Guid, bool>();
-    private bool isLoading = true;
+    private bool _isLoading = true;
     private bool _isSignOut;
-
-    // Phone return modal variables
-    private bool _showPhoneReturnModal = false;
+    private bool _showPhoneReturnModal;
     private Learner? _pendingSignOutLearner;
 
     private class AttendanceData
     {
-        public bool IsPresent { get; set; } = false;
+        public bool IsPresent { get; set; }
         public DateTime SignInTime { get; set; }
         public bool IsLate(DateTime startTimeDateTime) => SignInTime > startTimeDateTime;
         public Guid? AttendanceId { get; set; }
@@ -247,7 +239,7 @@
         base.OnInitialized();
     }
 
-    private async void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    private async void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         // Update _isSignOut based on new URL
         var relativePath = NavigationManager.ToBaseRelativePath(e.Location);
@@ -260,35 +252,13 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    public void Dispose()
-    {
-        NavigationManager.LocationChanged -= HandleLocationChanged;
-    }
-
     protected override async Task OnInitializedAsync()
     {
-        
-
-        // Make sure TimeOnly is properly initialized
         _startTime = TimeHelpers.GetCurrentTime().AddHours(7);
-        _startTimeOnly = new TimeOnly(7, 0);
         _startTimeDateTime = _startTime;
-        _isStartTimeConfirmed = true; // Start with time confirmed since it's set at the component level
 
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         SubscribeToEvent(UiEvents.SchoolSelected);
-
-        // Get the current user ID
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        if (user.Identity?.IsAuthenticated ?? false)
-        {
-            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!string.IsNullOrEmpty(userId))
-            {
-                _currentUserId = Guid.Parse(userId);
-            }
-        }
 
         if (_selectedSchool != null)
         {
@@ -296,21 +266,16 @@
             await CheckForExistingSession();
         }
 
-        isLoading = false;
+        _isLoading = false;
     }
 
-    // Add this method to properly handle school selection events
     protected override async Task HandleEventAsync(string eventName, object? payload)
     {
         if (eventName == UiEvents.SchoolSelected && payload is School school)
         {
-            // Log selection to help debug
             Console.WriteLine($"School selected: {school.LongName} (ID: {school.Id})");
 
-            // Update selected school
             _selectedSchool = school;
-
-            // Reset state when school changes
             _registerClassLearners.Clear();
             _attendanceData.Clear();
             _currentSession = null;
@@ -318,7 +283,6 @@
             await LoadRegisterClasses();
             await CheckForExistingSession();
 
-            // Force UI update
             await InvokeAsync(StateHasChanged);
         }
 
@@ -355,9 +319,7 @@
         }
 
         _startTime = _currentSession.Start;
-        _startTimeOnly = TimeOnly.FromDateTime(_startTime);
         _startTimeDateTime = _startTime;
-        _isStartTimeConfirmed = true;
 
         if (_selectedSchool?.Id != _currentSession.SchoolId)
         {
@@ -369,10 +331,9 @@
         await LoadAttendanceData();
     }
 
-    // Add LoadAttendanceData method to properly load attendance records
     private async Task LoadAttendanceData()
     {
-        if (_currentSession == null || _currentSession.AttendanceRecords == null) return;
+        if (_currentSession == null) return;
 
         // Clear existing data to avoid stale state
         _attendanceData.Clear();
@@ -448,29 +409,6 @@
         NavigationManager.NavigateTo($"/sign-in-and-out/sign-out/{AttendanceId}");
     }
 
-    // This method is no longer used as time confirmation happens at the component level
-    private async Task ConfirmStartTime()
-    {
-        if (_selectedSchool == null) return;
-
-        _startTime = TimeHelpers.GetCurrentTime().Date.Add(_startTimeOnly.ToTimeSpan());
-        _startTimeDateTime = _startTime;
-        _isStartTimeConfirmed = true;
-
-        // This is now done at the component level, but we keep the method for backward compatibility
-        if (_currentSession == null)
-        {
-            _currentSession = await AttendanceService.GetTodaysAttendanceAsync(_selectedSchool.Id);
-        }
-
-        if (_currentSession != null)
-        {
-            await CreateInitialAttendanceAsync();
-            await LoadLearners();
-            NavigationManager.NavigateTo($"/sign-in-and-out/sign-in/{_currentSession.Id}");
-        }
-    }
-
     private async Task LoadLearners()
     {
         if (_selectedSchool == null) return;
@@ -484,13 +422,13 @@
 
         // Sort register classes by SystemGrade sequence number
         var sortedRegisterClasses = _registerClasses
-            .Where(rc => rc?.SchoolGrade?.SystemGrade != null)
-            .OrderBy(rc => rc.SchoolGrade?.SystemGrade?.SequenceNumber)
+            .Where(rc => rc.SchoolGrade?.SystemGrade != null)
+            .OrderBy(rc => rc.SchoolGrade?.SystemGrade.SequenceNumber)
             .ToList();
 
         foreach (var registerClass in sortedRegisterClasses)
         {
-            if (registerClass?.SchoolGrade?.SystemGrade?.Name == null) continue;
+            if (registerClass.SchoolGrade?.SystemGrade.Name == null) continue;
             var className = registerClass.SchoolGrade.SystemGrade.Name;
 
             if (!_registerClassFilters.Contains(className))
@@ -587,11 +525,11 @@
             data.SignInTime = TimeHelpers.GetCurrentTime();
         }
 
-        if (_registerClassNameToIdMap.TryGetValue(registerClassName, out var registerClassId))
+        if (_registerClassNameToIdMap.TryGetValue(registerClassName, out _))
         {
             if (data.AttendanceId.HasValue)
             {
-                await UpdateAttendanceStatus(data.AttendanceId.Value, data.IsPresent);
+                await UpdateAttendanceStatus();
             }
             else
             {
@@ -614,9 +552,14 @@
             UpdatedAt = DateTime.UtcNow
         };
         await AttendanceRecordService.CreateAsync(signOut);
-        // Add to current session and in-memory maps for immediate UI update
-        _currentSession.AttendanceRecords ??= new List<AttendanceRecord>();
+        
+        if (_currentSession.AttendanceRecords == null)
+        {
+            _currentSession.AttendanceRecords = new List<AttendanceRecord>();
+        }
+        
         _currentSession.AttendanceRecords.Add(signOut);
+        
         _learnerToAttendanceRecordMap[learnerId] = signOut;
         _signOutTimeMap[learnerId] = signOut.Start ?? DateTime.UtcNow;
     }
@@ -651,13 +594,8 @@
         _learnerToAttendanceRecordMap[learnerId] = attendanceRecord;
     }
 
-    private async Task UpdateAttendanceStatus(Guid attendanceId, bool isPresent)
+    private async Task UpdateAttendanceStatus()
     {
-        var notes = isPresent
-            ? $"Updated to present at {TimeHelpers.GetCurrentTimeInLocal():HH:mm}"
-            : "Updated to absent";
-
-        // This method is async but currently has no await operation
         await Task.CompletedTask;
     }
 
@@ -707,35 +645,6 @@
         return _attendanceData[learner.Id].IsLate(_startTimeDateTime) ? "late" : "on-time";
     }
 
-    private async Task CreateInitialAttendanceAsync()
-    {
-        if (_selectedSchool == null || _currentSession == null) return;
-
-        foreach (var registerClassGroup in _registerClassLearners)
-        {
-            var className = registerClassGroup.Key;
-            if (!_registerClassNameToIdMap.TryGetValue(className, out var registerClassId)) continue;
-            foreach (var learner in registerClassGroup.Value)
-            {
-                var attendance = await AttendanceService.CreateAttendanceAsync(
-                    schoolId: _selectedSchool.Id,
-                    start: _startTime
-                );
-
-                // Store the attendance ID for later updates
-                if (!_attendanceData.ContainsKey(learner.Id))
-                {
-                    _attendanceData[learner.Id] = new AttendanceData();
-                }
-
-                // We'll update this with the proper ID when we load attendance data
-            }
-        }
-
-        // Refresh attendance data to get the IDs
-        await LoadAttendanceData();
-    }
-
     private Dictionary<Guid, AttendanceRecord> _learnerToAttendanceRecordMap = new Dictionary<Guid, AttendanceRecord>();
 
     // Helper methods for cellphone collection
@@ -752,76 +661,6 @@
         return false;
     }
 
-    private async Task CollectPhone(MouseEventArgs e, Learner learner)
-    {
-        // For present students, we need to collect their phone
-        if (!_attendanceData.TryGetValue(learner.Id, out var data) || !data.AttendanceId.HasValue)
-        {
-            // This should not happen for present students, but just in case
-            return;
-        }
-
-        // Get the attendance record from our map or from the service
-        AttendanceRecord? record = null;
-        if (_learnerToAttendanceRecordMap.TryGetValue(learner.Id, out var cachedRecord))
-        {
-            record = cachedRecord;
-        }
-        else
-        {
-            record = await AttendanceRecordService.GetByIdAsync(data.AttendanceId.Value);
-            if (record != null)
-            {
-                _learnerToAttendanceRecordMap[learner.Id] = record;
-            }
-        }
-
-        if (record == null)
-        {
-            return;
-        }
-
-        // Only allow collection, not return, at sign-in
-        if (!record.CellPhoneCollected)
-        {
-            // Set cell phone collected to true
-            record.CellPhoneCollected = true;
-            record.UpdatedAt = TimeHelpers.GetCurrentTime();
-
-            bool success = await AttendanceRecordService.ToggleCellPhoneCollectedAsync(record.Id);
-
-            if (success)
-            {
-                // Force UI update
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-    }
-
-    private void OnTogglePhoneCollectModal(ChangeEventArgs e, Learner learner)
-    {
-        var isChecked = e.Value is bool b && b;
-        if (isChecked)
-        {
-            _pendingPhoneLearner = learner;
-            _pendingPhoneModel = string.Empty;
-            _pendingToggleValue = true;
-            _showPhoneModal = true;
-        }
-        else
-        {
-            // If user cancels modal, reset toggle visually
-            if (_pendingPhoneLearner == learner)
-            {
-                _showPhoneModal = false;
-                _pendingPhoneLearner = null;
-                _pendingPhoneModel = string.Empty;
-                _pendingToggleValue = false;
-                StateHasChanged();
-            }
-        }
-    }
-
     private async Task ConfirmPhoneCollect()
     {
         if (_pendingPhoneLearner != null && _pendingToggleValue && !string.IsNullOrWhiteSpace(_pendingPhoneModel))
@@ -834,13 +673,11 @@
         _pendingToggleValue = false;
     }
 
-    
-
     private async Task CollectPhoneWithModel(Learner learner, string phoneModel)
     {
         if (!_attendanceData.TryGetValue(learner.Id, out var data) || !data.AttendanceId.HasValue)
             return;
-        AttendanceRecord? record = null;
+        AttendanceRecord? record;
         if (_learnerToAttendanceRecordMap.TryGetValue(learner.Id, out var cachedRecord))
         {
             record = cachedRecord;
@@ -869,14 +706,11 @@
 
     private async Task ToggleCellPhoneCollected(Learner learner)
     {
-        // Toggle desired state
         var isChecked = !_toggleValues[learner.Id];
-        // Update visual state
         _toggleValues[learner.Id] = isChecked;
 
          if (isChecked)
          {
-             // Toggling ON: open modal for phone model
              _pendingPhoneLearner = learner;
              _pendingPhoneModel = string.Empty;
              _pendingToggleValue = true;
@@ -885,10 +719,9 @@
          }
          else
          {
-             // Toggling OFF: immediately update record, no modal
              if (_attendanceData.TryGetValue(learner.Id, out var data) && data.AttendanceId.HasValue)
              {
-                 AttendanceRecord? record = null;
+                 AttendanceRecord? record;
                  if (_learnerToAttendanceRecordMap.TryGetValue(learner.Id, out var cachedRecord))
                  {
                      record = cachedRecord;
@@ -906,9 +739,7 @@
                      record.CellPhoneCollected = false;
                      record.CellPhoneModel = null;
                      record.UpdatedAt = TimeHelpers.GetCurrentTime();
-                     // Save changes to backend
                      await AttendanceRecordService.UpdateAsync(record);
-                     // Toggle visual state already updated
                      await InvokeAsync(StateHasChanged);
                  }
              }
@@ -917,7 +748,6 @@
 
     private void CancelPhoneCollect()
     {
-        // Reset toggle if cancellation
         if (_pendingPhoneLearner != null)
         {
             _toggleValues[_pendingPhoneLearner.Id] = false;
@@ -929,25 +759,11 @@
         InvokeAsync(StateHasChanged);
     }
 
-    // Phone return modal methods
     private async Task ConfirmPhoneReturn()
     {
         if (_pendingSignOutLearner != null)
         {
-            // Mark phone as returned and sign out learner
             await ReturnPhone(_pendingSignOutLearner);
-            await SaveSignOutRecord(_pendingSignOutLearner.Id);
-            await InvokeAsync(StateHasChanged);
-        }
-        _showPhoneReturnModal = false;
-        _pendingSignOutLearner = null;
-    }
-
-    private async Task SignOutWithoutPhoneReturn()
-    {
-        if (_pendingSignOutLearner != null)
-        {
-            // Sign out learner without returning phone (phone remains collected)
             await SaveSignOutRecord(_pendingSignOutLearner.Id);
             await InvokeAsync(StateHasChanged);
         }
@@ -966,7 +782,7 @@
         if (!_attendanceData.TryGetValue(learner.Id, out var data) || !data.AttendanceId.HasValue)
             return;
 
-        AttendanceRecord? record = null;
+        AttendanceRecord? record;
         if (_learnerToAttendanceRecordMap.TryGetValue(learner.Id, out var cachedRecord))
         {
             record = cachedRecord;
@@ -982,14 +798,20 @@
 
         if (record != null && record.CellPhoneCollected && !record.CellPhoneReturned)
         {
-            // Mark phone as returned but keep it as collected
             record.CellPhoneReturned = true;
             record.CellPhoneReturnedAt = TimeHelpers.GetCurrentTime();
             record.UpdatedAt = TimeHelpers.GetCurrentTime();
-            // Save changes to backend
             await AttendanceRecordService.UpdateAsync(record);
-            // Update in-memory state
             _phoneReturnedMap[learner.Id] = true;
         }
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            NavigationManager.LocationChanged -= HandleLocationChanged;
+        }
+        base.Dispose(disposing);
     }
 }

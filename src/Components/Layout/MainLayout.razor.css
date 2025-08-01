@@ -1,6 +1,7 @@
 .page {
     display: flex;
-    height: 100vh;
+    height: calc(100vh - 40px);
+    /* Subtract footer height (32px) plus small gap (8px) */
     overflow: hidden;
 }
 
@@ -8,7 +9,8 @@ main {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: calc(100vh - 40px);
+    /* Subtract footer height (32px) plus small gap (8px) */
 }
 
 #header {
@@ -36,13 +38,15 @@ main {
     align-items: center;
 }
 
-.top-row ::deep a, .top-row ::deep .btn-link {
+.top-row ::deep a,
+.top-row ::deep .btn-link {
     white-space: nowrap;
     margin-left: 1.5rem;
     text-decoration: none;
 }
 
-.top-row ::deep a:hover, .top-row ::deep .btn-link:hover {
+.top-row ::deep a:hover,
+.top-row ::deep .btn-link:hover {
     text-decoration: underline;
 }
 
@@ -56,7 +60,8 @@ main {
         justify-content: space-between;
     }
 
-    .top-row ::deep a, .top-row ::deep .btn-link {
+    .top-row ::deep a,
+    .top-row ::deep .btn-link {
         margin-left: 0;
     }
 
@@ -72,7 +77,8 @@ main {
 
     .sidebar {
         width: 250px;
-        height: 100vh;
+        height: calc(100vh - 40px);
+        /* Subtract footer height (32px) plus small gap (8px) */
         position: sticky;
         top: 0;
     }
@@ -89,7 +95,8 @@ main {
         width: 0;
     }
 
-    .top-row, article {
+    .top-row,
+    article {
         padding-left: 2rem !important;
         padding-right: 1.5rem !important;
     }

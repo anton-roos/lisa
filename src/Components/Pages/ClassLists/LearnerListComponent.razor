@@ -1,7 +1,7 @@
 @using Lisa.Models.Entities
 @inject IJSRuntime JsRuntime
 
-<button class="btn btn-outline-danger" @onclick="DownloadPDF">
+<button class="btn btn-outline-danger" @onclick="DownloadPdf">
     <i class="bi bi-file-earmark-pdf"></i> Download PDF
 </button>
 <table id="learner-list" class="table">
@@ -21,7 +21,7 @@
         </tr>
     </thead>
     <tbody>
-        @if (Learners == null || !Learners.Any())
+        @if (!Learners.Any())
         {
             <tr>
                 <td colspan="3">No learners available.</td>
@@ -47,7 +47,7 @@
     [Parameter]
     public string? Title { get; set; }
 
-    private async Task DownloadPDF()
+    private async Task DownloadPdf()
     {
         await JsRuntime.InvokeVoidAsync("downloadLearnerListPDF");
     }

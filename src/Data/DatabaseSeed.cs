@@ -11,7 +11,8 @@ public static class DatabaseSeed
 
     public static async Task Seed(IServiceProvider serviceProvider)
     {
-        var logger = serviceProvider.GetRequiredService<ILogger>();
+        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+        var logger = loggerFactory.CreateLogger(typeof(DatabaseSeed));
         logger.LogInformation("Starting database seeding...");
 
         try

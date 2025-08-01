@@ -6,6 +6,11 @@ namespace Lisa.Models.Entities;
 
 public class User : IdentityUser<Guid>
 {
+    public User()
+    {
+        Id = Guid.NewGuid();
+    }
+
     public string? Surname { get; set; }
     public string? Abbreviation { get; set; }
     [MaxLength(64)]

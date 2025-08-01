@@ -1,7 +1,5 @@
-﻿@using Lisa.Models.Entities
-@inherits LayoutComponentBase
+﻿@inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
-@inject ILogger<MainLayout> Logger
 
 <div class="page">
 
@@ -56,6 +54,8 @@
         @* Needed for snackbars *@
         <MudSnackbarProvider />
     </main>
+
+    <VersionFooter />
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {

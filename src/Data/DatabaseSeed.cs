@@ -4,14 +4,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Data;
 
-public class DatabaseSeed
+public static class DatabaseSeed
 {
-    private const string DefaultAdminEmail = "admin@dcegroup.co.za";
-    private const string DefaultAdminPassword = "Hexagoon@1995!";
+    private const string DefaultAdminEmail = "admin@email.com";
+    private const string DefaultAdminPassword = "TestP@ssword42069";
 
     public static async Task Seed(IServiceProvider serviceProvider)
     {
-        var logger = serviceProvider.GetRequiredService<ILogger<DatabaseSeed>>();
+        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+        var logger = loggerFactory.CreateLogger(typeof(DatabaseSeed));
         logger.LogInformation("Starting database seeding...");
 
         try
@@ -83,7 +84,6 @@ public class DatabaseSeed
     private static async Task SeedAdmin(IServiceProvider serviceProvider, ILogger logger)
     {
         var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
-        var config = serviceProvider.GetRequiredService<IConfiguration>();
 
         var configuredPassword = DefaultAdminPassword;
 

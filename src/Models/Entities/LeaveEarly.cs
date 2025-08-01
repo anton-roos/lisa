@@ -23,15 +23,22 @@ namespace Lisa.Models.Entities
         public TimeOnly? SignOutTime { get; set; }
 
         public PermissionType PermissionType { get; set; }
+        
+        [MaxLength(512)]
         public string? TelephonicNotes { get; set; }
 
         public PickUpType PickUpType { get; set; }
 
-        public string? PickupFamilyMemberIDNo { get; set; }
+        [MaxLength(64)]
+        public string? PickupFamilyMemberIdNo { get; set; }
+        [MaxLength(64)]
         public string? PickupFamilyMemberFirstname { get; set; }
+        [MaxLength(64)]
         public string? PickupFamilyMemberSurname { get; set; }
 
-        public string? PickupUberTransportIDNo { get; set; }
+        [MaxLength(64)]
+        public string? PickupUberTransportIdNo { get; set; }
+        [MaxLength(64)]
         public string? PickupUberTransportRegNo { get; set; }
     }
 }

@@ -1,5 +1,4 @@
 @namespace Lisa.Components.Shared
-@using System
 
 @if (_isVisible)
 {
@@ -66,7 +65,7 @@
     [Parameter] public TimeOnly? EndTime { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
-    private bool _isVisible = false;
+    private bool _isVisible;
 
     public void Show()
     {

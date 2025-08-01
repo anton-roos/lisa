@@ -28,7 +28,7 @@ public class LearnerViewModel
     [Required(AllowEmptyStrings = false, ErrorMessage = "Learner needs to be assigned to a Register Class.")]
     public Guid? RegisterClassId { get; set; }
 
-    public Guid SchoolId { get; set; }
+    public Guid SchoolId { get; } = Guid.NewGuid();
 
     [Required(AllowEmptyStrings = false, ErrorMessage = "Learner needs to be assigned to a Care Group.")]
     public Guid? CareGroupId { get; set; }

@@ -11,6 +11,6 @@ public class Combination
     public SchoolGrade? SchoolGrade { get; set; }
     public CombinationType CombinationType { get; set; }
     public ICollection<Subject>? Subjects { get; set; }
-    public bool IsDeleted { get; set; } = false;
+    public bool IsDeleted { get; set; }
     public DateTime? DeletedAt { get; set; }
 }

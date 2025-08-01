@@ -1,11 +1,9 @@
 @page "/progress-feedback-details/{LearnerId:guid}"
 @using Microsoft.AspNetCore.WebUtilities
-@inject ProgressFeedbackService ProgressFeedbackService
 @inject NavigationManager NavigationManager
-@inject UserService UserService
 @inject EmailRendererService RenderService
 
-@if (html == string.Empty)
+@if (_html == string.Empty)
 {
     <div class="d-flex justify-content-center align-items-center" style="height: 100vh;">
         <p class="text-muted">Loading...</p>
@@ -16,14 +14,14 @@ else
     <div class="text-center my-2">
         <button class="btn btn-secondary float-end" @onclick="GoBack">Back</button>
     </div>
-    <div>@((MarkupString)html)</div>
+    <div>@((MarkupString)_html)</div>
 }
 
 
 @code {
     [Parameter]
     public Guid LearnerId { get; set; }
-    private string html = string.Empty;
+    private string _html = string.Empty;
     private DateTime? FromDate { get; set; }
     private DateTime? ToDate { get; set; }
 
@@ -44,7 +42,7 @@ else
             ToDate = parsedToDate;
         }
 
-        html = await RenderService.RenderProgressFeedbackAsync(LearnerId, FromDate, ToDate);
+        _html = await RenderService.RenderProgressFeedbackAsync(LearnerId, FromDate, ToDate);
     }
 
     private void GoBack()

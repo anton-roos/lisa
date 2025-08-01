@@ -12,14 +12,15 @@
 @inject AssessmentTypeService AssessmentTypeService
 @inherits EventAwareComponentBase
 
-<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
+<AuthorizeView
+    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
     <Authorized>
         <PageTitle>@(IsEdit ? "Edit Result Set" : "Capture Results")</PageTitle>
         <h3>@(IsEdit ? "Edit Result Set" : "Capture Results")</h3>
 
         @if (_selectedSchool == null && !IsEdit)
         {
-            <NoSchoolSelected Message="Please select a school to capture results." />
+            <NoSchoolSelected Message="Please select a school to capture results."/>
         }
         else if (ViewModel.Loading)
         {
@@ -31,8 +32,8 @@
                 <div class="row">
                     <label for="gradeDropdown">Grade</label>
                     <InputSelect class="form-select" id="gradeDropdown" TValue="string" Value="@ViewModel.GradeId"
-                        ValueChanged="@(async (value) => await OnGradeChange(value))"
-                        ValueExpression="@(() => ViewModel.GradeId)" disabled="@IsEdit">
+                                 ValueChanged="@(async (value) => await OnGradeChange(value))"
+                                 ValueExpression="@(() => ViewModel.GradeId)" disabled="@IsEdit">
                         <option value="">-- Select Grade --</option>
                         @foreach (var grade in ViewModel.SchoolGrades)
                         {
@@ -43,8 +44,8 @@
                 <div class="row">
                     <label for="subjectDropdown">Subject</label>
                     <InputSelect class="form-select" id="subjectDropdown" TValue="string" Value="@ViewModel.SubjectId"
-                        ValueChanged="@(async (value) => await OnSubjectChange(value))"
-                        ValueExpression="@(() => ViewModel.SubjectId)" disabled="@IsEdit">
+                                 ValueChanged="@(async (value) => await OnSubjectChange(value))"
+                                 ValueExpression="@(() => ViewModel.SubjectId)" disabled="@IsEdit">
                         <option value="">-- Select Subject --</option>
                         @foreach (var subject in ViewModel.FilteredSubjects)
                         {
@@ -60,13 +61,13 @@
                 {
                     <div>
                         <label for="resultDate" class="form-label">Select the Date of the Test or Assignment:</label>
-                        <InputDate @bind-Value="ViewModel.AssessmentDate" class="form-control" id="resultDate" />
+                        <InputDate @bind-Value="ViewModel.AssessmentDate" class="form-control" id="resultDate"/>
                     </div>
 
                     <div class="mb-3">
                         <label for="assessmentTypeSelect"><strong>Select Assessment Type:</strong></label>
                         <InputSelect id="assessmentTypeSelect" class="form-select"
-                            @bind-Value="SelectedAssessmentTypeId">
+                                     @bind-Value="SelectedAssessmentTypeId">
                             <option value="">-- Select Assessment Type --</option>
                             @foreach (var type in AssessmentTypes)
                             {
@@ -77,7 +78,7 @@
 
                     <div class="mt-2">
                         <label>Assessment Topic</label>
-                        <InputText class="form-control" @bind-Value="ViewModel.AssessmentTopic" />
+                        <InputText class="form-control" @bind-Value="ViewModel.AssessmentTopic"/>
                     </div>
                     <div class="mt-2">
                         <label>Teacher</label>
@@ -95,50 +96,52 @@
                         }
                     </div>
 
-                    <hr />
+                    <hr/>
 
                     <table class="table table-striped">
                         <thead>
-                            <tr>
-                                <th>Learner</th>
-                                <th>Score</th>
-                                <th>Absent?</th>
-                                <th>Reason</th>
-                                <th>Actions</th>
-                            </tr>
+                        <tr>
+                            <th>Learner</th>
+                            <th>Score</th>
+                            <th>Absent?</th>
+                            <th>Reason</th>
+                            <th>Actions</th>
+                        </tr>
                         </thead>
                         <tbody>
-                            @foreach (var entry in ViewModel.LearnerResults)
-                            {
-                                <tr>
-                                    <td>@entry.Surname @entry.Name</td>
-                                    <td>
-                                        <InputNumber TValue="int?" Value="entry.ResultViewModel.Score"
-                                            ValueChanged="@(EventCallback.Factory.Create<int?>(this, value => {
-                                                if (value != null)
-                                                {
-                                                    OnScoreChanged(value, entry);
-                                                }
-                                            }))"
-                                            class="form-control" min="0" max="100" step="1"
-                                            ValueExpression="@(() => entry.ResultViewModel.Score)" />
-                                    </td>
-                                    <td>
-                                        <InputCheckbox @bind-Value="entry.ResultViewModel.Absent" />
-                                    </td>
-                                    <td>
-                                        @if (entry.ResultViewModel.Absent || entry.ResultViewModel.Score <= 20)
-                                        {
-                                            <InputText @bind-Value="entry.ResultViewModel.AbsentReason" class="form-control" />
-                                        }
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-danger" @onclick="(() => RemoveLearner(entry))">
-                                            Remove
-                                        </button>
-                                    </td>
-                                </tr>
-                            }
+                        @foreach (var entry in ViewModel.LearnerResults)
+                        {
+                            <tr>
+                                <td>@entry.Surname @entry.Name</td>
+                                <td>
+                                    <InputNumber TValue="int?" Value="entry.ResultViewModel.Score"
+                                                 ValueChanged="@(EventCallback.Factory.Create<int?>(this, value =>
+                                                               {
+                                                                   if (value != null)
+                                                                   {
+                                                                       OnScoreChanged(value, entry);
+                                                                   }
+                                                               }))"
+                                                 class="form-control" min="0" max="100" step="1"
+                                                 ValueExpression="@(() => entry.ResultViewModel.Score)"/>
+                                </td>
+                                <td>
+                                    <InputCheckbox @bind-Value="entry.ResultViewModel.Absent"/>
+                                </td>
+                                <td>
+                                    @if (entry.ResultViewModel.Absent || entry.ResultViewModel.Score <= 20)
+                                    {
+                                        <InputText @bind-Value="entry.ResultViewModel.AbsentReason"
+                                                   class="form-control"/>
+                                    }
+                                </td>
+                                <td>
+                                    <button class="btn btn-danger" @onclick="(() => RemoveLearner(entry))">
+                                        Remove
+                                    </button>
+                                </td>
+                            </tr>
+                        }
                         </tbody>
                     </table>
 
@@ -168,7 +171,7 @@
         }
     </Authorized>
     <NotAuthorized>
-        <Unauthorized />
+        <Unauthorized/>
     </NotAuthorized>
 </AuthorizeView>
 
@@ -203,6 +206,7 @@
             {
                 await OnSubjectChange(ViewModel.SubjectId);
             }
+
             // Sync the assessment type dropdown with the existing result set.
             SelectedAssessmentTypeId = ViewModel.AssessmentType?.Id;
         }
@@ -262,6 +266,7 @@
                 _selectedSchool?.Id,
                 Guid.Parse(ViewModel.GradeId), int.Parse(ViewModel.SubjectId));
         }
+
         await InvokeAsync(StateHasChanged);
     }
 
@@ -306,7 +311,6 @@
 
         if (_selectedSchool != null)
         {
-            ViewModel.Subjects = await SubjectService.GetAllAsync();
             ViewModel.SchoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
 
             if (!string.IsNullOrEmpty(ViewModel.GradeId))
@@ -341,23 +345,23 @@
             if (resultSet.Results != null)
             {
                 ViewModel.GradeId = resultSet.Results.FirstOrDefault()?.Learner?.RegisterClass?.SchoolGrade?.Id.ToString()
-                    ?? string.Empty;
+                                    ?? string.Empty;
                 ViewModel.Teacher = resultSet.Teacher;
 
                 ViewModel.LearnerResults = resultSet.Results.Select(r => new LearnerResultViewModel
-                {
-                    LearnerId = r.LearnerId,
-                    Surname = r.Learner?.Surname ?? string.Empty,
-                    Name = r.Learner?.Name ?? string.Empty,
-                    ResultViewModel = new ResultViewModel
                     {
-                        Score = r.Score,
-                        Absent = r.Absent,
-                        AbsentReason = r.AbsentReason
-                    }
-                })
-                .OrderBy(lr => lr.Surname)
-                .ToList();
+                        LearnerId = r.LearnerId,
+                        Surname = r.Learner?.Surname ?? string.Empty,
+                        Name = r.Learner?.Name ?? string.Empty,
+                        ResultViewModel = new ResultViewModel
+                        {
+                            Score = r.Score,
+                            Absent = r.Absent,
+                            AbsentReason = r.AbsentReason
+                        }
+                    })
+                    .OrderBy(lr => lr.Surname)
+                    .ToList();
             }
         }
 
@@ -388,6 +392,7 @@
         {
             _removedLearnerIds.Add(entry.LearnerId);
         }
+
         ViewModel.LearnerResults.Remove(entry);
     }
 
@@ -399,8 +404,9 @@
         {
             SelectedAssessmentTypeId = 0;
         }
+
         ViewModel.AssessmentType = AssessmentTypes.FirstOrDefault(at => at.Id == SelectedAssessmentTypeId)
-            ?? new AssessmentType { Id = 0, Name = "Unknown" };
+                                   ?? new AssessmentType { Id = 0, Name = "Unknown" };
     }
 
     private async Task SaveDraft()
@@ -418,6 +424,7 @@
                 {
                     await ResultService.RemoveLearnerResultsAsync(ResultSetId.Value, _removedLearnerIds);
                 }
+
                 await ResultService.UpdateAsync(ResultSetId.Value, ViewModel);
                 Navigation.NavigateTo($"/results/{ResultSetId}");
             }
@@ -444,6 +451,7 @@
             _submitError = "Assessment date is required.";
             return;
         }
+
         if (string.IsNullOrWhiteSpace(ViewModel.AssessmentTopic))
         {
             _submitError = "Assessment topic is required.";
@@ -463,11 +471,13 @@
                         _submitError = $"Score is required for {entry.Surname} {entry.Name} (if not absent).";
                         return;
                     }
+
                     if (entry.ResultViewModel.Score > 7)
                     {
                         _submitError = $"Achievement level for {entry.Surname} {entry.Name} cannot exceed 7.";
                         return;
                     }
+
                     if (entry.ResultViewModel.Score < 0)
                     {
                         _submitError = $"Achievement level for {entry.Surname} {entry.Name} cannot be less than 0.";
@@ -487,11 +497,13 @@
                         _submitError = $"Score is required for {entry.Surname} {entry.Name} (if not absent).";
                         return;
                     }
+
                     if (entry.ResultViewModel.Score > 100)
                     {
                         _submitError = $"Score for {entry.Surname} {entry.Name} cannot exceed 100.";
                         return;
                     }
+
                     if (entry.ResultViewModel.Score < 0)
                     {
                         _submitError = $"Score for {entry.Surname} {entry.Name} cannot be less than 0.";
@@ -511,6 +523,7 @@
                 {
                     await ResultService.RemoveLearnerResultsAsync(ResultSetId.Value, _removedLearnerIds);
                 }
+
                 await ResultService.UpdateAsync(ResultSetId.Value, ViewModel);
                 Navigation.NavigateTo($"/results/{ResultSetId}");
             }
@@ -527,4 +540,5 @@
             }
         }
     }
+
 }

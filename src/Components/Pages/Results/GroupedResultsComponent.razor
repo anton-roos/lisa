@@ -1,7 +1,7 @@
 @using Lisa.Models.Entities
 
 <div class="d-flex flex-column">
-    @if (GroupedResults != null && GroupedResults.Any())
+    @if (GroupedResults.Any())
     {
         @foreach (var group in GroupedResults)
         {

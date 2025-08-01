@@ -1,4 +1,5 @@
 using Lisa.Data;
+using Lisa.Interfaces;
 using Lisa.Models.Entities;
 using Lisa.Models.ViewModels;
 using Microsoft.AspNetCore.Identity;
@@ -6,14 +7,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class UserService
-(
+public class UserService(
     UserManager<User> userManager,
     IDbContextFactory<LisaDbContext> dbContextFactory,
     ILogger<UserService> logger,
     UiEventService uiEventService,
     IPasswordHasher<User> passwordHasher
-)
+) : IUserService
 {
     public async Task<List<User>> GetAllByRoleAndSchoolAsync(string[] roles, Guid? schoolId)
     {

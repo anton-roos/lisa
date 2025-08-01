@@ -5,6 +5,12 @@ namespace Lisa.Models.Entities;
 
 public class Learner
 {
+    public Learner()
+    {
+        Id = Guid.NewGuid();
+        SchoolId = Guid.NewGuid();
+    }
+
     public Guid Id { get; set; }
     public string? Code { get; set; }
     [MaxLength(30)]

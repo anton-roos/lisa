@@ -1,3 +1,4 @@
+using Lisa.Interfaces;
 using Lisa.Models.Entities;
 using System.Net;
 using System.Net.Mail;
@@ -5,7 +6,7 @@ using System.Net.Sockets;
 
 namespace Lisa.Services;
 
-public class EmailService(SchoolService schoolService, ILogger<EmailService> logger)
+public class EmailService(SchoolService schoolService, ILogger<EmailService> logger) : IEmailService
 {
     private readonly SchoolService _schoolService = Guard.Against.Null(schoolService, nameof(schoolService));
     private readonly ILogger<EmailService> _logger = Guard.Against.Null(logger, nameof(logger));

@@ -1,4 +1,5 @@
 using Lisa.Data;
+using Lisa.Interfaces;
 using Lisa.Models.Entities;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -7,14 +8,13 @@ using System.Security.Claims;
 
 namespace Lisa.Services;
 
-public class SchoolService
-(
+public class SchoolService(
     IDbContextFactory<LisaDbContext> dbContextFactory,
     UiEventService uiEventService,
     UserService userService,
     AuthenticationStateProvider authenticationStateProvider,
     ILogger<SchoolService> logger
-)
+) : ISchoolService
 {
     private School? _selectedSchool;
 
@@ -55,7 +55,7 @@ public class SchoolService
         }
     }
 
-    public async Task<School?> GetSelectedSchoolAsync()
+    public async Task<School?> GetCurrentSchoolAsync()
     {
         if (_selectedSchool != null)
         {
@@ -98,6 +98,10 @@ public class SchoolService
         logger.LogInformation("Main return returned school as {school} ", _selectedSchool.Learners);
         return _selectedSchool;
     }
+
+    // Backward compatibility methods
+    public async Task<School?> GetSelectedSchoolAsync() => await GetCurrentSchoolAsync();
+    public async Task<List<School>> GetAllAsync() => await GetAllSchoolsAsync();
 
     private async Task<IdentityUser<Guid>?> GetCurrentUserAsync()
     {
@@ -153,7 +157,7 @@ public class SchoolService
         return await context.Schools.CountAsync();
     }
 
-    public async Task<List<School>> GetAllAsync()
+    public async Task<List<School>> GetAllSchoolsAsync()
     {
         try
         {

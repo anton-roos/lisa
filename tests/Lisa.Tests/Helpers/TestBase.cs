@@ -51,7 +51,9 @@ public class TestBase : IDisposable
             SmtpUsername = "test@test.com",
             SmtpPassword = "password",
             SmtpEmail = "test@test.com",
-            FromEmail = "noreply@test.com"
+            FromEmail = "noreply@test.com",
+            SchoolTypeId = Guid.NewGuid(),
+            SchoolCurriculumId = Guid.NewGuid()
         };
 
         DbContext.Schools.Add(testSchool);

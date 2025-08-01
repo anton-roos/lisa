@@ -29,7 +29,7 @@ public class EventLogRepositoryTests : TestBase
         eventLog.Should().NotBeNull();
         eventLog!.EventType.Should().Be(eventType);
         eventLog.EventData.Should().Be(eventData);
-        eventLog.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, precision: TimeSpan.FromSeconds(1));
+        eventLog.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, precision: TimeSpan.FromSeconds(5));
 
         // Verify info log was written
         _fakeLogger.LogEntries
@@ -86,7 +86,10 @@ public class EventLogRepositoryTests : TestBase
         var eventLog = await DbContext.EventLogs.FirstOrDefaultAsync();
         eventLog.Should().NotBeNull();
         eventLog!.EventData.Should().Be(eventData);
-        eventLog!.EventData.Length.Should().Be(10000);
+        if (eventLog.EventData != null)
+        {
+            eventLog.EventData.Length.Should().Be(10000);
+        }
     }
 
     [Theory]

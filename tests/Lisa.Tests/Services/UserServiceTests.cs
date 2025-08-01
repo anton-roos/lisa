@@ -16,7 +16,11 @@ public class UserServiceTests : TestBase
         _mockUserManager = new Mock<UserManager<User>>(
             store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
         
-        _mockUiEventService = new Mock<UiEventService>();
+        // Create UiEventService with a fake logger instead of mocking it
+        var fakeUiEventLogger = new FakeLogger<UiEventService>();
+        var uiEventService = new UiEventService(fakeUiEventLogger);
+        _mockUiEventService = new Mock<UiEventService>(fakeUiEventLogger);
+        
         _mockPasswordHasher = new Mock<IPasswordHasher<User>>();
         _fakeUserLogger = new FakeLogger<UserService>();
         

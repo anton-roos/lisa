@@ -2,6 +2,14 @@ namespace Lisa.Models;
 
 public class Entity
 {
+    public Entity()
+    {
+        Id = Guid.NewGuid();
+        CreatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+        IsDeleted = false;
+    }
+
     public Guid Id { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

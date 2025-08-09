@@ -66,6 +66,7 @@ stages:
               siteName:  sit.dceg.co.za
               appPool:   sit.dceg.co.za
               host:      sit.dceg.co.za
+              physicalPath: C:\Sites\sit.dceg.co.za
               # optional:
               # packagePath: '$(Pipeline.Workspace)\drop\WebApp.zip'
               # enableHttps: true
@@ -99,6 +100,7 @@ stages:
               siteName:  uat.dceg.co.za
               appPool:   uat.dceg.co.za
               host:      uat.dceg.co.za
+              physicalPath: C:\Sites\uat.dceg.co.za
 
 # ===== CD: Prod =====
 - stage: DeployProd
@@ -128,3 +130,4 @@ stages:
               siteName:  dceg.co.za
               appPool:   dceg.co.za
               host:      dceg.co.za
+              physicalPath: C:\Sites\dceg.co.za

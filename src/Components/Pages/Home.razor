@@ -1,0 +1,182 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using Lisa.Models.Entities
+@inject SchoolService SchoolService
+@inject LearnerService LearnerService
+@inject ResultService ResultService
+@inherits EventAwareComponentBase
+
+<PageTitle>DCEG LEARN</PageTitle>
+
+<AuthorizeView Context="_">
+    <Authorized>
+        <!-- System Administrator View -->
+        <AuthorizeView Roles="@($"{Roles.SystemAdministrator}")">
+            <Authorized>
+                @if (_loading)
+                {
+                    <div class="text-center">
+                        <p>Loading...</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="container mt-4">
+                        <div class="text-center py-3">
+                            <h3>Learner Information System Dashboard</h3>
+                        </div>
+                        <div class="row mt-4">
+                            <div class="col">
+                                <div class="card mb-4">
+                                    <div class="card-body">
+                                        <h3 class="card-title">Welcome System Administrator</h3>
+                                    </div>
+                                </div>
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <div class="card text-center">
+                                            <div class="card-body bg-light">
+                                                <h4 class="card-title">Schools</h4>
+                                                <p class="card-text display-4">@_schoolCount</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card text-center">
+                                            <div class="card-body bg-light">
+                                                <h4 class="card-title">Learners</h4>
+                                                <p class="card-text display-4">@_learnerCount</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card text-center">
+                                            <div class="card-body bg-light">
+                                                <h4 class="card-title">Results Submitted</h4>
+                                                <p class="card-text display-4">@_resultCount</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </Authorized>
+        </AuthorizeView>
+        <!-- Teacher View -->
+        <AuthorizeView Roles="@($"{Roles.Teacher}, {Roles.Principal}, {Roles.Administrator}")">
+            <Authorized>
+                @if (_loading)
+                {
+                    <div class="text-center">
+                        <p>Loading...</p>
+                    </div>
+                }
+                else if (_selectedSchool != null)
+                {
+                    <div class="container mt-4">
+                        <div class="text-center py-3">
+                            <h3>Welcome to the Learner Information System</h3>
+                            <h3>@_selectedSchool.LongName</h3>
+                        </div>
+                        <div class="row mt-4">
+                            <div class="col">
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <div class="card text-center">
+                                            <div class="card-body bg-light">
+                                                <h4 class="card-title">Learners</h4>
+                                                <p class="card-text display-4">@_schoolLearnerCount</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card text-center">
+                                            <div class="card-body bg-light">
+                                                <h4 class="card-title">Results Submitted</h4>
+                                                <p class="card-text display-4">@_schoolResultCount</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </Authorized>
+        </AuthorizeView>
+        <!-- Attendance Staff View -->
+        <AuthorizeView Roles="@($"{Roles.Attendance}")">
+            <Authorized>
+                @if (_loading)
+                {
+                    <div class="text-center">
+                        <p>Loading...</p>
+                    </div>
+                }
+                else if (_selectedSchool != null)
+                {
+                    <div class="container mt-4">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="card mb-4">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <SignInAndOutComponent @key="_selectedSchool?.Id" SelectedSchool="@_selectedSchool" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            
+            </Authorized>
+        </AuthorizeView>
+
+    </Authorized>
+    <NotAuthorized>
+        <Unauthenticated />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    bool _loading;
+    int _schoolCount;
+    int _resultCount;
+    int _learnerCount;
+
+    School? _selectedSchool;
+    int _schoolResultCount;
+    int _schoolLearnerCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SubscribeToEvent(UiEvents.SchoolsUpdated);
+        _loading = true;
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        _schoolCount = await SchoolService.GetCountAsync();
+        _resultCount = await ResultService.GetCountAsync();
+        _learnerCount = await LearnerService.GetCountAsync();
+
+        if (_selectedSchool != null)
+        {
+            _schoolResultCount = await ResultService.GetCountAsync(_selectedSchool.Id);
+            _schoolLearnerCount = await LearnerService.GetCountAsync(_selectedSchool.Id);
+        }
+        _loading = false;
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        _selectedSchool = eventName switch
+        {
+            UiEvents.SchoolsUpdated => await SchoolService.GetSelectedSchoolAsync(),
+            _ => _selectedSchool
+        };
+        await base.HandleEventAsync(eventName, payload);
+    }
+}

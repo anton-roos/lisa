@@ -1,0 +1,70 @@
+@page "/schools/details/{SchoolId:guid}"
+@using Lisa.Models.Entities
+@inject SchoolService SchoolService
+@inject NavigationManager Navigation
+
+<PageTitle>School Details</PageTitle>
+<h3>School Details</h3>
+
+@if (_school == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <dl class="row">
+        <dt class="col-sm-2">Short Name</dt>
+        <dd class="col-sm-10">@_school.ShortName</dd>
+
+        <dt class="col-sm-2">Long Name</dt>
+        <dd class="col-sm-10">@_school.LongName</dd>
+
+        <dt class="col-sm-2">Color</dt>
+        <dd class="col-sm-10">
+            <div style="width: 50px; height: 25px; background-color: @_school.Color;"></div>
+        </dd>
+
+        <dt class="col-sm-2">School Type</dt>
+        <dd class="col-sm-10">@_school.SchoolType?.Name</dd>
+
+        <dt class="col-sm-2">Curriculum</dt>
+        <dd class="col-sm-10">@_school.Curriculum?.Name</dd>
+    </dl>
+
+    <h4>SMTP Details</h4>
+    <dl class="row">
+        <dt class="col-sm-2">Host</dt>
+        <dd class="col-sm-10">@_school.SmtpHost</dd>
+
+        <dt class="col-sm-2">Port</dt>
+        <dd class="col-sm-10">@_school.SmtpPort</dd>
+
+        <dt class="col-sm-2">Username</dt>
+        <dd class="col-sm-10">@_school.SmtpUsername</dd>
+
+        <dt class="col-sm-2">Email</dt>
+        <dd class="col-sm-10">@_school.SmtpEmail</dd>
+
+        <dt class="col-sm-2">From Email</dt>
+        <dd class="col-sm-10">@_school.FromEmail</dd>
+    </dl>
+
+    <button class="btn btn-secondary" @onclick="GoBack">Back to List</button>
+}
+
+@code {
+    [Parameter]
+    public Guid SchoolId { get; set; }
+
+    private School? _school;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _school = await SchoolService.GetSchoolAsync(SchoolId);
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/schools");
+    }
+}

@@ -1,0 +1,614 @@
+﻿@page "/leave-early"
+@using Lisa.Enums
+@using Lisa.Helpers
+@using Lisa.Models.Entities
+@using Lisa.Models.ViewModels
+@inject LearnerService LearnerService
+@inject SchoolService SchoolService
+@inject RegisterClassService RegisterClassService
+@inject SchoolGradeService SchoolGradeService
+@inject AttendanceRecordService AttendanceRecordService
+@inject LeaveEarlyService LeaveEarlyService
+@inject EmailService EmailService
+@inject ILogger<Index> _logger
+@inherits EventAwareComponentBase
+
+<PageTitle>Leave Early</PageTitle>
+
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Attendance}")">
+    <Authorized>
+        <div class="container py-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">Leave Early</h2>
+                    <p class="text-muted mb-0">@DateTime.UtcNow.ToString("dd/MM HH:mm")</p>
+                </div>
+            </div>
+
+            @if (_selectedSchool == null)
+            {
+                <NoSchoolSelected Message="Please select a school to process leave early."/>
+            }
+            else
+            {
+                <!-- Filters Card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">Filter Learners</h5>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="learnerSearch" class="form-label">Search Learner</label>
+                                <input id="learnerSearch" type="text" class="form-control"
+                                       placeholder="Search by name..." @oninput=OnSearchInputChanged/>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="gradeFilter" class="form-label">Grade</label>
+                                <select id="gradeFilter" class="form-select" @onchange=OnGradeChanged>
+                                    <option value="">-- All Grades --</option>
+                                    @foreach (var grade in _schoolGrades)
+                                    {
+                                        <option value="@grade.Id">@grade.SystemGrade.Name</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="classFilter" class="form-label">Class</label>
+                                <select id="classFilter" class="form-select" @onchange=OnClassChanged>
+                                    <option value="">-- All Classes --</option>
+                                    @foreach (var cls in RegisterClasses)
+                                    {
+                                        <option value="@cls.Id">@cls.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Learner List Card -->
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">Learners Requesting Early Leave</h5>
+                        @if (_leaveEarlyRecords.Any())
+                        {
+                            <ul class="list-group list-group-flush">
+                                @foreach (var leave in _leaveEarlyRecords)
+                                {
+                                    <li class="list-group-item">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <strong
+                                                    class="mb-0">@leave.Learner?.Name @leave.Learner?.Surname</strong>
+                                            </div>
+                                            <div class="d-flex flex-column flex-md-row gap-2 align-items-center">
+                                                <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                        @onclick="@(() => GetParentsDetails(leave.LearnerId))">
+                                                    <i class="bi bi-telephone-outbound-fill"></i>
+                                                </button>
+                                                @if (leave.End != null)
+                                                {
+                                                    <span
+                                                        class="badge rounded-pill text-bg-danger fs-6 px-4 py-2">@TimeHelpers.ConvertToLocal(leave.End.Value).ToString("HH:mm")</span>
+                                                }
+                                                else
+                                                {
+                                                    <button type="button" class="btn btn-primary btn-sm"
+                                                            @onclick="@(() => ShowLeaveEarlyModal(leave.Id, leave.LearnerId, leave.Learner!.RegisterClass!.SchoolGradeId))">
+                                                        <i class="bi bi-box-arrow-right"></i>
+                                                    </button>
+                                                }
+                                            </div>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <div class="text-muted text-center py-3">No early leave requests found.</div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <Unauthenticated/>
+    </NotAuthorized>
+</AuthorizeView>
+
+<!-- Parents Detail Modal -->
+@if (_showParentsDetailModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">Parent Contact Details</h5>
+                    <button type="button" class="btn-close" @onclick="CancelParentsDetail" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    @if (ParentsRecord.Any())
+                    {
+                        @foreach (var contact in ParentsRecord)
+                        {
+                            <div class="mb-3">
+                                <strong>@contact.Name @contact.Surname</strong>
+                                <div class="small text-muted">
+                                    @if (!string.IsNullOrWhiteSpace(contact.Relationship))
+                                    {
+                                        <div><b>Relationship:</b> @Capitalize(contact.Relationship)</div>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(contact.WhatsAppNumber))
+                                    {
+                                        <div><b>WhatsApp:</b> @contact.WhatsAppNumber</div>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(contact.PrimaryCellNumber))
+                                    {
+                                        <div><b>Telephone:</b> @contact.PrimaryCellNumber</div>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(contact.PrimaryEmail))
+                                    {
+                                        <div><b>Email:</b> @contact.PrimaryEmail</div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-muted">No parent contact information available.</div>
+                    }
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelParentsDetail">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+
+<!-- Leave Early Form Modal -->
+@if (_showLeaveEarlyFormModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">Leave Early - @DateTime.UtcNow.ToString("dd/MM HH:mm")</h5>
+                    <button type="button" class="btn-close" @onclick="CancelLeaveEarlyModal"
+                            aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body position-relative">
+                    @if (_isSubmittingLeaveEarly)
+                    {
+                        <div
+                            class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                            style="background-color: rgba(255, 255, 255, 0.8); z-index: 1000;">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary mb-2" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <div class="fw-medium">Processing leave early request...</div>
+                            </div>
+                        </div>
+                    }
+
+                    <EditForm Model="LeaveEarlyFormModel" OnValidSubmit="OnSubmitLeaveEarlyForm">
+                        <DataAnnotationsValidator/>
+                        <ValidationSummary/>
+
+                        <!-- Permission Type -->
+                        <div class="mb-3">
+                            <label class="form-label">Permission Type</label>
+                            <InputSelect class="form-select" @bind-Value="LeaveEarlyFormModel.PermissionType">
+                                @foreach (PermissionType type in Enum.GetValues(typeof(PermissionType)))
+                                {
+                                    if (type != PermissionType.None)
+                                    {
+                                        <option
+                                            value="@type">@type.ToString().Replace("FromParent", " from Parent").Replace("Confirmation", " Confirmation")</option>
+                                    }
+                                }
+                            </InputSelect>
+                        </div>
+
+                        @if (LeaveEarlyFormModel.PermissionType == PermissionType.TelephonicConfirmation)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Telephonic Notes</label>
+                                <InputTextArea class="form-control" @bind-Value="LeaveEarlyFormModel.TelephonicNotes"
+                                               placeholder="e.g. Called by mother confirming early leave..."/>
+                            </div>
+                        }
+
+                        <!-- Pickup Type -->
+                        <div class="mb-3">
+                            <label class="form-label">Pick-Up Type</label>
+                            <InputSelect class="form-select" @bind-Value="LeaveEarlyFormModel.PickUpType">
+                                @foreach (PickUpType type in Enum.GetValues(typeof(PickUpType)))
+                                {
+                                    if (type != PickUpType.None)
+                                    {
+                                        <option value="@type">@type.ToString().Replace("Or", " / ")</option>
+                                    }
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <!-- Designated Family Member Section -->
+                        @if (LeaveEarlyFormModel.PickUpType == PickUpType.DesignatedFamilyMember)
+                        {
+                            <div class="row mb-3 g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">ID No</label>
+                                    <InputText class="form-control"
+                                               @bind-Value="LeaveEarlyFormModel.PickupFamilyMemberIdNo"/>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">First Name</label>
+                                    <InputText class="form-control"
+                                               @bind-Value="LeaveEarlyFormModel.PickupFamilyMemberFirstname"/>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Surname</label>
+                                    <InputText class="form-control"
+                                               @bind-Value="LeaveEarlyFormModel.PickupFamilyMemberSurname"/>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Uber / Transport Section -->
+                        @if (LeaveEarlyFormModel.PickUpType == PickUpType.UberOrTransportDriver)
+                        {
+                            <div class="row mb-3 g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Driver ID No</label>
+                                    <InputText class="form-control"
+                                               @bind-Value="LeaveEarlyFormModel.PickupUberTransportIdNo"/>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Vehicle Reg No</label>
+                                    <InputText class="form-control"
+                                               @bind-Value="LeaveEarlyFormModel.PickupUberTransportRegNo"/>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Walk Home Alert -->
+                        @if (LeaveEarlyFormModel.PickUpType == PickUpType.LearnerWalkHome)
+                        {
+                            <div class="alert alert-warning mt-3">
+                                Learner will walk home without pickup.
+                            </div>
+                        }
+
+                        <!-- Submit Button -->
+                        <div class="text-end mt-4">
+                            @if (_isSubmittingLeaveEarly)
+                            {
+                                <button type="button" class="btn btn-primary px-4" disabled>
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"
+                                          aria-hidden="true"></span>
+                                    Processing...
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="submit" class="btn btn-primary px-4">Confirm Leave</button>
+                            }
+                        </div>
+                    </EditForm>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelLeaveEarlyModal"
+                            disabled="@_isSubmittingLeaveEarly">Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop fade show"></div>
+}
+
+
+@code {
+    private School? _selectedSchool;
+
+    private string LearnerSearchTerm { get; set; } = "";
+
+    private List<RegisterClass> RegisterClasses { get; set; } = [];
+    private List<AttendanceRecord> _leaveEarlyRecords = new();
+
+
+    private List<SchoolGrade> _schoolGrades = [];
+    private Guid? _selectedGradeId;
+    private Guid? SelectedClassId { get; set; }
+
+    private bool _showParentsDetailModal;
+    private List<Parent> ParentsRecord { get; set; } = new();
+
+    private bool _showLeaveEarlyFormModal;
+    private bool _isSubmittingLeaveEarly;
+    private LeaveEarlyViewModel LeaveEarlyFormModel { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        SubscribeToEvent(UiEvents.SchoolsUpdated);
+        SubscribeToEvent(UiEvents.SchoolSelected);
+
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        await InvokeAsync(StateHasChanged);
+
+        if (_selectedSchool != null)
+        {
+            _schoolGrades = await SchoolGradeService.GetCombinationGradesForSchool(_selectedSchool.Id);
+            await LoadLeaveEarlyAttendances();
+        }
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolsUpdated ||
+            (eventName == UiEvents.SchoolSelected && payload is School))
+        {
+            _selectedSchool = payload as School ?? await SchoolService.GetSelectedSchoolAsync();
+            if (_selectedSchool != null)
+            {
+                _schoolGrades = await SchoolGradeService.GetCombinationGradesForSchool(_selectedSchool.Id);
+                await LoadLeaveEarlyAttendances();
+            }
+
+            await InvokeAsync(StateHasChanged);
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnGradeChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out Guid gradeId))
+        {
+            _selectedGradeId = gradeId;
+            await LoadRegisterClasses(gradeId);
+            StateHasChanged();
+        }
+        else
+        {
+            _selectedGradeId = null;
+            RegisterClasses = [];
+        }
+
+        SelectedClassId = null;
+        await LoadLeaveEarlyAttendances();
+    }
+
+    private async Task OnClassChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out Guid classId))
+        {
+            SelectedClassId = classId;
+        }
+        else
+        {
+            SelectedClassId = null;
+        }
+
+        await LoadLeaveEarlyAttendances();
+        StateHasChanged();
+    }
+
+    private async Task LoadRegisterClasses(Guid gradeId)
+    {
+        if (_selectedSchool == null) return;
+        RegisterClasses = await RegisterClassService.GetByGradeIdAsync(gradeId);
+    }
+
+    private async Task OnSearchInputChanged(ChangeEventArgs e)
+    {
+        LearnerSearchTerm = e.Value?.ToString() ?? string.Empty;
+        await LoadLeaveEarlyAttendances();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadLeaveEarlyAttendances()
+    {
+        if (_selectedSchool == null) return;
+
+        _leaveEarlyRecords = await AttendanceRecordService.GetTodaysLeaveEarlyAttendancesAsync(
+            schoolId: _selectedSchool.Id,
+            registerClassId: SelectedClassId,
+            gradeId: _selectedGradeId,
+            searchTerm: LearnerSearchTerm
+        );
+    }
+
+    private async Task GetParentsDetails(Guid? learnerId)
+    {
+        var learner = await LearnerService.GetLearnerWithParentsAsync(learnerId);
+        if (learner is { Parents: not null })
+        {
+            _showParentsDetailModal = true;
+            ParentsRecord = learner.Parents.ToList();
+        }
+    }
+
+    private async Task ShowLeaveEarlyModal(Guid? attendenceRecordId, Guid? learnerId, Guid? schoolGradeId)
+    {
+        LeaveEarlyFormModel = new LeaveEarlyViewModel
+        {
+            AttendenceRecordId = attendenceRecordId,
+            LearnerId = learnerId,
+            SchoolGradeId = schoolGradeId,
+            Date = DateTime.UtcNow,
+            PermissionType = PermissionType.None,
+            PickUpType = PickUpType.None
+        };
+
+        _showLeaveEarlyFormModal = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void CancelParentsDetail()
+    {
+        _showParentsDetailModal = false;
+        ParentsRecord = [];
+    }
+
+    private void CancelLeaveEarlyModal()
+    {
+        _showLeaveEarlyFormModal = false;
+        _isSubmittingLeaveEarly = false;
+        LeaveEarlyFormModel = new LeaveEarlyViewModel();
+    }
+
+    private string Capitalize(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return string.Empty;
+
+        input = input.ToLower();
+        return char.ToUpper(input[0]) + input.Substring(1);
+    }
+
+    private async Task OnSubmitLeaveEarlyForm()
+    {
+        try
+        {
+            _isSubmittingLeaveEarly = true;
+            await InvokeAsync(StateHasChanged); // Force UI update to show loading state
+
+            if (LeaveEarlyFormModel.Date == default)
+                LeaveEarlyFormModel.Date = DateTime.UtcNow;
+
+            if (LeaveEarlyFormModel.SignOutTime == null)
+                LeaveEarlyFormModel.SignOutTime = TimeOnly.FromDateTime(DateTime.UtcNow);
+
+            // Persist the Leave Early record
+            bool isSaved = await LeaveEarlyService.SaveLeaveEarlyAsync(LeaveEarlyFormModel);
+            if (isSaved)
+            {
+                // Create a proper checkout attendance record instead of modifying the existing one
+                if (LeaveEarlyFormModel.AttendenceRecordId.HasValue && LeaveEarlyFormModel.LearnerId.HasValue)
+                {
+                    // Get the current session to link the checkout record
+                    var existingRecord = await AttendanceRecordService.GetByIdAsync(LeaveEarlyFormModel.AttendenceRecordId.Value);
+                    if (existingRecord != null)
+                    {
+                        // Create a new checkout record
+                        var checkoutRecord = new AttendanceRecord
+                        {
+                            Id = Guid.NewGuid(),
+                            LearnerId = LeaveEarlyFormModel.LearnerId.Value,
+                            AttendanceId = existingRecord.AttendanceId,
+                            AttendanceType = AttendanceType.CheckOut,
+                            Start = DateTime.UtcNow,
+                            End = DateTime.UtcNow,
+                            Notes = "Left early",
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+
+                        await AttendanceRecordService.CreateAsync(checkoutRecord);
+
+                        // Update the existing record in our local list to show they've left
+                        var recordToUpdate = _leaveEarlyRecords.FirstOrDefault(r => r.Id == LeaveEarlyFormModel.AttendenceRecordId.Value);
+                        if (recordToUpdate != null)
+                        {
+                            recordToUpdate.End = DateTime.UtcNow;
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Leave Early record not found for ID: {Id}", LeaveEarlyFormModel.AttendenceRecordId);
+                    }
+                }
+
+                var learner = await LearnerService.GetLearnerWithParentsAsync(LeaveEarlyFormModel.LearnerId);
+                if (learner != null && learner.Parents != null)
+                {
+                    foreach (var contact in learner.Parents)
+                    {
+                        if (!string.IsNullOrEmpty(contact.PrimaryEmail) && _selectedSchool is not null)
+                        {
+                            var emailBody = GenerateLeaveEarlyEmailBody(LeaveEarlyFormModel, learner, _selectedSchool);
+                            var subject = $"Leave Early Notification for {learner.Name} {learner.Surname}";
+                            await EmailService.SendEmailAsync(contact.PrimaryEmail, subject, emailBody, _selectedSchool.Id);
+                        }
+                    }
+                }
+
+                // Reload the data to ensure UI is current
+                await LoadLeaveEarlyAttendances();
+                await InvokeAsync(StateHasChanged);
+
+                // Close modal and reset form
+                _showLeaveEarlyFormModal = false;
+                LeaveEarlyFormModel = new LeaveEarlyViewModel();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error saving LeaveEarly: {ex.Message}");
+        }
+        finally
+        {
+            _isSubmittingLeaveEarly = false;
+            await InvokeAsync(StateHasChanged); // Force UI update to hide loading state
+        }
+    }
+
+    private string GenerateLeaveEarlyEmailBody(LeaveEarlyViewModel leave, Learner learner, School school)
+    {
+        var fullName = $"{learner.Name} {learner.Surname}";
+        var date = leave.Date.ToString("dddd, dd MMMM yyyy");
+        var time = leave.SignOutTime?.ToString("hh\\:mm") ?? "N/A";
+        var permissionText = leave.PermissionType == PermissionType.TelephonicConfirmation
+            ? $"<p>This leave was authorized via a telephonic confirmation.</p><p><em>{leave.TelephonicNotes}</em></p>"
+            : string.Empty;
+
+        var pickupDetails = leave.PickUpType switch
+        {
+            PickUpType.ParentOrGuardian => "<p>Pick-up method: <strong>Parent / Guardian</strong></p>",
+            PickUpType.DesignatedFamilyMember => $@"
+            <p>Pick-up method: <strong>Designated Family Member</strong></p>
+            <p>Picked up by: {leave.PickupFamilyMemberFirstname} {leave.PickupFamilyMemberSurname} (ID: {leave.PickupFamilyMemberIdNo})</p>",
+            PickUpType.UberOrTransportDriver => $@"
+            <p>Pick-up method: <strong>Uber / Transport</strong></p>
+            <p>Transport ID: {leave.PickupUberTransportIdNo}<br/>
+            Vehicle Reg No: {leave.PickupUberTransportRegNo}</p>",
+            PickUpType.LearnerWalkHome => "<p>Pick-up method: <strong>Walk Home</strong><br/>The learner walked home as approved.</p>",
+            _ => ""
+        };
+
+        var body = $@"
+        <p>Dear Parent/Guardian,</p>
+        <p>
+            We would like to inform you that <strong>{fullName}</strong>
+            has been signed out early from school on <strong>{date}</strong> at <strong>{time}</strong>.
+        </p>
+    {permissionText}
+    {pickupDetails}
+        <p>If you have any questions, please contact the school office.</p>
+        <p>Kind regards,<br/><strong>{school.LongName ?? school.ShortName}</strong></p>";
+
+        return body;
+    }
+
+}

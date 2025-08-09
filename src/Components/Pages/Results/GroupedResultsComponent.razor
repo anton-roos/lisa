@@ -1,0 +1,72 @@
+@using Lisa.Models.Entities
+
+<div class="d-flex flex-column">
+    @if (GroupedResults.Any())
+    {
+        @foreach (var group in GroupedResults)
+        {
+            <div class="mb-2">
+                <h5>@group.Key</h5>
+                <div class="d-flex flex-wrap">
+                    @foreach (var set in group.Value)
+                    {
+                        if (set is null)
+                        {
+                            continue;
+                        }
+                        <div class="me-1" type="button" @onclick="() => OnResultClick.InvokeAsync(set.Id)">
+                            <div class="result-pill">
+                                <Pill Color="@GetResultSetStatusColor(set)">
+                                    <div class="text-center">
+                                        <div>
+                                            @if (set.AssessmentDate.HasValue)
+                                            {
+                                                @set.AssessmentDate.Value.ToString("dd MMM")
+                                            }
+                                            else
+                                            {
+                                                <span>No Date</span>
+                                            }
+                                        </div>
+                                        <div class="assessment-type">
+                                            @if (set.AssessmentType == null || set.AssessmentType.Id == 0)
+                                            {
+                                                <span>Unknown</span>
+                                            }
+                                            else
+                                            {
+                                                <span>@set.AssessmentType.Name</span>
+                                            }
+                                        </div>
+                                        <div class="assessment-type">
+                                            @if (set.SchoolGrade is not null)
+                                            {
+                                                <span>&nbsp;@set.SchoolGrade.SystemGrade.Name</span>
+                                            }
+                                        </div>
+                                    </div>
+
+                                </Pill>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="alert alert-secondary">No Results</div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public Dictionary<string, List<ResultSet?>> GroupedResults { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<Guid> OnResultClick { get; set; }
+
+    [Parameter]
+    public Func<ResultSet, string> GetResultSetStatusColor { get; set; } = _ => "secondary";
+}

@@ -1,0 +1,630 @@
+@using Lisa.Models.Entities
+@inject SchoolService SchoolService
+@inject SchoolGradeService SchoolGradeService
+@inject LearnerService LearnerService
+@inject AttendanceService AttendanceService
+@inject NavigationManager NavigationManager
+
+<style>
+    .attendance-card {
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+
+    .attendance-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .attendance-card.disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    .attendance-card.disabled:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    .attendance-status {
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .attendance-status.active {
+        border-left: 5px solid #28a745;
+    }
+
+    .attendance-status.inactive {
+        border-left: 5px solid #6c757d;
+    }
+
+    .stat-card {
+        text-align: center;
+        padding: 0.5rem;
+    }
+
+    .stat-card-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+
+    .stat-card-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .recent-sessions-container {
+        max-height: 500px;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+    
+    .recent-sessions-container::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .recent-sessions-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    
+    .recent-sessions-container::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+    
+    .recent-sessions-container::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+</style>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h3 class="mb-1">Sign In / Out</h3>
+                    <p class="text-muted mb-0">@DateTime.UtcNow.ToString("dd MMMM yyyy")</p>
+                </div>
+            </div>
+
+            @if (_selectedSchool == null)
+            {
+                <NoSchoolSelected Message="Please select a school to to manage sign in and out." />
+            }
+            else
+            {
+                @if (_todayAttendance == null)
+                {
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Set School Day Times</h5>
+                            <small class="text-muted">Times auto-populated from school grade settings</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="startTime" class="form-label">Start Time</label>
+                                    <input type="time" id="startTime" class="form-control" @bind="_startTimeOnly" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="endTime" class="form-label">End Time</label>
+                                    <input type="time" id="endTime" class="form-control" @bind="_endTimeOnly" />
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" @onclick="ConfirmTimes" disabled="@(_isTimeConfirmed)">
+                                Confirm Times
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Grade-specific time overrides section -->
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">Grade-Specific Time Overrides for Today</h6>
+                                <small class="text-muted">Override default times for specific grades</small>
+                            </div>
+                            <button class="btn btn-outline-secondary btn-sm" @onclick="ToggleGradeOverrides">
+                                <i class="bi @(_showGradeOverrides ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                            </button>
+                        </div>
+                        @if (_showGradeOverrides)
+                        {
+                            <div class="card-body">
+                                @if (_schoolGrades.Any())
+                                {
+                                    <div class="row">
+                                        @foreach (var schoolGrade in _schoolGrades.OrderBy(sg => sg.SystemGrade.SequenceNumber))
+                                        {
+                                            <div class="col-md-6 mb-3">
+                                                <div class="grade-override-section">
+                                                    <h6 class="fw-bold">@schoolGrade.SystemGrade.Name</h6>
+                                                    <div class="row">
+                                                        <div class="col-6">
+                                                            <label class="form-label small">Start Time</label>
+                                                            <input type="time" class="form-control form-control-sm grade-override-time-input" 
+                                                                   value="@GetGradeOverrideStartTime(schoolGrade.Id)" 
+                                                                   @onchange="@(async (e) => await SetGradeOverrideTime(schoolGrade.Id, e.Value?.ToString(), true))" />
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <label class="form-label small">End Time</label>
+                                                            <input type="time" class="form-control form-control-sm grade-override-time-input" 
+                                                                   value="@GetGradeOverrideEndTime(schoolGrade.Id)" 
+                                                                   @onchange="@(async (e) => await SetGradeOverrideTime(schoolGrade.Id, e.Value?.ToString(), false))" />
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-2">
+                                                        <small class="text-muted">
+                                                            Default: @(schoolGrade.StartTime?.ToString("HH:mm") ?? "08:00") - @(schoolGrade.EndTime?.ToString("HH:mm") ?? "14:00")
+                                                        </small>
+                                                        @if (_gradeTimeOverrides.ContainsKey(schoolGrade.Id))
+                                                        {
+                                                            <button class="btn btn-link btn-sm p-0 ms-2 btn-reset-override" @onclick="@(() => ClearGradeOverride(schoolGrade.Id))">
+                                                                <small>Reset to default</small>
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted">No grades configured for this school.</p>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card attendance-card h-100 @(_todayAttendance == null ? "disabled" : "")" 
+                             @onclick="@(_todayAttendance != null ? NavigateToSignIn : () => {})">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="bi bi-person-check" style="font-size: 2rem;"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title mb-1">@(_todayAttendance != null ? "Continue Sign In" : "Start Sign In")</h5>
+                                        <p class="card-text text-muted mb-0">Record attendance for learners arriving at school.</p>
+                                        @if (_todayAttendance == null)
+                                        {
+                                            <small class="text-danger">(Confirm times first)</small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-transparent"></small>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card attendance-card h-100 @(_todayAttendance is null ? "disabled" : "")" 
+                             @onclick="@(_todayAttendance is not null ? NavigateToSignOut : () => {})">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="bi bi-box-arrow-right" style="font-size: 2rem;"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title mb-1">Sign Out</h5>
+                                        <p class="card-text text-muted mb-0">Record attendance for learners leaving school.</p>
+                                        @if (_todayAttendance is null)
+                                        {
+                                            <small class="text-danger">(Confirm times first)</small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-transparent"></small>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>@if (_todayAttendance != null)
+                {
+                    <div class="attendance-status active">
+                        <h5>Today's Attendance Session</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Started:</strong> @_todayAttendance.Start.ToString("dd/MM/yyyy HH:mm")</p>
+                                @if (_todayAttendance.End.HasValue)
+                                {
+                                    <p class="mb-1"><strong>Ended:</strong> @_todayAttendance.End.Value.ToString("dd/MM/yyyy HH:mm")</p>
+                                }
+                            </div>
+                            <div class="col-md-6">
+                                @if (_attendanceStats != null)
+                                {
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="stat-card">
+                                                <div class="stat-card-value text-success">@_attendanceStats.CheckedInCount</div>
+                                                <div class="stat-card-label">Signed in</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="stat-card">
+                                                <div class="stat-card-value text-primary">@_attendanceStats.CheckedOutCount</div>
+                                                <div class="stat-card-label">Signed out</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="stat-card">
+                                                <div class="stat-card-value text-danger">@_attendanceStats.AbsentCount</div>
+                                                <div class="stat-card-label">Absent</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                      @if (_recentAttendances.Any())
+                    {
+                        <h5 class="mt-4 mb-3">Recent Attendance Sessions</h5>
+                        
+                        <div class="recent-sessions-container">
+                            @foreach (var attendance in _recentAttendances)
+                            {
+                                var stats = CalculateAttendanceStats(attendance);
+                                  <div class="attendance-status inactive mb-3">
+                                    <h5>@attendance.Start.ToString("yyyy-MM-dd") Attendance Session</h5>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Started:</strong> @attendance.Start.ToString("dd/MM/yyyy HH:mm")</p>
+                                            @if (attendance.End.HasValue)
+                                            {
+                                                <p class="mb-1"><strong>Ended:</strong> @attendance.End.Value.ToString("dd/MM/yyyy HH:mm")</p>
+                                            }
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <div class="stat-card">
+                                                        <div class="stat-card-value text-success">@stats.CheckedInCount</div>
+                                                        <div class="stat-card-label">Signed in</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="stat-card">
+                                                        <div class="stat-card-value text-primary">@stats.CheckedOutCount</div>
+                                                        <div class="stat-card-label">Signed out</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="stat-card">
+                                                        <div class="stat-card-value text-secondary">@(stats.CheckedInCount - stats.CheckedOutCount)</div>
+                                                        <div class="stat-card-label">Not signed out</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="text-end mt-2">
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="() => ViewAttendanceDetails(attendance.Id)">
+                                                    <i class="bi bi-eye"></i> View Details
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {    
+    [Parameter] public School? SelectedSchool { get; set; }
+    private School? _selectedSchool;
+    private Attendance? _todayAttendance;
+    private AttendanceStats? _attendanceStats;
+
+    private TimeOnly _startTimeOnly = new TimeOnly(7, 0); // Default to 7:00 AM
+    private TimeOnly _endTimeOnly = new TimeOnly(14, 0); // Default to 2:00 PM
+    private bool _isTimeConfirmed;
+
+    // Grade override variables
+    private bool _showGradeOverrides;
+    private List<SchoolGrade> _schoolGrades = new();
+    private Dictionary<Guid, (TimeOnly start, TimeOnly end)> _gradeTimeOverrides = new();
+    private List<Attendance> _recentAttendances = new();
+
+    private async Task LoadSchoolDefaultTimes()
+    {
+        if (_selectedSchool == null) return;
+
+        try
+        {
+            // Get all school grades for the selected school to determine default times
+            var schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+            
+            if (schoolGrades.Any())
+            {
+                // Get the earliest start time and latest end time from all grades
+                var earliestStart = schoolGrades
+                    .Where(sg => sg.StartTime.HasValue)
+                    .Select(sg => sg.StartTime!.Value)
+                    .DefaultIfEmpty(new TimeOnly(7, 0))
+                    .Min();
+                
+                var latestEnd = schoolGrades
+                    .Where(sg => sg.EndTime.HasValue)
+                    .Select(sg => sg.EndTime!.Value)
+                    .DefaultIfEmpty(new TimeOnly(14, 0))
+                    .Max();
+
+                _startTimeOnly = earliestStart;
+                _endTimeOnly = latestEnd;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error and use defaults
+            Console.WriteLine($"Error loading school default times: {ex.Message}");
+        }
+    }
+
+    private class AttendanceStats
+    {
+        public int CheckedInCount { get; set; }
+        public int CheckedOutCount { get; set; }
+        public int AbsentCount { get; set; }
+    }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        await LoadDataAsync();
+    }
+    
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SelectedSchool != null && !Equals(SelectedSchool, _selectedSchool))
+        {
+            _selectedSchool = SelectedSchool;
+            await LoadDataAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+      private async Task LoadDataAsync()
+    {
+        if (_selectedSchool == null)
+        {
+            _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        }
+
+        // Load school default times based on school grades
+        await LoadSchoolDefaultTimes();
+
+        await InvokeAsync(StateHasChanged);
+
+        if (_selectedSchool != null)
+        {
+            // Load school grades for overrides
+            _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+            
+            var todayAttendance = await AttendanceService.GetTodaysAttendance(_selectedSchool.Id);
+
+            if (todayAttendance != null)
+            {
+                var activeAttendance = await AttendanceService.GetTodaysAttendanceAsync(_selectedSchool.Id);
+
+                _todayAttendance = activeAttendance ?? todayAttendance;
+
+                if (_todayAttendance != null)
+                {
+                    await LoadAttendanceStatsAsync();
+                }
+            }
+            
+            // Load recent attendances
+            _recentAttendances = await AttendanceService.GetRecentAttendancesAsync(_selectedSchool.Id);
+            
+            // Remove today's attendance from the list if it exists
+            if (_todayAttendance != null)
+            {
+                _recentAttendances = _recentAttendances
+                    .Where(a => a.Id != _todayAttendance.Id)
+                    .Take(10)
+                    .ToList();
+            }
+        }
+    }
+
+    private async Task LoadAttendanceStatsAsync()
+    {
+        if (_todayAttendance?.AttendanceRecords != null)
+        {
+            _attendanceStats = new AttendanceStats
+            {
+                CheckedInCount = _todayAttendance.AttendanceRecords.Count(r => r.Start != null),
+                CheckedOutCount = _todayAttendance.AttendanceRecords.Count(r => r.End != null),
+                AbsentCount = 0
+            };
+            
+            if (_selectedSchool != null)
+            {
+                var totalLearners = await LearnerService.GetCountAsync(_selectedSchool.Id);
+                _attendanceStats.AbsentCount = totalLearners - _attendanceStats.CheckedInCount;
+            }
+        }
+    }    private void NavigateToSignIn()
+    {
+        if (_todayAttendance != null)
+        {
+            NavigationManager.NavigateTo($"/sign-in-and-out/sign-in/{_todayAttendance.Id}");
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/sign-in-and-out");
+        }
+    }
+
+    private void NavigateToSignOut()
+    {
+        if (_todayAttendance is not null)
+        {
+            NavigationManager.NavigateTo($"/sign-in-and-out/sign-out/{_todayAttendance.Id}");
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/sign-in-and-out");
+        }
+    }    private async Task ConfirmTimes()
+    {
+        if (_selectedSchool == null) return;
+
+        var startDateTime = DateTime.UtcNow.Date.Add(_startTimeOnly.ToTimeSpan());
+        var endDateTime = DateTime.UtcNow.Date.Add(_endTimeOnly.ToTimeSpan());
+
+        // Check if times are valid (end time must be after start time)
+        if (endDateTime <= startDateTime)
+        {
+            // In a real application, you might want to show an error message here
+            return;
+        }
+
+        _isTimeConfirmed = true;
+
+        // Create the attendance record with both start and end times
+        _todayAttendance = await AttendanceService.CreateAttendanceAsync(
+            _selectedSchool.Id,
+            startDateTime,
+            endDateTime
+        );
+
+        // Make sure the _todayAttendance is fully loaded with all attendance records
+        if (_todayAttendance != null)
+        {
+            _todayAttendance = await AttendanceService.GetAsync(_todayAttendance.Id);
+        }
+
+        // Refresh the UI
+        await LoadDataAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private AttendanceStats CalculateAttendanceStats(Attendance attendance)
+    {
+        var stats = new AttendanceStats
+        {
+            CheckedInCount = attendance.AttendanceRecords.Count(r => r.Start != null),
+            CheckedOutCount = attendance.AttendanceRecords.Count(r => r.End != null),
+            AbsentCount = 0
+        };
+        
+        return stats;
+    }
+
+    private void ViewAttendanceDetails(Guid attendanceId)
+    {
+        NavigationManager.NavigateTo($"/sign-in-and-out/details/{attendanceId}");
+    }
+
+    private void ToggleGradeOverrides()
+    {
+        _showGradeOverrides = !_showGradeOverrides;
+    }
+
+    private string GetGradeOverrideStartTime(Guid schoolGradeId)
+    {
+        if (_gradeTimeOverrides.TryGetValue(schoolGradeId, out var overrideTimes))
+        {
+            return overrideTimes.start.ToString("HH:mm");
+        }
+
+        var schoolGrade = _schoolGrades.FirstOrDefault(sg => sg.Id == schoolGradeId);
+        return schoolGrade?.StartTime?.ToString("HH:mm") ?? "08:00";
+    }
+
+    private string GetGradeOverrideEndTime(Guid schoolGradeId)
+    {
+        if (_gradeTimeOverrides.TryGetValue(schoolGradeId, out var overrideTimes))
+        {
+            return overrideTimes.end.ToString("HH:mm");
+        }
+
+        var schoolGrade = _schoolGrades.FirstOrDefault(sg => sg.Id == schoolGradeId);
+        return schoolGrade?.EndTime?.ToString("HH:mm") ?? "14:00";
+    }
+
+    private async Task SetGradeOverrideTime(Guid schoolGradeId, string? timeValue, bool isStartTime)
+    {
+        if (string.IsNullOrEmpty(timeValue)) return;
+
+        if (TimeOnly.TryParse(timeValue, out var parsedTime))
+        {
+            if (!_gradeTimeOverrides.ContainsKey(schoolGradeId))
+            {
+                var schoolGrade = _schoolGrades.FirstOrDefault(sg => sg.Id == schoolGradeId);
+                var defaultStart = schoolGrade?.StartTime ?? new TimeOnly(8, 0);
+                var defaultEnd = schoolGrade?.EndTime ?? new TimeOnly(14, 0);
+                _gradeTimeOverrides[schoolGradeId] = (defaultStart, defaultEnd);
+            }
+
+            var current = _gradeTimeOverrides[schoolGradeId];
+            if (isStartTime)
+            {
+                _gradeTimeOverrides[schoolGradeId] = (parsedTime, current.end);
+            }
+            else
+            {
+                _gradeTimeOverrides[schoolGradeId] = (current.start, parsedTime);
+            }
+
+            UpdateMainSchoolTimes();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void ClearGradeOverride(Guid schoolGradeId)
+    {
+        _gradeTimeOverrides.Remove(schoolGradeId);
+        _ = Task.Run(async () =>
+        {
+            UpdateMainSchoolTimes();
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private void UpdateMainSchoolTimes()
+    {
+        if (!_schoolGrades.Any()) return;
+
+        var allStartTimes = new List<TimeOnly>();
+        var allEndTimes = new List<TimeOnly>();
+
+        foreach (var schoolGrade in _schoolGrades)
+        {
+            if (_gradeTimeOverrides.TryGetValue(schoolGrade.Id, out var overrideTimes))
+            {
+                allStartTimes.Add(overrideTimes.start);
+                allEndTimes.Add(overrideTimes.end);
+            }
+            else
+            {
+                allStartTimes.Add(schoolGrade.StartTime ?? new TimeOnly(8, 0));
+                allEndTimes.Add(schoolGrade.EndTime ?? new TimeOnly(14, 0));
+            }
+        }
+
+        if (allStartTimes.Any() && allEndTimes.Any())
+        {
+            _startTimeOnly = allStartTimes.Min();
+            _endTimeOnly = allEndTimes.Max();
+        } 
+    }
+}

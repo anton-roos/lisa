@@ -1,0 +1,424 @@
+@page "/results"
+@using Lisa.Models.Entities
+@inject ResultService ResultService
+@inject SchoolService SchoolService
+@inject SchoolGradeService SchoolGradeService
+@inject SubjectService SubjectService
+@inject NavigationManager Navigation
+@inject UserService UserService
+@inject AssessmentTypeService AssessmentTypeService
+@inject LearnerService LearnerService
+
+@inherits EventAwareComponentBase
+
+@code 
+{
+    [Parameter, SupplyParameterFromQuery]
+    public string ViewMode { get; set; } = "Grade";
+
+    [Parameter, SupplyParameterFromQuery]
+    public Guid? GradeId { get; set; }
+
+    [Parameter, SupplyParameterFromQuery]
+    public Guid? TeacherId { get; set; }
+
+    [Parameter, SupplyParameterFromQuery]
+    public int? SubjectId { get; set; }
+
+    [Parameter, SupplyParameterFromQuery]
+    public DateTime? FromDate { get; set; }
+
+    [Parameter, SupplyParameterFromQuery]
+    public DateTime? ToDate { get; set; }
+
+    [Parameter, SupplyParameterFromQuery]
+    public Guid? LearnerGradeId { get; set; }
+
+    [Parameter, SupplyParameterFromQuery]
+    public string LearnerSearchText { get; set; } = "";
+
+    [Parameter, SupplyParameterFromQuery]
+    public int? AssessmentTypeId { get; set; }
+
+    [Parameter, SupplyParameterFromQuery]
+    public string? SelectedGrades { get; set; }
+}
+
+
+<AuthorizeView
+    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
+    <Authorized>
+        <PageTitle>Results</PageTitle>
+        <h3>Results</h3>
+
+        @if (_selectedSchool == null)
+        {
+            <NoSchoolSelected Message="Please select a school to view results." />
+        }
+        
+        else
+        {
+            <ResultFilter
+                ViewMode="@ViewMode"
+                GradeId="@GradeId"
+                SubjectId="@SubjectId"
+                TeacherId="@TeacherId"
+                FromDate="@FromDate"
+                ToDate="@ToDate"
+                LearnerSearchText="@LearnerSearchText"
+                AssessmentTypeId="@AssessmentTypeId"
+                SchoolGrades="@_schoolGrades"
+                Subjects="@_subjects"
+                Teachers="@_teachers"
+                AssessmentTypes="@_assessmentTypes"
+                AvailableGradesForSubject="@_availableGradesForSubject"
+                SelectedGrades="@_selectedGrades"
+                OnFilterChanged="@OnFiltersChanged" 
+            />
+            @if (_loading)
+            {
+                <LoadingSpinner />
+            }
+            else if (ViewMode == "Learner")
+            {
+               @if (_learnersLoading)
+               {
+                   <div class="d-flex justify-content-center p-4">
+                       <LoadingSpinner />
+                   </div>
+               }
+               else
+               {
+                   <LearnerResultsCards 
+                       Learners="FilteredLearners" 
+                       LearnerResults="@_learnerResults"
+                       OnLearnerClick="ViewLearner"
+                       OnResultClick="ViewResult"
+                       GetResultSetStatusColor="GetResultSetStatusColor"
+                       RequireDateRange="true"
+                       HasValidDateRange="@(FromDate.HasValue && ToDate.HasValue)" />
+               }
+            }
+            else
+            {
+                <GroupedResultsComponent 
+                GroupedResults="GroupedResults"
+                OnResultClick="ViewResult"
+                GetResultSetStatusColor="GetResultSetStatusColor" />
+            }
+
+        }
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private List<ResultSet> _resultsSet = [];
+    private Dictionary<string, List<ResultSet>> GroupedResults { get; set; } = new();
+    private List<SchoolGrade> _schoolGrades = [];
+    private List<Subject> _subjects = [];
+    private List<User> _teachers = [];
+    private List<AssessmentType> _assessmentTypes = [];
+    private List<int> _availableGradesForSubject = [];
+    private HashSet<int> _selectedGrades = [];
+    private bool _loading;
+    private School? _selectedSchool;
+
+    private List<Learner> _learners = [];
+    private Dictionary<Guid, List<ResultSet>> _learnerResults = new();
+    private bool _learnersLoading;
+    private string _learnerSearchText = "";
+    private Guid? _learnerGradeId;
+    private int? _assessmentTypeId;
+
+    private IEnumerable<Learner> FilteredLearners =>
+    _learners
+      .Where(u => string.IsNullOrWhiteSpace(_learnerSearchText)
+                  || $"{u.Name} {u.Surname}"
+                     .Contains(_learnerSearchText, StringComparison.OrdinalIgnoreCase))
+      .Where(u => !_learnerGradeId.HasValue || u.RegisterClass?.SchoolGradeId == _learnerGradeId)
+      .Where(u => !_selectedGrades.Any() 
+                || (u.RegisterClass?.SchoolGrade?.SystemGrade.Id != null 
+                && _selectedGrades.Contains(u.RegisterClass.SchoolGrade.SystemGrade.Id)));
+
+    async Task OnFiltersChanged(ResultFilter.FilterCriteria c)
+    {
+        ViewMode = c.ViewMode;
+        GradeId = c.GradeId;
+        SubjectId = c.SubjectId;
+        TeacherId = c.TeacherId;
+        FromDate = c.FromDate;
+        ToDate = c.ToDate;
+        LearnerGradeId = c.GradeId;
+        LearnerSearchText = c.LearnerSearchText ?? "";
+        AssessmentTypeId = c.AssessmentTypeId;
+        
+        // Update local state variables
+        _learnerGradeId = c.GradeId;
+        _learnerSearchText = c.LearnerSearchText ?? "";
+        _assessmentTypeId = c.AssessmentTypeId;
+        _selectedGrades = new HashSet<int>(c.SelectedGrades ?? Enumerable.Empty<int>());
+
+        if (c.ViewMode == "Learner")
+        {
+            // Only load learners if we don't have them yet or if the grade filter changed
+            if (!_learners.Any() || _learnerGradeId != c.GradeId)
+            {
+                _learnersLoading = true;
+                StateHasChanged(); // Trigger UI update to show loading state
+                _learners = await LearnerService.GetBySchoolAsync(_selectedSchool!.Id);
+                _learnersLoading = false;
+            }
+            
+            // Load learner results if we have valid date range
+            if (FromDate.HasValue && ToDate.HasValue && _selectedSchool != null)
+            {
+                _learnersLoading = true;
+                StateHasChanged();
+                await LoadLearnerResults();
+                _learnersLoading = false;
+            }
+            
+            // For search text changes, just trigger a re-render without reloading data
+            StateHasChanged();
+            return; // Don't call UpdateAndLoadAsync for learner view mode
+        }
+
+        if (SubjectId.HasValue)
+        {
+            var subject = await SubjectService.GetByIdAsync(SubjectId.Value);
+            _availableGradesForSubject = subject?.GradesApplicable ?? [];
+        }
+        else
+        {
+            _availableGradesForSubject = [];
+        }
+        
+        await UpdateAndLoadAsync();
+    }
+      
+    protected override async Task OnInitializedAsync()
+    {
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        await LoadFilters();
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected && payload is School school)
+        {
+            _selectedSchool = school;
+            await LoadFilters();
+        }
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    void UpdateUrl()
+    {
+        var query = new Dictionary<string, string?>
+        {
+            ["viewMode"] = ViewMode,
+            ["gradeId"] = GradeId?.ToString(),
+            ["teacherId"] = TeacherId?.ToString(),
+            ["subjectId"] = SubjectId?.ToString(),
+            ["fromDate"] = FromDate?.ToString("yyyy-MM-dd"),
+            ["toDate"] = ToDate?.ToString("yyyy-MM-dd"),
+            ["learnerGradeId"] = _learnerGradeId?.ToString(),
+            ["learnerSearchText"] = _learnerSearchText,
+            ["assessmentTypeId"] = _assessmentTypeId?.ToString(),
+            ["selectedGrades"] = _selectedGrades.Any() ? string.Join(",", _selectedGrades) : null
+        };
+
+        var encoded = string.Join("&", query
+            .Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
+            .Select(kv => $"{kv.Key}={Uri.EscapeDataString(kv.Value!)}"));
+
+        Navigation.NavigateTo($"/results?{encoded}", forceLoad: false);
+    }
+
+    private async Task UpdateAndLoadAsync()
+    {
+        UpdateUrl();
+        await LoadResults();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _learnerSearchText = LearnerSearchText;
+        _learnerGradeId = LearnerGradeId;
+        _assessmentTypeId = AssessmentTypeId;
+        
+        if (!string.IsNullOrWhiteSpace(SelectedGrades))
+        {
+            _selectedGrades = new HashSet<int>(
+                SelectedGrades.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Where(s => int.TryParse(s, out _))
+                .Select(int.Parse)
+            );
+        }
+        else
+        {
+            _selectedGrades.Clear();
+        }
+        
+        if (!_schoolGrades.Any()) await LoadFilters();
+
+        // Load learners if we're in learner view mode
+        if (ViewMode == "Learner" && _selectedSchool != null)
+        {
+            if (!_learners.Any())
+            {
+                await LoadLearners();
+            }
+            
+            // Load learner results if we have valid date range
+            if (FromDate.HasValue && ToDate.HasValue)
+            {
+                await LoadLearnerResults();
+            }
+        }
+
+        await LoadResults();
+    }    
+
+    private async Task LoadResults()
+    {
+        _loading = true;
+
+        if (_selectedSchool is null)
+        {
+            _loading = false;
+            return;
+        }
+
+        switch (ViewMode)
+        {
+            case "Subject":
+                _resultsSet = (await ResultService.GetResultsByFiltersAsync(
+                _selectedSchool.Id,
+                null,
+                SubjectId,
+                null,
+                null,
+                FromDate,
+                ToDate))
+                .Where(r => !_selectedGrades.Any() || (r.SchoolGrade?.SystemGrade.Id != null && _selectedGrades.Contains(r.SchoolGrade.SystemGrade.Id)))
+                .OrderBy(r => r.AssessmentDate)
+                .ToList();
+
+                GroupedResults = _resultsSet
+                .GroupBy(r => $"{r.Subject!.Name!} - {r.SchoolGrade!.SystemGrade.Name!}")
+                .ToDictionary(g => g.Key, g => g.ToList());
+                break;
+            case "Grade":
+                _resultsSet = (await ResultService.GetResultsByFiltersAsync(
+                _selectedSchool.Id,
+                GradeId,
+                null,
+                null,
+                null,
+                FromDate,
+                ToDate))
+                .OrderBy(r => r.AssessmentDate)
+                .ToList();
+
+                GroupedResults = _resultsSet
+                .GroupBy(r => r.Subject!.Name)
+                .ToDictionary(g => g.Key!, g => g.ToList());
+                break;
+            case "Teacher":
+                _resultsSet = (await ResultService.GetResultsByFiltersAsync(
+                _selectedSchool.Id,
+                null,
+                null,
+                TeacherId,
+                null,
+                FromDate,
+                ToDate))
+                .Where(r => !_selectedGrades.Any() || (r.SchoolGrade?.SystemGrade.Id != null && _selectedGrades.Contains(r.SchoolGrade.SystemGrade.Id)))
+                .OrderBy(r => r.AssessmentDate)
+                .ToList();
+
+                GroupedResults = _resultsSet
+                .GroupBy(r => new { r.Teacher?.Abbreviation, r.Subject?.Name })
+                .ToDictionary(g => $"{g.Key.Abbreviation} - {g.Key.Name}", g => g.ToList());
+                break;
+        }
+
+        _loading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadLearners()
+    {
+        if (_selectedSchool != null)
+        {
+            _learners = await LearnerService.GetBySchoolAsync(_selectedSchool.Id);
+        }
+    }
+
+    private async Task LoadFilters()
+    {
+        if (_selectedSchool != null)
+        {
+            _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+            _subjects = await SubjectService.GetAllAsync();
+            _teachers = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], _selectedSchool.Id);
+            _assessmentTypes = await AssessmentTypeService.GetAssessmentTypesAsync();
+        }
+    }
+
+    private async Task LoadLearnerResults()
+    {
+        if (_selectedSchool == null || !FromDate.HasValue || !ToDate.HasValue) return;
+
+        _learnerResults.Clear();
+
+        foreach (var learner in FilteredLearners) // Use filtered learners to respect grade selection
+        {
+            var results = await ResultService.GetResultsByFiltersAsync(
+                _selectedSchool.Id,
+                null, // Don't filter by grade at the result level - we're using FilteredLearners
+                null, // Don't filter by subject
+                null, // Don't filter by teacher
+                learner.Id,
+                FromDate,
+                ToDate
+            );
+
+            // Filter by assessment type if specified
+            if (_assessmentTypeId.HasValue)
+            {
+                results = results.Where(r => r.AssessmentTypeId == _assessmentTypeId.Value).ToList();
+            }
+
+            // Take the last 6 results per subject for each learner
+            var learnerResultsBySubject = results
+                .GroupBy(r => r.Subject?.Name ?? "Unknown")
+                .SelectMany(g => g.OrderByDescending(r => r.AssessmentDate).Take(6))
+                .OrderByDescending(r => r.AssessmentDate)
+                .ToList();
+
+            if (learnerResultsBySubject.Any())
+            {
+                _learnerResults[learner.Id] = learnerResultsBySubject;
+            }
+        }
+    }
+
+    private void ViewLearner(Guid learnerId)
+    {
+        Navigation.NavigateTo($"learners/{learnerId}");
+    }
+
+    private static string GetResultSetStatusColor(ResultSet set) =>
+    set.Status == ResultSetStatus.Draft ? "secondary" :
+    set.AssessmentDate is null ? "warning" :
+    set.Status == ResultSetStatus.Submitted ? "success" : "secondary";
+
+    void ViewResult(Guid id)
+    {
+        var query = new Uri(Navigation.Uri).Query;
+        Navigation.NavigateTo($"/results/{id}{query}", forceLoad: false);
+    }
+}

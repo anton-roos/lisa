@@ -1,0 +1,493 @@
+﻿@page "/progress-feedback"
+@using DinkToPdf
+@using DinkToPdf.Contracts
+@using Lisa.Models.EmailModels
+@using Lisa.Models.Entities
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.Extensions.Primitives
+@inject ProgressFeedbackService ProgressFeedbackService
+@inject SchoolService SchoolService
+@inject NavigationManager NavigationManager
+@inject SubjectService SubjectService
+@inject SchoolGradeService SchoolGradeService
+@inherits EventAwareComponentBase
+@inject IJSRuntime JsRuntime
+@inject TemplateRenderService TemplateRenderService
+@inject IConverter Converter
+
+<PageTitle>Progress Feedback List</PageTitle>
+<h3>Progress Feedback List</h3>
+
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
+    <Authorized>
+        @if (_selectedSchool is null)
+        {
+            <NoSchoolSelected Message="Please select a school to view progress feedback." />
+        }
+        else
+        {
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label for="fromDate" class="form-label">From Date</label>
+                    <div class="d-flex align-items-center">
+                        <input id="fromDate" type="date" class="form-control me-2" value="@(_fromDate?.ToString("yyyy-MM-dd"))"
+                        @onchange="OnFromDateRangeChange" />
+                        <button class="btn btn-secondary" @onclick="ClearFromDate">Clear</button>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <label for="toDate" class="form-label">To Date</label>
+                    <div class="d-flex align-items-center">
+                        <input id="toDate" type="date" class="form-control me-2" value="@(_toDate?.ToString("yyyy-MM-dd"))"
+                        @onchange="OnToDateRangeChange" />
+                        <button class="btn btn-secondary" @onclick="ClearToDate">Clear</button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label for="gradeDropdown" class="form-label">Grade</label>
+                    <InputSelect id="gradeDropdown" class="form-select" TValue="Guid?" Value="@_selectedGradeId"
+                    ValueChanged="@OnGradeChange" ValueExpression="@(() => _selectedGradeId)">
+                        <option value="">-- Select Grade --</option>
+                        @foreach (var grade in _grades)
+                        {
+                            <option value="@grade.Id">@grade.SystemGrade.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-4">
+                    <label for="subjectDropdown" class="form-label">Subject</label>
+                    <InputSelect id="subjectDropdown" class="form-select" TValue="int?" Value="@_selectedSubjectId"
+                    ValueChanged="@OnSubjectChange" ValueExpression="@(() => _selectedSubjectId)">
+                        <option value="">-- Select Subject --</option>
+                        @foreach (var subject in _subjects)
+                        {
+                            <option value="@subject.Id">@subject.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-4">
+                    <label for="searchLearner" class="form-label">Search Learner</label>
+                    <input id="searchLearner" type="text" class="form-control" placeholder="Enter learner name..."
+                    @bind="_searchTerm" @oninput="FilterChanged" />
+                </div>
+                <div class="col-md-4 pt-6">
+                    @if (_selectedLearnerIds.Count > 0)
+                    {
+                        <button class="btn btn-outline-primary" data-bs-toggle='tooltip'
+                        title='Download Selected Feedbacks' @onclick="HandleDownloadSelected">
+                            <i class="bi bi-file-earmark-pdf"></i> @_selectedLearnerIds.Count()/@MaxSelection Download Selected
+                        </button>
+                    }
+
+                    @if (_fromDate != null
+                 && _toDate != null
+                 && _selectedGradeId != null
+                 && _filteredProgressFeedbackList?.Count > 0)
+                    {
+                        <button class="btn btn-outline-danger" data-bs-toggle='tooltip'
+                        title='Download All Feedbacks' @onclick="HandleDownloadAll">
+                            <i class="bi bi-file-earmark-pdf"></i> Download All
+                        </button>
+                    }
+                </div>
+            </div>
+
+            @if (_isLoading)
+            {
+                <p>Loading progress feedback...</p>
+            }
+            else if (_filteredProgressFeedbackList == null || !_filteredProgressFeedbackList.Any())
+            {
+                <p>No progress feedback available.</p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Child Name</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var feedback in _filteredProgressFeedbackList)
+                        {
+                            var isChecked = _selectedLearnerIds.Contains(feedback.LearnerId);
+                            var isDisabled = ReachedLimit() && !isChecked; @* disable if limit is reached AND this is not already selected *@
+
+                            <tr>
+                                <td style="width: 1px;">
+                                    <div class="form-check">
+                                        <input class="form-check-input"
+                                        type="checkbox"
+                                        checked="@isChecked"
+                                        disabled="@isDisabled"
+                                        @onchange="e => ToggleLearnerId(feedback.LearnerId, e)" />
+                                    </div>
+                                </td>
+                                <td>@feedback.Surname, @feedback.Name</td>
+                                <td>
+                                    <button type="button" class="btn btn-primary btn-sm"
+                                    data-bs-toggle='tooltip'
+                                    title='View Feedback'
+                                    @onclick="() => NavigateToDetails(feedback.LearnerId)">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" data-bs-toggle='tooltip'
+                                    title='Download PDF' @onclick="()=>DownloadPdf(feedback.LearnerId)">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<ProgressFeedbackListItem> _allFeedbackList = [];
+    private List<ProgressFeedbackListItem>? _filteredProgressFeedbackList;
+    private School? _selectedSchool;
+    private bool _isLoading;
+    private Guid? _selectedGradeId;
+    private int? _selectedSubjectId;
+    private string _searchTerm = "";
+    private List<Subject> _subjects = [];
+    private List<SchoolGrade> _grades = [];
+    private DateTime? _fromDate;
+    private DateTime? _toDate;
+    private List<Guid> _selectedLearnerIds = new();
+    private const int MaxSelection = 10;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+
+        if (_selectedSchool != null)
+        {
+            var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+            var uriParams = QueryHelpers.ParseQuery(uri.Query);
+
+            if (uriParams.TryGetValue("fromDate", out var fromDateParam) 
+                && DateTime.TryParse(fromDateParam, out var parsedFromDate))
+            {
+                _fromDate = parsedFromDate.ToUniversalTime();
+            }
+
+            if (uriParams.TryGetValue("toDate", out var toDateParam) 
+                && DateTime.TryParse(toDateParam, out var parsedToDate))
+            {
+                _toDate = parsedToDate.ToUniversalTime();
+            }
+
+            if (uriParams.TryGetValue("grade", out var gradeParam) 
+                && Guid.TryParse(gradeParam, out var parsedGrade))
+            {
+                _selectedGradeId = parsedGrade;
+            }
+
+            if (uriParams.TryGetValue("subject", out var subjectParam) 
+                && int.TryParse(subjectParam, out var parsedSubject))
+            {
+                _selectedSubjectId = parsedSubject;
+            }
+
+            if (uriParams.TryGetValue("learner", out var learnerParam) 
+                && !StringValues.IsNullOrEmpty(learnerParam))
+            {
+                _searchTerm = learnerParam!;
+            }
+            StateHasChanged();
+            await LoadDropdowns();
+            await LoadProgressFeedbackListFromService();
+
+        }
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected)
+        {
+            _selectedSchool = payload as School;
+            if (_selectedSchool != null)
+            {
+                await LoadDropdowns();
+                await LoadProgressFeedbackListFromService();
+            }
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadProgressFeedbackListFromService()
+    {
+        if (_selectedSchool == null)
+            return;
+
+        _isLoading = true;
+        await InvokeAsync(StateHasChanged);
+
+        _allFeedbackList = await ProgressFeedbackService
+        .GetProgressFeedbackListAsync(
+        _selectedSchool.Id,
+        _selectedGradeId,
+        _selectedSubjectId,
+        _fromDate,
+        _toDate);
+
+        FilterFeedbackInMemory();
+
+        _isLoading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void FilterFeedbackInMemory()
+    {
+        var filtered = _allFeedbackList.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(_searchTerm))
+        {
+            filtered = filtered.Where(item =>
+            item.Name.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+            item.Surname.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        _filteredProgressFeedbackList = filtered
+        .OrderBy(item => item.Surname)
+        .ToList();
+    }
+
+    private async Task FilterChanged(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
+        FilterFeedbackInMemory();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnGradeChange(Guid? value)
+    {
+        _selectedGradeId = value;
+        _selectedLearnerIds.Clear();
+        UpdateUrlWithFilters();
+        await LoadProgressFeedbackListFromService();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnSubjectChange(int? value)
+    {
+        _selectedSubjectId = value;
+        _selectedLearnerIds.Clear();
+        UpdateUrlWithFilters();
+        await LoadProgressFeedbackListFromService();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnFromDateRangeChange(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+
+        if (DateTime.TryParse(value, out var selected))
+        {
+            _fromDate = selected.ToUniversalTime();
+            _selectedLearnerIds.Clear();
+            UpdateUrlWithFilters();
+            await LoadProgressFeedbackListFromService();
+        }
+        else
+        {
+            _fromDate = null;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnToDateRangeChange(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+
+        if (DateTime.TryParse(value, out var selected))
+        {
+            _toDate = selected.ToUniversalTime();
+            _selectedLearnerIds.Clear();
+            UpdateUrlWithFilters();
+            await LoadProgressFeedbackListFromService();
+        }
+        else
+        {
+            _toDate = null;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void NavigateToDetails(Guid learnerId)
+    {
+        var queryParams = new List<string>();
+
+        if (_fromDate.HasValue)
+        {
+            queryParams.Add($"fromDate={_fromDate.Value:yyyy-MM-dd}");
+        }
+
+        if (_toDate.HasValue)
+        {
+            queryParams.Add($"toDate={_toDate.Value:yyyy-MM-dd}");
+        }
+
+        if (_selectedGradeId.HasValue)
+        {
+            queryParams.Add($"grade={_selectedGradeId}");
+        }
+
+        if (_selectedSubjectId.HasValue)
+        {
+            queryParams.Add($"subject={_selectedSubjectId}");
+        }
+
+        if (string.IsNullOrEmpty(_searchTerm) && _searchTerm != "")
+        {
+            queryParams.Add($"learner={_searchTerm}");
+        }
+
+        var url = $"/progress-feedback-details/{learnerId}";
+        if (queryParams.Any())
+        {
+            url += $"?{string.Join("&", queryParams)}";
+        }
+
+        NavigationManager.NavigateTo(url);
+    }
+
+    private async Task LoadDropdowns()
+    {
+        if (_selectedSchool != null)
+        {
+            _subjects = await SubjectService.GetAllAsync();
+            _grades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+        }
+    }
+
+    private async Task ClearFromDate()
+    {
+        _fromDate = null;
+        _selectedLearnerIds.Clear();
+        await LoadProgressFeedbackListFromService();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ClearToDate()
+    {
+        _toDate = null;
+        _selectedLearnerIds.Clear();
+        await LoadProgressFeedbackListFromService();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task DownloadPdf(Guid learnerId)
+    {
+        var learnerIds = new List<Guid> { learnerId };
+        var progressFeedbackHtml = await TemplateRenderService.RenderBulkProgressFeedbackAsync(learnerIds, _fromDate, _toDate);
+        if (string.IsNullOrEmpty(progressFeedbackHtml))
+            return;
+
+        await GeneratePdf(progressFeedbackHtml);
+    }
+
+    private void ToggleLearnerId(Guid learnerId, ChangeEventArgs e)
+    {
+        var isChecked = (bool)e.Value!;
+
+        if (isChecked)
+        {
+            if (_selectedLearnerIds.Count >= MaxSelection)
+            {
+                StateHasChanged();
+                return;
+            }
+
+            if (!_selectedLearnerIds.Contains(learnerId))
+                _selectedLearnerIds.Add(learnerId);
+        }
+        else
+        {
+            _selectedLearnerIds.Remove(learnerId);
+        }
+    }
+
+    private bool ReachedLimit() => _selectedLearnerIds.Count >= MaxSelection;
+
+    private async Task HandleDownloadAll()
+    {
+        var learnerIds = _filteredProgressFeedbackList?
+        .Select(pf => pf.LearnerId)
+        .ToList();
+
+        var progressFeedbackHtml = await TemplateRenderService
+            .RenderBulkProgressFeedbackAsync(learnerIds ?? [], _fromDate, _toDate);
+
+        if (string.IsNullOrEmpty(progressFeedbackHtml))
+            return;
+
+        await GeneratePdf(progressFeedbackHtml);
+    }
+
+
+    private async Task HandleDownloadSelected()
+    {
+        var progressFeedbackHtml = await TemplateRenderService.RenderBulkProgressFeedbackAsync(_selectedLearnerIds, _fromDate, _toDate);
+        if (string.IsNullOrEmpty(progressFeedbackHtml))
+            return;
+
+        await GeneratePdf(progressFeedbackHtml);
+    }
+
+    private async Task GeneratePdf(string htmlContent)
+    {
+        var doc = new HtmlToPdfDocument
+            {
+                GlobalSettings = new GlobalSettings
+                {
+                    PaperSize = PaperKind.A4,
+                    Orientation = DinkToPdf.Orientation.Portrait
+                },
+                Objects = { new ObjectSettings { HtmlContent = htmlContent } }
+            };
+        var fileBytes = Converter.Convert(doc); // <- reuse injected converter
+        await JsRuntime.InvokeVoidAsync(
+            "downloadFileFromBytes",
+            "progress-feedback.pdf",
+            "application/pdf",
+            fileBytes
+        );
+    }
+
+    private void UpdateUrlWithFilters()
+    {
+        var queryParams = new List<string>();
+
+        if (_fromDate.HasValue)
+            queryParams.Add($"fromDate={_fromDate:yyyy-MM-dd}");
+        if (_toDate.HasValue)
+            queryParams.Add($"toDate={_toDate:yyyy-MM-dd}");
+        if (_selectedGradeId.HasValue)
+            queryParams.Add($"grade={_selectedGradeId}");
+        if (_selectedSubjectId.HasValue)
+            queryParams.Add($"subject={_selectedSubjectId}");
+        if (!string.IsNullOrEmpty(_searchTerm))
+            queryParams.Add($"learner={Uri.EscapeDataString(_searchTerm)}");
+
+        var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : string.Empty;
+        NavigationManager.NavigateTo("/progress-feedback" + queryString, forceLoad: false, replace: true);
+    }
+}

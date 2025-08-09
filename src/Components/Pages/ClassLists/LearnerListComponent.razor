@@ -1,0 +1,54 @@
+@using Lisa.Models.Entities
+@inject IJSRuntime JsRuntime
+
+<button class="btn btn-outline-danger" @onclick="DownloadPdf">
+    <i class="bi bi-file-earmark-pdf"></i> Download PDF
+</button>
+<table id="learner-list" class="table">
+    <thead>
+        @if (!string.IsNullOrWhiteSpace(Title))
+        {
+            <h3>@Title</h3>
+        }
+        else
+        {
+            <h3>Learner List</h3>
+        }
+        <tr>
+            <th>Name</th>
+            <th>Surname</th>
+            <th>Register Class</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Learners.Any())
+        {
+            <tr>
+                <td colspan="3">No learners available.</td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var learner in Learners)
+            {
+                <tr>
+                    <td>@learner.Name</td>
+                    <td>@learner.Surname</td>
+                    <td>@learner.RegisterClass?.Name</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter]
+    public List<Learner> Learners { get; set; } = [];
+    [Parameter]
+    public string? Title { get; set; }
+
+    private async Task DownloadPdf()
+    {
+        await JsRuntime.InvokeVoidAsync("downloadLearnerListPDF");
+    }
+}

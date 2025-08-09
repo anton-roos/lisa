@@ -1,0 +1,89 @@
+@page "/progress-feedback-details/{LearnerId:guid}"
+@using Microsoft.AspNetCore.WebUtilities
+@inject NavigationManager NavigationManager
+@inject TemplateRenderService RenderService
+
+@if (_html == string.Empty)
+{
+    <div class="d-flex justify-content-center align-items-center" style="height: 100vh;">
+        <p class="text-muted">Loading...</p>
+    </div>
+}
+else
+{
+    <div class="text-center my-2">
+        <button class="btn btn-secondary float-end" @onclick="GoBack">Back</button>
+    </div>
+    <div>@((MarkupString)_html)</div>
+}
+
+
+@code {
+    [Parameter]
+    public Guid LearnerId { get; set; }
+    private string _html = string.Empty;
+    private DateTime? FromDate { get; set; }
+    private DateTime? ToDate { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var queryParams = QueryHelpers.ParseQuery(uri.Query);
+
+        if (queryParams.TryGetValue("fromDate", out var fromDateParam) &&
+            DateTime.TryParse(fromDateParam, out var parsedFromDate))
+        {
+            FromDate = parsedFromDate;
+        }
+
+        if (queryParams.TryGetValue("toDate", out var toDateParam) &&
+            DateTime.TryParse(toDateParam, out var parsedToDate))
+        {
+            ToDate = parsedToDate;
+        }
+
+        _html = await RenderService.RenderProgressFeedbackAsync(LearnerId, FromDate, ToDate);
+    }
+
+    private void GoBack()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var uriParams = QueryHelpers.ParseQuery(uri.Query);
+
+        var queryParams = new List<string>();
+        string queryString = "/progress-feedback";
+
+        if (uriParams.TryGetValue("fromDate", out var fromDateParam) &&
+            DateTime.TryParse(fromDateParam, out var parsedFromDate))
+        {
+            queryParams.Add($"fromDate={parsedFromDate:yyyy-MM-dd}");
+        }
+
+        if (uriParams.TryGetValue("toDate", out var toDateParam) &&
+            DateTime.TryParse(toDateParam, out var parsedToDate))
+        {
+            queryParams.Add($"toDate={parsedToDate:yyyy-MM-dd}");
+        }
+
+        if (uriParams.TryGetValue("grade", out var gradeParam))
+        {
+            queryParams.Add($"grade={gradeParam}");
+        }
+
+        if (uriParams.TryGetValue("subject", out var subjectParam))
+        {
+            queryParams.Add($"subject={subjectParam}");
+        }
+
+        if (uriParams.TryGetValue("learner", out var learnerParam))
+        {
+            queryParams.Add($"learner={learnerParam}");
+        }
+        if (queryParams.Any())
+        {
+            queryString += $"?{string.Join("&", queryParams)}";
+        }
+
+        NavigationManager.NavigateTo(queryString);
+    }
+}

@@ -1,0 +1,80 @@
+@page "/schools/edit/{Id:guid}"
+@using Lisa.Models.Entities
+@inject SchoolService SchoolService
+@inject NavigationManager NavigationManager
+@inject ILogger<SchoolEdit> Logger
+
+<PageTitle>Edit School</PageTitle>
+
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
+    <Authorized>
+        <h3>Edit School</h3>
+
+        @if (_isLoading)
+        {
+            <p>Loading...</p>
+        }
+        else if (School == null)
+        {
+            <p>School not found.</p>
+        }
+        else
+        {
+            <SchoolForm School="@School" SchoolTypes="@_schoolTypes" Curriculums="@_curriculums"
+                OnValidSubmitCallback="@HandleValidSubmit" OnCancelCallback="@Cancel" />
+        }
+    </Authorized>
+    <NotAuthorized>
+        <h3>You are not authorized to access this page.</h3>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+    private School? School { get; set; }
+    private List<SchoolType> _schoolTypes = [];
+    private List<SchoolCurriculum> _curriculums = [];
+    private bool _isLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            _schoolTypes = await SchoolService.GetSchoolTypesAsync();
+            _curriculums = await SchoolService.GetSchoolCurriculumsAsync();
+            School = await SchoolService.GetSchoolAsync(Id);
+            if (School == null)
+            {
+                NavigationManager.NavigateTo("/schools");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading school: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            await SchoolService.UpdateAsync(School!);
+            NavigationManager.NavigateTo("/schools");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("Error saving school: {Message}", ex.Message);
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/schools");
+    }
+}

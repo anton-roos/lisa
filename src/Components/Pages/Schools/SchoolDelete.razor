@@ -1,0 +1,115 @@
+@page "/schools/delete/{id:guid?}"
+@using Lisa.Models.Entities
+@inject SchoolService SchoolService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Confirm School Delete</PageTitle>
+<h2>Confirm School Delete</h2>
+
+<AuthorizeView Roles="@Roles.SystemAdministrator">
+    <Authorized>
+        @if (School != null)
+        {
+            <div class="alert alert-warning">
+                <p>
+                    <Icon Name="IconName.ExclamationDiamondFill"></Icon>
+                    Are you sure you want to delete the school
+                    <strong>@School.ShortName</strong>?
+                </p>
+                <p>This will delete the record. Once deleted, this can not be rolled back.</p>
+                <p>This will delete the <strong>Principal</strong> and all <strong>Staff</strong> along with all
+                    <strong>Learners</strong> and <strong>Subject Combinations</strong> belonging to this School.
+                </p>
+                <p>This School has:</p>
+                <ul>
+                    <li>
+                        @if (School.Staff != null)
+                        {
+                            @School.Staff.Count
+                        }
+                        Staff
+                    </li>
+                    <li>
+                        @if (School.Learners != null)
+                        {
+                            @School.Learners.Count
+                        }
+                        Learners
+                    </li>
+                    <li>
+                        @if (School.RegisterClasses != null)
+                        {
+                            @School.RegisterClasses.Count
+                        }
+                        Register Classes
+                    </li>
+                </ul>
+                <p>Do you want to proceed?</p>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <button class="btn btn-danger" @onclick="DeleteSchool">Delete</button>
+                <button class="btn btn-secondary">Cancel</button>
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized/>
+    </NotAuthorized>
+</AuthorizeView>
+
+<Modal @ref="_errorModal" Title="Info">
+    <BodyTemplate>
+        You can't delete this school because of the following:
+        @_exception.Message
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Primary" @onclick="CloseErrorModal">Ok</Button>
+    </FooterTemplate>
+</Modal>
+
+
+@code
+{
+    [Parameter] public Guid? Id { get; set; }
+    private School? School { get; set; }
+    private Modal _errorModal = null!;
+    private Exception _exception = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id.HasValue)
+        {
+            School = await SchoolService.GetSchoolAsync(Id.Value);
+        }
+    }
+
+    private async Task DeleteSchool()
+    {
+        if (School != null)
+        {
+            try
+            {
+                var schoolToDelete = await SchoolService.GetSchoolAsync(School.Id);
+
+                if (schoolToDelete == null)
+                {
+                    throw new Exception("School not found.");
+                }
+
+                await SchoolService.DeleteSchoolAsync(School);
+                NavigationManager.NavigateTo("/schools");
+            }
+            catch (Exception ex)
+            {
+                _exception = ex;
+                await _errorModal.ShowAsync();
+            }
+        }
+    }
+
+    private async Task CloseErrorModal()
+    {
+        await _errorModal.HideAsync();
+    }
+}

@@ -1,0 +1,38 @@
+@inherits ErrorBoundary
+@inject ILogger<CustomErrorBoundary> Logger
+@inject IJSRuntime JsRuntime
+
+@if (CurrentException is null)
+{
+    @ChildContent
+}
+else if (ErrorContent is not null)
+{
+    <div class="alert alert-danger my-4 mx-4">
+        <h3>An error occurred in the application.</h3>
+        <button class="btn btn-danger my-4" @onclick="Recover">Reload Application</button>
+        <dl>
+            <dt>Source</dt>
+            <dd>@CurrentException.Source</dd>
+            <dt>Message</dt>
+            <dd>@CurrentException.Message</dd>
+            <dt>Stack Trace</dt>
+            <dd>@CurrentException.StackTrace</dd>
+            <dt>Target Site</dt>
+            <dd>@CurrentException.TargetSite</dd>
+        </dl>
+    </div>
+}
+
+@code {
+    protected override Task OnErrorAsync(Exception ex)
+    {
+        Logger.LogError(ex, "An error occurred in the application.");
+        return Task.CompletedTask;
+    }
+    protected new async Task Recover()
+    {
+        base.Recover();
+        await JsRuntime.InvokeVoidAsync("reloadToMainPage");
+    }
+}

@@ -1,0 +1,42 @@
+@page "/schools/add"
+@using Lisa.Models.Entities
+@inject NavigationManager Navigation
+@inject SchoolService SchoolService
+
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator}")">
+    <Authorized>
+        <h3>Add School</h3>
+
+        <SchoolForm School="@_school" SchoolTypes="@_schoolTypes" Curriculums="@_curriculums"
+            OnValidSubmitCallback="@HandleValidSubmit" OnCancelCallback="@Cancel" />
+    </Authorized>
+    <NotAuthorized>
+        <h3>You are not authorized to access this page.</h3>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private readonly School _school = new();
+    private List<SchoolType> _schoolTypes = [];
+    private List<SchoolCurriculum> _curriculums = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _schoolTypes = await SchoolService.GetSchoolTypesAsync();
+        _curriculums = await SchoolService.GetSchoolCurriculumsAsync();
+        _school.SmtpPort = 587;
+        _school.SmtpHost = "smtp.office365.com";
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        await SchoolService.AddSchoolAsync(_school);
+        Navigation.NavigateTo("/schools");
+    }
+
+    private void Cancel()
+    {
+        // Navigate back to the list of schools
+        Navigation.NavigateTo("/schools");
+    }
+}

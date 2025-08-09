@@ -1,0 +1,253 @@
+﻿@page "/learners"
+@using Lisa.Models.Entities
+@inject SchoolService SchoolService
+@inject LearnerService LearnerService
+@inject NavigationManager NavigationManager
+@inherits EventAwareComponentBase
+
+<PageTitle>Learners</PageTitle>
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+    <Authorized>
+        <h3>Learners</h3>
+        @if (_selectedSchool is null)
+        {
+            <NoSchoolSelected Message="Please select a school to view learners." />
+        }
+        else
+        {
+            <div class="row mb-3">
+                <div class="col-12 col-md-3 mb-2">
+                    <label for="gradeFilter" class="form-label">Filter by Grade</label>
+                    <select id="gradeFilter" class="form-select" @bind="SelectedGradeId">
+                        <option value="">All Grades</option>
+                        @if (AvailableGrades != null)
+                        {
+                            @foreach (var grade in AvailableGrades)
+                            {
+                                <option value="@grade.Id">@grade.SystemGrade.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-12 col-md-3 mb-2">
+                    <label for="nameSearch" class="form-label">Search by Name</label>
+                    <input id="nameSearch" type="text" class="form-control" @oninput="OnSearchTermChanged" @bind="SearchTerm" placeholder="Type name..." />
+                </div>
+                <div class="col-12 col-md-3 mb-2 d-flex align-items-end">
+                    <button class="btn btn-secondary" @onclick="ToggleSort">
+                        Sort by: @(_sortByLastName ? "First Name" : "Last Name")
+                    </button>
+                </div>
+                <div class="col-12 col-md-3 mb-2 d-flex align-items-end justify-content-md-end">
+                    <button class="btn btn-primary" @onclick="AddLearner">Add Learner</button>
+                </div>
+            </div>
+
+            @if (SortedLearners.Any())
+            {
+               <div class="row">
+                @foreach (var learner in SortedLearners)
+                {
+                    <div class="col-12 mb-3">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-sm-8">
+                                        <h5 class="card-title mb-1">@learner.Surname, @learner.Name</h5>
+                                        <p class="mb-1">
+                                            <small class="text-muted">Code: @learner.Code</small>
+                                        </p>
+                                        <p class="mb-1">
+                                            <small class="text-muted">
+                                                Grade: @(learner.RegisterClass?.SchoolGrade?.SystemGrade.Name ?? "Unassigned")
+                                            </small>
+                                        </p>
+                                    </div>
+                                    <div class="col-sm-4 text-sm-end">
+                                        <p class="mb-1">
+                                            <small class="text-muted">
+                                                Parents: @(learner.Parents?.Count() ?? 0)
+                                            </small>
+                                        </p>
+                                        <p class="mb-0">
+                                            <small class="text-muted">
+                                                Care Group: @learner.CareGroup?.Name
+                                            </small>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-footer bg-transparent border-top-0 
+                                        d-flex align-items-center justify-content-between flex-wrap">
+                                <div class="mb-2 mb-sm-0">
+                                    
+                                    @if (learner.Active)
+                                    {
+                                          <strong>Subjects:</strong>
+                                    @if (learner.LearnerSubjects is not null && learner.LearnerSubjects.Any())
+                                    {
+                                        @foreach (var subject in learner.LearnerSubjects)
+                                        {
+                                            <span class="badge mx-1 
+                                                @(subject.Subject.SubjectType switch {
+                                                    SubjectType.Compulsory => "bg-primary",
+                                                    SubjectType.MathCombination => "bg-success",
+                                                    SubjectType.Combination => "bg-danger",
+                                                    SubjectType.AdditionalSubject => "bg-secondary",
+                                                    _ => "bg-light text-dark"
+                                                })">
+                                                @subject.Subject.Code
+                                            </span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">None</span>
+                                    }
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    }
+                                  
+                                </div>
+
+                                <div class="d-flex justify-content-end">
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            @onclick="() => ViewLearner(learner)">
+                                        View
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary ms-2" 
+                                            @onclick="() => EditLearner(learner)">
+                                        Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger ms-2" 
+                                            @onclick="() => DeleteLearner(learner)">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    No learners found for @_selectedSchool.ShortName with the current filters.
+                </div>
+            }
+        }
+        
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<Learner> _learners = [];
+    private IEnumerable<Learner> FilteredLearners => ApplyFilters();
+    private bool _sortByLastName = true;
+    private IEnumerable<Learner> SortedLearners => _sortByLastName
+        ? FilteredLearners.OrderBy(l => l.Surname).ThenBy(l => l.Name)
+        : FilteredLearners.OrderBy(l => l.Name).ThenBy(l => l.Surname);
+    private School? _selectedSchool;
+
+    private string? SelectedGradeId { get; set; }
+    private string? SearchTerm { get; set; }
+    private List<SchoolGrade>? AvailableGrades { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        await LoadLearners();
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected)
+        {
+            _selectedSchool = payload as School;
+            await LoadLearners();
+        }
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadLearners()
+    {
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        if (_selectedSchool?.Id != null)
+        {
+            _learners = await LearnerService.GetBySchoolAsync(_selectedSchool.Id);
+            _learners.ForEach(l => l.LearnerSubjects = l.LearnerSubjects?.OrderBy(ls => ls.Subject.Order).ToList());
+
+            AvailableGrades = _learners
+                .Where(l => l.RegisterClass?.SchoolGrade != null)
+                .Select(l => l.RegisterClass!.SchoolGrade!)
+                .DistinctBy(g => g.Id)
+                .ToList();
+        }
+        else
+        {
+            _learners = [];
+            AvailableGrades = [];
+        }
+    }
+
+    private IEnumerable<Learner> ApplyFilters()
+    {
+        var query = _learners.AsEnumerable();
+
+        if (!string.IsNullOrEmpty(SelectedGradeId))
+        {
+            query = query.Where(l => l.RegisterClass?.SchoolGrade != null &&
+                                     l.RegisterClass.SchoolGrade.Id == Guid.Parse(SelectedGradeId));
+        }
+
+        if (!string.IsNullOrEmpty(SearchTerm))
+        {
+            var term = SearchTerm.Trim().ToLower();
+            query = query.Where(l => ($"{l.Surname} {l.Name}").ToLower().Contains(term));
+        }
+
+        return query;
+    }
+
+    private void ToggleSort()
+    {
+        _sortByLastName = !_sortByLastName;
+    }
+
+    private async Task OnSearchTermChanged(ChangeEventArgs e)
+    {
+        SearchTerm = e.Value?.ToString();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void EditLearner(Learner learner)
+    {
+        NavigationManager.NavigateTo($"/learners/manage/{learner.Id}");
+    }
+
+    private void ViewLearner(Learner learner)
+    {
+        NavigationManager.NavigateTo($"/learners/details/{learner.Id}");
+    }
+
+    private void AddLearner()
+    {
+        NavigationManager.NavigateTo("/learners/manage");
+    }
+
+    private async Task DeleteLearner(Learner learner)
+    {
+        await LearnerService.DeleteLearnerAsync(learner.Id);
+        await LoadLearners();
+        await InvokeAsync(StateHasChanged);
+    }
+}

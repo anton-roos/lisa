@@ -1,0 +1,82 @@
+@namespace Lisa.Components.Shared
+
+@if (_isVisible)
+{
+    <div class="early-leave-modal-container">
+        <div class="modal show d-block" tabindex="-1" role="dialog">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content border-warning shadow">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            Early Leave Detected
+                        </h5>
+                        <button type="button" class="btn-close" @onclick="Close" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body bg-white text-dark">
+                        <p class="fs-5">The learner is attempting to leave before the scheduled end time <span class="fw-bold">(@EndTime?.ToString("HH:mm"))</span>.</p>
+                        <p class="fs-5 fw-bold">Please direct the learner to reception to complete the early leave process.</p>
+                        
+                        <div class="alert alert-info mt-3">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            Early leaves must be processed through the <strong>Leave Early</strong> system to ensure proper documentation and safety protocols.
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" @onclick="Close">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="early-leave-modal-backdrop"></div>
+    </div><style>
+        .early-leave-modal-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1050;
+            overflow-x: hidden;
+            overflow-y: auto;
+            outline: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .early-leave-modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1040;
+        }
+        
+        .modal-content {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.5);
+        }
+    </style>
+}
+
+@code {
+    [Parameter] public TimeOnly? EndTime { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool _isVisible;
+
+    public void Show()
+    {
+        _isVisible = true;
+        StateHasChanged();
+    }
+
+    public void Close()
+    {
+        _isVisible = false;
+        OnClose.InvokeAsync();
+        StateHasChanged();
+    }
+}

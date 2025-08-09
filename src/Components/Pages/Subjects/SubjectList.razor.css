@@ -1,0 +1,13 @@
+.drag-handle {
+    cursor: grab;
+    border-radius: 4px;
+    margin: 1px;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+/* .subject-row {
+    border: 1px dashed #ccc;
+} */

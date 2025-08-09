@@ -1,0 +1,297 @@
+﻿@using Lisa.Models.Entities
+
+<div class="results-filter-bar">
+    <!-- Date Range -->
+    <div class="mb-3">
+        <label><strong>Filter by Date Range:</strong></label>
+        <div class="d-flex align-items-center">
+            <InputDate TValue="DateTime?"
+                       Value="FromDate"
+                       ValueChanged="OnFromDateChanged"
+                       ValueExpression="() => FromDate"
+                       class="form-control me-2" />
+            <button class="btn btn-secondary me-2" @onclick="() => ClearDate(nameof(FromDate))">Clear</button>
+
+            <InputDate TValue="DateTime?"
+                       Value="ToDate"
+                       ValueChanged="OnToDateChanged"
+                       ValueExpression="() => ToDate"
+                       class="form-control me-2" />
+            <button class="btn btn-secondary" @onclick="() => ClearDate(nameof(ToDate))">Clear</button>
+        </div>
+    </div>
+
+    <!-- View Mode -->
+    <div class="mb-3">
+        <label><strong>View Results by:</strong></label>
+        <div class="btn-group" role="group">
+            @foreach (var mode in new[] { "Grade", "Subject", "Teacher", "Learner" })
+            {
+                <input type="radio"
+                       class="btn-check"
+                       name="viewMode"
+                       id="view_@mode"
+                       value="@mode"
+                       checked="@(ViewMode == mode)"
+                       @onclick="() => OnViewModeChanged(mode)" />
+                <label class="btn btn-outline-secondary" for="view_@mode">@mode</label>
+            }
+        </div>
+    </div>
+
+    <!-- Conditional Filter Sections -->
+    @if (ViewMode == "Grade")
+    {
+        <div class="mb-3">
+            <label><strong>Select Grade:</strong></label>
+            <InputSelect class="form-select"
+                         TValue="Guid?"
+                         Value="GradeId"
+                         ValueChanged="OnGradeChanged"
+                         ValueExpression="() => GradeId">
+                <option value="">-- Select Grade --</option>
+                @foreach (var g in SchoolGrades)
+                {
+                    <option value="@g.Id">@g.SystemGrade.Name</option>
+                }
+            </InputSelect>
+        </div>
+    }
+    else if (ViewMode == "Subject")
+    {
+        <div class="mb-3">
+            <label><strong>Select Subject:</strong></label>
+            <InputSelect class="form-select"
+                         TValue="int?"
+                         Value="SubjectId"
+                         ValueChanged="OnSubjectChanged"
+                         ValueExpression="() => SubjectId">
+                <option value="">-- Select Subject --</option>
+                @foreach (var s in Subjects)
+                {
+                    <option value="@s.Id">@s.Name</option>
+                }
+            </InputSelect>
+        </div>
+        @if (AvailableGradesForSubject?.Any() == true)
+        {
+            <div class="mb-3">
+                <label><strong>Choose Grades:</strong></label>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var grade in AvailableGradesForSubject)
+                    {
+                        <button class="btn btn-sm @(_localSelectedGrades.Contains(grade) ? "btn-success" : "btn-outline-success")"
+                                @onclick="() => OnToggleGradeSelection(grade)">
+                            @(FormatGrade(grade))
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    }
+    else if (ViewMode == "Teacher")
+    {
+        <div class="mb-3">
+            <label><strong>Select Teacher:</strong></label>
+            <InputSelect class="form-select"
+                         TValue="Guid?"
+                         Value="TeacherId"
+                         ValueChanged="OnTeacherChanged"
+                         ValueExpression="() => TeacherId">
+                <option value="">-- Select Teacher --</option>
+                @foreach (var t in Teachers)
+                {
+                    <option value="@t.Id">@t.Abbreviation @t.Surname</option>
+                }
+            </InputSelect>
+        </div>
+        
+        @if (SchoolGrades.Any())
+        {
+            <div class="mb-3">
+                <label><strong>Choose Grades:</strong></label>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var grade in SchoolGrades.OrderBy(g => g.SystemGrade.SequenceNumber))
+                    {
+                        <button class="btn btn-sm @(_localSelectedGrades.Contains(grade.SystemGrade.Id) ? "btn-success" : "btn-outline-success")"
+                                @onclick="() => OnToggleGradeSelection(grade.SystemGrade.Id)">
+                            @(FormatGrade(grade.SystemGrade.Id))
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    }
+    else if (ViewMode == "Learner")
+    {
+        <div class="mb-3">
+            <label><strong>Search Learner:</strong></label>
+            <InputText
+              class="form-control"
+              Value="@LearnerSearchText"
+              ValueExpression="() => LearnerSearchText"
+              @oninput="async (e) => await OnLearnerSearchChanged(e.Value?.ToString() ?? string.Empty)"
+              placeholder="Enter learner name..." />
+        </div>
+        
+        <div class="mb-3">
+            <label><strong>Assessment Type:</strong></label>
+            <InputSelect class="form-select"
+                         TValue="int?"
+                         Value="AssessmentTypeId"
+                         ValueChanged="OnAssessmentTypeChanged"
+                         ValueExpression="() => AssessmentTypeId">
+                <option value="">-- All Assessment Types --</option>
+                @foreach (var at in AssessmentTypes)
+                {
+                    <option value="@at.Id">@at.Name</option>
+                }
+            </InputSelect>
+        </div>
+        
+        @if (SchoolGrades.Any())
+        {
+            <div class="mb-3">
+                <label><strong>Choose Grades:</strong></label>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var grade in SchoolGrades.OrderBy(g => g.SystemGrade.SequenceNumber))
+                    {
+                        <button class="btn btn-sm @(_localSelectedGrades.Contains(grade.SystemGrade.Id) ? "btn-success" : "btn-outline-success")"
+                                @onclick="() => OnToggleGradeSelection(grade.SystemGrade.Id)">
+                            @(FormatGrade(grade.SystemGrade.Id))
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    // Filter values
+    [Parameter] public string ViewMode { get; set; } = "";
+    [Parameter] public Guid? GradeId { get; set; }
+    [Parameter] public int? SubjectId { get; set; }
+    [Parameter] public Guid? TeacherId { get; set; }
+    [Parameter] public DateTime? FromDate { get; set; }
+    [Parameter] public DateTime? ToDate { get; set; }
+    [Parameter] public string LearnerSearchText { get; set; } = "";
+    [Parameter] public int? AssessmentTypeId { get; set; }
+
+    // Data sources
+    [Parameter] public List<SchoolGrade> SchoolGrades { get; set; } = new();
+    [Parameter] public List<Subject> Subjects { get; set; } = new();
+    [Parameter] public List<User> Teachers { get; set; } = new();
+    [Parameter] public List<AssessmentType> AssessmentTypes { get; set; } = new();
+    [Parameter] public List<int>? AvailableGradesForSubject { get; set; }
+    [Parameter] public HashSet<int> SelectedGrades { get; set; } = new();
+
+    // Callback when any filter changes
+    [Parameter] public EventCallback<FilterCriteria> OnFilterChanged { get; set; }
+
+    private readonly HashSet<int> _localSelectedGrades = new();
+
+    protected override Task OnParametersSetAsync()
+    {
+        _localSelectedGrades.Clear();
+        if (!SelectedGrades.Any()) return Task.CompletedTask;
+        foreach (var grade in SelectedGrades)
+        {
+            _localSelectedGrades.Add(grade);
+        }
+        return Task.CompletedTask;
+    }
+
+    // Helper methods
+    private async Task OnViewModeChanged(string mode)
+    {
+        ViewMode = mode;
+        _localSelectedGrades.Clear();
+        await NotifyChange();
+    }
+    private async Task OnFromDateChanged(DateTime? value)
+    {
+        FromDate = value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null;
+        await NotifyChange();
+    }
+    private async Task OnToDateChanged(DateTime? value)
+    {
+        ToDate = value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null;
+        await NotifyChange();
+    }
+    private async Task OnGradeChanged(Guid? value)
+    {
+        GradeId = value;
+        await NotifyChange();
+    }
+    private async Task OnSubjectChanged(int? value)
+    {
+        SubjectId = value;
+        await NotifyChange();
+    }
+    private async Task OnTeacherChanged(Guid? value)
+    {
+        TeacherId = value;
+        await NotifyChange();
+    }
+    private async Task OnLearnerSearchChanged(string? newText)
+    {
+        LearnerSearchText = newText ?? string.Empty;
+        await NotifyChange();
+    }
+    private async Task OnAssessmentTypeChanged(int? value)
+    {
+        AssessmentTypeId = value;
+        await NotifyChange();
+    }
+    private async Task OnToggleGradeSelection(int grade)
+    {
+        if (_localSelectedGrades.Contains(grade)) _localSelectedGrades.Remove(grade);
+        else _localSelectedGrades.Add(grade);
+        await NotifyChange();
+    }
+    private void ClearDate(string which)
+    {
+        if (which == nameof(FromDate)) FromDate = null;
+        else if (which == nameof(ToDate)) ToDate = null;
+    }
+    private async Task NotifyChange()
+    {
+        var criteria = new FilterCriteria
+        {
+            ViewMode = ViewMode,
+            GradeId = GradeId,
+            SubjectId = SubjectId,
+            TeacherId = TeacherId,
+            FromDate = FromDate,
+            ToDate = ToDate,
+            SelectedGrades = _localSelectedGrades.ToList(),
+            LearnerSearchText = LearnerSearchText,
+            AssessmentTypeId = AssessmentTypeId
+        };
+        await OnFilterChanged.InvokeAsync(criteria);
+    }
+
+    // A simple DTO to pass all filters up
+    public class FilterCriteria
+    {
+        public string ViewMode { get; set; } = default!;
+        public Guid? GradeId { get; set; }
+        public int? SubjectId { get; set; }
+        public Guid? TeacherId { get; set; }
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+        public List<int>? SelectedGrades { get; set; }
+        public string? LearnerSearchText { get; set; }
+        public int? AssessmentTypeId { get; set; }
+    }
+
+    private string FormatGrade(int grade) =>
+        grade switch
+        {
+            -2 => "Gr RRR",
+            -1 => "Gr RR",
+            0 => "Gr R",
+            _ => $"Gr {grade}"
+        };
+}

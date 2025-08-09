@@ -1,0 +1,125 @@
+@page "/email-campaigns"
+
+@using Lisa.Models.Entities
+@inject SchoolService SchoolService
+@inject EmailCampaignService CampaignService
+@inject NavigationManager NavigationManager
+@inherits EventAwareComponentBase
+@inject ILogger<EmailCampaign> Logger
+
+<PageTitle>Email Campaigns</PageTitle>
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
+    <Authorized>
+        <h3>Email Campaigns for @_selectedSchool?.ShortName</h3>
+        @if (_selectedSchool is null)
+        {
+            <NoSchoolSelected Message="Please select a school to view email campaigns." />
+        }
+        else if (_emailCampaignList?.Count == 0)
+        {
+            <div class="alert alert-info">
+                No campaigns found for this school.
+            </div>
+        }
+        else
+        {
+            <h3>Email Campaigns for @_selectedSchool?.ShortName</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Status</th>
+                        <th>Subject Line</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (_emailCampaignList == null)
+                    {
+                        <tr>
+                            <td colspan="5">No Email Campaigns Found</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var campaign in _emailCampaignList)
+                        {
+                            <tr>
+                                <td>@campaign.Name</td>
+                                <td>@campaign.Status</td>
+                                <td>@campaign.SubjectLine</td>
+                                <td>@campaign.CreatedAt.ToLocalTime()</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" @onclick="@(() => ViewCampaign(campaign.Id))">
+                                    View
+                                </button>
+                            </td>
+                        </tr>
+                    }
+        }
+                </tbody>
+            </table>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private School? _selectedSchool;
+    private List<EmailCampaign>? _emailCampaignList;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        SubscribeToEvent(UiEvents.EmailCampaignStarted);
+        SubscribeToEvent(UiEvents.EmailCampaignProgressUpdated);
+        SubscribeToEvent(UiEvents.EmailCampaignCompleted);
+        SubscribeToEvent(UiEvents.EmailCampaignPaused);
+        SubscribeToEvent(UiEvents.EmailCampaignCancelled);
+
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        await LoadEmailCampaigns();
+    }
+
+    private async Task LoadEmailCampaigns()
+    {
+        if (_selectedSchool != null)
+        {
+            _emailCampaignList = await CampaignService.GetBySchoolIdAsync(_selectedSchool.Id);
+        }
+        else
+        {
+            Logger.LogError("SelectedSchool was null when trying to load email campaigns.");
+        }
+    }
+
+    private void ViewCampaign(Guid campaignId)
+    {
+        NavigationManager.NavigateTo($"/email-campaign/{campaignId}");
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        switch (eventName)
+        {
+            case UiEvents.SchoolSelected:
+                _selectedSchool = payload as School;
+                await LoadEmailCampaigns();
+                break;
+
+            case UiEvents.EmailCampaignStarted:
+            case UiEvents.EmailCampaignProgressUpdated:
+            case UiEvents.EmailCampaignCompleted:
+            case UiEvents.EmailCampaignPaused:
+            case UiEvents.EmailCampaignCancelled:
+                await LoadEmailCampaigns();
+                break;
+        }
+
+        await InvokeAsync(StateHasChanged);
+        await base.HandleEventAsync(eventName, payload);
+    }
+}

@@ -1,0 +1,225 @@
+
+
+.pill-container {
+    display: flex;
+    justify-content: flex-end;
+    min-width: 100px;
+}
+
+.phone-button-container {
+    min-width: 120px;
+    display: flex;
+    justify-content: flex-start;
+}
+
+/* Pill styles for attendance states */
+.pill.present-not-signed-out {
+    background-color: #fd7e14; /* Orange for not signed out yet */
+    color: white;
+}
+
+.pill.on-time-signout {
+    background-color: #198754; /* Green for after-hours sign-out */
+    color: white;
+}
+
+.pill.early-signout {
+    background-color: white;
+    color: #dc3545; /* Red text */
+    border: 2px solid #dc3545; /* Red border outline */
+}
+
+.pill.not-at-school {
+    background-color: #6c757d; /* Gray for not at school */
+    color: white;
+}
+
+.pill.leave-early {
+    background-color: white;
+    color: #dc3545; /* Red text */
+    border: 2px solid #dc3545; /* Red border outline */
+}
+
+.pill.present {
+    background-color: #198754; /* Green for present */
+    color: white;
+}
+
+.pill.on-time {
+    background-color: #198754; /* Green for on-time */
+    color: white;
+}
+
+.pill.late {
+    background-color: white;
+    color: #dc3545; /* Red text */
+    border: 2px solid #dc3545; /* Red border outline */
+}
+
+.pill.absent {
+    background-color: #fd7e14; /* Orange for absent */
+    color: white;
+}
+
+.btn-phone {
+    background-color: #8a2be2;
+    color: white;
+    border-radius: 20px;
+    min-width: 100px;
+    font-size: 0.9rem;
+}
+
+.btn-phone-collected {
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 20px;
+    min-width: 100px;
+    font-size: 0.9rem;
+}
+
+.loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 1040;
+}
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 1050;
+}
+
+.sidebar {
+    display: none !important;
+}
+
+/* Toggle switch styles */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 20px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 12px;
+    width: 12px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    border-radius: 50%;
+    transition: .4s;
+}
+
+input:checked+.slider {
+    background-color: #2196F3;
+}
+
+input:checked+.slider:before {
+    transform: translateX(14px);
+}
+
+.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Hide sidebar on attendance sign-out page */
+.sidebar {
+    display: none !important;
+}
+
+.pill {
+    padding: 5px 15px;
+    border-radius: 20px;
+    display: inline-block;
+    min-width: 100px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.pill-container {
+    display: flex;
+    justify-content: flex-end;
+    min-width: 100px;
+}
+
+.phone-button-container {
+    min-width: 120px;
+    display: flex;
+    justify-content: flex-start;
+}
+
+/* Additional pill styles for duplication prevention */
+.pill.present {
+    background-color: #198754; /* Green for present */
+    color: white;
+}
+
+.pill.not-at-school {
+    background-color: #6c757d; /* Gray for not at school */
+    color: white;
+}
+
+.pill.early-leave {
+    background-color: white;
+    color: #dc3545; /* Red text */
+    border: 2px solid #dc3545; /* Red border outline */
+}
+
+.pill.left {
+    background-color: #2196F3;
+    color: white;
+}
+
+.btn-phone {
+    background-color: #8a2be2;
+    color: white;
+    border-radius: 20px;
+    min-width: 100px;
+    font-size: 0.9rem;
+}
+
+.btn-phone-returned {
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 20px;
+    min-width: 100px;
+    font-size: 0.9rem;
+}
+
+.btn-phone-collect {
+    background-color: #FF9800;
+    color: white;
+    border-radius: 20px;
+    min-width: 100px;
+    font-size: 0.9rem;
+}

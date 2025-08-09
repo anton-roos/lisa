@@ -1,0 +1,465 @@
+@page "/adi-creator"
+@using Lisa.Models.Entities
+@using System.Security.Claims
+@inject SchoolService SchoolService
+@inject SchoolGradeService SchoolGradeService
+@inject SubjectService SubjectService
+@inject UserService UserService
+@inject AcademicDevelopmentClassService AdiService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject ILogger<AdiCreator> Logger
+@inherits EventAwareComponentBase
+
+<PageTitle>ADI Creator</PageTitle>
+
+<h3>ADI Creator</h3>
+
+@if (_selectedSchool == null)
+{
+    <NoSchoolSelected Message="Please select a school from the dropdown at the top of the page before proceeding." />
+}
+else
+{
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Create Academic Development Intervention (ADI)</h5>
+        </div>
+        <div class="card-body">
+            <EditForm Model="_adiModel" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+
+                <div class="row">
+                    <!-- Grade Selection -->
+                    <div class="col-md-6 mb-3">
+                        <label for="gradeSelect" class="form-label">Grade <span class="text-danger">*</span></label>
+                        <select id="gradeSelect" class="form-select @(_validationErrors.ContainsKey("Grade") ? "is-invalid" : "")" 
+                                value="@(_adiModel.SchoolGradeId?.ToString() ?? "")"
+                                @onchange="@((e) => GradeSelectionChanged(e))">
+                            <option value="">-- Select Grade --</option>
+                            @foreach (var grade in _schoolGrades.OrderBy(g => g.SystemGrade.SequenceNumber))
+                            {
+                                <option value="@grade.Id">@grade.SystemGrade.Name</option>
+                            }
+                        </select>
+                        @if (_validationErrors.ContainsKey("Grade"))
+                        {
+                            <div class="invalid-feedback">@_validationErrors["Grade"]</div>
+                        }
+                    </div>
+
+                    <!-- Subject Selection -->
+                    <div class="col-md-6 mb-3">
+                        <label for="subjectSelect" class="form-label">Subject <span class="text-danger">*</span></label>
+                        <select id="subjectSelect" class="form-select @(_validationErrors.ContainsKey("Subject") ? "is-invalid" : "")" 
+                                value="@(_adiModel.SubjectId?.ToString() ?? "")"
+                                @onchange="@((e) => SubjectSelectionChanged(e))">
+                            <option value="">-- Select Subject --</option>
+                            @foreach (var subject in _availableSubjects.OrderBy(s => s.Name))
+                            {
+                                <option value="@subject.Id">@subject.Name</option>
+                            }
+                        </select>
+                        @if (_validationErrors.ContainsKey("Subject"))
+                        {
+                            <div class="invalid-feedback">@_validationErrors["Subject"]</div>
+                        }
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Date and Time Selection -->
+                    <div class="col-md-6 mb-3">
+                        <label for="dateTimeSelect" class="form-label">Date and Time <span class="text-danger">*</span></label>
+                        <input type="datetime-local" 
+                               id="dateTimeSelect" 
+                               class="form-control @(_validationErrors.ContainsKey("DateTime") ? "is-invalid" : "")" 
+                               value="@_adiModel.DateTime.ToString("yyyy-MM-ddTHH:mm")"
+                               @onchange="@((e) => DateTimeChanged(e))" />
+                        @if (_validationErrors.ContainsKey("DateTime"))
+                        {
+                            <div class="invalid-feedback">@_validationErrors["DateTime"]</div>
+                        }
+                    </div>
+
+                    <!-- Teacher Selection (Optional) -->
+                    <div class="col-md-6 mb-3">
+                        <label for="teacherSelect" class="form-label">Teacher <span class="text-muted">(Optional)</span></label>
+                        <select id="teacherSelect" class="form-select" 
+                                value="@(_adiModel.TeacherId?.ToString() ?? "")"
+                                @onchange="@((e) => TeacherSelectionChanged(e))">
+                            <option value="">-- Select Teacher --</option>
+                            @foreach (var teacher in _availableTeachers.OrderBy(t => t.Surname).ThenBy(t => t.Name))
+                            {
+                                <option value="@teacher.Id">@teacher.Surname, @teacher.Name</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" disabled="@_isLoading">
+                                @if (_isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    <span>Saving...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-circle me-2"></i>
+                                    <span>Save ADI</span>
+                                }
+                            </button>
+                            <button type="button" class="btn btn-secondary" @onclick="Cancel">
+                                <i class="bi bi-x-circle me-2"></i>
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+
+    @if (_recentAdis.Any())
+    {
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Recent ADIs</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Grade</th>
+                                <th>Subject</th>
+                                <th>Teacher</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var adi in _recentAdis.Take(10))
+                            {
+                                <tr>
+                                    <td>@adi.DateTime.ToString("dd MMM yyyy HH:mm")</td>
+                                    <td>@adi.SchoolGrade?.SystemGrade.Name</td>
+                                    <td>@adi.Subject?.Name</td>
+                                    <td>@(adi.Teacher != null ? $"{adi.Teacher.Surname}, {adi.Teacher.Name}" : "Not assigned")</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAdi(adi)">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+<!-- Success/Error Modals -->
+@if (_showSuccessModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Success
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <p>ADI has been created successfully!</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" @onclick="CloseSuccessModal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showErrorModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Error
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <p>@_errorMessage</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" @onclick="CloseErrorModal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private School? _selectedSchool;
+    private List<SchoolGrade> _schoolGrades = [];
+    private List<Subject> _availableSubjects = [];
+    private List<User> _availableTeachers = [];
+    private List<AcademicDevelopmentClass> _recentAdis = [];
+    private AdiModel _adiModel = new();
+    private Dictionary<string, string> _validationErrors = new();
+    private bool _isLoading;
+    private bool _showSuccessModal;
+    private bool _showErrorModal;
+    private string _errorMessage = "";
+    private Guid? _currentUserId;
+
+    public class AdiModel
+    {
+        public Guid? SchoolGradeId { get; set; }
+        public int? SubjectId { get; set; }
+        public DateTime DateTime { get; set; } = DateTime.Now.Date.AddHours(8); // Default to 8 AM today
+        public Guid? TeacherId { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        SubscribeToEvent(UiEvents.SchoolSelected);
+
+        // Get the current user ID
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                _currentUserId = Guid.Parse(userId);
+            }
+        }
+
+        if (_selectedSchool != null)
+        {
+            await LoadData();
+        }
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected && payload is School school)
+        {
+            _selectedSchool = school;
+            await LoadData();
+            
+            // Reset form
+            _adiModel = new AdiModel
+            {
+                DateTime = DateTime.Now.Date.AddHours(8)
+            };
+            _validationErrors.Clear();
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadData()
+    {
+        if (_selectedSchool == null) return;
+
+        try
+        {
+            // Load school grades
+            _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+            
+            // Load all subjects
+            _availableSubjects = await SubjectService.GetAllAsync();
+            
+            // Load teachers for this school
+            _availableTeachers = await UserService.GetBySchoolAsync(_selectedSchool.Id);
+            
+            // Load recent ADIs
+            _recentAdis = await AdiService.GetBySchoolIdAsync(_selectedSchool.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading data for ADI Creator");
+            _errorMessage = "Failed to load data. Please try again.";
+            _showErrorModal = true;
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void GradeSelectionChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var gradeId))
+        {
+            _adiModel.SchoolGradeId = gradeId;
+        }
+        else
+        {
+            _adiModel.SchoolGradeId = null;
+        }
+        
+        _validationErrors.Remove("Grade");
+    }
+
+    private void SubjectSelectionChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var subjectId))
+        {
+            _adiModel.SubjectId = subjectId;
+        }
+        else
+        {
+            _adiModel.SubjectId = null;
+        }
+        
+        _validationErrors.Remove("Subject");
+    }
+
+    private void DateTimeChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out var dateTime))
+        {
+            _adiModel.DateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+        }
+        
+        _validationErrors.Remove("DateTime");
+    }
+
+    private void TeacherSelectionChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var teacherId))
+        {
+            _adiModel.TeacherId = teacherId;
+        }
+        else
+        {
+            _adiModel.TeacherId = null;
+        }
+    }
+
+    private bool ValidateForm()
+    {
+        _validationErrors.Clear();
+
+        if (_adiModel.SchoolGradeId == null)
+        {
+            _validationErrors["Grade"] = "Please select a grade.";
+        }
+
+        if (_adiModel.SubjectId == null)
+        {
+            _validationErrors["Subject"] = "Please select a subject.";
+        }
+
+        if (_adiModel.DateTime == default)
+        {
+            _validationErrors["DateTime"] = "Please select a date and time.";
+        }
+        else if (_adiModel.DateTime < DateTime.Now.AddMinutes(-30)) // Allow 30 minutes in the past
+        {
+            _validationErrors["DateTime"] = "Date and time cannot be in the past.";
+        }
+
+        return !_validationErrors.Any();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (!ValidateForm())
+        {
+            return;
+        }
+
+        _isLoading = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var adi = new AcademicDevelopmentClass
+            {
+                DateTime = _adiModel.DateTime,
+                SchoolGradeId = _adiModel.SchoolGradeId!.Value,
+                SubjectId = _adiModel.SubjectId!.Value,
+                TeacherId = _adiModel.TeacherId,
+                SchoolId = _selectedSchool!.Id,
+                CreatedBy = _currentUserId
+            };
+
+            await AdiService.CreateAsync(adi);
+            
+            Logger.LogInformation("Created ADI for Grade {GradeId}, Subject {SubjectId} at {DateTime}", 
+                adi.SchoolGradeId, adi.SubjectId, adi.DateTime);
+
+            // Reset form
+            _adiModel = new AdiModel
+            {
+                DateTime = DateTime.Now.Date.AddHours(8)
+            };
+            _validationErrors.Clear();
+
+            // Reload recent ADIs
+            await LoadData();
+
+            _showSuccessModal = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error creating ADI");
+            _errorMessage = "Failed to create ADI. Please try again.";
+            _showErrorModal = true;
+        }
+        finally
+        {
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task DeleteAdi(AcademicDevelopmentClass adi)
+    {
+        try
+        {
+            await AdiService.DeleteAsync(adi.Id);
+            await LoadData(); // Reload the list
+            
+            Logger.LogInformation("Deleted ADI {AdiId}", adi.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting ADI {AdiId}", adi.Id);
+            _errorMessage = "Failed to delete ADI. Please try again.";
+            _showErrorModal = true;
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private void CloseSuccessModal()
+    {
+        _showSuccessModal = false;
+    }
+
+    private void CloseErrorModal()
+    {
+        _showErrorModal = false;
+    }
+}

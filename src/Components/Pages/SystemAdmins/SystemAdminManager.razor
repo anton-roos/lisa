@@ -1,0 +1,200 @@
+@page "/system-administrators/manage/{Id:guid?}"
+
+@using Lisa.Models.Entities
+@using Lisa.Models.ViewModels
+@using Microsoft.AspNetCore.Identity
+@inject NavigationManager Navigation
+@inject UserManager<User> UserManager
+
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator}")">
+    <Authorized>
+        <h3>@(IsEdit ? "Edit System Administrator" : "Add System Administrator")</h3>
+
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class='alert alert-danger'>@ErrorMessage</div>
+        }
+
+        @if (IsLoading)
+        {
+            <p>Loading user...</p>
+        }
+        else
+        {
+            <EditForm Context="_" Model="SysAdmin" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form-group">
+                    <label for="surname">Surname</label>
+                    <InputText id="surname" class="form-control" @bind-Value="SysAdmin.Surname" />
+                </div>
+
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <InputText id="name" class="form-control" @bind-Value="SysAdmin.Name" />
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <InputText id="email" class="form-control" @bind-Value="SysAdmin.Email" />
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <InputText id="password" type="password" class="form-control" @bind-Value="SysAdmin.Password" />
+                    @if (!IsEdit)
+                    {
+                        <small class="text-muted">Required when adding a new system admin.</small>
+                    }
+                    else
+                    {
+                        <small class="text-muted">Leave blank to keep current password.</small>
+                    }
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    @(IsEdit ? "Save Changes" : "Add System Administrator")
+                </button>
+                <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+            </EditForm>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private bool IsEdit => Id.HasValue && Id.Value != Guid.Empty;
+    private bool IsLoading { get; set; } = true;
+
+    private SystemAdminViewModel SysAdmin { get; set; } = new();
+    private string ErrorMessage { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (IsEdit && Id.HasValue)
+            {
+                var userEntity = await UserManager.FindByIdAsync(Id.Value.ToString());
+                if (userEntity == null)
+                {
+                    Navigation.NavigateTo("/system-administrators");
+                    return;
+                }
+
+                SysAdmin = new SystemAdminViewModel
+                    {
+                        Surname = userEntity.Surname,
+                        Name = userEntity.Name,
+                        Email = userEntity.Email
+                    };
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error loading page: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            if (!IsEdit)
+            {
+                if (string.IsNullOrWhiteSpace(SysAdmin.Password))
+                {
+                    throw new Exception("Password is required when adding a new admin.");
+                }
+
+                var newUser = new User
+                    {
+                        Surname = SysAdmin.Surname,
+                        Name = SysAdmin.Name,
+                        Email = SysAdmin.Email,
+                        UserName = SysAdmin.Email
+                    };
+
+                var createResult = await UserManager.CreateAsync(newUser, SysAdmin.Password);
+                if (!createResult.Succeeded)
+                {
+                    ErrorMessage = string.Join("; ", createResult.Errors.Select(e => e.Description));
+                    return;
+                }
+
+                var roleResult = await UserManager.AddToRoleAsync(newUser, Roles.SystemAdministrator);
+
+                if (!roleResult.Succeeded)
+                {
+                    ErrorMessage = string.Join("; ", roleResult.Errors.Select(e => e.Description));
+                    return;
+                }
+            }
+            else
+            {
+                if (Id == null)
+                {
+                    ErrorMessage = "Invalid user ID.";
+                    return;
+                }
+
+                var existingUser = await UserManager.FindByIdAsync(Id.ToString()!);
+
+                if (existingUser == null)
+                {
+                    ErrorMessage = "User not found.";
+                    return;
+                }
+
+                existingUser.Surname = SysAdmin.Surname;
+                existingUser.Name = SysAdmin.Name;
+                existingUser.Email = SysAdmin.Email;
+                existingUser.UserName = SysAdmin.Email;
+
+                var updateResult = await UserManager.UpdateAsync(existingUser);
+                if (!updateResult.Succeeded)
+                {
+                    ErrorMessage = string.Join("; ", updateResult.Errors.Select(e => e.Description));
+                    return;
+                }
+
+                if (!string.IsNullOrWhiteSpace(SysAdmin.Password))
+                {
+                    var removePwdResult = await UserManager.RemovePasswordAsync(existingUser);
+                    if (!removePwdResult.Succeeded)
+                    {
+                        ErrorMessage = string.Join("; ", removePwdResult.Errors.Select(e => e.Description));
+                        return;
+                    }
+
+                    var addPwdResult = await UserManager.AddPasswordAsync(existingUser, SysAdmin.Password);
+                    if (!addPwdResult.Succeeded)
+                    {
+                        ErrorMessage = string.Join("; ", addPwdResult.Errors.Select(e => e.Description));
+                        return;
+                    }
+                }
+            }
+
+            Navigation.NavigateTo("/system-administrators");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/system-administrators");
+    }
+}

@@ -1,0 +1,559 @@
+@page "/daily-register"
+@using Lisa.Models.Entities
+@using System.Security.Claims
+@using Lisa.Enums
+@inject SchoolService SchoolService
+@inject RegisterClassService RegisterClassService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject LearnerService LearnerService
+@inject AttendanceService AttendanceService
+@inject AttendanceRecordService AttendanceRecordService
+@inject NavigationManager NavigationManager
+@inject ILogger<DailyRegister> Logger
+@inherits EventAwareComponentBase
+
+<PageTitle>Daily Register</PageTitle>
+
+<h3>Daily Register - @DateTime.UtcNow.Date.ToString("d MMM yyyy")</h3>
+
+@if (_selectedSchool == null)
+{
+    <NoSchoolSelected Message="Please select a school from the dropdown at the top of the page before proceeding." />
+}
+else
+{
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="form-group">
+                <label for="registerClassSelect" class="form-label">Select Register Class</label>
+                <select id="registerClassSelect" class="form-select" value="@SelectedRegisterClassId.ToString()"
+                    @onchange="@((e) => RegisterClassSelectionChanged(e))">
+                    <option value="">-- Select Register Class --</option>
+                    @foreach (var group in _registerClasses.GroupBy(rc => rc.SchoolGrade?.SystemGrade.Name))
+                    {
+                        <optgroup label="@(group.Key ?? "Unknown")">
+                            @foreach (var registerClass in group.OrderBy(rc => rc.Name))
+                            {
+                                <option value="@registerClass.Id">@registerClass.Name</option>
+                            }
+                        </optgroup>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="d-flex justify-content-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (SelectedRegisterClassId != Guid.Empty)
+    {
+        @if (_todayAttendanceSession == null)
+        {
+            <div class="alert alert-warning">
+                <i class="oi oi-warning me-2"></i>
+                <strong>No attendance session found for today.</strong><br />
+                Attendance must be started from the Sign In/Out page before the daily register can be used.
+                <button class="btn btn-outline-primary btn-sm ms-2" @onclick="NavigateToSignInOut">
+                    <i class="oi oi-external-link"></i> Go to Sign In/Out
+                </button>
+            </div>
+        }
+        else
+        {
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    @(_selectedRegisterClass?.Name)
+                    @if (_selectedRegisterClass?.SchoolGrade?.SystemGrade != null)
+                    {
+                        <span class="badge bg-secondary ms-2">@_selectedRegisterClass.SchoolGrade.SystemGrade.Name</span>
+                    }
+                </h5>
+                <div>
+                    <button class="btn btn-outline-primary btn-sm" @onclick="RefreshAttendance">
+                        <i class="oi oi-reload"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <input type="text" class="form-control" @bind-value="_searchTerm" @bind-value:event="oninput"
+                        placeholder="Search Learner" />
+                </div>
+
+                @if (!_learners.Any())
+                {
+                    <div class="alert alert-info">No learners found in this register class.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50%">Name</th>
+                                    <th style="width: 50%">Attendance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @* Show learners who signed in first *@
+                                @foreach (var learner in FilteredSignedInLearners)
+                                {
+                                    <tr>
+                                        <td>@learner.Surname @learner.Name</td>
+                                        <td>
+                                            @{
+                                                var isDailyRegisterPresent = _dailyAttendanceData.TryGetValue(learner.Id, out var dailyAttendance) && 
+                                                                              dailyAttendance.Notes?.Contains("Present") == true;
+                                                var pillClass = isDailyRegisterPresent ? "present" : "absent";
+                                                var isProcessing = _processingLearnerIds.Contains(learner.Id);
+                                            }
+                                            <div @onclick="() => ToggleAttendance(learner)"
+                                                class="pill @pillClass @(isProcessing ? "processing" : "")" style="cursor: pointer;">
+                                                @if (isProcessing)
+                                                {
+                                                    <span class="spinner-border spinner-border-sm me-1" role="status"
+                                                        aria-hidden="true"></span>
+                                                    <span>Saving...</span>
+                                                }
+                                                else
+                                                {
+                                                    @(isDailyRegisterPresent ? "Present" : "Absent")
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                                
+                                @* Show learners who didn't sign in at the bottom with muted pills *@
+                                @if (FilteredNotSignedInLearners.Any())
+                                {
+                                    <tr>
+                                        <td colspan="2" class="pt-4">
+                                            <h6 class="text-muted">Not at School (Did not sign in)</h6>
+                                        </td>
+                                    </tr>
+                                    @foreach (var learner in FilteredNotSignedInLearners)
+                                    {
+                                        <tr class="opacity-75">
+                                            <td>@learner.Surname @learner.Name</td>
+                                            <td>
+                                                @{
+                                                    var isProcessing = _processingLearnerIds.Contains(learner.Id);
+                                                }
+                                                <div @onclick="() => CheckInFromRegister(learner)"
+                                                    class="pill not-present @(isProcessing ? "processing" : "")" style="cursor: pointer;">
+                                                    @if (isProcessing)
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm me-1" role="status"
+                                                            aria-hidden="true"></span>
+                                                        <span>Checking In...</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>Not Present</span>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+        }
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <i class="oi oi-info me-2"></i>
+            Please select a register class to view the daily register.
+        </div>
+    }
+}
+
+<style>
+    .pill {
+        padding: 5px 15px;
+        border-radius: 20px;
+        display: inline-block;
+        min-width: 100px;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .present {
+        background-color: #198754; /* Green for present */
+        color: white;
+    }
+
+    .absent {
+        background-color: #fd7e14; /* Orange for absent */
+        color: white;
+    }
+
+    .not-present {
+        background-color: #6c757d; /* Muted gray for not present */
+        color: white;
+        opacity: 0.7;
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    .not-present:hover {
+        opacity: 1;
+        background-color: #5a6268;
+    }
+
+    .processing {
+        opacity: 0.7;
+        pointer-events: none;
+    }
+</style>
+
+@code {
+    private School? _selectedSchool;
+    private List<RegisterClass> _registerClasses = [];
+    private RegisterClass? _selectedRegisterClass;
+    private List<Learner> _learners = [];
+    private string _searchTerm = "";
+    private bool IsLoading { get; set; }
+    private Guid SelectedRegisterClassId { get; set; } = Guid.Empty;
+    private Guid? _currentUserId;
+    private Attendance? _todayAttendanceSession;
+    private Dictionary<Guid, AttendanceRecord> _attendanceData = new(); // Who signed in today
+    private Dictionary<Guid, AttendanceRecord> _dailyAttendanceData = new(); // Daily register attendance
+    private HashSet<Guid> _processingLearnerIds = [];
+
+    private IEnumerable<Learner> FilteredSignedInLearners => _learners
+        .Where(l => _attendanceData.ContainsKey(l.Id)) // Only learners who signed in
+        .Where(l => string.IsNullOrEmpty(_searchTerm) ||
+            $"{l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(l => l.Surname)
+        .ThenBy(l => l.Name);
+
+    private IEnumerable<Learner> FilteredNotSignedInLearners => _learners
+        .Where(l => !_attendanceData.ContainsKey(l.Id)) // Only learners who didn't sign in
+        .Where(l => string.IsNullOrEmpty(_searchTerm) ||
+            $"{l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(l => l.Surname)
+        .ThenBy(l => l.Name);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        SubscribeToEvent(UiEvents.SchoolSelected);
+
+        // Get the current user ID
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                _currentUserId = Guid.Parse(userId);
+            }
+        }
+
+        if (_selectedSchool != null)
+        {
+            await LoadRegisterClasses();
+        }
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected && payload is School school)
+        {
+            _selectedSchool = school;
+            await LoadRegisterClasses();
+
+            // Reset selections
+            SelectedRegisterClassId = Guid.Empty;
+            _selectedRegisterClass = null;
+            _learners.Clear();
+            _attendanceData.Clear();
+            _dailyAttendanceData.Clear();
+            _todayAttendanceSession = null;
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadRegisterClasses()
+    {
+        if (_selectedSchool == null) return;
+
+        try
+        {
+            IsLoading = true;
+            _registerClasses = await RegisterClassService.GetBySchoolIdAsync(_selectedSchool.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading register classes");
+        }
+        finally
+        {
+            IsLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    // Method replaced by RegisterClassSelectionChanged
+
+    private async Task LoadLearners(Guid registerClassId)
+    {
+        if (_selectedSchool == null) return;
+
+        try
+        {
+            IsLoading = true;
+            await InvokeAsync(StateHasChanged);
+
+            _selectedRegisterClass = _registerClasses.FirstOrDefault(rc => rc.Id == registerClassId);
+            _learners = await LearnerService.GetByRegisterClassAsync(registerClassId);
+
+            // Load today's attendance session to see who signed in
+            // Use the same logic as SignInAndOut component - try both methods
+            var todayAttendance = await AttendanceService.GetTodaysAttendance(_selectedSchool.Id);
+            if (todayAttendance != null)
+            {
+                var activeAttendance = await AttendanceService.GetTodaysAttendanceAsync(_selectedSchool.Id);
+                _todayAttendanceSession = activeAttendance ?? todayAttendance;
+            }
+
+            // Clear previous data
+            _attendanceData.Clear();
+            _dailyAttendanceData.Clear();
+
+            if (_todayAttendanceSession?.AttendanceRecords != null)
+            {
+                // Process attendance records to identify who signed in
+                foreach (var record in _todayAttendanceSession.AttendanceRecords)
+                {
+                    if ((record.AttendanceType == AttendanceType.CheckIn || record.AttendanceType == AttendanceType.CheckInFromRegister) && record.Start.HasValue)
+                    {
+                        // This learner signed in today (either normally or via register)
+                        var learner = _learners.FirstOrDefault(l => l.Id == record.LearnerId);
+                        if (learner != null)
+                        {
+                            _attendanceData[learner.Id] = record;
+                        }
+                    }
+                    else if (record.AttendanceType == AttendanceType.Register && record.Start.HasValue)
+                    {
+                        // This learner has been marked present/absent in daily register
+                        var learner = _learners.FirstOrDefault(l => l.Id == record.LearnerId);
+                        if (learner != null)
+                        {
+                            _dailyAttendanceData[learner.Id] = record;
+                        }
+                    }
+                }
+            }
+
+            Logger.LogInformation("Loaded {LearnerCount} learners for register class {RegisterClassId}. {SignedInCount} signed in today.", 
+                _learners.Count, registerClassId, _attendanceData.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading learners for register class {RegisterClassId}", registerClassId);
+        }
+        finally
+        {
+            IsLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ToggleAttendance(Learner learner)
+    {
+        if (_selectedSchool == null || _selectedRegisterClass == null || _todayAttendanceSession == null) return;
+        if (_processingLearnerIds.Contains(learner.Id)) return; // Prevent double-clicks
+        
+        // Only allow attendance toggle for learners who signed in
+        if (!_attendanceData.ContainsKey(learner.Id))
+        {
+            Logger.LogWarning("Cannot toggle attendance for learner {LearnerId} who did not sign in today", learner.Id);
+            return;
+        }
+
+        try
+        {
+            // Set processing state
+            _processingLearnerIds.Add(learner.Id);
+            await InvokeAsync(StateHasChanged);
+
+            // Determine current daily register attendance status
+            var isCurrentlyPresent = _dailyAttendanceData.TryGetValue(learner.Id, out var existingDailyAttendance) &&
+                                     existingDailyAttendance.Notes?.Contains("Present") == true;
+
+            // Toggle attendance
+            var newAttendanceStatus = !isCurrentlyPresent;
+
+            // Create or update the daily register attendance record
+            var dailyAttendanceRecord = new AttendanceRecord
+            {
+                Id = existingDailyAttendance?.Id ?? Guid.NewGuid(),
+                LearnerId = learner.Id,
+                AttendanceId = _todayAttendanceSession.Id,
+                AttendanceType = AttendanceType.Register,
+                Start = DateTime.UtcNow,
+                Notes = newAttendanceStatus ? "Present" : "Absent",
+                CreatedAt = existingDailyAttendance?.CreatedAt ?? DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CreatedBy = existingDailyAttendance?.CreatedBy ?? _currentUserId,
+                UpdatedBy = _currentUserId
+            };
+
+            // Save to database
+            if (existingDailyAttendance == null)
+            {
+                await AttendanceRecordService.CreateAsync(dailyAttendanceRecord);
+            }
+            else
+            {
+                await AttendanceRecordService.UpdateAsync(dailyAttendanceRecord);
+            }
+
+            // Update our local cache
+            _dailyAttendanceData[learner.Id] = dailyAttendanceRecord;
+
+            // Log the successful update for debugging/audit
+            Logger.LogInformation("Daily register attendance for learner {LearnerId} updated to {Status}",
+                learner.Id, newAttendanceStatus ? "Present" : "Absent");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error toggling daily register attendance for learner {LearnerId}", learner.Id);
+        }
+        finally
+        {
+            // Remove processing state
+            _processingLearnerIds.Remove(learner.Id);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task CheckInFromRegister(Learner learner)
+    {
+        if (_selectedSchool == null || _selectedRegisterClass == null || _todayAttendanceSession == null) return;
+        if (_processingLearnerIds.Contains(learner.Id)) return; // Prevent double-clicks
+        
+        // Only allow check-in for learners who haven't signed in
+        if (_attendanceData.ContainsKey(learner.Id))
+        {
+            Logger.LogWarning("Learner {LearnerId} has already signed in today", learner.Id);
+            return;
+        }
+
+        try
+        {
+            // Set processing state
+            _processingLearnerIds.Add(learner.Id);
+            await InvokeAsync(StateHasChanged);
+
+            // Create CheckInFromRegister attendance record
+            var checkInFromRegisterRecord = new AttendanceRecord
+            {
+                Id = Guid.NewGuid(),
+                LearnerId = learner.Id,
+                AttendanceId = _todayAttendanceSession.Id,
+                AttendanceType = AttendanceType.CheckInFromRegister,
+                Start = DateTime.UtcNow,
+                Notes = "Checked in via register class",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CreatedBy = _currentUserId,
+                UpdatedBy = _currentUserId
+            };
+
+            // Save to database
+            await AttendanceRecordService.CreateAsync(checkInFromRegisterRecord);
+
+            // Add to our local attendance data so the learner appears in the signed-in section
+            _attendanceData[learner.Id] = checkInFromRegisterRecord;
+
+            // Create a daily register attendance record marking them as present
+            var dailyAttendanceRecord = new AttendanceRecord
+            {
+                Id = Guid.NewGuid(),
+                LearnerId = learner.Id,
+                AttendanceId = _todayAttendanceSession.Id,
+                AttendanceType = AttendanceType.Register,
+                Start = DateTime.UtcNow,
+                Notes = "Present",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CreatedBy = _currentUserId,
+                UpdatedBy = _currentUserId
+            };
+
+            // Save daily attendance to database
+            await AttendanceRecordService.CreateAsync(dailyAttendanceRecord);
+
+            // Update our local cache
+            _dailyAttendanceData[learner.Id] = dailyAttendanceRecord;
+
+            // Log the successful check-in
+            Logger.LogInformation("Learner {LearnerId} checked in via register class",
+                learner.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error checking in learner {LearnerId} from register", learner.Id);
+        }
+        finally
+        {
+            // Remove processing state
+            _processingLearnerIds.Remove(learner.Id);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RefreshAttendance()
+    {
+        if (SelectedRegisterClassId != Guid.Empty)
+        {
+            IsLoading = true;
+            await Task.Delay(1000);
+            await LoadLearners(SelectedRegisterClassId);
+            IsLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RegisterClassSelectionChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var registerClassId))
+        {
+            SelectedRegisterClassId = registerClassId;
+            await LoadLearners(registerClassId);
+        }
+        else
+        {
+            SelectedRegisterClassId = Guid.Empty;
+            _learners.Clear();
+            _attendanceData.Clear();
+            _dailyAttendanceData.Clear();
+            _selectedRegisterClass = null;
+            _todayAttendanceSession = null;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void NavigateToSignInOut()
+    {
+        NavigationManager.NavigateTo("/sign-in-and-out");
+    }
+}

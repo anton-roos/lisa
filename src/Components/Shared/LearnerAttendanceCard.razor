@@ -1,0 +1,102 @@
+@using Lisa.Models.Entities
+@using Lisa.Helpers
+
+<div class="card mb-3 shadow-sm rounded border-0 bg-light" 
+     style="cursor: @(IsAlreadySignedOut ? "default" : "pointer");" 
+     @onclick="@(IsAlreadySignedOut ? () => InvokeAsync(StateHasChanged) : () => OnToggleAttendance.InvokeAsync(null))">
+    <div class="card-body @(IsAlreadySignedOut ? "opacity-75" : "")">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <div style="min-width: 150px;">@Learner.Name @Learner.Surname</div>
+            <div class="pill-container">
+                <div class="pill @PillColor @(IsSignOut ? "signout" : "")">
+                    @if (IsSignOut)
+                    {
+                        @switch (PillColor)
+                        {
+                            case "absent": <text>Absent</text>
+                                break;
+                            case "not-at-school": <text>Not at School</text>
+                                break;
+                            case "present-not-signed-out": <text>Present</text>
+                                break;
+                            case "on-time-signout":
+                            case "early-signout": @TimeHelpers.ConvertToLocal(SignInTime)
+                                break;
+                            case "leave-early": @TimeHelpers.ConvertToLocal(SignInTime)
+                                break;
+                            default: <text>@(IsAlreadySignedOut ? "Signed Out" : "On time")</text>
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        @if (PillColor == "absent")
+                        {
+                            <span>Absent</span>
+                        }
+                        else
+                        {
+                            @TimeHelpers.ConvertToLocal(SignInTime).ToString("HH:mm")
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+        @if (PillColor != "absent" && ShowPhoneToggle)
+        {
+            <div class="d-flex align-items-center" @onclick:stopPropagation="true">
+                @if (IsSignOut)
+                {
+                    @* Sign-out mode: show collection status instead of toggles *@
+                    @if (PhoneReturned)
+                    {
+                        <span><strong>Cellphone Returned</strong></span>
+                    }
+                    else if (CellPhoneCollected)
+                    {
+                        <span><strong>Collected:</strong> @CellPhoneModel</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">No phone collected</span>
+                    }
+                }
+                else
+                {
+                    @* Sign-in mode: show toggles *@
+                    @if (CellPhoneCollected)
+                    {
+                        <div class="toggle-switch disabled me-2">
+                            <input type="checkbox" checked disabled />
+                            <span class="slider collected"></span>
+                        </div>
+                        <span>Cellphone @if(!string.IsNullOrWhiteSpace(CellPhoneModel)) {<span class="text-muted small ms-1">(@CellPhoneModel)</span>}</span>
+                    }
+                    else
+                    {
+                        <div class="toggle-switch me-2" @onclick="async () => await OnTogglePhone.InvokeAsync(null)">
+                            <input type="checkbox" checked="@ToggleChecked" />
+                            <span class="slider"></span>
+                        </div>
+                        <span>Cellphone</span>
+                    }
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public Learner Learner { get; set; } = default!;
+    [Parameter] public string PillColor { get; set; } = "absent";
+    [Parameter] public DateTime SignInTime { get; set; }
+    [Parameter] public bool ShowPhoneToggle { get; set; } = true;
+    [Parameter] public bool CellPhoneCollected { get; set; }
+    [Parameter] public string? CellPhoneModel { get; set; }
+    [Parameter] public bool ToggleChecked { get; set; }
+    [Parameter] public EventCallback OnToggleAttendance { get; set; }
+    [Parameter] public EventCallback OnTogglePhone { get; set; }
+    [Parameter] public bool IsSignOut { get; set; }
+    [Parameter] public bool IsAlreadySignedOut { get; set; }
+    [Parameter] public bool PhoneReturned { get; set; }
+}

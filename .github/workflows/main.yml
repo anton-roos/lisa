@@ -1,0 +1,159 @@
+# .github/workflows/deploy-iis.yml
+name: CI/CD - Build → QA → Prod
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: 🔨 Build & Publish
+    runs-on: [self-hosted, windows]
+    outputs:
+      publish-dir: ${{ steps.publish.outputs.publish-dir }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Restore & Build
+        run: |
+          dotnet restore
+          dotnet build --configuration Release
+
+      - name: Publish
+        id: publish
+        shell: pwsh
+        run: |
+          $outFolder = Join-Path $env:GITHUB_WORKSPACE 'publish'
+          dotnet publish --configuration Release --output $outFolder
+
+          # Write the full path into GITHUB_OUTPUT
+          "publish-dir=$outFolder" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          
+  deploy-qa:
+    name: 🚧 Deploy → QA
+    needs: build
+    runs-on: [self-hosted, windows]
+    env:
+      SITE_PATH: ${{ secrets.IIS_QA_SITE_PATH }}
+      APP_POOL:  ${{ secrets.IIS_QA_APP_POOL }}
+      SRC:       ${{ needs.build.outputs.publish-dir }}
+
+    steps:
+      - name: Stop QA App Pool
+        shell: pwsh
+        run: |
+          Write-Host "Stopping App Pool: $env:APP_POOL"
+          & "$env:windir\System32\inetsrv\appcmd.exe" stop apppool "$env:APP_POOL"
+
+      - name: Deploy to QA IIS (robocopy)
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:GITHUB_WORKSPACE 'robocopy.log'
+          Write-Host "Copying from $env:SRC to $env:SITE_PATH"
+          robocopy $env:SRC $env:SITE_PATH /MIR /XF appsettings.json /R:3 /W:5 /LOG:$log
+          $exitCode = $LASTEXITCODE
+          Write-Host "Robocopy exit code: $exitCode"
+          
+          # Robocopy exit codes:
+          # 0 = No files copied, no failures
+          # 1 = Files copied successfully  
+          # 2 = Extra files or directories detected
+          # 3 = Files copied + extra files detected (SUCCESS)
+          # 4 = Mismatched files or directories detected
+          # 5 = Files copied + mismatches detected
+          # 6 = Extra files + mismatches detected  
+          # 7 = Files copied + extra files + mismatches detected
+          # 8+ = Serious errors occurred
+          
+          if ($exitCode -ge 8) {
+            Write-Host "❌ Robocopy failure—see log:"
+            Get-Content $log | Write-Host
+            exit 1
+          } elseif ($exitCode -ge 4) {
+            Write-Host "⚠️ Robocopy completed with warnings (exit code: $exitCode)—see log:"
+            Get-Content $log | Write-Host
+            Write-Host "✅ Deployment completed with warnings but will continue"
+          } else {
+            Write-Host "✅ Robocopy completed successfully (exit code: $exitCode)"
+          }
+          
+          # Ensure PowerShell exits with success code
+          exit 0
+
+      - name: Start QA App Pool
+        shell: pwsh
+        run: |
+          Write-Host "Starting App Pool: $env:APP_POOL"
+          & "$env:windir\System32\inetsrv\appcmd.exe" start apppool "$env:APP_POOL"
+
+      - name: Verify deploy
+        shell: pwsh
+        run: |
+          Write-Host "✅ Files now in IIS folder:"
+          Get-ChildItem -Recurse $env:SITE_PATH | Select-Object FullName | Write-Host
+
+  deploy-prod:
+    name: 🚀 Deploy → Production
+    needs: [build, deploy-qa]
+    runs-on: [self-hosted, windows]
+    environment: production  # This requires manual approval when configured in GitHub
+    env:
+      SITE_PATH: ${{ secrets.IIS_PROD_SITE_PATH }}
+      APP_POOL:  ${{ secrets.IIS_PROD_APP_POOL }}
+      SRC:       ${{ needs.build.outputs.publish-dir }}
+
+    steps:
+      - name: Stop Production App Pool
+        shell: pwsh
+        run: |
+          Write-Host "Stopping Production App Pool: $env:APP_POOL"
+          & "$env:windir\System32\inetsrv\appcmd.exe" stop apppool "$env:APP_POOL"
+
+      - name: Deploy to Production IIS (robocopy)
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:GITHUB_WORKSPACE 'robocopy-prod.log'
+          Write-Host "Copying from $env:SRC to $env:SITE_PATH"
+          robocopy $env:SRC $env:SITE_PATH /MIR /XF appsettings.json /R:3 /W:5 /LOG:$log
+          $exitCode = $LASTEXITCODE
+          Write-Host "Robocopy exit code: $exitCode"
+          
+          # Robocopy exit codes:
+          # 0 = No files copied, no failures
+          # 1 = Files copied successfully  
+          # 2 = Extra files or directories detected
+          # 3 = Files copied + extra files detected (SUCCESS)
+          # 4 = Mismatched files or directories detected
+          # 5 = Files copied + mismatches detected
+          # 6 = Extra files + mismatches detected  
+          # 7 = Files copied + extra files + mismatches detected
+          # 8+ = Serious errors occurred
+          
+          if ($exitCode -ge 8) {
+            Write-Host "❌ Robocopy failure—see log:"
+            Get-Content $log | Write-Host
+            exit 1
+          } elseif ($exitCode -ge 4) {
+            Write-Host "⚠️ Robocopy completed with warnings (exit code: $exitCode)—see log:"
+            Get-Content $log | Write-Host
+            Write-Host "✅ Deployment completed with warnings but will continue"
+          } else {
+            Write-Host "✅ Robocopy completed successfully (exit code: $exitCode)"
+          }
+          
+          # Ensure PowerShell exits with success code
+          exit 0
+
+      - name: Start Production App Pool
+        shell: pwsh
+        run: |
+          Write-Host "Starting Production App Pool: $env:APP_POOL"
+          & "$env:windir\System32\inetsrv\appcmd.exe" start apppool "$env:APP_POOL"
+
+      - name: Verify Production Deploy
+        shell: pwsh
+        run: |
+          Write-Host "✅ Production deployment completed!"
+          Write-Host "Files now in Production IIS folder:"
+          Get-ChildItem -Recurse $env:SITE_PATH | Select-Object FullName | Write-Host

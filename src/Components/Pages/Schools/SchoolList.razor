@@ -1,0 +1,103 @@
+﻿@page "/schools"
+@using Lisa.Models.Entities
+@inject NavigationManager NavigationManager
+@inject SchoolService SchoolService
+
+<AuthorizeView Roles="@Roles.SystemAdministrator">
+    <Authorized>
+        <h3>Schools</h3>
+        <button class="btn btn-primary mb-3" @onclick="() => AddSchool()">
+            Add School
+        </button>
+        @if (_schools == null)
+        {
+            <p>Loading...</p>
+        }
+        else if (_schools.Count == 0)
+        {
+            <div class="alert alert-info">
+                No Schools found, please add a School.
+            </div>
+        }
+        else
+        {
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Short Name</th>
+                        <th>Long Name</th>
+                        <th>Color</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var school in _schools)
+                    {
+                        <tr>
+                            <td class="align-middle">@school.ShortName</td>
+                            <td class="align-middle">@school.LongName</td>
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="color-box" style="background-color:@(school.Color);"></div>
+                                    @school.Color
+                                </div>
+                            </td>
+                            <ActionButtons TEntity="School" Entity="school" OnView="ViewSchool" OnEdit="EditSchool"
+                                OnDelete="DeleteSchool" />
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <h3>You are not authorized to access this page.</h3>
+    </NotAuthorized>
+</AuthorizeView>
+
+<ConfirmDialog />
+<Modal @ref="_errorModal" Title="Info">
+    <BodyTemplate>
+        You can't delete this school because of the following:
+        @_exception.Message
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Primary" @onclick="CloseErrorModal">Ok</Button>
+    </FooterTemplate>
+</Modal>
+
+@code {
+    private List<School>? _schools;
+    private Modal _errorModal = default!;
+    private readonly Exception _exception = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _schools = await SchoolService.GetAllAsync();
+    }
+
+    private void EditSchool(School school)
+    {
+        NavigationManager.NavigateTo($"schools/edit/{school.Id}");
+    }
+
+    private async Task CloseErrorModal()
+    {
+        await _errorModal.HideAsync();
+    }
+
+    private void ViewSchool(School school)
+    {
+        NavigationManager.NavigateTo($"schools/details/{school.Id}");
+    }
+
+    private void DeleteSchool(School school)
+    {
+        NavigationManager.NavigateTo($"schools/delete/{school.Id}");
+    }
+
+    private void AddSchool()
+    {
+        NavigationManager.NavigateTo("schools/add");
+    }
+}

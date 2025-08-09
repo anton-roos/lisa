@@ -1,0 +1,48 @@
+@page "/sign-in-and-out"
+@using Lisa.Models.Entities
+@inject SchoolService SchoolService
+
+@inherits EventAwareComponentBase
+
+<PageTitle>Attendance</PageTitle>
+
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Attendance}")">
+    <Authorized>
+        <SignInAndOutComponent @key="_selectedSchool?.Id" SelectedSchool="@_selectedSchool" />
+    </Authorized>
+    <NotAuthorized>
+        <Unauthenticated />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private School? _selectedSchool;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        SubscribeToEvent(UiEvents.SchoolsUpdated);
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolsUpdated || 
+            (eventName == UiEvents.SchoolSelected && payload is School))
+        {
+            _selectedSchool = payload as School ?? await SchoolService.GetSelectedSchoolAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+}

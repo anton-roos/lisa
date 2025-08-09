@@ -1,0 +1,263 @@
+@page "/register-class/manage/{RegisterClassId:guid?}"
+
+@using Lisa.Models.Entities
+@using Lisa.Models.ViewModels
+@inject NavigationManager Navigation
+@inject RegisterClassService RegisterClassService
+@inject SchoolService SchoolService
+@inject SubjectService SubjectService
+@inject SchoolGradeService SchoolGradeService
+@inject UserService UserService
+@inherits EventAwareComponentBase
+@inject ILogger<RegisterClassManager> Logger
+
+<PageTitle>Care Group Manager</PageTitle>
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+    <Authorized>
+        <h3>@(IsEdit ? "Edit Register Class" : "Add Register Class")</h3>
+
+        @if (!string.IsNullOrEmpty(AlertMessage))
+        {
+            <div class="alert alert-@AlertType alert-dismissible fade show" role="alert">
+                @AlertMessage
+                <button type="button" class="btn-close" aria-label="Close" @onclick="ClearAlert"></button>
+            </div>
+        }
+
+        @if (_selectedSchool == null)
+        {
+            <div class="alert alert-warning">No school is selected. Please select a school first.</div>
+        }
+        else if (IsLoading)
+        {
+            <p>Loading @(IsEdit ? "register class..." : "form...")</p>
+        }
+        else
+        {
+            <EditForm Model="@RegisterClassModel" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label class="form-label">Class Name</label>
+                    <InputText class="form-control" @bind-Value="RegisterClassModel.Name" />
+                </div>
+
+
+
+                <div class="mb-3">
+                    <div class="d-flex align-items-center">
+                        <label class="form-label me-2">Grade</label>
+
+                        @if (RegisterClassModel.Grade != null)
+                        {
+                            @if (RegisterClassModel.Grade.SystemGrade.MathGrade)
+                            {
+                                <Pill Color="success" Class="me-1 mb-1">Math</Pill>
+                            }
+                            @if (RegisterClassModel.Grade.SystemGrade.CombinationGrade)
+                            {
+                                <Pill Color="danger" Class="me-1 mb-1">Combination</Pill>
+                            }
+                        }
+                    </div>
+
+                    <InputSelect class="form-select" id="SelectGrade" TValue="Guid" Value="@RegisterClassModel.GradeId"
+                        ValueChanged="OnGradeSelected" ValueExpression="@(() => RegisterClassModel.GradeId)">
+                        <option value="">-- Select School --</option>
+                        @foreach (var grade in _schoolGrades!)
+                        {
+                            <option value="@grade.Id">@grade.SystemGrade.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Teacher</label>
+                    <select class="form-select" @bind="RegisterClassModel.TeacherId">
+                        <option value="">-- Select Teacher --</option>
+                        @if (_users != null)
+                        {
+                            @foreach (var teacher in _users)
+                            {
+                                <option value="@teacher.Id">@($"{teacher.Surname} {teacher.Name}")</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Compulsory Subjects</label>
+                    <div class="mb-3">
+                        <label class="form-label">Search Subjects</label>
+                        <InputText class="form-control" @bind-Value="_searchText" @oninput="OnInputChange"
+                            placeholder="Type to filter subjects..." />
+                    </div>
+                    <div role="group">
+                        @foreach (var subject in FilteredSubjects)
+                        {
+                            <div>
+                                <input type="checkbox" checked="@RegisterClassModel.SubjectIds.Contains(subject.Id)"
+                                       @onchange="@(() => ToggleSubject(subject.Id))" />
+                                <label>@subject.Name</label>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" type="submit" disabled="@IsLoading">
+                    @(IsLoading ? "Saving..." : "Save")
+                </button>
+                <button class="btn btn-secondary" type="button" @onclick="Cancel">Cancel</button>
+            </EditForm>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <h3>You are not authorized to access this page.</h3>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter] public Guid? RegisterClassId { get; set; }
+
+    private bool IsEdit => RegisterClassId.HasValue && RegisterClassId.Value != Guid.Empty;
+    private bool IsLoading { get; set; } = true;
+    private RegisterClassViewModel RegisterClassModel { get; set; } = new();
+    private School? _selectedSchool;
+    private List<SchoolGrade>? _schoolGrades;
+    private List<User>? _users;
+    private List<Subject> _allSubjectsMaster = [];
+    private List<Subject> _allSubjects = [];
+    private string _searchText = string.Empty;
+    private string? AlertMessage { get; set; }
+    private string AlertType { get; set; } = "success";
+
+    private IEnumerable<Subject> FilteredSubjects =>
+    _allSubjects.Where(s => string.IsNullOrEmpty(_searchText)
+    || (s.Name != null && s.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase)));
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            SubscribeToEvent(UiEvents.SchoolSelected);
+            _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+
+            if (_selectedSchool != null)
+            {
+                _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+                _users = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], _selectedSchool.Id);
+
+                _allSubjectsMaster = await SubjectService.GetAllAsync();
+                _allSubjectsMaster = _allSubjectsMaster.Where(s => s.SubjectType == SubjectType.Compulsory).ToList();
+
+                if (IsEdit)
+                {
+                    if (RegisterClassId != null)
+                    {
+                        var existingRegisterClass = await RegisterClassService.GetByIdAsync(RegisterClassId.Value);
+                        RegisterClassModel = new RegisterClassViewModel
+                        {
+                            Name = existingRegisterClass?.Name,
+                            TeacherId = existingRegisterClass!.UserId,
+                            GradeId = existingRegisterClass.SchoolGradeId,
+                            SubjectIds = existingRegisterClass.CompulsorySubjects!.Select(s => s.Id).ToList(),
+                            Grade = existingRegisterClass.SchoolGrade
+                        };
+                    }
+                }
+
+                if (RegisterClassModel.GradeId != Guid.Empty)
+                {
+                    await OnGradeSelected(RegisterClassModel.GradeId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            SetAlert("danger", $"Error loading page: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            if (_selectedSchool == null)
+            {
+                SetAlert("danger", "Please select a school.");
+                return;
+            }
+
+            var success = await RegisterClassService.CreateAsync(RegisterClassModel, RegisterClassId);
+
+            if (success)
+            {
+                SetAlert("success", IsEdit ? "Register Class updated successfully." : "Register Class added successfully.");
+                Navigation.NavigateTo("/register-class");
+            }
+            else
+            {
+                SetAlert("danger", "Error saving Register Class.");
+            }
+        }
+        catch (Exception ex)
+        {
+            SetAlert("danger", $"Error: {ex.Message}");
+        }
+    }
+
+    private void Cancel() => Navigation.NavigateTo("/register-class");
+
+    private void OnInputChange(ChangeEventArgs e)
+    {
+        _searchText = e.Value?.ToString() ?? string.Empty;
+        StateHasChanged();
+    }
+
+    private void ToggleSubject(int subjectId)
+    {
+        if (RegisterClassModel.SubjectIds.Contains(subjectId))
+        {
+            RegisterClassModel.SubjectIds.Remove(subjectId);
+        }
+        else
+        {
+            RegisterClassModel.SubjectIds.Add(subjectId);
+        }
+    }
+
+    private void SetAlert(string type, string message)
+    {
+        AlertType = type;
+        AlertMessage = message;
+        StateHasChanged();
+    }
+
+    private void ClearAlert()
+    {
+        AlertMessage = null;
+        StateHasChanged();
+    }
+
+    public async Task OnGradeSelected(Guid selectedGradeId)
+    {
+        var grade = await SchoolGradeService.GetByIdAsync(selectedGradeId);
+
+        if (grade != null)
+        {
+            RegisterClassModel.GradeId = grade.Id;
+            RegisterClassModel.Grade = grade;
+
+            _allSubjects = _allSubjectsMaster.Where(s => s.GradesApplicable != null && s.GradesApplicable.Contains(grade.SystemGrade.SequenceNumber)).ToList();
+        }
+        else
+        {
+            Logger.LogError("Grade is null");
+        }
+    }
+}

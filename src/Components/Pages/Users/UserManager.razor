@@ -1,0 +1,466 @@
+@page "/users/manage/{UserId:guid?}"
+@using Lisa.Models.ViewModels
+@using Lisa.Models.Entities
+@using Microsoft.AspNetCore.Identity
+@inject NavigationManager Navigation
+@inject UserManager<User> UserManagerService
+@inject SchoolService SchoolService
+@inject UserService UserService
+@inject CareGroupService CareGroupService
+@inject ILogger<UserManager> Logger
+@inject SubjectService SubjectService
+@inject SchoolGradeService SchoolGradeService
+
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+    <Authorized>
+        <h3>@(IsEdit ? "Edit User" : "Add User")</h3>
+
+        <EditForm Context="_" Model="User" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator/>
+            <ValidationSummary/>
+
+            <div class="form-group mb-3">
+                <label for="surname">Surname</label>
+                <InputText id="surname" class="form-control" @bind-Value="User.Surname"/>
+            </div>
+            <div class="form-group mb-3">
+                <label for="abbreviation">Abbreviation</label>
+                <InputText id="abbreviation" class="form-control" @bind-Value="User.Abbreviation"/>
+            </div>
+            <div class="form-group mb-3">
+                <label for="name">Name</label>
+                <InputText id="name" class="form-control" @bind-Value="User.Name"/>
+            </div>
+            <div class="form-group mb-3">
+                <label for="email">Email</label>
+                <InputText id="email" class="form-control" @bind-Value="User.Email" disabled="@(IsEdit)"/>
+            </div>
+            <div class="form-group mb-3">
+                <label for="password">Password</label>
+                <small class="text-muted">Leave blank to keep the current password.</small>
+                <InputText id="password" type="password" class="form-control" @bind-Value="User.Password"/>
+            </div>
+
+            <div class="form-group mb-3">
+                <label>Roles</label>
+                @foreach (var role in AvailableRoles)
+                {
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="@($"role_{role}")"
+                               checked="@User.SelectedRoles.Contains(role)"
+                               @onchange="(e) => ToggleRole(role, (bool)e.Value!)"
+                               disabled="@(role == Roles.SystemAdministrator && !IsCurrentUserSystemAdmin)"/>
+                        <label class="form-check-label" for="@($"role_{role}")">@role</label>
+                    </div>
+                }
+            </div>
+
+            @if (ShouldShowCareGroups())
+            {
+                <div class="form-group mb-3">
+                    <label>Care Groups</label>
+                    <div class="row">
+                        @foreach (var group in AvailableCareGroups)
+                        {
+                            <div class="col-4 d-flex align-items-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="@($"careGroup_{group.Id}")"
+                                           checked="@User.SelectedCareGroupIds.Contains(group.Id)"
+                                           @onchange="(e) => ToggleCareGroup(group.Id, (bool)e.Value!)"/>
+                                    <label class="form-check-label" for="@($"careGroup_{group.Id}")">@group.Name</label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (ShouldShowSubjects())
+            {
+                <label>Subjects</label>
+                <button type="button" class="btn btn-primary me-2" @onclick="OpenSubjectSelectModal">Add / Edit
+                    Subjects
+                </button>
+                @if (User.Subjects != null && User.Subjects.Any())
+                {
+                    <div class="mb-3">
+                        @foreach (var subjectGroup in User.Subjects.GroupBy(ts => ts.SubjectId))
+                        {
+                            var subject = AvailableSubjects.FirstOrDefault(s => s.Id == subjectGroup.Key);
+                            if (subject != null)
+                            {
+                                <div class="d-flex align-items-center mb-2">
+                                    <strong class="me-2">@subject.Name</strong>
+                                    @foreach (var teacherSubject in subjectGroup)
+                                    {
+                                        <span class="badge bg-primary me-1">@FormatGrade(teacherSubject.Grade)</span>
+                                    }
+                                    <button type="button" class="btn btn-sm btn-outline-danger ms-2"
+                                            @onclick="@(() => RemoveSubject(subject.Id))" @onclick:stopPropagation>
+                                        Remove
+                                    </button>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p>No subjects selected.</p>
+                }
+            }
+
+            <button type="submit" class="btn btn-primary me-2">Save</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+        </EditForm>
+
+        <div class="modal fade @(ShowErrorModal ? "show d-block" : "d-none")" tabindex="-1"
+             style="background-color: rgba(0,0,0,0.5);" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Error</h5>
+                        <button type="button" class="btn-close" aria-label="Close" @onclick="CloseErrorModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>@ErrorMessage</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" @onclick="CloseErrorModal">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade @(ShowSubjectSelectionModal ? "show d-block" : "d-none")" tabindex="-1"
+             style="background-color: rgba(0,0,0,0.5);" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Select Subjects</h5>
+                        <button type="button" class="btn-close" aria-label="Close"
+                                @onclick="CloseSubjectSelectModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <InputText @bind-Value="SubjectSearchTerm" @oninput="FilterSubjects" class="form-control mb-3"
+                                   placeholder="Search subjects..."/>
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            @foreach (var subject in FilteredSubjects)
+                            {
+                                <div class="mb-3 border-bottom pb-2">
+                                    <div class="d-flex align-items-center">
+                                        <input class="form-check-input me-1" type="checkbox"
+                                               id="@($"subject_{subject.Id}")"
+                                               checked="@IsSubjectSelected(subject.Id)"
+                                               @onchange="(e) => ToggleSubject(subject.Id, (bool)e.Value!)"/>
+                                        <label class="form-check-label fw-bold me-2" for="@($"subject_{subject.Id}")">
+                                            @subject.Name
+                                        </label>
+                                        <span
+                                            class="badge bg-primary">@(FormatGradeRange(subject.GradesApplicable))</span>
+                                    </div>
+                                    @if (IsSubjectSelected(subject.Id))
+                                    {
+                                        <div class="ms-4 mt-2">
+                                            @foreach (var grade in subject.GradesApplicable?.Where(g =>
+                                                              SchoolApplicableGrades.Contains(g)) ?? [])
+                                            {
+                                                <div class="d-flex align-items-center mb-1">
+                                                    <input class="form-check-input me-1" type="checkbox"
+                                                           id="@($"subject_{subject.Id}_grade_{grade}")"
+                                                           checked="@IsGradeSelected(subject.Id, grade)"
+                                                           @onchange="(e) => ToggleGrade(subject.Id, grade, (bool)e.Value!)"/>
+                                                    <label class="form-check-label me-2"
+                                                           for="@($"subject_{subject.Id}_grade_{grade}")">
+                                                        Grade @FormatGrade(grade)
+                                                    </label>
+                                                    <span
+                                                        class="badge @(IsGradeSelected(subject.Id, grade) ? "bg-primary" : "bg-secondary")">
+                                                        @(IsGradeSelected(subject.Id, grade) ? "Selected" : "Available")
+                                                    </span>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary"
+                                @onclick="CloseSubjectSelectModal">Cancel
+                        </button>
+                        <button type="button" class="btn btn-primary" @onclick="CloseSubjectSelectModal">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </Authorized>
+    <NotAuthorized>
+        <h3>You are not authorized to access this page.</h3>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter] public Guid? UserId { get; set; }
+    private UserViewModel User { get; set; } = new();
+    private School? _selectedSchool;
+    private List<CareGroup> AvailableCareGroups { get; set; } = [];
+    private List<Subject> AvailableSubjects { get; set; } = [];
+    private List<int> SchoolApplicableGrades { get; set; } = [];
+
+    private List<string> AvailableRoles { get; set; } = [Roles.Principal, Roles.Administrator, Roles.SchoolManagement, Roles.SystemAdministrator, Roles.Teacher, Roles.Attendance, Roles.Reception];
+
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
+    private bool IsCurrentUserSystemAdmin { get; set; }
+
+    private string SubjectSearchTerm { get; set; } = "";
+    private List<Subject> FilteredSubjects { get; set; } = [];
+
+    private bool ShowSubjectSelectionModal { get; set; }
+    private bool ShowErrorModal { get; set; }
+    private string ErrorMessage { get; set; } = "";
+
+    private bool IsEdit => UserId.HasValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateTask;
+        var currentUser = authState.User;
+        IsCurrentUserSystemAdmin = currentUser.IsInRole(Roles.SystemAdministrator);
+
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        AvailableSubjects = await SubjectService.GetAllAsync();
+
+        if (_selectedSchool != null)
+        {
+            var gradesForSchool = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+            SchoolApplicableGrades = gradesForSchool.Select(g => g.SystemGrade.SequenceNumber).ToList();
+            AvailableCareGroups = await CareGroupService.GetBySchoolAsync(_selectedSchool.Id);
+        }
+
+        if (!IsEdit)
+        {
+            User = new UserViewModel
+            {
+                SelectedCareGroupIds = [],
+                Subjects = [],
+                SelectedRoles = []
+            };
+        }
+        else
+        {
+            if (UserId is not null)
+            {
+                var existingUser = await UserService.GetByIdAsync(UserId.Value);
+                if (existingUser != null)
+                {
+                    var currentRoles = await UserManagerService.GetRolesAsync(existingUser);
+                    User = new UserViewModel
+                    {
+                        Id = existingUser.Id,
+                        Surname = existingUser.Surname!,
+                        Abbreviation = existingUser.Abbreviation!,
+                        Name = existingUser.Name!,
+                        Email = existingUser.Email!,
+                        SelectedRoles = currentRoles.ToList(),
+                        SchoolId = existingUser.SchoolId,
+                        Subjects = existingUser.Subjects!.ToList(),
+                        SelectedCareGroupIds = existingUser.CareGroups?.Select(cg => cg.Id).ToList() ?? []
+                    };
+                }
+            }
+        }
+
+        FilteredSubjects = AvailableSubjects;
+    }
+
+    private void ToggleCareGroup(Guid careGroupId, bool isSelected)
+    {
+        if (isSelected)
+        {
+            if (!User.SelectedCareGroupIds.Contains(careGroupId))
+                User.SelectedCareGroupIds.Add(careGroupId);
+        }
+        else
+        {
+            User.SelectedCareGroupIds.Remove(careGroupId);
+        }
+    }
+
+    private bool IsSubjectSelected(int subjectId)
+    {
+        return User.Subjects?.Any(ts => ts.SubjectId == subjectId) ?? false;
+    }
+
+    private bool IsGradeSelected(int subjectId, int grade)
+    {
+        return User.Subjects?.Any(ts => ts.SubjectId == subjectId && ts.Grade == grade) ?? false;
+    }
+
+    private void ToggleSubject(int subjectId, bool isSelected)
+    {
+        if (isSelected)
+        {
+            if (!IsSubjectSelected(subjectId))
+            {
+                var subject = AvailableSubjects.FirstOrDefault(s => s.Id == subjectId);
+                if (subject != null && subject.GradesApplicable != null && subject.GradesApplicable.Any())
+                {
+                    User.Subjects?.Add(new TeacherSubject { SubjectId = subjectId, Grade = subject.GradesApplicable.First() });
+                }
+            }
+        }
+        else
+        {
+            User.Subjects?.RemoveAll(ts => ts.SubjectId == subjectId);
+        }
+    }
+
+    private void ToggleGrade(int subjectId, int grade, bool isSelected)
+    {
+        if (isSelected)
+        {
+            if (!IsGradeSelected(subjectId, grade))
+            {
+                User.Subjects?.Add(new TeacherSubject { SubjectId = subjectId, Grade = grade });
+            }
+        }
+        else
+        {
+            User.Subjects?.RemoveAll(ts => ts.SubjectId == subjectId && ts.Grade == grade);
+        }
+    }
+
+    private void OpenSubjectSelectModal()
+    {
+        ShowSubjectSelectionModal = true;
+    }
+
+    private void CloseSubjectSelectModal() => ShowSubjectSelectionModal = false;
+
+    private void FilterSubjects(ChangeEventArgs e)
+    {
+        SubjectSearchTerm = e.Value?.ToString() ?? "";
+
+        if (string.IsNullOrWhiteSpace(SubjectSearchTerm))
+        {
+            FilteredSubjects = AvailableSubjects;
+        }
+        else
+        {
+            FilteredSubjects = AvailableSubjects
+                .Where(s => s.Name!.Contains(SubjectSearchTerm, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    private void RemoveSubject(int subjectId)
+    {
+        User.Subjects?.RemoveAll(ts => ts.SubjectId == subjectId);
+    }
+
+    private void ToggleRole(string role, bool isSelected)
+    {
+        if (role == Roles.SystemAdministrator && !IsCurrentUserSystemAdmin)
+        {
+            return;
+        }
+
+        if (isSelected)
+        {
+            if (!User.SelectedRoles.Contains(role))
+                User.SelectedRoles.Add(role);
+        }
+        else
+        {
+            User.SelectedRoles.Remove(role);
+        }
+    }
+
+    public async Task<bool> HandleValidSubmit()
+    {
+        try
+        {
+            if (_selectedSchool == null)
+                throw new Exception("No Selected School while trying to manage a user.");
+
+            if (IsEdit)
+            {
+                var newPassword = string.IsNullOrWhiteSpace(User.Password) ? null : User.Password;
+                await UserService.UpdateAsync(User, newPassword);
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(User.Password))
+                    throw new Exception("Password is required for new users.");
+
+                var newUser = new User
+                {
+                    Surname = User.Surname,
+                    Abbreviation = User.Abbreviation,
+                    Name = User.Name,
+                    Email = User.Email,
+                    UserName = User.Email,
+                    Subjects = User.Subjects,
+                    SchoolId = _selectedSchool.Id
+                };
+
+                var result = await UserManagerService.CreateAsync(newUser, User.Password);
+                if (!result.Succeeded)
+                {
+                    var errorMessage = string.Join("; ", result.Errors.Select(e => e.Description));
+                    throw new Exception($"Failed to create user: {errorMessage}");
+                }
+
+                if (User.SelectedRoles.Any())
+                {
+                    await UserManagerService.AddToRolesAsync(newUser, User.SelectedRoles);
+                }
+            }
+
+            Navigation.NavigateTo("/users");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("Error: {Message}", ex.Message);
+            ErrorMessage = ex.Message;
+            ShowErrorModal = true;
+            return false;
+        }
+    }
+
+    private void Cancel() => Navigation.NavigateTo("/users");
+    private void CloseErrorModal() => ShowErrorModal = false;
+
+    private bool ShouldShowCareGroups() => !User.SelectedRoles.Contains(Roles.SystemAdministrator);
+
+    private bool ShouldShowSubjects() => !User.SelectedRoles.Contains(Roles.SystemAdministrator)
+                                         && User.SelectedRoles.Contains(Roles.Teacher);
+
+    private string FormatGrade(int grade) =>
+        grade switch
+        {
+            -2 => "Gr RRR",
+            -1 => "Gr RR",
+            0 => "Gr R",
+            _ => $"Gr {grade}"
+        };
+
+    private string FormatGradeRange(List<int>? grades)
+    {
+        if (grades == null || !grades.Any())
+            return "No Grades";
+
+        var applicableGrades = grades.Where(g => SchoolApplicableGrades.Contains(g)).ToList();
+        if (!applicableGrades.Any())
+            return "No Grades";
+
+        var minGrade = applicableGrades.Min();
+        var maxGrade = applicableGrades.Max();
+        return $"{FormatGrade(minGrade)} - {FormatGrade(maxGrade)}";
+    }
+
+}

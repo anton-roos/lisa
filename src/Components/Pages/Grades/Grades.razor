@@ -1,0 +1,250 @@
+@page "/grades"
+@using Lisa.Models.Entities
+@inject SchoolService SchoolService
+@inject SchoolGradeService SchoolGradeService
+@inject SystemGradeService SystemGradeService
+@inherits EventAwareComponentBase
+
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+    <Authorized>
+        <h3>Manage Grades for @_selectedSchool?.ShortName</h3>
+        @if (_selectedSchool == null)
+        {
+            <NoSchoolSelected Message="Please select a school to manage grades." />
+        }
+        else if (_loading)
+        {
+            <div class="list-group">
+                @for (var i = 0; i < _systemGrades.Count(); i++)
+                {
+                    <div class="list-group-item d-flex justify-content-start align-items-center flex-wrap">
+                        <div class="col-1">
+                            <div class="skeleton skeleton-switch"></div>
+                        </div>
+                        <div class="col-1">
+                            <div class="skeleton skeleton-text"></div>
+                        </div>
+                        <div class="col-3">
+                            <div class="skeleton skeleton-pill"></div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="list-group">
+                @foreach (var systemGrade in _systemGrades)
+                {
+                    var isChecked = _schoolGrades.Any(sg => sg.SystemGradeId == systemGrade.Id);
+                    <div class="list-group-item d-flex justify-content-start align-items-center flex-wrap">
+                        <div class="col-1">
+                            <Switch Value="isChecked" Reverse="false" ValueChanged="async (bool newValue) =>
+                                        {
+                                            isChecked = newValue;
+                                            await ToggleSchoolGrade(systemGrade.Id, newValue);
+                                        }" ValueExpression="() => isChecked">
+                            </Switch>
+                        </div>
+                        <div class="col-2">
+                            <strong>@systemGrade.Name</strong>
+                        </div>
+                        <div class="col-2">
+                            @{
+                                var schoolGrade = _schoolGrades.FirstOrDefault(sg => sg.SystemGradeId == systemGrade.Id);
+                                var startTime = schoolGrade?.StartTime?.ToString("HH:mm") ?? "08:00";
+                                var endTime = schoolGrade?.EndTime?.ToString("HH:mm") ?? "14:00";
+                            }
+                            <div class="mb-2">
+                                <label class="form-label small">Start Time:</label>
+                                <input type="time" class="form-control form-control-sm" 
+                                       value="@startTime" 
+                                       disabled="@(!isChecked)"
+                                       @onchange="@(async (e) => await UpdateSchoolGradeTime(systemGrade.Id, e.Value?.ToString(), true))" />
+                            </div>
+                            <div>
+                                <label class="form-label small">End Time:</label>
+                                <input type="time" class="form-control form-control-sm" 
+                                       value="@endTime" 
+                                       disabled="@(!isChecked)"
+                                       @onchange="@(async (e) => await UpdateSchoolGradeTime(systemGrade.Id, e.Value?.ToString(), false))" />
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            @if (systemGrade.MathGrade)
+                            {
+                                <Pill Color="success" AdditionalClasses="me-2">Math</Pill>
+                            }
+                            @if (systemGrade.CombinationGrade)
+                            {
+                                <Pill Color="danger">Combination</Pill>
+                            }
+                            @if (systemGrade.AchievementLevelRating)
+                            {
+                                <Pill Color="primary">Acievement Level Rating</Pill>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+@if (_showModal)
+{
+    <LisaModal Show="@_showModal" Title="@_modalTitle" Message="@_modalMessage" OnConfirm="CloseModal" OnCancel="CloseModal" />
+}
+
+
+@code {
+    private School? _selectedSchool;
+    private bool _loading;
+    private List<SystemGrade> _systemGrades = [];
+    private List<SchoolGrade> _schoolGrades = [];
+    private bool _showModal;
+    private string _modalTitle = "";
+    private string _modalMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _systemGrades = await SystemGradeService.GetAllAsync();
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        if (_selectedSchool == null) return;
+        await LoadGrades();
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        switch (eventName)
+        {
+            case UiEvents.SchoolSelected:
+                if (payload is School school)
+                {
+                    _selectedSchool = school;
+                    await LoadGrades();
+                }
+                break;
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task ToggleSchoolGrade(int systemGradeId, bool isChecked)
+    {
+        if (_selectedSchool == null)
+        {
+            return;
+        }
+
+        _loading = true;
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(1000);
+        var existingSchoolGrade = await SchoolGradeService.GetBySystemGradeAndSchoolAsync(systemGradeId, _selectedSchool.Id);
+
+        if (isChecked)
+        {
+            if (existingSchoolGrade == null)
+            {
+                var newSchoolGrade = new SchoolGrade
+                    {
+                        Id = Guid.NewGuid(),
+                        SchoolId = _selectedSchool.Id,
+                        SystemGradeId = systemGradeId,
+                        StartTime = new TimeOnly(8, 0),
+                        EndTime = new TimeOnly(14, 0)
+                    };
+
+                await SchoolGradeService.CreateAsync(newSchoolGrade);
+                await LoadGrades();
+                _loading = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        else
+        {
+            if (existingSchoolGrade != null)
+            {
+                var schoolGrade = await SchoolGradeService.GetByIdAsync(existingSchoolGrade.Id);
+                if (schoolGrade != null)
+                {
+                    var registerClassCount = schoolGrade.RegisterClasses?.Count ?? 0;
+                    var combinationCount = schoolGrade.Combinations?.Count ?? 0;
+                    var hasRegisterClasses = registerClassCount > 0;
+                    var hasCombinations = combinationCount > 0;
+
+                    if (hasRegisterClasses || hasCombinations)
+                    {
+                        ShowWarningModal("Warring", $"You can't disable {existingSchoolGrade.SystemGrade.Name} because it has {registerClassCount} Register Classes and {combinationCount} Combinations assigned.");
+                        return;
+                    }
+                }
+
+                await SchoolGradeService.DeleteAsync(existingSchoolGrade.Id);
+                await LoadGrades();
+                _loading = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async Task UpdateSchoolGradeTime(int systemGradeId, string? timeValue, bool isStartTime)
+    {
+        if (_selectedSchool == null || string.IsNullOrEmpty(timeValue))
+        {
+            return;
+        }
+
+        var existingSchoolGrade = await SchoolGradeService.GetBySystemGradeAndSchoolAsync(systemGradeId, _selectedSchool.Id);
+        if (existingSchoolGrade == null)
+        {
+            return;
+        }
+
+        if (TimeOnly.TryParse(timeValue, out var parsedTime))
+        {
+            var schoolGradeToUpdate = new SchoolGrade
+            {
+                Id = existingSchoolGrade.Id,
+                SchoolId = existingSchoolGrade.SchoolId,
+                SystemGradeId = existingSchoolGrade.SystemGradeId,
+                StartTime = isStartTime ? parsedTime : existingSchoolGrade.StartTime,
+                EndTime = isStartTime ? existingSchoolGrade.EndTime : parsedTime
+            };
+
+            await SchoolGradeService.UpdateAsync(schoolGradeToUpdate);
+            await LoadGrades();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadGrades()
+    {
+        _loading = true;
+        await InvokeAsync(StateHasChanged);
+        if (_selectedSchool != null)
+        {
+            _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+        }
+        _loading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void CloseModal()
+    {
+        _showModal = false;
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private void ShowWarningModal(string title, string message)
+    {
+        _modalTitle = title;
+        _modalMessage = message;
+        _showModal = true;
+        StateHasChanged();
+    }
+}

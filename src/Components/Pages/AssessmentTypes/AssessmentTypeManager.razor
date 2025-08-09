@@ -1,0 +1,68 @@
+@page "/assessment-types/manage/{assessmentTypeId:int?}"
+@using Lisa.Models.Entities
+@inject AssessmentTypeService AssessmentTypeService
+@inject NavigationManager Navigation
+
+<PageTitle>Assessment Type Manager</PageTitle>
+<h3>@(IsEdit ? "Edit Assessment Type" : "Create Assessment Type")</h3>
+
+@if (_loading)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <EditForm Model="_assessmentType" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label for="name" class="form-label">Name</label>
+            @if (_assessmentType != null)
+            {
+                <InputText id="name" class="form-control" @bind-Value="_assessmentType.Name"/>
+            }
+        </div>
+
+        <button type="submit" class="btn btn-primary">@(IsEdit ? "Update" : "Create")</button>
+        <button type="button" class="btn btn-secondary ms-2" @onclick="Cancel">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public int? AssessmentTypeId { get; set; }
+
+    private bool IsEdit => AssessmentTypeId.HasValue;
+    private bool _loading;
+    private AssessmentType? _assessmentType = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEdit)
+        {
+            _loading = true;
+            if (AssessmentTypeId != null)
+                _assessmentType = await AssessmentTypeService.GetAssessmentTypeByIdAsync(AssessmentTypeId.Value);
+            _loading = false;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (IsEdit)
+        {
+            if (_assessmentType != null) await AssessmentTypeService.UpdateAssessmentTypeAsync(_assessmentType);
+        }
+        else
+        {
+            if (_assessmentType != null) await AssessmentTypeService.CreateAssessmentTypeAsync(_assessmentType);
+        }
+        Navigation.NavigateTo("/assessment-types");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/assessment-types");
+    }
+}

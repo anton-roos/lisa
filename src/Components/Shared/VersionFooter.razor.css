@@ -1,0 +1,60 @@
+.version-footer {
+    background-color: var(--bs-light);
+    font-size: 0.75rem;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    border-top: 1px solid var(--bs-border-color);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    height: 32px; /* Fixed height for consistent calculations */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.version-footer small {
+    color: var(--bs-secondary);
+    line-height: 1.2;
+}
+
+/* Adjust main content to account for fixed footer */
+/* No padding needed since layout heights are calculated */
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .version-footer {
+        font-size: 0.65rem;
+        height: 45px; /* Smaller height on mobile */
+    }
+    
+    .version-footer small {
+        display: block;
+        line-height: 1.3;
+    }
+}
+
+/* Mobile layout adjustments */
+@media (max-width: 599px) {
+    .page {
+        height: calc(100vh - 55px) !important; /* Account for smaller footer with extra spacing */
+    }
+    
+    main {
+        height: calc(100vh - 55px) !important;
+        padding-bottom: 0;
+    }
+    
+    .nav-scrollable {
+        height: calc(100vh - 3.5rem - 55px) !important; /* Mobile footer height with extra spacing */
+    }
+}
+
+/* Hide some details on very small screens */
+@media (max-width: 480px) {
+    .version-footer .mx-1 {
+        display: none;
+    }
+}

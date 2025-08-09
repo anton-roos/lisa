@@ -1,0 +1,53 @@
+@page "/care-groups/details/{Id:guid}"
+@using Lisa.Models.Entities
+@inject CareGroupService CareGroupService
+@inject NavigationManager Navigation
+
+<PageTitle>Care Group Details</PageTitle>
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+    <Authorized>
+        <h3>Care Group Details</h3>
+        @if (CareGroup == null)
+        {
+            <p>Loading care group...</p>
+        }
+        else
+        {
+            <dl class="row">
+                <dt class="col-sm-2">Name</dt>
+                <dd class="col-sm-10">@CareGroup.Name</dd>
+            </dl>
+            @if (CareGroup.Users != null)
+            {
+                <dl class="row">
+                    <dt class="col-sm-2">Teacher(s)</dt>
+                    @foreach (var user in CareGroup.Users)
+                    {
+                        <dd class="col-sm-10"></dd>
+                        <dd class="col-sm-10"><span class="badge bg-primary">@user.Abbreviation</span> @($"{user.Surname} {user.Name}")</dd>
+                    }
+                </dl>
+            }
+        }
+        <button class="btn btn-secondary" @onclick="GoBack">Back</button>
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+    public CareGroup? CareGroup { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        CareGroup = await CareGroupService.GetByIdAsync(Id);
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/care-groups");
+    }
+}

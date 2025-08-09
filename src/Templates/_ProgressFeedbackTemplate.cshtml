@@ -1,0 +1,140 @@
+﻿@using Lisa.Models.EmailModels
+@model IEnumerable<ProgressFeedback>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Progress Feedback</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        @@page { margin: 1cm; }
+
+        .learner-section:not(:last-child) {
+            page-break-after: always;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 11px;
+        }
+
+        thead { display: table-header-group; }
+        tr, td, th { page-break-inside: avoid; }
+
+        th, td {
+            padding: 0.25rem;
+            border-top: 1px solid #dee2e6;
+            font-size: 10px;
+        }
+
+        h3, h4 { 
+            page-break-after: avoid;
+            font-size: 14px;
+        }
+
+        p {
+            font-size: 11px;
+            line-height: 1.3;
+        }
+
+        body {
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body style="margin:0; padding:0; font-family: Arial, sans-serif;">
+
+@foreach (var progressFeedback in Model)
+{
+    var firstResult = progressFeedback.ResultsBySubject
+        .SelectMany(x => x.Value)
+        .FirstOrDefault();
+    var isAchievementRating = firstResult?.Learner?.RegisterClass?.SchoolGrade?.SystemGrade.AchievementLevelRating ?? false;
+
+    <div class="learner-section" style="margin:0.8rem auto; max-width:600px;">
+
+        <h3 style="margin:0 0 0.4rem 0; font-size: 14px;">Progress Feedback</h3>
+        <p style="margin: 0 0 0.8rem 0; font-size: 11px;">
+            <strong>Name:</strong> @progressFeedback.LearnerName | 
+            <strong>From:</strong> {{fromDate}} | 
+            <strong>To:</strong> {{toDate}}
+        </p>
+
+        @if (progressFeedback.ResultsBySubject.Any(x => x.Value.Any()))
+        {
+            foreach (var subjectGroup in progressFeedback.ResultsBySubject
+                         .Where(x => x.Value.Any()))
+            {
+                <table style="margin-bottom:1.2rem; border:1px solid #ccc; font-size: 10px; width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th colspan="6" style="background-color:#f8f9fa; font-size: 12px; text-align: center; padding: 0.25rem; border: 1px solid #ccc;">@subjectGroup.Key</th>
+                        </tr>
+                        <tr>
+                            @for (var i = 0; i < 3; i++)
+                            {
+                                <th style="font-size: 10px; text-align: center; padding: 0.25rem; border: 1px solid #ccc; width: 16.66%;">Date</th>
+                                <th style="font-size: 10px; text-align: center; padding: 0.25rem; border: 1px solid #ccc; width: 16.66%;">@(isAchievementRating ? "Level" : "Mark")</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            var totalResults = Math.Min(subjectGroup.Value.Count, 6);
+                            var rows = (int)Math.Ceiling(totalResults / 3.0);
+                        }
+                        @for (var row = 0; row < rows; row++)
+                        {
+                            var rowStyle = (row % 2 == 0) ? "background-color:#f9f9f9;" : "";
+                            <tr style="@rowStyle">
+                                @for (var col = 0; col < 3; col++)
+                                {
+                                    var index = row * 3 + col;
+                                    if (index < totalResults)
+                                    {
+                                        var result = subjectGroup.Value[index];
+
+                                        <!-- Date -->
+                                        <td style="font-size: 10px; text-align: center; padding: 0.25rem; border: 1px solid #ccc;">
+                                            @(result.ResultSet?.AssessmentDate?.ToString("MM/dd") ?? "-")
+                                        </td>
+
+                                        <!-- Score -->
+                                        
+                                            var color = result.Score == null ? "#ffc107" :
+                                                        result.Score < 50 ? "#dc3545" : "#198754";
+
+                                            string text;
+                                            if (result.Score == null)
+                                                text = "Absent";
+                                            else if (isAchievementRating)
+                                                text = result.Score.ToString() ?? string.Empty;
+                                            else
+                                                text = result.Score.Value + "%";
+                                        
+                                        <td style="color:@color; font-weight:bold; font-size: 10px; text-align: center; padding: 0.25rem; border: 1px solid #ccc;">@text</td>
+                                    }
+                                    else
+                                    {
+                                        <td style="font-size: 10px; text-align: center; padding: 0.25rem; border: 1px solid #ccc;">&nbsp;</td><td style="font-size: 10px; text-align: center; padding: 0.25rem; border: 1px solid #ccc;">&nbsp;</td>
+                                    }
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+        else
+        {
+            <p style="color:#856404; background:#fff3cd; padding:0.6rem; border:1px solid #ffeeba; text-align:center; font-size: 11px;">
+                No results available for this learner.
+            </p>
+        }
+
+    </div>
+}
+</body>
+</html>

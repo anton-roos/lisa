@@ -1,0 +1,67 @@
+@page "/combinations/details/{Id:guid}"
+@using Lisa.Models.Entities
+@inject CombinationService CombinationService
+@inject NavigationManager Navigation
+
+<PageTitle>Combination Details</PageTitle>
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+    <Authorized>
+        <h3>Subject Combination Details</h3>
+
+        @if (_combination != null)
+        {
+            <dl>
+                <dt>Name</dt>
+                <dd>@_combination.Name</dd>
+                <dt>Grade</dt>
+                <dd>@_combination.SchoolGrade?.SystemGrade.Name</dd>
+                <dt>School</dt>
+                <dd>@_combination.SchoolGrade?.School?.ShortName</dd>
+                <dt>Combination Type</dt>
+                <dd>@_combination.CombinationType.ToString() </dd>
+                <dt>Subjects</dt>
+                <dd>
+                    <ul>
+                        @if (_combination.Subjects != null)
+                        {
+                            @foreach (var subject in _combination.Subjects)
+                            {
+                                <li>@subject.Name</li>
+                            }
+                        }
+                    </ul>
+                </dd>
+            </dl>
+        }
+        else
+        {
+            <p>Combination not found</p>
+        }
+
+        <button class="btn btn-primary" @onclick="EditCombination">Edit</button>
+        <button class="btn btn-secondary" @onclick="Cancel">Back</button>
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private Combination? _combination;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _combination = await CombinationService.GetByIdAsync(Id);
+    }
+
+    private void EditCombination()
+    {
+        Navigation.NavigateTo($"/combinations/edit/{Id}");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/combinations");
+    }
+}

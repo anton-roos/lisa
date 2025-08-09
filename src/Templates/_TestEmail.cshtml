@@ -1,0 +1,63 @@
+@using Lisa.Models.ViewModels
+@model TestEmailViewModel
+
+@{
+    var principal = Model.Principals?.FirstOrDefault();
+    var school = Model.School;
+}
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Progress Feedback Confirmation Email</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+
+<body style="margin:0; padding:0;">
+    <table role="presentation" width="100%"
+        style="max-width: 600px; margin: 1.5rem auto 0 auto; padding-left: 1rem; padding-right: 1rem; font-family: Arial, sans-serif;">
+        <tr>
+            <td style="vertical-align: top;">
+                <h3 style="margin: 0 0 1rem 0;">Progress Feedback Confirmation Email</h3>
+                <p style="margin: 0 0 1rem 0;">Dear Parent of <strong>@Model.Learner?.Name
+                        @Model.Learner?.Surname</strong></p>
+
+                <p>This is a test email from @(school?.LongName ?? "your school") designed to verify the learner's details as registered
+                    with this email address.</p>
+
+                <p>Please reply to this email and confirm the following:</p>
+
+                <ol>
+                    <li>
+                        Confirm that the learner's details in this email match your child's information.
+                    </li>
+                    <li>
+                        Provide any additional email addresses and telephone numbers where you would like to receive
+                        regular progress updates. Please include:
+                        <ul>
+                            <li>Surname of recipient</li>
+                            <li>Name of recipient</li>
+                            <li>Primary email address</li>
+                            <li>Secondary email address</li>
+                            <li> Primary phone number</li>
+                            <li>Secondary phone number</li>
+                            <li>WhatsApp number</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <p style="margin: 0 0 1rem 0;">
+                    Regards,<br />
+                    @principal?.Name
+                    @principal?.Surname
+                    <br />
+                    Principal
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

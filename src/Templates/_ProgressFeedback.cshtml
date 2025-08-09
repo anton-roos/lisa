@@ -1,0 +1,158 @@
+@using Lisa.Models.ViewModels
+@model ProgressFeedbackViewModel
+
+@{
+    var firstResult = Model.Feedback?.ResultsBySubject
+                         .SelectMany(x => x.Value).FirstOrDefault();
+    var isAchievementRating = firstResult?.Learner?.RegisterClass?.SchoolGrade?.SystemGrade.AchievementLevelRating ?? false;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Progress Feedback</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="margin:0; padding:0;">
+    <table role="presentation" width="100%" style="max-width: 600px; margin: 1.5rem auto 0 auto; padding-left: 1rem; padding-right: 1rem; font-family: Arial, sans-serif;">
+        <tr>
+            <td style="vertical-align: top;">
+                <h3 style="margin: 0 0 1rem 0;">Progress Feedback</h3>
+                <p style="margin: 0 0 1rem 0;">Dear Parent of <strong>@Model.Feedback?.LearnerName</strong></p>
+                @if (isAchievementRating)
+                {
+                    <p style="margin: 0 0 1rem 0;">
+                        Please find below the progress feedback on the tests or assignments your child has completed,
+                        expressed as an achievement level.
+                    </p>
+                }
+                else
+                {
+                    <p style="margin: 0 0 1rem 0;">
+                        Please find below the progress feedback on the tests or assignments your child has completed,
+                        expressed as percentages out of 100.
+                    </p>
+                }
+                <p style="margin: 0 0 1rem 0;">
+                    Kindly note that this is not a formal report card but rather a reflection of all assessments
+                    conducted throughout the term.
+                </p>
+                <p style="margin: 0 0 1rem 0;">
+                    Regards,<br />
+                    @foreach (var principal in Model.Principals!)
+                    {
+                        @principal.Name @principal.Surname <br />
+                    }
+                    Principal
+                </p>
+
+                @if (Model.Feedback?.ResultsBySubject != null && Model.Feedback.ResultsBySubject.Any(x => x.Value.Any()))
+                {
+                    foreach (var subjectGroup in Model.Feedback.ResultsBySubject.Where(x => x.Value.Any()))
+                    {
+                        <table role="presentation" width="100%" style="border: 1px solid rgba(0,0,0,0.125); border-radius: 0.25rem; margin-bottom: 1.5rem; background-color: #fff; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);">
+                            <tr>
+                                <td style="padding: 0.5rem 1rem; background-color: rgba(0, 0, 0, 0.03); border-bottom: 1px solid rgba(0, 0, 0, 0.125);">
+                                    <h4 style="margin: 0;">@subjectGroup.Key</h4>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 1rem;">
+                                    <table role="presentation" width="100%" style="margin-bottom: 1rem; color: #212529; border-collapse: collapse; text-align: center;">
+                                        <thead>
+                                            <tr>
+                                                @for (var i = 0; i < 3; i++)
+                                                {
+                                                    <th style="padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6;">Date</th>
+                                                    @if (isAchievementRating)
+                                                    {
+                                                        <th style="padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6;">Level</th>
+                                                    }
+                                                    else
+                                                    {
+                                                        <th style="padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6;">Mark</th>
+                                                    }
+                                                }
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @{
+                                                var totalResults = Math.Min(subjectGroup.Value.Count, 6);
+                                                var rows = (int)Math.Ceiling(totalResults / 3.0);
+                                            }
+                                            @for (var row = 0; row < rows; row++)
+                                            {
+                                                var rowStyle = (row % 2 == 0) ? "background-color: rgba(0, 0, 0, 0.05);" : "";
+                                                <tr style="@rowStyle">
+                                                    @for (var col = 0; col < 3; col++)
+                                                    {
+                                                        var index = row * 3 + col;
+                                                        if (index < totalResults)
+                                                        {
+                                                            var result = subjectGroup.Value[index];
+                                                            <td style="padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6;">
+                                                                @if (result.ResultSet?.AssessmentDate != null)
+                                                                {
+                                                                    @result.ResultSet.AssessmentDate.Value.ToString("MM/dd")
+                                                                }
+                                                                else
+                                                                {
+                                                                    @("-")
+                                                                }
+                                                            </td>
+
+                                                            var markStyle = "padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6;";
+                                                            if (!result.Score.HasValue)
+                                                            {
+                                                                markStyle += "color: #ffc107; font-weight: 700;";
+                                                            }
+                                                            else if (result.Score.Value < 50)
+                                                            {
+                                                                markStyle += "color: #dc3545; font-weight: 700;";
+                                                            }
+                                                            else
+                                                            {
+                                                                markStyle += "color: #198754; font-weight: 700;";
+                                                            }
+
+                                                            if (isAchievementRating)
+                                                            {
+                                                                markStyle += "color: #198754; font-weight: 700;";
+                                                                <td style="@markStyle">
+                                                                    @(result.Score.HasValue ? result.Score.Value : "Absent")
+                                                                </td>
+                                                            }
+                                                            else
+                                                            {
+                                                                <td style="@markStyle">
+                                                                    @(result.Score.HasValue? result.Score.Value + "%" : "Absent")
+                                                                </td>
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            <td style="padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6;">&nbsp;</td>
+                                                            <td style="padding: 0.75rem; vertical-align: top; border-top: 1px solid #dee2e6;">&nbsp;</td>
+                                                        }
+                                                    }
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    }
+                }
+                else
+                {
+                    <p style="position: relative; padding: 0.75rem 1.25rem; margin-bottom: 1rem; border: 1px solid transparent; border-radius: 0.25rem; color: #856404; background-color: #fff3cd; border-color: #ffeeba; text-align: center;">
+                        No results available for this learner.
+                    </p>
+                }
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

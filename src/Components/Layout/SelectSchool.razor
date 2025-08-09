@@ -1,0 +1,91 @@
+@using Lisa.Models.Entities
+@inject SchoolService SchoolService
+@inherits EventAwareComponentBase
+@inject ILogger<SelectSchool> Logger
+
+@if (_isLoading)
+{
+    <div class="select-school">
+        <div class="select-school-text">
+            Select School
+        </div>
+        <div class="select-school-dropdown">
+            <select class="form-select" id="SelectedSchoolId">
+                <option value="@string.Empty">-- Select School --</option>
+            </select>
+        </div>
+    </div>
+}
+else
+{
+    <div class="select-school">
+        <div class="select-school-text">
+            Select School
+        </div>
+        <div>
+            <InputSelect class="form-select" id="SelectedSchoolId" TValue="string" Value="@_selectedSchoolId"
+                ValueChanged="OnSchoolSelected" ValueExpression="@(() => _selectedSchoolId)">
+                <option value="@string.Empty">-- Select School --</option>
+                @foreach (var school in _schools!)
+                {
+                    <option value="@school.Id.ToString()">@school.ShortName</option>
+                }
+            </InputSelect>
+        </div>
+    </div>
+}
+
+@code {
+    private List<School>? _schools;
+    private string _selectedSchoolId = string.Empty;
+    private bool _isLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSchoolsAsync();
+        SubscribeToEvent(UiEvents.SchoolsUpdated);
+    }
+
+    private async Task LoadSchoolsAsync()
+    {
+        _isLoading = true;
+        await InvokeAsync(StateHasChanged);
+        _schools = await SchoolService.GetAllAsync();
+        _schools = _schools.OrderBy(s => s.Id).ToList();
+        var selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        _selectedSchoolId = selectedSchool?.Id.ToString() ?? string.Empty;
+        _isLoading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        switch (eventName)
+        {
+            case UiEvents.SchoolsUpdated:
+                await LoadSchoolsAsync();
+                break;
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    public async Task OnSchoolSelected(string selectedSchoolId)
+    {
+        _selectedSchoolId = selectedSchoolId;
+        if (_selectedSchoolId == string.Empty)
+        {
+            await SchoolService.SetCurrentSchoolAsync(null);
+            return;
+        }
+        if (!string.IsNullOrEmpty(_selectedSchoolId))
+        {
+            var selectedSchool = await SchoolService.SetCurrentSchoolAsync(Guid.Parse(_selectedSchoolId));
+            await UiEventService.PublishAsync(UiEvents.SchoolSelected, selectedSchool);
+        }
+        else
+        {
+            Logger.LogError("SelectedSchoolId is null");
+        }
+    }
+}

@@ -1,0 +1,398 @@
+@page "/class-lists"
+@using Lisa.Models.Entities
+@inject SchoolService SchoolService
+@inject SchoolGradeService SchoolGradeService
+@inject CombinationService CombinationService
+@inject SubjectService SubjectService
+@inject CareGroupService CareGroupService
+@inject LearnerService LearnerService
+@inject RegisterClassService RegisterClassService
+
+@inherits EventAwareComponentBase
+
+<PageTitle>Class Lists</PageTitle>
+<AuthorizeView Context="_"
+    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.Teacher},{Roles.Administrator},{Roles.SchoolManagement}")">
+    <Authorized>
+        <h3>Class Lists</h3>
+
+        @if (_selectedSchool == null)
+        {
+            <NoSchoolSelected Message="Please select a school to view Class Lists." />
+        }
+        else
+        {
+            <div class="mb-3">
+                <label><strong>View Class List by:</strong></label>
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="viewMode" id="viewByCombination" value="Combination"
+                        checked="@(_viewMode == "Combination")" @onchange="@(_ => SetViewMode("Combination"))" />
+                    <label class="btn btn-outline-secondary" for="viewByCombination">Combination</label>
+
+                    <input type="radio" class="btn-check" name="viewMode" id="viewByRegisterClass" value="RegisterClass"
+                        checked="@(_viewMode == "RegisterClass")" @onchange="@(_ => SetViewMode("RegisterClass"))" />
+                    <label class="btn btn-outline-secondary" for="viewByRegisterClass">Register Class</label>
+
+                    <input type="radio" class="btn-check" name="viewMode" id="viewByCareGroup" value="CareGroup"
+                        checked="@(_viewMode == "CareGroup")" @onchange="@(_ => SetViewMode("CareGroup"))" />
+                    <label class="btn btn-outline-secondary" for="viewByCareGroup">Care Group</label>
+                </div>
+            </div>
+
+            @if (_viewMode == "Combination")
+            {
+                <div class="mb-3">
+                    <label><strong>Select Grade:</strong></label>
+                    <InputSelect class="form-select" TValue="Guid ?" Value="@_gradeId" ValueChanged="OnGradeChange"
+                        ValueExpression="() => _gradeId">
+                        <option value="">-- Select Grade --</option>
+                        @foreach (var grade in _schoolGrades)
+                        {
+                            <option value="@grade.Id">@grade.SystemGrade.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                @if (_gradeId != null)
+                {
+                    <div class="mb-3">
+                        <label><strong>Select Combination:</strong></label>
+                        <InputSelect class="form-select" TValue="string" Value="@_combinationId" ValueChanged="OnCombinationChange"
+                            ValueExpression="() => _combinationId ?? string.Empty">
+                            <option value="">-- Select Combination --</option>
+                            @foreach (var combination in _filteredCombinations)
+                            {
+                                <option value="@combination.Id">@combination.Name</option>
+                            }
+                            <option value="Math">Math</option>
+                            <option value="MathLit">Math Literacy</option>
+                        </InputSelect>
+                    </div>
+                }
+
+                <!-- Only show the subject dropdown if a standard combination is selected -->
+                @if (!string.IsNullOrEmpty(_combinationId) && _combinationId != "Math" && _combinationId != "MathLit")
+                {
+                    <div class="mb-3">
+                        <label><strong>Select Subject:</strong></label>
+                        <InputSelect class="form-select" TValue="int?" Value="@_subjectId" ValueChanged="OnSubjectChange"
+                            ValueExpression="() => _subjectId">
+                            <option value="">-- Select Subject --</option>
+                            @foreach (var subject in _combinationSubjects)
+                            {
+                                <option value="@subject.Id">@subject.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+                }
+
+                @if (_subjectId != null)
+                {
+                    var grade = _schoolGrades.FirstOrDefault(g => g.Id == _gradeId);
+                    string combinationName;
+                    string subjectName;
+                    
+                    if (_combinationId == "Math")
+                    {
+                        combinationName = "Math";
+                        subjectName = "Math";
+                    }
+                    else if (_combinationId == "MathLit")
+                    {
+                        combinationName = "Math Literacy";
+                        subjectName = "Math Literacy";
+                    }
+                    else
+                    {
+                        var combination = _combinations.FirstOrDefault(c => _combinationId != null && 
+                                                                            c.Id == Guid.Parse(_combinationId));
+                        var subject = _combinationSubjects.FirstOrDefault(s => s.Id == _subjectId);
+                        combinationName = combination?.Name ?? "";
+                        subjectName = subject?.Name ?? "";
+                    }
+                    
+                    var title = $"{grade?.SystemGrade.Name} - {combinationName} - {subjectName}";
+                    <div>
+                        <LearnerListComponent Learners="@_learners" Title="@title" />
+                    </div>
+                }
+            }
+            else if (_viewMode == "RegisterClass")
+            {
+                <div class="mb-3">
+                    <label><strong>Select Grade:</strong></label>
+                    <InputSelect class="form-select" TValue="Guid ?" Value="@_gradeId" ValueChanged="OnGradeChange"
+                        ValueExpression="() => _gradeId">
+                        <option value="">-- Select Grade --</option>
+                        @foreach (var grade in _schoolGrades)
+                        {
+                            <option value="@grade.Id">@grade.SystemGrade.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                @if (_gradeId != null)
+                {
+                    <div class="mb-3">
+                        <label><strong>Select Register Class:</strong></label>
+                        <InputSelect class="form-select" TValue="Guid ?" Value="@_registerClassId"
+                            ValueChanged="OnRegisterClassChange" ValueExpression="() => _registerClassId">
+                            <option value="">-- Select Register Class --</option>
+                            @foreach (var regClass in _registerClasses)
+                            {
+                                <option value="@regClass.Id">@regClass.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+                }
+
+                @if (_registerClassId != null)
+                {
+                    var registerClass = _registerClasses.FirstOrDefault(c => c.Id == _registerClassId);
+                    <div>
+                        <LearnerListComponent Learners="@_learners" Title="@registerClass?.Name" />
+                    </div>
+                }
+            }
+            else if (_viewMode == "CareGroup")
+            {
+                <div class="mb-3">
+                    <label><strong>Select Care Group:</strong></label>
+                    <InputSelect class="form-select" TValue="Guid ?" Value="@_careGroupId" ValueChanged="OnCareGroupChange"
+                        ValueExpression="() => _careGroupId">
+                        <option value="">-- Select Care Group --</option>
+                        @foreach (var careGroup in _careGroups)
+                        {
+                            <option value="@careGroup.Id">@careGroup.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                @if (_careGroupId != null)
+                {
+                    var careGroup = _careGroups.FirstOrDefault(c => c.Id == _careGroupId);
+                    <div>
+                        <LearnerListComponent Learners="@_learners" Title="@careGroup?.Name" />
+                    </div>
+                }
+            }
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthenticated />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private School? _selectedSchool;
+    private string _viewMode = "Combination";
+
+    private List<SchoolGrade> _schoolGrades = [];
+    private Guid? _gradeId;
+
+    private List<Combination> _combinations = [];
+    private List<Combination> _filteredCombinations = [];
+    private string? _combinationId;
+
+    private List<Subject> _subjects = [];
+    private int? _subjectId;
+    private List<Subject> _combinationSubjects = [];
+
+    private List<CareGroup> _careGroups = [];
+    private Guid? _careGroupId;
+
+    private List<RegisterClass> _registerClasses = [];
+    private Guid? _registerClassId;
+
+    private List<Learner> _learners = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        await LoadFilters();
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected && payload is School school)
+        {
+            _selectedSchool = school;
+            ClearFilters();
+            await LoadFilters();
+        }
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private void ClearFilters()
+    {
+        _gradeId = null;
+        _combinationId = null;
+        _subjectId = null;
+        _careGroupId = null;
+        _registerClassId = null;
+        _learners.Clear();
+        _filteredCombinations.Clear();
+        _combinationSubjects.Clear();
+    }
+
+    private async Task LoadFilters()
+    {
+        if (_selectedSchool != null)
+        {
+            _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+            _combinations = await CombinationService.GetCombinationsBySchoolId(_selectedSchool.Id);
+            _subjects = await SubjectService.GetAllAsync();
+            _careGroups = await CareGroupService.GetBySchoolAsync(_selectedSchool.Id);
+            _registerClasses = await RegisterClassService.GetBySchoolIdAsync(_selectedSchool.Id);
+
+            var validGradeIds = _combinations.Select(c => c.SchoolGradeId).Distinct().ToHashSet();
+            _schoolGrades = _schoolGrades.Where(g => validGradeIds.Contains(g.Id)).ToList();
+        }
+    }
+
+    private void SetViewMode(string mode)
+    {
+        _viewMode = mode;
+        _gradeId = null;
+        _combinationId = null;
+        _subjectId = null;
+        _careGroupId = null;
+        _registerClassId = null;
+        _learners.Clear();
+        StateHasChanged();
+    }
+
+    private async Task OnGradeChange(Guid? value)
+    {
+        _gradeId = value;
+        _combinationId = null;
+        _subjectId = null;
+
+        if (_gradeId != null)
+        {
+            _filteredCombinations = _combinations.Where(c => c.SchoolGradeId == _gradeId).ToList();
+        }
+        else
+        {
+            _filteredCombinations.Clear();
+        }
+
+        await LoadLearners();
+        StateHasChanged();
+    }
+
+    private async Task OnCombinationChange(string? value)
+    {
+        _combinationId = value;
+        _subjectId = null;
+
+        if (!string.IsNullOrEmpty(value))
+        {
+            if (value == "Math" || value == "MathLit")
+            {
+                var subjectName = value == "Math" ? "Mathematics" : "Mathematical Literacy";
+                var mathSubject = _subjects.FirstOrDefault(s => s.Name != null 
+                                            && s.Name.Equals(subjectName, StringComparison.OrdinalIgnoreCase) 
+                                            && s.SubjectType == SubjectType.MathCombination);
+                if (mathSubject != null)
+                {
+                    _subjectId = mathSubject.Id;
+                }
+                _combinationSubjects.Clear();
+            }
+            else if (Guid.TryParse(value, out var combId))
+            {
+                var selectedCombination = _combinations.FirstOrDefault(c => c.Id == combId);
+                if (selectedCombination != null && selectedCombination.Subjects != null)
+                {
+                    _combinationSubjects = selectedCombination.Subjects.ToList();
+                }
+                else
+                {
+                    _combinationSubjects.Clear();
+                }
+            }
+        }
+        else
+        {
+            _combinationSubjects.Clear();
+        }
+
+        await LoadLearners();
+        StateHasChanged();
+    }
+
+    private async Task OnSubjectChange(int? value)
+    {
+        _subjectId = value;
+        await LoadLearners();
+        StateHasChanged();
+    }
+
+    private async Task OnCareGroupChange(Guid? value)
+    {
+        _careGroupId = value;
+        await LoadLearners();
+        StateHasChanged();
+    }
+
+    private async Task OnRegisterClassChange(Guid? value)
+    {
+        _registerClassId = value;
+        await LoadLearners();
+        StateHasChanged();
+    }
+
+    private async Task LoadLearners()
+    {
+        if (_selectedSchool == null)
+            return;
+
+        if (_viewMode == "Combination")
+        {
+            // For math selections, load learners based on grade and subject.
+            if (_gradeId != null && !string.IsNullOrEmpty(_combinationId) && _subjectId != null)
+            {
+                if (_combinationId == "Math" || _combinationId == "MathLit")
+                {
+                    // Use a method that loads by grade and subject (adjust as needed)
+                    _learners = await LearnerService.GetByGradeAndSubjectAsync(_gradeId.Value, _subjectId.Value);
+                }
+                else if (Guid.TryParse(_combinationId, out var combId))
+                {
+                    _learners = await LearnerService.GetByCombinationAndSubjectAsync(combId, _subjectId.Value);
+                }
+                _learners = _learners.OrderBy(l => l.Surname).ThenBy(l => l.Name).ToList();
+            }
+            else
+            {
+                _learners.Clear();
+            }
+        }
+        else if (_viewMode == "RegisterClass")
+        {
+            if (_registerClassId != null)
+            {
+                _learners = await LearnerService.GetByRegisterClassAsync(_registerClassId.Value);
+                _learners = _learners.OrderBy(l => l.Surname).ThenBy(l => l.Name).ToList();
+            }
+            else
+            {
+                _learners.Clear();
+            }
+        }
+        else if (_viewMode == "CareGroup")
+        {
+            if (_careGroupId != null)
+            {
+                _learners = await LearnerService.GetByCareGroupAsync(_careGroupId.Value);
+                _learners = _learners.OrderBy(l => l.Surname).ThenBy(l => l.Name).ToList();
+            }
+            else
+            {
+                _learners.Clear();
+            }
+        }
+    }
+}

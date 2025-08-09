@@ -1,0 +1,141 @@
+@using Lisa.Models.Entities
+
+@code
+{
+    [Parameter] public IEnumerable<Learner> Learners { get; set; } = [];
+    [Parameter] public Dictionary<Guid, List<ResultSet>> LearnerResults { get; set; } = new();
+    [Parameter] public EventCallback<Guid> OnLearnerClick { get; set; }
+    [Parameter] public EventCallback<Guid> OnResultClick { get; set; }
+    [Parameter] public Func<ResultSet, string> GetResultSetStatusColor { get; set; } = _ => "secondary";
+    [Parameter] public bool RequireDateRange { get; set; } = true;
+    [Parameter] public bool HasValidDateRange { get; set; }
+}
+
+@if (RequireDateRange && !HasValidDateRange)
+{
+    <div class="alert alert-warning">
+        <i class="fa fa-info-circle"></i>
+        Please select both a start date and end date to view learner results.
+    </div>
+}
+else if (!Learners.Any())
+{
+    <div class="alert alert-secondary">
+        <i class="fa fa-users"></i>
+        No learners found matching the current filters.
+    </div>
+}
+else
+{
+    <div class="mb-3">
+        <small class="text-muted">
+            Showing results for @Learners.Count() learner(s). Each learner shows up to 6 most recent results per subject.
+        </small>
+    </div>
+    
+    <div class="row">
+        @foreach (var learner in Learners)
+        {
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <a href="#" @onclick="() => OnLearnerClick.InvokeAsync(learner.Id)" @onclick:preventDefault="true" class="text-decoration-none">
+                                @learner.Name @learner.Surname
+                            </a>
+                        </h6>
+                        @if (learner.RegisterClass?.SchoolGrade?.SystemGrade.Name != null)
+                        {
+                            <small class="text-muted">@learner.RegisterClass.SchoolGrade.SystemGrade.Name</small>
+                        }
+                    </div>
+                    
+                    <div class="card-body p-2">
+                        @if (LearnerResults.ContainsKey(learner.Id) && LearnerResults[learner.Id].Any())
+                        {
+                            var results = LearnerResults[learner.Id].Take(6).ToList();
+                            var groupedResults = results.GroupBy(r => r.Subject?.Name ?? "Unknown Subject").ToList();
+                            
+                            @foreach (var subjectGroup in groupedResults)
+                            {
+                                <div class="mb-3">
+                                    <small class="fw-bold text-primary">@subjectGroup.Key</small>
+                                    <div class="row g-1">
+                                        @foreach (var result in subjectGroup.Take(6))
+                                        {
+                                            <div class="col-6">
+                                                <div class="card border-0 bg-light" style="cursor: pointer;" @onclick="() => OnResultClick.InvokeAsync(result.Id)">
+                                                    <div class="card-body p-2">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <div>
+                                                                <small class="fw-semibold">@(result.AssessmentType?.Name ?? "Unknown")</small>
+                                                                @if (result.AssessmentDate.HasValue)
+                                                                {
+                                                                    <br><small class="text-muted">@result.AssessmentDate.Value.ToString("dd/MM")</small>
+                                                                }
+                                                            </div>
+                                                            <div class="text-end">
+                                                                @{
+                                                                    var learnerResult = result.Results?.FirstOrDefault(r => r.LearnerId == learner.Id);
+                                                                }
+                                                                @if (learnerResult != null)
+                                                                {
+                                                                    @if (learnerResult.Absent)
+                                                                    {
+                                                                        <span class="badge bg-warning text-dark">ABS</span>
+                                                                    }
+                                                                    else if (learnerResult.Score.HasValue)
+                                                                    {
+                                                                        <span class="badge bg-@GetScoreColor(learnerResult.Score.Value)">@learnerResult.Score%</span>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <span class="badge bg-secondary">-</span>
+                                                                    }
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="badge bg-secondary">-</span>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            
+                            @if (LearnerResults[learner.Id].Count > 6)
+                            {
+                                <div class="text-center">
+                                    <small class="text-muted">
+                                        Showing 6 of @LearnerResults[learner.Id].Count results
+                                    </small>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center text-muted p-3">
+                                <small>No results found for the selected criteria</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private string GetScoreColor(int score)
+    {
+        return score switch
+        {
+            >= 50 => "success",
+            _ => "danger"
+        };
+    }
+}

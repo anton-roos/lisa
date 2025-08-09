@@ -1,0 +1,98 @@
+@using Lisa.Models.Entities
+
+<EditForm Model="School" Context="_" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group my-1">
+        <label for="shortName">Short Name</label>
+        <InputText id="shortName" class="form-control" @bind-Value="School.ShortName" />
+    </div>
+
+    <div class="form-group my-1">
+        <label for="longName">Long Name</label>
+        <InputText id="longName" class="form-control" @bind-Value="School.LongName" />
+    </div>
+
+    <div class="form-group my-1">
+        <label for="color">Color</label>
+        <div style="display: flex;">
+            <div style="background-color: @School.Color; height: 30px; width: 30px; border-radius: 5px; margin-right: 5px;
+            margin-top: 2px;"></div>
+            <InputText id="color" class="form-control" @bind-Value="School.Color" />
+        </div>
+    </div>
+
+    <div class="form-group my-1">
+        <label for="schoolType">School Type</label>
+        <InputSelect id="schoolType" class="form-control" @bind-Value="School.SchoolTypeId">
+            <option value="">Select School Type</option>
+            @foreach (var type in SchoolTypes)
+            {
+                <option value="@type.Id">@type.Name</option>
+            }
+        </InputSelect>
+    </div>
+
+    <div class="form-group my-1">
+        <label for="curriculum">Curriculum</label>
+        <InputSelect id="curriculum" class="form-control" @bind-Value="School.SchoolCurriculumId">
+            <option value="">Select Curriculum</option>
+            @foreach (var curriculum in Curriculums)
+            {
+                <option value="@curriculum.Id">@curriculum.Name</option>
+            }
+        </InputSelect>
+    </div>
+
+    <div class="form-group my-1">
+        <label for="host">SMTP Host</label>
+        <InputText id="host" class="form-control" @bind-Value="School.SmtpHost" />
+    </div>
+
+    <div class="form-group my-1">
+        <label for="port">SMTP Port</label>
+        <InputNumber id="port" class="form-control" @bind-Value="School.SmtpPort" />
+    </div>
+
+    <div class="form-group my-1">
+        <label for="username">SMTP Username</label>
+        <InputText id="username" class="form-control" @bind-Value="School.SmtpUsername" />
+    </div>
+
+    <div class="form-group my-1">
+        <label for="password">SMTP Password</label>
+        <InputText id="password" type="password" class="form-control" @bind-Value="School.SmtpPassword" />
+    </div>
+
+    <div class="form-group my-1">
+        <label for="email">SMTP Email</label>
+        <InputText id="email" class="form-control" @bind-Value="School.SmtpEmail" />
+    </div>
+
+    <div class="form-group my-1">
+        <label for="fromEmail">From Email (Display)</label>
+        <InputText id="fromEmail" class="form-control" @bind-Value="School.FromEmail" />
+    </div>
+
+    <button type="submit" class="btn btn-primary my-3">Save</button>
+    <button type="button" class="btn btn-secondary" @onclick="OnCancel">Cancel</button>
+</EditForm>
+
+@code {
+    [Parameter] public School School { get; set; } = new();
+    [Parameter] public EventCallback OnValidSubmitCallback { get; set; }
+    [Parameter] public EventCallback OnCancelCallback { get; set; }
+    [Parameter] public List<SchoolType> SchoolTypes { get; set; } = [];
+    [Parameter] public List<SchoolCurriculum> Curriculums { get; set; } = [];
+
+    private async Task HandleValidSubmit()
+    {
+        await OnValidSubmitCallback.InvokeAsync();
+    }
+
+    private async Task OnCancel()
+    {
+        await OnCancelCallback.InvokeAsync();
+    }
+}

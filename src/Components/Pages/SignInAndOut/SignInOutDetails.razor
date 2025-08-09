@@ -1,0 +1,241 @@
+@page "/sign-in-and-out/details/{AttendanceId:guid}"
+@using Lisa.Models.Entities
+@using Lisa.Helpers
+@using Lisa.Enums
+@inject SchoolGradeTimeService SchoolGradeTimeService
+@inject AttendanceService AttendanceService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Attendance Details</PageTitle>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h3 class="mb-1">Attendance Details</h3>
+                    @if (_attendance != null)
+                    {
+                        <p class="text-muted mb-0">@_attendance.Start.ToString("dd MMMM yyyy")</p>
+                    }
+                </div>
+                <button class="btn btn-outline-secondary" @onclick="NavigateBack">
+                    <i class="bi bi-arrow-left"></i> Back
+                </button>
+            </div>
+
+            @if (_attendance == null)
+            {
+                <div class="alert alert-warning">
+                    <h4><i class="bi bi-exclamation-triangle"></i> Attendance session not found</h4>
+                    <p>The attendance session you requested could not be found.</p>
+                </div>
+            }
+            else
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Session Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>School:</strong> @_attendance.School.LongName</p>
+                                <p><strong>Start Time:</strong> @_attendance.Start.ToString("dd/MM/yyyy HH:mm")</p>
+                                @if (_attendance.End.HasValue)
+                                {
+                                    <p><strong>End Time:</strong> @_attendance.End.Value.ToString("dd/MM/yyyy HH:mm")</p>
+                                    <p><strong>Status:</strong> <span class="badge bg-secondary">Completed</span></p>
+                                }
+                                else
+                                {
+                                    <p><strong>Status:</strong> <span class="badge bg-success">Active</span></p>
+                                }
+                            </div>
+                            <div class="col-md-6">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="text-center">
+                                            <h4 class="text-success">@(_checkedInCount)</h4>
+                                            <p class="text-muted">Signed in</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-center">
+                                            <h4 class="text-primary">@(_checkedOutCount)</h4>
+                                            <p class="text-muted">Signed out</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-center">
+                                            <h4 class="text-secondary">@(_notSignedOutCount)</h4>
+                                            <p class="text-muted">Not signed out</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Attendance Records</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (!_attendance.AttendanceRecords.Any())
+                        {
+                            <div class="alert alert-info">
+                                <p class="mb-0">No attendance records found for this session.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead>
+                                    <tr>
+                                        <th>Learner</th>
+                                        <th>Sign-in Time</th>
+                                        <th>Sign-out Time</th>
+                                        <th>Status</th>
+                                        <th>Phone</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    @foreach (var record in _attendance.AttendanceRecords.OrderBy(r => r.Learner?.Surname).ThenBy(r => r.Learner?.Name))
+                                    {
+                                        <tr>
+                                            <td>@record.Learner?.Surname, @record.Learner?.Name</td>
+                                            <td>
+                                                @if (record.Start.HasValue)
+                                                {
+                                                    @TimeHelpers.ConvertToLocal(record.Start.Value).ToString("HH:mm")
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (record.End.HasValue)
+                                                {
+                                                    @TimeHelpers.ConvertToLocal(record.End.Value).ToString("HH:mm")
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @{
+                                                    var statusBadge = GetAttendanceStatusBadge(record);
+                                                }
+                                                @statusBadge
+                                            </td>
+                                            <td>
+                                                @if (record.CellPhoneCollected)
+                                                {
+                                                    @if (record.CellPhoneReturned)
+                                                    {
+                                                        <span class="badge bg-success">Returned</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-warning text-dark">Collected</span>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                            <td>@record.Notes</td>
+                                        </tr>
+                                    }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid AttendanceId { get; set; }
+    
+    private Attendance? _attendance;
+    private int _checkedInCount;
+    private int _checkedOutCount;
+    private int _notSignedOutCount;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAttendanceData();
+    }
+    
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAttendanceData();
+    }
+    
+    private async Task LoadAttendanceData()
+    {
+        _attendance = await AttendanceService.GetAsync(AttendanceId);
+        
+        if (_attendance?.AttendanceRecords != null)
+        {
+            _checkedInCount = _attendance.AttendanceRecords.Count(r => r.Start.HasValue && r.AttendanceType == AttendanceType.CheckIn);
+            _checkedOutCount = _attendance.AttendanceRecords.Count(r => r.End.HasValue && r.AttendanceType == AttendanceType.CheckIn);
+            _notSignedOutCount = _checkedInCount - _checkedOutCount;
+        }
+    }
+
+    private RenderFragment GetAttendanceStatusBadge(AttendanceRecord record)
+    {
+        return __builder =>
+        {
+            if (record.Start.HasValue && record.End.HasValue)
+            {
+                // Check if this was an early leave
+                if (record.Learner != null)
+                {
+                    var leaveTime = TimeOnly.FromDateTime(TimeHelpers.ConvertToLocal(record.End.Value));
+                    var task = SchoolGradeTimeService.IsEarlyLeaveAsync(record.Learner.Id, leaveTime);
+                    task.Wait(); // Note: This is not ideal but needed for synchronous rendering
+                    var isEarlyLeave = task.Result;
+                    
+                    if (isEarlyLeave)
+                    {
+                        <span class="badge bg-warning text-dark">Left Early</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success">Full Day</span>
+                    }
+                }
+                else
+                {
+                    <span class="badge bg-success">Completed</span>
+                }
+            }
+            else if (record.Start.HasValue)
+            {
+                <span class="badge bg-primary">Present</span>
+            }
+            else
+            {
+                <span class="badge bg-secondary">No Record</span>
+            }
+        };
+    }
+
+    private void NavigateBack()
+    {
+        NavigationManager.NavigateTo("/sign-in-and-out");
+    }
+}

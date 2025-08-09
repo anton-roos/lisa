@@ -1,0 +1,21 @@
+@inject NavigationManager NavigationManager
+
+<div class="login-container">
+    <div class="login-content">
+        <h1 class="login-icon"><i class="bi bi-person-x-fill"></i></h1>
+        <h3 class="login-title">Please Log In</h3>
+        <p class="login-message">
+            You need to log in to access this page
+        </p>
+        <button class="btn btn-primary" @onclick="GoToLogin">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Log In
+        </button>
+    </div>
+</div>
+
+@code {
+    private void GoToLogin()
+    {
+        NavigationManager.NavigateTo("/login");
+    }
+}

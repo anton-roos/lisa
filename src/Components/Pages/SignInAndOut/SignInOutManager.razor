@@ -1,0 +1,817 @@
+@page "/sign-in-and-out/sign-in/{AttendanceId:guid}"
+@page "/sign-in-and-out/sign-out/{AttendanceId:guid}"
+@using Lisa.Models.Entities
+@using Lisa.Helpers
+@using Lisa.Enums
+@inject SchoolService SchoolService
+@inject RegisterClassService RegisterClassService
+@inject LearnerService LearnerService
+@inject AttendanceService AttendanceService
+@inject AttendanceRecordService AttendanceRecordService
+@inject NavigationManager NavigationManager
+
+@inherits EventAwareComponentBase
+
+<PageTitle>Attendance Sign In</PageTitle>
+
+@code {
+
+}
+
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Attendance}")">
+    <Authorized>
+        <div class="container">
+            <button class="btn btn-secondary mb-3" @onclick="NavigateToAttendanceHome">
+                <i class="bi bi-arrow-left"></i> Back
+            </button>
+            @if (!_isSignOut)
+            {
+                <button class="btn btn-secondary mb-3" @onclick="NavigateToSignOut">
+                    <i class="bi bi-arrow-right"></i> Sign Out
+                </button>
+            }
+
+            @if (_isLoading)
+            {
+                <div class="overlay d-flex justify-content-center align-items-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="row">
+                    <div class="col-md-6">
+                        <h2>@(_isSignOut ? "Sign Out" : "Sign In")</h2>
+                        <p>@TimeHelpers.GetCurrentTimeInLocal().ToString("dd/M")</p>
+
+                        @if (_selectedSchool == null)
+                        {
+                            <div class="alert alert-warning mb-3">
+                                <h4><i class="oi oi-warning"></i> No School Selected</h4>
+                                <p>Please select a school from the dropdown at the top of the page before proceeding.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            @* Show filters only on Sign In *@
+                            @if (!_isSignOut)
+                            {
+                                <div class="d-flex mb-3">
+                                    @foreach (var filter in _registerClassFilters)
+                                    {
+                                        <button class="btn @(filter == _selectedFilter ? "btn-primary" : "btn-secondary") me-2" @onclick="() => FilterByRegisterClass(filter)">@filter</button>
+                                    }
+                                </div>
+                            }
+
+                            <div class="mb-3">
+                                <input type="text" class="form-control" @bind-value="_searchText" @bind-value:event="oninput" placeholder="Search Learner" />
+                            </div>
+
+                            @if (_registerClassLearners.Any())
+                            {
+                                @foreach (var registerClass in _registerClassLearners.Keys)
+                                {
+                                    @if (_selectedFilter == "All" || _isSignOut || _selectedFilter == registerClass)
+                                    {
+                                        <div class="mb-4">
+                                            <h4>Gr @registerClass</h4>
+                                            <div class="d-flex flex-column">
+                                                @foreach (var learner in _registerClassLearners[registerClass]
+                                                    .Where(l => string.IsNullOrEmpty(_searchText) || $"{l.Name} {l.Surname}".ToLower().Contains(_searchText.ToLower()))
+                                                    .Where(l => _isSignOut ? 
+                                                        (_attendanceData.TryGetValue(l.Id, out var d) && d.IsPresent) || 
+                                                        _signOutTimeMap.ContainsKey(l.Id)
+                                                        : true))
+                                                {
+                                                    <LearnerAttendanceCard
+                                                        Learner="learner"
+                                                        PillColor="@GetPillColor(learner)"
+                                                        SignInTime="@(
+                                                            _isSignOut && _signOutTimeMap.ContainsKey(learner.Id)
+                                                                ? _signOutTimeMap[learner.Id]
+                                                                : (_attendanceData.TryGetValue(learner.Id, out var dt) ? dt.SignInTime : DateTime.MinValue)
+                                                        )"
+                                                        ShowPhoneToggle="true"
+                                                        CellPhoneCollected="@IsCellPhoneCollected(learner)"
+                                                        CellPhoneModel="@(_learnerToAttendanceRecordMap.TryGetValue(learner.Id, out var rec) ? rec.CellPhoneModel : null)"
+                                                        ToggleChecked="@(_toggleValues.TryGetValue(learner.Id, out var toggled) && toggled)"
+                                                        IsSignOut="@_isSignOut"
+                                                        IsAlreadySignedOut="@(_isSignOut && _signOutTimeMap.ContainsKey(learner.Id))"
+                                                        PhoneReturned="@(_phoneReturnedMap.TryGetValue(learner.Id, out var returned) && returned)"
+                                                        OnToggleAttendance="@( () => ToggleAttendance(learner, registerClass) )"
+                                                        OnTogglePhone="@( () => ToggleCellPhoneCollected(learner) )" />
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                <p>No learners found.</p>
+                            }
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <style>
+
+        </style>
+    </Authorized>
+    <NotAuthorized>
+        <Unauthenticated/>
+    </NotAuthorized>
+</AuthorizeView>
+
+@if (_showPhoneModal && _pendingPhoneLearner != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Phone Collection</h5>
+                    <button type="button" class="btn-close" @onclick="CancelPhoneCollect"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Enter the name of the person collecting the phone from <b>@_pendingPhoneLearner.Name @_pendingPhoneLearner.Surname</b> and description of phone.</p>
+                    <input class="form-control" @bind-value="_pendingPhoneModel" @bind-value:event="oninput" placeholder="Staff Name..." />
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelPhoneCollect">Cancel</button>
+                    <button class="btn btn-primary" @onclick="ConfirmPhoneCollect" disabled="@string.IsNullOrWhiteSpace(_pendingPhoneModel)">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@if (_showPhoneReturnModal && _pendingSignOutLearner != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Phone Return</h5>
+                    <button type="button" class="btn-close" @onclick="CancelPhoneReturn"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Did <b>@_pendingSignOutLearner.Name @_pendingSignOutLearner.Surname</b> collect their cellphone?</p>
+                    @if (_learnerToAttendanceRecordMap.TryGetValue(_pendingSignOutLearner.Id, out var record) && !string.IsNullOrEmpty(record.CellPhoneModel))
+                    {
+                        <p class="text-muted small">Collection Notes: @record.CellPhoneModel</p>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelPhoneReturn">Cancel</button>
+                    <button class="btn btn-success" @onclick="ConfirmPhoneReturn">Yes, Phone Returned</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter] public Guid? AttendanceId { get; set; }
+
+    private School? _selectedSchool;
+    private List<RegisterClass> _registerClasses = [];
+    private Dictionary<string, List<Learner>> _registerClassLearners = new();
+    private Dictionary<Guid, AttendanceData> _attendanceData = new();
+    private DateTime _startTime;
+    private DateTime _startTimeDateTime;
+    private List<string> _registerClassFilters = ["All"];
+    private string _selectedFilter = "All";
+    private string _searchText = "";
+    private Dictionary<string, Guid> _registerClassNameToIdMap = new();
+    private Attendance? _currentSession;
+    private bool _showPhoneModal;
+    private Learner? _pendingPhoneLearner;
+    private string _pendingPhoneModel = string.Empty;
+    private bool _pendingToggleValue;
+    private Dictionary<Guid, bool> _toggleValues = new Dictionary<Guid, bool>();
+    private bool _isLoading = true;
+    private bool _isSignOut;
+    private bool _showPhoneReturnModal;
+    private Learner? _pendingSignOutLearner;
+
+    private class AttendanceData
+    {
+        public bool IsPresent { get; set; }
+        public DateTime SignInTime { get; set; }
+        public bool IsLate(DateTime startTimeDateTime) => SignInTime > startTimeDateTime;
+        public Guid? AttendanceId { get; set; }
+    }
+
+    private Dictionary<Guid, DateTime> _signOutTimeMap = new();
+    private Dictionary<Guid, bool> _earlyLeaveMap = new();
+    private Dictionary<Guid, bool> _phoneReturnedMap = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Determine if current route is sign-out
+        var relativePath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        _isSignOut = relativePath.StartsWith("sign-in-and-out/sign-out/", StringComparison.OrdinalIgnoreCase);
+
+        // Load session by ID or existing session for sign-in
+        if (AttendanceId.HasValue)
+        {
+            await LoadAttendanceSession(AttendanceId.Value);
+        }
+        else if (!_isSignOut && _selectedSchool != null)
+        {
+            await CheckForExistingSession();
+        }
+
+        await base.OnParametersSetAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += HandleLocationChanged;
+        base.OnInitialized();
+    }
+
+    private async void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        // Update _isSignOut based on new URL
+        var relativePath = NavigationManager.ToBaseRelativePath(e.Location);
+        _isSignOut = relativePath.StartsWith("sign-in-and-out/sign-out/", StringComparison.OrdinalIgnoreCase);
+        // Reload session data for both sign-in and sign-out views
+        if (AttendanceId.HasValue)
+        {
+            await LoadAttendanceSession(AttendanceId.Value);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _startTime = TimeHelpers.GetCurrentTime().AddHours(7);
+        _startTimeDateTime = _startTime;
+
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        SubscribeToEvent(UiEvents.SchoolSelected);
+
+        if (_selectedSchool != null)
+        {
+            await LoadRegisterClasses();
+            await CheckForExistingSession();
+        }
+
+        _isLoading = false;
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected && payload is School school)
+        {
+            Console.WriteLine($"School selected: {school.LongName} (ID: {school.Id})");
+
+            _selectedSchool = school;
+            _registerClassLearners.Clear();
+            _attendanceData.Clear();
+            _currentSession = null;
+
+            await LoadRegisterClasses();
+            await CheckForExistingSession();
+
+            await InvokeAsync(StateHasChanged);
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadRegisterClasses()
+    {
+        if (_selectedSchool == null) return;
+        _registerClasses = await RegisterClassService.GetBySchoolIdAsync(_selectedSchool.Id);
+    }
+
+
+    private async Task CheckForExistingSession()
+    {
+        if (_selectedSchool == null) return;
+
+        var existingSession = await AttendanceService.GetTodaysAttendanceAsync(_selectedSchool.Id);
+
+        if (existingSession != null)
+        {
+            NavigationManager.NavigateTo($"/sign-in-and-out/sign-in/{existingSession.Id}");
+        }
+    }
+
+    private async Task LoadAttendanceSession(Guid sessionId)
+    {
+        _currentSession = await AttendanceService.GetAsync(sessionId);
+
+        if (_currentSession == null)
+        {
+            NavigationManager.NavigateTo("/sign-in-and-out/sign-in");
+            return;
+        }
+
+        _startTime = _currentSession.Start;
+        _startTimeDateTime = _startTime;
+
+        if (_selectedSchool?.Id != _currentSession.SchoolId)
+        {
+            _selectedSchool = await SchoolService.GetSchoolAsync(_currentSession.SchoolId);
+            await LoadRegisterClasses();
+        }
+
+        await LoadLearners();
+        await LoadAttendanceData();
+    }
+
+    private async Task LoadAttendanceData()
+    {
+        if (_currentSession == null) return;
+
+        // Clear existing data to avoid stale state
+        _attendanceData.Clear();
+        _learnerToAttendanceRecordMap.Clear();
+        _toggleValues.Clear();  // clear previous toggle states
+        _signOutTimeMap.Clear();
+        _earlyLeaveMap.Clear();
+        _phoneReturnedMap.Clear();
+
+        // Initialize attendance data and dummy toggle values for all learners first
+        foreach (var learnerGroup in _registerClassLearners)
+        {
+            foreach (var learner in learnerGroup.Value)
+            {
+                _attendanceData[learner.Id] = new AttendanceData();
+                _toggleValues[learner.Id] = false;  // default toggle
+                // Don't initialize _signOutTimeMap - only add entries when there's an actual sign-out
+                _earlyLeaveMap[learner.Id] = false;
+                _phoneReturnedMap[learner.Id] = false;
+            }
+        }
+
+        // Process attendance records
+        foreach (var record in _currentSession.AttendanceRecords)
+        {
+            if (record.AttendanceType == AttendanceType.CheckOut)
+            {
+                // Track checkout time
+                _signOutTimeMap[record.LearnerId] = record.Start ?? DateTime.UtcNow;
+                
+                // Check if this was an early leave based on notes
+                if (!string.IsNullOrEmpty(record.Notes) && 
+                    (record.Notes.Contains("Left early", StringComparison.OrdinalIgnoreCase) ||
+                     record.Notes.Contains("early leave", StringComparison.OrdinalIgnoreCase)))
+                {
+                    _earlyLeaveMap[record.LearnerId] = true;
+                }
+                
+                continue;
+            }
+            // Skip non-check-in records
+            if (record.AttendanceType != AttendanceType.CheckIn) continue;
+
+            // If we have a record for this learner, update their attendance data
+            if (_attendanceData.TryGetValue(record.LearnerId, out var data))
+            {
+                data.IsPresent = true;
+                data.SignInTime = record.Start ?? DateTime.UtcNow;
+                data.AttendanceId = record.Id;
+
+                // Also store in the learner-to-record map for easy access
+                _learnerToAttendanceRecordMap[record.LearnerId] = record;
+
+                // Sync toggle state with actual phone collected state
+                _toggleValues[record.LearnerId] = record.CellPhoneCollected;
+                
+                // Load phone return status from database
+                _phoneReturnedMap[record.LearnerId] = record.CellPhoneReturned;
+            }
+        }
+
+        // Force UI update
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void NavigateToAttendanceHome()
+    {
+        NavigationManager.NavigateTo("/sign-in-and-out");
+    }
+
+    private void NavigateToSignOut()
+    {
+        NavigationManager.NavigateTo($"/sign-in-and-out/sign-out/{AttendanceId}");
+    }
+
+    private async Task LoadLearners()
+    {
+        if (_selectedSchool == null) return;
+
+        _registerClassLearners.Clear();
+        _attendanceData.Clear();
+        _registerClassFilters = ["All"];
+        _registerClassNameToIdMap.Clear();
+        _toggleValues.Clear();  // clear previous toggle states
+        _phoneReturnedMap.Clear();
+
+        // Sort register classes by SystemGrade sequence number
+        var sortedRegisterClasses = _registerClasses
+            .Where(rc => rc.SchoolGrade?.SystemGrade != null)
+            .OrderBy(rc => rc.SchoolGrade?.SystemGrade.SequenceNumber)
+            .ToList();
+
+        foreach (var registerClass in sortedRegisterClasses)
+        {
+            if (registerClass.SchoolGrade?.SystemGrade.Name == null) continue;
+            var className = registerClass.SchoolGrade.SystemGrade.Name;
+
+            if (!_registerClassFilters.Contains(className))
+            {
+                _registerClassFilters.Add(className);
+            }
+
+            var learners = await LearnerService.GetByRegisterClassAsync(registerClass.Id);
+
+            if (!learners.Any()) continue;
+
+            // Sort learners by surname then by name
+            _registerClassLearners[className] = learners
+                .OrderBy(l => l.Surname)
+                .ThenBy(l => l.Name)
+                .ToList();
+
+            _registerClassNameToIdMap[className] = registerClass.Id;
+
+            foreach (var learner in learners)
+            {
+                _attendanceData[learner.Id] = new AttendanceData();
+                _toggleValues[learner.Id] = false;  // initialize toggle state
+                _phoneReturnedMap[learner.Id] = false;  // initialize phone return state
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private void FilterByRegisterClass(string filter)
+    {
+        _selectedFilter = filter;
+    }
+
+    private async Task ToggleAttendance(Learner learner, string registerClassName)
+    {
+        if (_currentSession == null) return;
+
+        // Debug logging
+        Console.WriteLine($"ToggleAttendance called for {learner.Name} {learner.Surname}, IsSignOut: {_isSignOut}");
+
+        // Handle sign-out separately
+        if (_isSignOut)
+        {
+            Console.WriteLine($"Sign-out mode - checking attendance data for {learner.Name}");
+            
+            // Check if already signed out - if so, do nothing (learner is just displayed for status)
+            if (_signOutTimeMap.ContainsKey(learner.Id))
+            {
+                Console.WriteLine($"Learner {learner.Name} already signed out at {_signOutTimeMap[learner.Id]} - no action needed");
+                // Already signed out, just return - this is for display purposes only
+                return;
+            }
+            
+            // Only allow sign-out if learner has checked in and hasn't already signed out
+            if (_attendanceData.TryGetValue(learner.Id, out var outData) && outData.IsPresent)
+            {
+                Console.WriteLine($"Learner {learner.Name} is present and can sign out");
+                
+                // Check if learner has a collected phone that needs to be returned
+                if (IsCellPhoneCollected(learner))
+                {
+                    Console.WriteLine($"Learner {learner.Name} has collected phone - showing return modal");
+                    _pendingSignOutLearner = learner;
+                    _showPhoneReturnModal = true;
+                    await InvokeAsync(StateHasChanged);
+                    return;
+                }
+                
+                Console.WriteLine($"Saving sign-out record for {learner.Name}");
+                await SaveSignOutRecord(learner.Id);
+                // Update UI immediately without full reload
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                Console.WriteLine($"Learner {learner.Name} not present or no attendance data - cannot sign out");
+            }
+            return;
+        }
+
+        // Existing sign-in logic
+        if (!_attendanceData.ContainsKey(learner.Id))
+        {
+            _attendanceData[learner.Id] = new AttendanceData();
+        }
+
+        var data = _attendanceData[learner.Id];
+        data.IsPresent = !data.IsPresent;
+
+        if (data.IsPresent)
+        {
+            data.SignInTime = TimeHelpers.GetCurrentTime();
+        }
+
+        if (_registerClassNameToIdMap.TryGetValue(registerClassName, out _))
+        {
+            if (data.AttendanceId.HasValue)
+            {
+                await UpdateAttendanceStatus();
+            }
+            else
+            {
+                await SaveAttendanceRecord(learner.Id);
+            }
+        }
+    }
+
+    private async Task SaveSignOutRecord(Guid learnerId)
+    {
+        if (_currentSession == null) return;
+        var signOut = new AttendanceRecord
+        {
+            Id = Guid.NewGuid(),
+            Start = TimeHelpers.GetCurrentTime(),
+            AttendanceType = AttendanceType.CheckOut,
+            LearnerId = learnerId,
+            AttendanceId = _currentSession.Id,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        await AttendanceRecordService.CreateAsync(signOut);
+        
+        if (_currentSession.AttendanceRecords == null)
+        {
+            _currentSession.AttendanceRecords = new List<AttendanceRecord>();
+        }
+        
+        _currentSession.AttendanceRecords.Add(signOut);
+        
+        _learnerToAttendanceRecordMap[learnerId] = signOut;
+        _signOutTimeMap[learnerId] = signOut.Start ?? DateTime.UtcNow;
+    }
+
+    private async Task SaveAttendanceRecord(Guid learnerId)
+    {
+        if (_selectedSchool == null || _currentSession == null) return;
+
+        var attendanceRecord = new AttendanceRecord()
+        {
+            Id = Guid.NewGuid(),
+            Start = TimeHelpers.GetCurrentTime(),
+            End = null,
+            AttendanceType = AttendanceType.CheckIn,
+            LearnerId = learnerId,
+            AttendanceId = _currentSession.Id,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await AttendanceRecordService.CreateAsync(attendanceRecord);
+
+        // Add to our tracking map
+        if (!_attendanceData.ContainsKey(learnerId))
+        {
+            _attendanceData[learnerId] = new AttendanceData();
+        }
+
+        _attendanceData[learnerId].AttendanceId = attendanceRecord.Id;
+        _attendanceData[learnerId].IsPresent = true;
+        _attendanceData[learnerId].SignInTime = attendanceRecord.Start ?? DateTime.UtcNow;
+        _learnerToAttendanceRecordMap[learnerId] = attendanceRecord;
+    }
+
+    private async Task UpdateAttendanceStatus()
+    {
+        await Task.CompletedTask;
+    }
+
+    private string GetPillColor(Learner learner)
+    {
+        if (_isSignOut)
+        {
+            // For sign-out, we need different logic
+            if (!_attendanceData.ContainsKey(learner.Id) || !_attendanceData[learner.Id].IsPresent)
+            {
+                // Never signed in
+                return "not-at-school";
+            }
+            
+            // Check if they have already signed out or left early
+            if (_signOutTimeMap.ContainsKey(learner.Id))
+            {
+                var signOutTime = _signOutTimeMap[learner.Id];
+                
+                // Check if it was early leave based on notes
+                if (_earlyLeaveMap.TryGetValue(learner.Id, out var isEarlyLeave) && isEarlyLeave)
+                {
+                    return "leave-early";
+                }
+                
+                // Check if sign-out was before school end time (assume 15:00 for now)
+                var schoolEndTime = signOutTime.Date.AddHours(15); // 3 PM
+                if (signOutTime < schoolEndTime)
+                {
+                    return "early-signout"; // New category for early sign-out
+                }
+                
+                // Regular sign-out after school hours - show as on-time
+                return "on-time-signout";
+            }
+            
+            // They signed in but haven't signed out yet - show as present (orange)
+            return "present-not-signed-out";
+        }
+        
+        // Original sign-in logic
+        if (!_attendanceData.ContainsKey(learner.Id) || !_attendanceData[learner.Id].IsPresent)
+        {
+            return "absent";
+        }
+
+        return _attendanceData[learner.Id].IsLate(_startTimeDateTime) ? "late" : "on-time";
+    }
+
+    private Dictionary<Guid, AttendanceRecord> _learnerToAttendanceRecordMap = new Dictionary<Guid, AttendanceRecord>();
+
+    // Helper methods for cellphone collection
+    private bool IsCellPhoneCollected(Learner learner)
+    {
+        if (_attendanceData.TryGetValue(learner.Id, out var data) && data.AttendanceId.HasValue)
+        {
+            if (_learnerToAttendanceRecordMap.TryGetValue(learner.Id, out var record))
+            {
+                return record.CellPhoneCollected;
+            }
+        }
+
+        return false;
+    }
+
+    private async Task ConfirmPhoneCollect()
+    {
+        if (_pendingPhoneLearner != null && _pendingToggleValue && !string.IsNullOrWhiteSpace(_pendingPhoneModel))
+        {
+            await CollectPhoneWithModel(_pendingPhoneLearner, _pendingPhoneModel);
+        }
+        _showPhoneModal = false;
+        _pendingPhoneLearner = null;
+        _pendingPhoneModel = string.Empty;
+        _pendingToggleValue = false;
+    }
+
+    private async Task CollectPhoneWithModel(Learner learner, string phoneModel)
+    {
+        if (!_attendanceData.TryGetValue(learner.Id, out var data) || !data.AttendanceId.HasValue)
+            return;
+        AttendanceRecord? record;
+        if (_learnerToAttendanceRecordMap.TryGetValue(learner.Id, out var cachedRecord))
+        {
+            record = cachedRecord;
+        }
+        else
+        {
+            record = await AttendanceRecordService.GetByIdAsync(data.AttendanceId.Value);
+            if (record != null)
+            {
+                _learnerToAttendanceRecordMap[learner.Id] = record;
+            }
+        }
+        if (record == null) return;
+        if (!record.CellPhoneCollected)
+        {
+            record.CellPhoneCollected = true;
+            record.UpdatedAt = TimeHelpers.GetCurrentTime();
+            record.CellPhoneModel = phoneModel;
+            bool success = await AttendanceRecordService.CollectCellPhoneWithModelAsync(record.Id, phoneModel);
+            if (success)
+            {
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async Task ToggleCellPhoneCollected(Learner learner)
+    {
+        var isChecked = !_toggleValues[learner.Id];
+        _toggleValues[learner.Id] = isChecked;
+
+         if (isChecked)
+         {
+             _pendingPhoneLearner = learner;
+             _pendingPhoneModel = string.Empty;
+             _pendingToggleValue = true;
+             _showPhoneModal = true;
+             await InvokeAsync(StateHasChanged);
+         }
+         else
+         {
+             if (_attendanceData.TryGetValue(learner.Id, out var data) && data.AttendanceId.HasValue)
+             {
+                 AttendanceRecord? record;
+                 if (_learnerToAttendanceRecordMap.TryGetValue(learner.Id, out var cachedRecord))
+                 {
+                     record = cachedRecord;
+                 }
+                 else
+                 {
+                     record = await AttendanceRecordService.GetByIdAsync(data.AttendanceId.Value);
+                     if (record != null)
+                     {
+                         _learnerToAttendanceRecordMap[learner.Id] = record;
+                     }
+                 }
+                 if (record != null && record.CellPhoneCollected)
+                 {
+                     record.CellPhoneCollected = false;
+                     record.CellPhoneModel = null;
+                     record.UpdatedAt = TimeHelpers.GetCurrentTime();
+                     await AttendanceRecordService.UpdateAsync(record);
+                     await InvokeAsync(StateHasChanged);
+                 }
+             }
+         }
+     }
+
+    private void CancelPhoneCollect()
+    {
+        if (_pendingPhoneLearner != null)
+        {
+            _toggleValues[_pendingPhoneLearner.Id] = false;
+        }
+        _showPhoneModal = false;
+        _pendingPhoneLearner = null;
+        _pendingPhoneModel = string.Empty;
+        _pendingToggleValue = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ConfirmPhoneReturn()
+    {
+        if (_pendingSignOutLearner != null)
+        {
+            await ReturnPhone(_pendingSignOutLearner);
+            await SaveSignOutRecord(_pendingSignOutLearner.Id);
+            await InvokeAsync(StateHasChanged);
+        }
+        _showPhoneReturnModal = false;
+        _pendingSignOutLearner = null;
+    }
+
+    private void CancelPhoneReturn()
+    {
+        _showPhoneReturnModal = false;
+        _pendingSignOutLearner = null;
+    }
+
+    private async Task ReturnPhone(Learner learner)
+    {
+        if (!_attendanceData.TryGetValue(learner.Id, out var data) || !data.AttendanceId.HasValue)
+            return;
+
+        AttendanceRecord? record;
+        if (_learnerToAttendanceRecordMap.TryGetValue(learner.Id, out var cachedRecord))
+        {
+            record = cachedRecord;
+        }
+        else
+        {
+            record = await AttendanceRecordService.GetByIdAsync(data.AttendanceId.Value);
+            if (record != null)
+            {
+                _learnerToAttendanceRecordMap[learner.Id] = record;
+            }
+        }
+
+        if (record != null && record.CellPhoneCollected && !record.CellPhoneReturned)
+        {
+            record.CellPhoneReturned = true;
+            record.CellPhoneReturnedAt = TimeHelpers.GetCurrentTime();
+            record.UpdatedAt = TimeHelpers.GetCurrentTime();
+            await AttendanceRecordService.UpdateAsync(record);
+            _phoneReturnedMap[learner.Id] = true;
+        }
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            NavigationManager.LocationChanged -= HandleLocationChanged;
+        }
+        base.Dispose(disposing);
+    }
+}

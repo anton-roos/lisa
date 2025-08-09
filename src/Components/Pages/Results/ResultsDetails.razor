@@ -1,0 +1,179 @@
+@page "/results/{ResultSetId:guid}"
+@using Lisa.Models.Entities
+@using Microsoft.AspNetCore.WebUtilities
+@inject NavigationManager Navigation
+@inject ResultService ResultService
+@inject ILogger<ResultsDetails> Logger
+
+<PageTitle>Result Set Details</PageTitle>
+<AuthorizeView
+    Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
+    <Authorized>
+        <h3>Result Details</h3>
+
+        @if (_loading)
+        {
+            <p>Loading...</p>
+        }
+        else if (_resultSet == null)
+        {
+            <div class="alert alert-danger">
+                Result not found.
+            </div>
+        }
+        else
+        {
+            <div class="card p-3">
+                <h4>Assessment Details</h4>
+                <div>
+                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => Edit()">
+                        <i class="bi bi-pencil-fill"></i>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => GoBack()">
+                        <i class="bi bi-arrow-left"></i>
+                    </button>
+                    <button type="button" class="btn btn-danger btn-sm" @onclick="() => Delete()">
+                        <i class="bi bi-trash3-fill"></i>
+                    </button>
+                </div>
+                @if(_resultSet.Status == ResultSetStatus.Submitted)
+                {
+                    <p><Pill Color="success">Submitted</Pill></p>
+                }
+                @if(_resultSet.Status == ResultSetStatus.Draft)
+                {
+                    <p><Pill Color="secondary">Draft</Pill></p>
+                }
+                <p><strong>Assessment Topic:</strong> @_resultSet.AssessmentTopic</p>
+                <p><strong>Assessment Type:</strong> @_resultSet.AssessmentType?.Name</p>
+                <p><strong>Assessment Date:</strong> @_resultSet.AssessmentDate?.ToString("yyyy-MM-dd")</p>
+                <p><strong>Teacher:</strong>
+                    <Pill Color="primary"> @_resultSet?.Teacher?.Abbreviation</Pill>
+                    @_resultSet?.Teacher?.Surname, @_resultSet?.Teacher?.Name
+                </p>
+
+                <h4>Results</h4>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Learner</th>
+                            <th>Score</th>
+                            <th>Absent?</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (_resultSet?.Results != null)
+                        {
+                            foreach (var result in _resultSet.Results)
+                            {
+                                <tr>
+                                    <td>@result.Learner?.Surname, @result.Learner?.Name</td>
+                                    <td>@(result.Absent ? "-" : result.Score?.ToString())</td>
+                                    <td>@(result.Absent ? "Yes" : "No")</td>
+                                    <td>@result.AbsentReason</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter] public Guid ResultSetId { get; set; }
+    private ResultSet? _resultSet;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _resultSet = await ResultService.GetByIdAsync(ResultSetId);
+            _loading = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load result set with ID: {ResultSetId}", ResultSetId);
+            _loading = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var uriParams = QueryHelpers.ParseQuery(uri.Query);
+
+        var queryParams = new List<string>();
+        string queryString = "/results";
+
+        // Preserve all filter parameters that were passed to this details page
+        if (uriParams.TryGetValue("viewMode", out var viewModeParam))
+        {
+            queryParams.Add($"viewMode={viewModeParam}");
+        }
+
+        if (uriParams.TryGetValue("gradeId", out var gradeIdParam))
+        {
+            queryParams.Add($"gradeId={gradeIdParam}");
+        }
+
+        if (uriParams.TryGetValue("subjectId", out var subjectIdParam))
+        {
+            queryParams.Add($"subjectId={subjectIdParam}");
+        }
+
+        if (uriParams.TryGetValue("teacherId", out var teacherIdParam))
+        {
+            queryParams.Add($"teacherId={teacherIdParam}");
+        }
+
+        if (uriParams.TryGetValue("fromDate", out var fromDateParam))
+        {
+            queryParams.Add($"fromDate={fromDateParam}");
+        }
+
+        if (uriParams.TryGetValue("toDate", out var toDateParam))
+        {
+            queryParams.Add($"toDate={toDateParam}");
+        }
+
+        if (uriParams.TryGetValue("learnerGradeId", out var learnerGradeIdParam))
+        {
+            queryParams.Add($"learnerGradeId={learnerGradeIdParam}");
+        }
+
+        if (uriParams.TryGetValue("learnerSearchText", out var learnerSearchTextParam))
+        {
+            queryParams.Add($"learnerSearchText={learnerSearchTextParam}");
+        }
+
+        if (uriParams.TryGetValue("assessmentTypeId", out var assessmentTypeIdParam))
+        {
+            queryParams.Add($"assessmentTypeId={assessmentTypeIdParam}");
+        }
+
+        if (uriParams.TryGetValue("selectedGrades", out var selectedGradesParam))
+        {
+            queryParams.Add($"selectedGrades={selectedGradesParam}");
+        }
+
+        if (queryParams.Any())
+        {
+            queryString += $"?{string.Join("&", queryParams)}";
+        }
+
+        Navigation.NavigateTo(queryString);
+    }
+    private void Edit() => Navigation.NavigateTo($"/results/manage/{ResultSetId}");
+    private async Task Delete()
+    {
+        await ResultService.DeleteAsync(ResultSetId);
+        Navigation.NavigateTo("/results");
+    }
+}

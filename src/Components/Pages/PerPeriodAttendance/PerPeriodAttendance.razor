@@ -1,0 +1,974 @@
+@page "/per-period-attendance"
+@using Lisa.Models.Entities
+@using System.Security.Claims
+@using Lisa.Enums
+@inject SchoolService SchoolService
+@inject SchoolGradeService SchoolGradeService
+@inject SubjectService SubjectService
+@inject CombinationService CombinationService
+@inject LearnerService LearnerService
+@inject AttendanceService AttendanceService
+@inject AttendanceRecordService AttendanceRecordService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+@inject ILogger<PerPeriodAttendance> Logger
+@inherits EventAwareComponentBase
+
+<PageTitle>Per Period Attendance</PageTitle>
+
+<h3>Per Period Attendance - @DateTime.UtcNow.Date.ToString("d MMM yyyy")</h3>
+
+@if (_selectedSchool == null)
+{
+    <NoSchoolSelected Message="Please select a school from the dropdown at the top of the page before proceeding." />
+}
+else
+{
+    <div class="row mb-4">
+        <!-- Grade Selection -->
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="gradeSelect" class="form-label">Select Grade</label>
+                <select id="gradeSelect" class="form-select" value="@(_selectedGrade?.Id.ToString() ?? "")"
+                    @onchange="@((e) => GradeSelectionChanged(e))">
+                    <option value="">-- Select Grade --</option>
+                    @foreach (var grade in _schoolGrades.OrderBy(g => g.SystemGrade.SequenceNumber))
+                    {
+                        <option value="@grade.Id">@grade.SystemGrade.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <!-- Subject Type Filter (for grades 10-12) -->
+        @if (_selectedGrade?.SystemGrade.MathGrade == true || _selectedGrade?.SystemGrade.CombinationGrade == true)
+        {
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="subjectTypeSelect" class="form-label">Subject Type</label>
+                    <select id="subjectTypeSelect" class="form-select" value="@_selectedSubjectType.ToString()"
+                        @onchange="@((e) => SubjectTypeSelectionChanged(e))">
+                        <option value="">-- Select Type --</option>
+                        <option value="@SubjectType.Compulsory">Compulsory</option>
+                        @if (_selectedGrade?.SystemGrade.CombinationGrade == true)
+                        {
+                            <option value="@SubjectType.Combination">Combination</option>
+                        }
+                        @if (_selectedGrade?.SystemGrade.MathGrade == true)
+                        {
+                            <option value="@SubjectType.MathCombination">Math Combination</option>
+                        }
+                        <option value="@SubjectType.AdditionalSubject">Additional Subject</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Combination Selection (for combination subjects) -->
+            @if (_selectedSubjectType == SubjectType.Combination && _combinations.Any())
+            {
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="combinationSelect" class="form-label">Combination</label>
+                        <select id="combinationSelect" class="form-select" value="@(_selectedCombination?.Id.ToString() ?? "")"
+                            @onchange="@((e) => CombinationSelectionChanged(e))">
+                            <option value="">-- Select Combination --</option>
+                            @foreach (var combination in _combinations)
+                            {
+                                <option value="@combination.Id">@combination.Name</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            }
+        }
+
+        <!-- Subject Selection -->
+        @if (_availableSubjects.Any())
+        {
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="subjectSelect" class="form-label">Subject</label>
+                    <select id="subjectSelect" class="form-select" value="@(_selectedSubject?.Id.ToString() ?? "")"
+                        @onchange="@((e) => SubjectSelectionChanged(e))">
+                        <option value="">-- Select Subject --</option>
+                        @foreach (var subject in _availableSubjects.OrderBy(s => s.Order))
+                        {
+                            <option value="@subject.Id">@subject.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="d-flex justify-content-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (_selectedSubject != null && _learners.Any())
+    {
+        @if (_todayAttendanceSession == null)
+        {
+            <div class="alert alert-warning">
+                <i class="oi oi-warning me-2"></i>
+                <strong>No attendance session found for today.</strong><br />
+                Attendance must be started from the Sign In/Out page before period attendance can be taken.
+                <button class="btn btn-outline-primary btn-sm ms-2" @onclick="NavigateToSignInOut">
+                    <i class="oi oi-external-link"></i> Go to Sign In/Out
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        @_selectedSubject.Name
+                        @if (_selectedGrade?.SystemGrade.Name != null)
+                        {
+                            <span class="badge bg-secondary ms-2">@_selectedGrade.SystemGrade.Name</span>
+                        }
+                        @if (_selectedCombination != null)
+                        {
+                            <span class="badge bg-info ms-1">@_selectedCombination.Name</span>
+                        }
+                    </h5>
+                    <div>
+                        @if (!_periodStarted)
+                        {
+                            <button class="btn btn-success me-2" @onclick="StartPeriod" disabled="@_processingPeriodStart">
+                                @if (_processingPeriodStart)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                }
+                                <i class="oi oi-play-circle"></i> Start Period
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-danger me-2" @onclick="StopPeriod" disabled="@_processingPeriodStop">
+                                @if (_processingPeriodStop)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                }
+                                <i class="oi oi-stop-circle"></i> Stop Period
+                            </button>
+                        }
+                        <button class="btn btn-outline-primary btn-sm" @onclick="RefreshAttendance">
+                            <i class="oi oi-reload"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" @bind-value="_searchTerm" @bind-value:event="oninput"
+                            placeholder="Search Learner" />
+                    </div>
+
+                    @if (_periodStarted)
+                    {
+                        <div class="alert alert-info">
+                            <i class="oi oi-clock me-2"></i>
+                            Period started at @_periodStartTime?.ToString("HH:mm"). New attendance will be marked as late.
+                        </div>
+                    }
+
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50%">Name</th>
+                                    <th style="width: 50%">Attendance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @* Show learners who signed in first *@
+                                @foreach (var learner in FilteredSignedInLearners)
+                                {
+                                    <tr>
+                                        <td>@learner.Surname @learner.Name</td>
+                                        <td>
+                                            @{
+                                                var periodAttendance = _periodAttendanceData.TryGetValue(learner.Id, out var attendance) ? attendance : null;
+                                                var isPresent = periodAttendance != null;
+                                                var isLate = periodAttendance?.Notes?.Contains("Late") == true;
+                                                var attendanceTime = ExtractTimeFromNotes(periodAttendance?.Notes);
+                                                var pillClass = isPresent ? (isLate ? "late" : "present-period") : "absent";
+                                                var isProcessing = _processingLearnerIds.Contains(learner.Id);
+                                            }
+                                            <div @onclick="() => TogglePeriodAttendance(learner)"
+                                                class="pill @pillClass @(isProcessing ? "processing" : "")" style="cursor: pointer;">
+                                                @if (isProcessing)
+                                                {
+                                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                    <span>Saving...</span>
+                                                }
+                                                else if (isPresent)
+                                                {
+                                                    @if (isLate)
+                                                    {
+                                                        <span>Late @attendanceTime</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>@attendanceTime</span>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span>Absent</span>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                                
+                                @* Show learners who didn't sign in at the bottom with muted pills *@
+                                @if (FilteredNotSignedInLearners.Any())
+                                {
+                                    <tr>
+                                        <td colspan="2" class="pt-4">
+                                            <h6 class="text-muted">Not at School (Did not sign in)</h6>
+                                        </td>
+                                    </tr>
+                                    @foreach (var learner in FilteredNotSignedInLearners)
+                                    {
+                                        <tr class="opacity-75">
+                                            <td>@learner.Surname @learner.Name</td>
+                                            <td>
+                                                @{
+                                                    var isProcessing = _processingLearnerIds.Contains(learner.Id);
+                                                }
+                                                <div @onclick="() => CheckInFromRegister(learner)"
+                                                    class="pill not-present @(isProcessing ? "processing" : "")" style="cursor: pointer;">
+                                                    @if (isProcessing)
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm me-1" role="status"
+                                                            aria-hidden="true"></span>
+                                                        <span>Checking In...</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>Not Present</span>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else if (_selectedSubject != null)
+    {
+        <div class="alert alert-info">
+            <i class="oi oi-info me-2"></i>
+            No learners found for the selected subject.
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <i class="oi oi-info me-2"></i>
+            Please select a grade and subject to view period attendance.
+        </div>
+    }
+}
+
+<style>
+    .pill {
+        padding: 5px 15px;
+        border-radius: 20px;
+        display: inline-block;
+        min-width: 100px;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .present-period {
+        background-color: #198754; /* Green for present on time */
+        color: white;
+    }
+
+    .late {
+        background-color: #dc3545; /* Red for late */
+        color: white;
+    }
+
+    .absent {
+        background-color: #fd7e14; /* Orange for absent */
+        color: white;
+    }
+
+    .not-present {
+        background-color: #6c757d; /* Muted gray for not present */
+        color: white;
+        opacity: 0.7;
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    .not-present:hover {
+        opacity: 1;
+        background-color: #5a6268;
+    }
+
+    .processing {
+        opacity: 0.7;
+        pointer-events: none;
+    }
+</style>
+
+@code {
+    private School? _selectedSchool;
+    private List<SchoolGrade> _schoolGrades = [];
+    private SchoolGrade? _selectedGrade;
+    private SubjectType? _selectedSubjectType;
+    private List<Combination> _combinations = [];
+    private Combination? _selectedCombination;
+    private List<Subject> _availableSubjects = [];
+    private Subject? _selectedSubject;
+    private List<Learner> _learners = [];
+    private string _searchTerm = "";
+    private bool IsLoading { get; set; }
+    private Guid? _currentUserId;
+    private Attendance? _todayAttendanceSession;
+    private Dictionary<Guid, AttendanceRecord> _attendanceData = new(); // Who signed in today
+    private Dictionary<Guid, AttendanceRecord> _periodAttendanceData = new(); // Period attendance
+    private HashSet<Guid> _processingLearnerIds = [];
+    private bool _periodStarted;
+    private DateTime? _periodStartTime;
+    private bool _processingPeriodStart;
+    private bool _processingPeriodStop;
+
+    private IEnumerable<Learner> FilteredSignedInLearners => _learners
+        .Where(l => _attendanceData.ContainsKey(l.Id)) // Only learners who signed in
+        .Where(l => string.IsNullOrEmpty(_searchTerm) ||
+            $"{l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(l => l.Surname)
+        .ThenBy(l => l.Name);
+
+    private IEnumerable<Learner> FilteredNotSignedInLearners => _learners
+        .Where(l => !_attendanceData.ContainsKey(l.Id)) // Only learners who didn't sign in
+        .Where(l => string.IsNullOrEmpty(_searchTerm) ||
+            $"{l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(l => l.Surname)
+        .ThenBy(l => l.Name);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        SubscribeToEvent(UiEvents.SchoolSelected);
+
+        // Get the current user ID
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                _currentUserId = Guid.Parse(userId);
+            }
+        }
+
+        if (_selectedSchool != null)
+        {
+            await LoadSchoolGrades();
+        }
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected && payload is School school)
+        {
+            _selectedSchool = school;
+            await LoadSchoolGrades();
+
+            // Reset selections
+            _selectedGrade = null;
+            _selectedSubjectType = null;
+            _selectedCombination = null;
+            _selectedSubject = null;
+            _learners.Clear();
+            _attendanceData.Clear();
+            _periodAttendanceData.Clear();
+            _todayAttendanceSession = null;
+            _periodStarted = false;
+            _periodStartTime = null;
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadSchoolGrades()
+    {
+        if (_selectedSchool == null) return;
+
+        try
+        {
+            IsLoading = true;
+            _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading school grades");
+        }
+        finally
+        {
+            IsLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task GradeSelectionChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var gradeId))
+        {
+            _selectedGrade = _schoolGrades.FirstOrDefault(g => g.Id == gradeId);
+            
+            // Reset downstream selections
+            _selectedSubjectType = null;
+            _selectedCombination = null;
+            _selectedSubject = null;
+            _combinations.Clear();
+            _availableSubjects.Clear();
+            _learners.Clear();
+            _attendanceData.Clear();
+            _periodAttendanceData.Clear();
+            _periodStarted = false;
+            _periodStartTime = null;
+
+            // For grades RRR-9, load subjects directly
+            if (_selectedGrade?.SystemGrade.MathGrade != true && _selectedGrade?.SystemGrade.CombinationGrade != true)
+            {
+                await LoadSubjectsForGrade();
+            }
+        }
+        else
+        {
+            _selectedGrade = null;
+            _selectedSubjectType = null;
+            _selectedCombination = null;
+            _selectedSubject = null;
+            _combinations.Clear();
+            _availableSubjects.Clear();
+            _learners.Clear();
+            _attendanceData.Clear();
+            _periodAttendanceData.Clear();
+            _periodStarted = false;
+            _periodStartTime = null;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SubjectTypeSelectionChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<SubjectType>(e.Value?.ToString(), out var subjectType))
+        {
+            _selectedSubjectType = subjectType;
+            
+            // Reset downstream selections
+            _selectedCombination = null;
+            _selectedSubject = null;
+            _combinations.Clear();
+            _availableSubjects.Clear();
+            _learners.Clear();
+            _attendanceData.Clear();
+            _periodAttendanceData.Clear();
+            _periodStarted = false;
+            _periodStartTime = null;
+
+            if (_selectedSubjectType == SubjectType.Combination)
+            {
+                await LoadCombinations();
+            }
+            else
+            {
+                await LoadSubjectsByType();
+            }
+        }
+        else
+        {
+            _selectedSubjectType = null;
+            _selectedCombination = null;
+            _selectedSubject = null;
+            _combinations.Clear();
+            _availableSubjects.Clear();
+            _learners.Clear();
+            _attendanceData.Clear();
+            _periodAttendanceData.Clear();
+            _periodStarted = false;
+            _periodStartTime = null;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CombinationSelectionChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var combinationId))
+        {
+            _selectedCombination = _combinations.FirstOrDefault(c => c.Id == combinationId);
+            
+            // Reset downstream selections
+            _selectedSubject = null;
+            _availableSubjects.Clear();
+            _learners.Clear();
+            _attendanceData.Clear();
+            _periodAttendanceData.Clear();
+            _periodStarted = false;
+            _periodStartTime = null;
+
+            await LoadSubjectsForCombination();
+        }
+        else
+        {
+            _selectedCombination = null;
+            _selectedSubject = null;
+            _availableSubjects.Clear();
+            _learners.Clear();
+            _attendanceData.Clear();
+            _periodAttendanceData.Clear();
+            _periodStarted = false;
+            _periodStartTime = null;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SubjectSelectionChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var subjectId))
+        {
+            _selectedSubject = _availableSubjects.FirstOrDefault(s => s.Id == subjectId);
+            
+            // Reset attendance data
+            _learners.Clear();
+            _attendanceData.Clear();
+            _periodAttendanceData.Clear();
+            _periodStarted = false;
+            _periodStartTime = null;
+
+            if (_selectedSubject != null)
+            {
+                await LoadLearnersForSubject();
+            }
+        }
+        else
+        {
+            _selectedSubject = null;
+            _learners.Clear();
+            _attendanceData.Clear();
+            _periodAttendanceData.Clear();
+            _periodStarted = false;
+            _periodStartTime = null;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadSubjectsForGrade()
+    {
+        if (_selectedGrade == null) return;
+
+        try
+        {
+            IsLoading = true;
+            var allSubjects = await SubjectService.GetSubjectsForGradeAsync(_selectedGrade.Id);
+            _availableSubjects = allSubjects.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading subjects for grade {GradeId}", _selectedGrade.Id);
+        }
+        finally
+        {
+            IsLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadCombinations()
+    {
+        if (_selectedGrade == null) return;
+
+        try
+        {
+            IsLoading = true;
+            var allCombinations = await CombinationService.GetCombinationsBySchoolId(_selectedSchool!.Id);
+            _combinations = allCombinations.Where(c => c.SchoolGradeId == _selectedGrade.Id).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading combinations for grade {GradeId}", _selectedGrade.Id);
+        }
+        finally
+        {
+            IsLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadSubjectsByType()
+    {
+        if (_selectedSubjectType == null) return;
+
+        try
+        {
+            IsLoading = true;
+            var allSubjects = await SubjectService.GetAllAsync();
+            _availableSubjects = allSubjects.Where(s => s.SubjectType == _selectedSubjectType).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading subjects by type {SubjectType}", _selectedSubjectType);
+        }
+        finally
+        {
+            IsLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadSubjectsForCombination()
+    {
+        if (_selectedCombination?.Subjects == null) return;
+
+        try
+        {
+            IsLoading = true;
+            _availableSubjects = _selectedCombination.Subjects.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading subjects for combination {CombinationId}", _selectedCombination.Id);
+        }
+        finally
+        {
+            IsLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadLearnersForSubject()
+    {
+        if (_selectedSchool == null || _selectedSubject == null) return;
+
+        try
+        {
+            IsLoading = true;
+            await InvokeAsync(StateHasChanged);
+
+            // Load learners based on subject and combination
+            if (_selectedCombination != null)
+            {
+                // Load learners for this combination and subject
+                _learners = await LearnerService.GetByCombinationAndSubjectAsync(_selectedCombination.Id, _selectedSubject.Id);
+            }
+            else
+            {
+                // Load learners for this subject in the selected grade
+                _learners = await LearnerService.GetByGradeAndSubjectAsync(_selectedGrade!.Id, _selectedSubject.Id);
+            }
+
+            // Load today's attendance session to see who signed in
+            // Use the same logic as Daily Register and SignInAndOut components
+            var todayAttendance = await AttendanceService.GetTodaysAttendance(_selectedSchool.Id);
+            if (todayAttendance != null)
+            {
+                var activeAttendance = await AttendanceService.GetTodaysAttendanceAsync(_selectedSchool.Id);
+                _todayAttendanceSession = activeAttendance ?? todayAttendance;
+            }
+
+            // Clear previous data
+            _attendanceData.Clear();
+            _periodAttendanceData.Clear();
+
+            if (_todayAttendanceSession?.AttendanceRecords != null)
+            {
+                // Process attendance records to identify who signed in
+                foreach (var record in _todayAttendanceSession.AttendanceRecords)
+                {
+                    if (record.AttendanceType == AttendanceType.CheckIn && record.Start.HasValue)
+                    {
+                        // This learner signed in today
+                        var learner = _learners.FirstOrDefault(l => l.Id == record.LearnerId);
+                        if (learner != null)
+                        {
+                            _attendanceData[learner.Id] = record;
+                        }
+                    }
+                    else if (record.AttendanceType == AttendanceType.Period && record.Start.HasValue)
+                    {
+                        // This learner has period attendance recorded
+                        var learner = _learners.FirstOrDefault(l => l.Id == record.LearnerId);
+                        if (learner != null && record.Notes?.Contains($"Subject:{_selectedSubject.Id}") == true)
+                        {
+                            _periodAttendanceData[learner.Id] = record;
+                        }
+                    }
+                }
+            }
+
+            Logger.LogInformation("Loaded {LearnerCount} learners for subject {SubjectId}. {SignedInCount} signed in today.", 
+                _learners.Count, _selectedSubject.Id, _attendanceData.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading learners for subject {SubjectId}", _selectedSubject.Id);
+        }
+        finally
+        {
+            IsLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task StartPeriod()
+    {
+        if (_selectedSubject == null) return;
+
+        try
+        {
+            _processingPeriodStart = true;
+            _periodStartTime = DateTime.UtcNow;
+            _periodStarted = true;
+            
+            Logger.LogInformation("Period started for subject {SubjectId} at {StartTime}", _selectedSubject.Id, _periodStartTime);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error starting period for subject {SubjectId}", _selectedSubject.Id);
+        }
+        finally
+        {
+            _processingPeriodStart = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task StopPeriod()
+    {
+        if (_selectedSubject == null) return;
+
+        try
+        {
+            _processingPeriodStop = true;
+            _periodStarted = false;
+            
+            Logger.LogInformation("Period stopped for subject {SubjectId}", _selectedSubject.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error stopping period for subject {SubjectId}", _selectedSubject.Id);
+        }
+        finally
+        {
+            _processingPeriodStop = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task TogglePeriodAttendance(Learner learner)
+    {
+        if (_selectedSchool == null || _selectedSubject == null || _todayAttendanceSession == null) return;
+        if (_processingLearnerIds.Contains(learner.Id)) return; // Prevent double-clicks
+        
+        // Only allow attendance toggle for learners who signed in
+        if (!_attendanceData.ContainsKey(learner.Id))
+        {
+            Logger.LogWarning("Cannot toggle period attendance for learner {LearnerId} who did not sign in today", learner.Id);
+            return;
+        }
+
+        try
+        {
+            // Set processing state
+            _processingLearnerIds.Add(learner.Id);
+            await InvokeAsync(StateHasChanged);
+
+            // Determine current period attendance status
+            var hasExistingAttendance = _periodAttendanceData.ContainsKey(learner.Id);
+
+            if (!hasExistingAttendance)
+            {
+                // Mark as present
+                var currentTime = DateTime.UtcNow;
+                var isLate = _periodStarted && _periodStartTime.HasValue && currentTime > _periodStartTime.Value;
+                var timeString = currentTime.ToString("HH:mm");
+                var notes = $"Subject:{_selectedSubject.Id}";
+                
+                if (isLate)
+                {
+                    notes += $"|Late {timeString}";
+                }
+                else
+                {
+                    notes += $"|Present {timeString}";
+                }
+
+                // Create period attendance record
+                var periodAttendanceRecord = new AttendanceRecord
+                {
+                    Id = Guid.NewGuid(),
+                    AttendanceId = _todayAttendanceSession.Id,
+                    LearnerId = learner.Id,
+                    AttendanceType = AttendanceType.Period,
+                    Start = currentTime,
+                    Notes = notes,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                // Save to database
+                await AttendanceRecordService.CreateAsync(periodAttendanceRecord);
+                
+                // Update local data
+                _periodAttendanceData[learner.Id] = periodAttendanceRecord;
+                
+                Logger.LogInformation("Marked learner {LearnerId} as {Status} for subject {SubjectId} at {Time}", 
+                    learner.Id, isLate ? "late" : "present", _selectedSubject.Id, timeString);
+            }
+            else
+            {
+                // Remove attendance by updating the record to remove period-specific notes
+                var existingRecord = _periodAttendanceData[learner.Id];
+                
+                // Check if this record is only for period attendance
+                var notesParts = existingRecord.Notes?.Split('|') ?? [];
+                var nonPeriodNotes = notesParts.Where(p => !p.Contains($"Subject:{_selectedSubject.Id}") && 
+                                                           !p.Contains("Late") && 
+                                                           !p.Contains("Present")).ToList();
+                
+                if (nonPeriodNotes.Any())
+                {
+                    // Update the record to remove only period-specific notes
+                    existingRecord.Notes = string.Join("|", nonPeriodNotes);
+                    existingRecord.UpdatedAt = DateTime.UtcNow;
+                    await AttendanceRecordService.UpdateAsync(existingRecord);
+                }
+                else
+                {
+                    // If this record only contained period attendance, mark it as inactive
+                    existingRecord.Notes = "Removed";
+                    existingRecord.End = DateTime.UtcNow;
+                    existingRecord.UpdatedAt = DateTime.UtcNow;
+                    await AttendanceRecordService.UpdateAsync(existingRecord);
+                }
+                
+                // Update local data
+                _periodAttendanceData.Remove(learner.Id);
+                
+                Logger.LogInformation("Removed period attendance for learner {LearnerId} for subject {SubjectId}", 
+                    learner.Id, _selectedSubject.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error toggling period attendance for learner {LearnerId}", learner.Id);
+        }
+        finally
+        {
+            _processingLearnerIds.Remove(learner.Id);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task CheckInFromRegister(Learner learner)
+    {
+        if (_selectedSchool == null || _selectedSubject == null || _todayAttendanceSession == null) return;
+        if (_processingLearnerIds.Contains(learner.Id)) return; // Prevent double-clicks
+        
+        // Only allow check-in for learners who haven't signed in
+        if (_attendanceData.ContainsKey(learner.Id))
+        {
+            Logger.LogWarning("Learner {LearnerId} has already signed in today", learner.Id);
+            return;
+        }
+
+        try
+        {
+            // Set processing state
+            _processingLearnerIds.Add(learner.Id);
+            await InvokeAsync(StateHasChanged);
+
+            // Create CheckInFromRegister attendance record
+            var checkInFromRegisterRecord = new AttendanceRecord
+            {
+                Id = Guid.NewGuid(),
+                LearnerId = learner.Id,
+                AttendanceId = _todayAttendanceSession.Id,
+                AttendanceType = AttendanceType.CheckInFromPeriod,
+                Start = DateTime.UtcNow,
+                Notes = "Checked in via period attendance",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CreatedBy = _currentUserId,
+                UpdatedBy = _currentUserId
+            };
+
+            // Save to database
+            await AttendanceRecordService.CreateAsync(checkInFromRegisterRecord);
+
+            // Add to our local attendance data so the learner appears in the signed-in section
+            _attendanceData[learner.Id] = checkInFromRegisterRecord;
+
+            // Log the successful check-in
+            Logger.LogInformation("Learner {LearnerId} checked in via period attendance for subject {SubjectId}",
+                learner.Id, _selectedSubject.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error checking in learner {LearnerId} from period attendance", learner.Id);
+        }
+        finally
+        {
+            // Remove processing state
+            _processingLearnerIds.Remove(learner.Id);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RefreshAttendance()
+    {
+        if (_selectedSubject != null)
+        {
+            await LoadLearnersForSubject();
+        }
+    }
+
+    private string ExtractTimeFromNotes(string? notes)
+    {
+        if (string.IsNullOrEmpty(notes)) return "";
+        
+        // Extract time from notes like "Late 14:30" or "Present 14:30"
+        var parts = notes.Split('|');
+        foreach (var part in parts)
+        {
+            if (part.Contains("Late ") || part.Contains("Present "))
+            {
+                var timePart = part.Split(' ').LastOrDefault();
+                if (!string.IsNullOrEmpty(timePart) && timePart.Contains(':'))
+                {
+                    return timePart;
+                }
+            }
+        }
+        
+        return "";
+    }
+
+    private void NavigateToSignInOut()
+    {
+        NavigationManager.NavigateTo("/sign-in-and-out");
+    }
+}

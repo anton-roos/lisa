@@ -1,0 +1,13 @@
+@* Reusable No School Selected Component *@
+<div class="alert alert-info d-flex align-items-center">
+    <i class="bi bi-info-circle me-2"></i>
+    <span>@Message</span>
+</div>
+
+@code {
+    /// <summary>
+    /// The message to display. Defaults to "Please select a school to continue."
+    /// </summary>
+    [Parameter]
+    public string Message { get; set; } = "Please select a school to continue.";
+}

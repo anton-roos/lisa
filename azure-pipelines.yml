@@ -40,42 +40,45 @@ stages:
       artifact: drop
 
 # ===== CD: SIT =====
-- stage: DeploySIT
+- stage: Deploy_SIT
   displayName: Deploy to SIT
   dependsOn: Build
   jobs:
-  - deployment: DeployToDev
+  - deployment: DeployToSIT
     environment: 'SIT'
     pool: { name: Default }
     strategy:
       runOnce:
-        preDeploy:
-          steps:
-          - task: ManualValidation@0
-            inputs:
-              instructions: 'Approve to deploy to SIT'
-              notifyUsers: 'anton@dceg.co.za'
-              onTimeout: 'reject'
-            timeoutInMinutes: 1440
         deploy:
           steps:
           - download: current
             artifact: drop
           - template: deploy-iis-steps.yml
             parameters:
-              siteName:  sit.dceg.co.za
-              appPool:   sit.dceg.co.za
-              host:      sit.dceg.co.za
-              physicalPath: C:\Sites\sit.dceg.co.za
-              # optional:
-              # packagePath: '$(Pipeline.Workspace)\drop\WebApp.zip'
-              # enableHttps: true
-              # certThumbprint: '0123456789ABCDEF0123456789ABCDEF01234567'
+              siteName:  'sit.dceg.co.za'
+              appPool:   'sit.dceg.co.za'
+              host:      'sit.dceg.co.za'
+              physicalPath: 'C:\Sites\sit.dceg.co.za'
+
+# ===== Approve UAT =====
+- stage: Approve_UAT
+  displayName: "Approve UAT"
+  dependsOn: Deploy_SIT
+  jobs:
+  - job: WaitForApproval_UAT
+    pool: server
+    steps:
+    - task: ManualValidation@0
+      inputs:
+        instructions: 'Approve deploy to UAT'
+        notifyUsers: 'anton@dceg.co.za'
+        onTimeout: 'reject'
+      timeoutInMinutes: 1440
 
 # ===== CD: UAT =====
-- stage: DeployUAT
-  displayName: Deploy to QA
-  dependsOn: DeploySIT
+- stage: Deploy_UAT
+  displayName: Deploy to UAT
+  dependsOn: Approve_UAT
   condition: succeeded()
   jobs:
   - deployment: DeployToUAT
@@ -83,29 +86,36 @@ stages:
     pool: { name: Default }
     strategy:
       runOnce:
-        preDeploy:
-          steps:
-          - task: ManualValidation@0
-            inputs:
-              instructions: 'Approve to deploy to UAT'
-              notifyUsers: 'anton@dceg.co.za'
-              onTimeout: 'reject'
-            timeoutInMinutes: 1440
         deploy:
           steps:
           - download: current
             artifact: drop
           - template: deploy-iis-steps.yml
             parameters:
-              siteName:  uat.dceg.co.za
-              appPool:   uat.dceg.co.za
-              host:      uat.dceg.co.za
-              physicalPath: C:\Sites\uat.dceg.co.za
+              siteName:  'uat.dceg.co.za'
+              appPool:   'uat.dceg.co.za'
+              host:      'uat.dceg.co.za'
+              physicalPath: 'C:\Sites\uat.dceg.co.za'
+
+# ===== Approve Prod =====
+- stage: Approve_Prod
+  displayName: "Approve Prod"
+  dependsOn: Deploy_UAT
+  jobs:
+  - job: WaitForApproval_Prod
+    pool: server
+    steps:
+    - task: ManualValidation@0
+      inputs:
+        instructions: 'Approve deploy to Prod'
+        notifyUsers: 'anton@dceg.co.za'
+        onTimeout: 'reject'
+      timeoutInMinutes: 1440
 
 # ===== CD: Prod =====
-- stage: DeployProd
+- stage: Deploy_Prod
   displayName: Deploy to Prod
-  dependsOn: DeployUAT
+  dependsOn: Approve_Prod
   condition: succeeded()
   jobs:
   - deployment: DeployToProd
@@ -113,21 +123,13 @@ stages:
     pool: { name: Default }
     strategy:
       runOnce:
-        preDeploy:
-          steps:
-          - task: ManualValidation@0
-            inputs:
-              instructions: 'Approve to deploy to Prod'
-              notifyUsers: 'anton@dceg.co.za'
-              onTimeout: 'reject'
-            timeoutInMinutes: 1440
         deploy:
           steps:
           - download: current
             artifact: drop
           - template: deploy-iis-steps.yml
             parameters:
-              siteName:  dceg.co.za
-              appPool:   dceg.co.za
-              host:      dceg.co.za
-              physicalPath: C:\Sites\dceg.co.za
+              siteName:  'dceg.co.za'
+              appPool:   'dceg.co.za'
+              host:      'dceg.co.za'
+              physicalPath: 'C:\Sites\dceg.co.za'

@@ -59,13 +59,25 @@ steps:
     $msdeploy = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
     if (-not (Test-Path $msdeploy)) { throw "msdeploy not found at: $msdeploy" }
 
+    # Build setParam as ONE argument token
+    $setParam = "-setParam:name=`"IIS Web Application Name`",value=`"$siteName`""
+
+    # Optional: show exactly what we’ll pass
+    Write-Host "msdeploy args:"
+    Write-Host "  -verb:sync"
+    Write-Host "  -source:package=$pkg"
+    Write-Host "  -dest:auto,computerName=localhost,authType=NTLM"
+    Write-Host "  $setParam"
+
     & $msdeploy `
       -verb:sync `
       "-source:package=$pkg" `
       "-dest:auto,computerName=localhost,authType=NTLM" `
-      -setParam:name="IIS Web Application Name",value="$siteName" `
+      $setParam `
       -disableLink:AppPoolExtension `
       -disableLink:ContentExtension `
+      -disableLink:CertificateExtension
+
 
     Start-Website -Name $siteName
   displayName: "Ensure IIS site/app pool & deploy"

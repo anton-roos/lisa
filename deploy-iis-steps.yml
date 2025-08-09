@@ -61,12 +61,11 @@ steps:
 
     & $msdeploy `
       -verb:sync `
-      -source:package="$pkg" `
-      -dest:auto,computerName='localhost',authType='NTLM' `
-      "-setParam:name='IIS Web Application Name',value='$siteName'" `
+      "-source:package=$pkg" `
+      "-dest:auto,computerName=localhost,authType=NTLM" `
+      -setParam:name="IIS Web Application Name",value="$siteName" `
       -disableLink:AppPoolExtension `
       -disableLink:ContentExtension `
-      -disableLink:CertificateExtension
 
     Start-Website -Name $siteName
   displayName: "Ensure IIS site/app pool & deploy"

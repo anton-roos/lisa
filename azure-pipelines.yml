@@ -57,7 +57,7 @@ stages:
             parameters:
               siteName:  'sit.dceg.co.za'
               appPool:   'sit.dceg.co.za'
-              host:      'sit.dceg.co.za'
+              hostHeader:      'sit.dceg.co.za'
               physicalPath: 'C:\Sites\sit.dceg.co.za'
 
 # ===== Approve UAT =====
@@ -94,7 +94,7 @@ stages:
             parameters:
               siteName:  'uat.dceg.co.za'
               appPool:   'uat.dceg.co.za'
-              host:      'uat.dceg.co.za'
+              hostHeader:      'uat.dceg.co.za'
               physicalPath: 'C:\Sites\uat.dceg.co.za'
 
 # ===== Approve Prod =====
@@ -131,5 +131,5 @@ stages:
             parameters:
               siteName:  'dceg.co.za'
               appPool:   'dceg.co.za'
-              host:      'dceg.co.za'
+              hostHeader:      'dceg.co.za'
               physicalPath: 'C:\Sites\dceg.co.za'

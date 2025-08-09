@@ -1,8 +1,8 @@
 trigger:
 - main
 
-# ===== CI: Build & publish artifact =====
 stages:
+# ===== CI: Build & publish artifact =====
 - stage: Build
   displayName: Build
   jobs:
@@ -39,13 +39,13 @@ stages:
     - publish: '$(Build.ArtifactStagingDirectory)'
       artifact: drop
 
-# ===== CD: Dev =====
-- stage: Deploy_Dev
-  displayName: Deploy to Dev
+# ===== CD: antonroos.co.za =====
+- stage: deploy antonroos.co.za
+  displayName: Deploy to antonroos.co.za
   dependsOn: Build
   jobs:
   - deployment: DeployToDev
-    environment: 'Dev'
+    environment: 'antonroos.co.za'
     pool: { name: Default }
     strategy:
       runOnce:
@@ -53,39 +53,15 @@ stages:
           steps:
           - download: current
             artifact: drop
-          - powershell: |
-              $pkg = "$(Pipeline.Workspace)\drop\WebApp.zip"
-              $siteName   = "$(Dev_IIS_SiteName)"
-              $appPool    = "$(Dev_IIS_AppPool)"
-              $appPath    = "$(Dev_IIS_AppPath)"     # e.g. 'DevSite'
-              $binding    = "$(Dev_IIS_Host)"        # e.g. 'dev.website.com'
-              $port       = 80
-
-              Import-Module WebAdministration
-
-              if (-not (Test-Path IIS:\AppPools\$appPool)) {
-                New-Item IIS:\AppPools\$appPool | Out-Null
-                Set-ItemProperty IIS:\AppPools\$appPool -Name managedRuntimeVersion -Value ""  # No CLR for .NET Core
-                Set-ItemProperty IIS:\AppPools\$appPool -Name startMode -Value AlwaysRunning
-              }
-
-              if (-not (Test-Path IIS:\Sites\$siteName)) {
-                New-Item IIS:\Sites\$siteName -physicalPath "C:\inetpub\wwwroot\$siteName" -bindings @{protocol='http';bindingInformation="*:$port:$binding"} | Out-Null
-                Set-ItemProperty IIS:\Sites\$siteName -Name applicationPool -Value $appPool
-              } else {
-                # ensure host header exists
-                $hasBinding = (Get-WebBinding -Name $siteName | Where-Object { $_.bindingInformation -like "*:$port:$binding" })
-                if (-not $hasBinding) { New-WebBinding -Name $siteName -Protocol http -Port $port -HostHeader $binding }
-                Set-ItemProperty IIS:\Sites\$siteName -Name applicationPool -Value $appPool
-              }
-
-              & "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe" `
-                -verb:sync `
-                -source:package="$pkg" `
-                -dest:auto,computerName='localhost',authType='NTLM' `
-                "-setParam:name='IIS Web Application Name',value='$siteName'"
-
-            displayName: "Ensure IIS site/app pool & deploy (Dev)"
+          - template: deploy-iis-steps.yml
+            parameters:
+              siteName:  antonroos.co.za
+              appPool:   antonroos.co.za
+              host:      $(Dev_IIS_Host)
+              # optional:
+              # packagePath: '$(Pipeline.Workspace)\drop\WebApp.zip'
+              # enableHttps: true
+              # certThumbprint: '0123456789ABCDEF0123456789ABCDEF01234567'
 
 # ===== CD: QA =====
 - stage: Deploy_QA
@@ -106,7 +82,6 @@ stages:
             parameters:
               siteName:  $(QA_IIS_SiteName)
               appPool:   $(QA_IIS_AppPool)
-              appPath:   $(QA_IIS_AppPath)
               host:      $(QA_IIS_Host)
 
 # ===== CD: Prod =====
@@ -117,7 +92,7 @@ stages:
   jobs:
   - deployment: DeployToProd
     environment: 'Prod'
-    pool: { name: Default }               # or a locked-down Prod pool
+    pool: { name: Default }   # or a separate locked-down pool
     strategy:
       runOnce:
         deploy:
@@ -128,5 +103,4 @@ stages:
             parameters:
               siteName:  $(Prod_IIS_SiteName)
               appPool:   $(Prod_IIS_AppPool)
-              appPath:   $(Prod_IIS_AppPath)
               host:      $(Prod_IIS_Host)

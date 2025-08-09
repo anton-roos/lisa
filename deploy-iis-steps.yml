@@ -1,3 +1,15 @@
+# deploy-iis-steps.yml
+parameters:
+  siteName: ''
+  appPool: ''
+  hostHeader: ''          # renamed from "host"
+  packagePath: '$(Pipeline.Workspace)\drop\WebApp.zip'
+  physicalPath: ''
+  httpPort: 80
+  enableHttps: false
+  httpsPort: 443
+  certThumbprint: ''
+
 steps:
 - powershell: |
     $ErrorActionPreference = 'Stop'
@@ -5,25 +17,20 @@ steps:
     $pkg          = "${{ parameters.packagePath }}"
     $siteName     = "${{ parameters.siteName }}"
     $appPool      = "${{ parameters.appPool }}"
-    $host         = "${{ parameters.host }}"
+    $hostHeader   = "${{ parameters.hostHeader }}"
     $httpPort     = [int]"${{ parameters.httpPort }}"
     $enableHttps  = [bool]("${{ parameters.enableHttps }}")
     $httpsPort    = [int]"${{ parameters.httpsPort }}"
     $thumb        = "${{ parameters.certThumbprint }}"
     $physicalPath = "${{ parameters.physicalPath }}"
-    if ([string]::IsNullOrWhiteSpace($physicalPath)) {
-      $physicalPath = "C:\inetpub\wwwroot\$siteName"
-    }
+    if ([string]::IsNullOrWhiteSpace($physicalPath)) { $physicalPath = "C:\inetpub\wwwroot\$siteName" }
 
-    # Build binding strings safely (avoid $var: parsing)
-    $bindHttp  = "*:${httpPort}:${host}"
-    $bindHttps = "*:${httpsPort}:${host}"
+    $bindHttp  = "*:${httpPort}:${hostHeader}"
+    $bindHttps = "*:${httpsPort}:${hostHeader}"
 
     Import-Module WebAdministration
 
-    if (-not (Test-Path "IIS:\AppPools\$appPool")) {
-      New-Item "IIS:\AppPools\$appPool" | Out-Null
-    }
+    if (-not (Test-Path "IIS:\AppPools\$appPool")) { New-Item "IIS:\AppPools\$appPool" | Out-Null }
     Set-ItemProperty "IIS:\AppPools\$appPool" -Name managedRuntimeVersion -Value ""
     Set-ItemProperty "IIS:\AppPools\$appPool" -Name startMode -Value "AlwaysRunning"
     Set-ItemProperty "IIS:\AppPools\$appPool" -Name recycling.periodicRestart.time -Value ([TimeSpan]::Zero)
@@ -35,19 +42,14 @@ steps:
     }
 
     $hasHttp = Get-WebBinding -Name $siteName -Protocol http | Where-Object { $_.bindingInformation -like $bindHttp }
-    if (-not $hasHttp) { New-WebBinding -Name $siteName -Protocol http -Port $httpPort -HostHeader $host | Out-Null }
+    if (-not $hasHttp) { New-WebBinding -Name $siteName -Protocol http -Port $httpPort -HostHeader $hostHeader | Out-Null }
 
     if ($enableHttps -and -not [string]::IsNullOrWhiteSpace($thumb)) {
       $hasHttps = Get-WebBinding -Name $siteName -Protocol https | Where-Object { $_.bindingInformation -like $bindHttps }
-      if (-not $hasHttps) {
-        New-WebBinding -Name $siteName -Protocol https -Port $httpsPort -HostHeader $host | Out-Null
-      }
-      $bindingPath = "IIS:\SslBindings\!${httpsPort}!${host}"
-      if (-not (Test-Path $bindingPath)) {
-        New-Item $bindingPath -Thumbprint $thumb -SSLFlags 1 | Out-Null
-      } else {
-        Set-Item $bindingPath -Thumbprint $thumb -SSLFlags 1
-      }
+      if (-not $hasHttps) { New-WebBinding -Name $siteName -Protocol https -Port $httpsPort -HostHeader $hostHeader | Out-Null }
+      $bindingPath = "IIS:\SslBindings\!${httpsPort}!${hostHeader}"
+      if (-not (Test-Path $bindingPath)) { New-Item $bindingPath -Thumbprint $thumb -SSLFlags 1 | Out-Null }
+      else { Set-Item $bindingPath -Thumbprint $thumb -SSLFlags 1 }
     }
 
     Set-ItemProperty "IIS:\Sites\$siteName" -Name applicationPool -Value $appPool

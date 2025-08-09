@@ -1,0 +1,94 @@
+# deploy-iis-steps.yml
+parameters:
+  # Required
+  siteName: ''          # e.g. DevSite
+  appPool: ''           # e.g. DevSiteAppPool
+  host: ''              # e.g. dev.website.com
+
+  # Optional
+  packagePath: '$(Pipeline.Workspace)\drop\WebApp.zip'
+  physicalPath: ''      # e.g. C:\inetpub\wwwroot\DevSite  (default below if empty)
+  httpPort: 80
+
+  # HTTPS (optional). Set enableHttps: true and provide certThumbprint to add an https binding.
+  enableHttps: false
+  httpsPort: 443
+  certThumbprint: ''    # from LocalMachine\My
+
+steps:
+- powershell: |
+    $ErrorActionPreference = 'Stop'
+
+    $pkg          = "${{ parameters.packagePath }}"
+    $siteName     = "${{ parameters.siteName }}"
+    $appPool      = "${{ parameters.appPool }}"
+    $host         = "${{ parameters.host }}"
+    $httpPort     = [int]"${{ parameters.httpPort }}"
+    $enableHttps  = [bool]("${{ parameters.enableHttps }}")
+    $httpsPort    = [int]"${{ parameters.httpsPort }}"
+    $thumb        = "${{ parameters.certThumbprint }}"
+    $physicalPath = "${{ parameters.physicalPath }}"
+    if ([string]::IsNullOrWhiteSpace($physicalPath)) {
+      $physicalPath = "C:\inetpub\wwwroot\$siteName"
+    }
+
+    if (-not (Test-Path $pkg)) {
+      throw "Package not found at $pkg"
+    }
+
+    Import-Module WebAdministration
+
+    # App Pool (No Managed Code, AlwaysRunning)
+    if (-not (Test-Path "IIS:\AppPools\$appPool")) {
+      New-Item "IIS:\AppPools\$appPool" | Out-Null
+    }
+    Set-ItemProperty "IIS:\AppPools\$appPool" -Name managedRuntimeVersion -Value ""
+    Set-ItemProperty "IIS:\AppPools\$appPool" -Name startMode -Value "AlwaysRunning"
+    Set-ItemProperty "IIS:\AppPools\$appPool" -Name recycling.periodicRestart.time -Value ([TimeSpan]::FromMinutes(0))  # disable time-based recycle if you prefer
+
+    # Site
+    if (-not (Test-Path $physicalPath)) { New-Item -ItemType Directory -Path $physicalPath -Force | Out-Null }
+
+    if (-not (Test-Path "IIS:\Sites\$siteName")) {
+      New-Item "IIS:\Sites\$siteName" -physicalPath $physicalPath -bindings @{protocol='http';bindingInformation="*:$httpPort:$host"} | Out-Null
+    }
+
+    # Ensure bindings & app pool
+    $hasHttp = Get-WebBinding -Name $siteName -Protocol http | Where-Object { $_.bindingInformation -like "*:$httpPort:$host" }
+    if (-not $hasHttp) { New-WebBinding -Name $siteName -Protocol http -Port $httpPort -HostHeader $host | Out-Null }
+
+    if ($enableHttps -and -not [string]::IsNullOrWhiteSpace($thumb)) {
+      $hasHttps = Get-WebBinding -Name $siteName -Protocol https | Where-Object { $_.bindingInformation -like "*:$httpsPort:$host" }
+      if (-not $hasHttps) {
+        New-WebBinding -Name $siteName -Protocol https -Port $httpsPort -HostHeader $host | Out-Null
+      }
+      # Bind certificate from LocalMachine\My store
+      $bindingPath = "IIS:\SslBindings\!$httpsPort!$host"
+      if (-not (Test-Path $bindingPath)) {
+        New-Item $bindingPath -Thumbprint $thumb -SSLFlags 1 | Out-Null
+      } else {
+        Set-Item $bindingPath -Thumbprint $thumb -SSLFlags 1
+      }
+    }
+
+    # Link site to app pool
+    Set-ItemProperty "IIS:\Sites\$siteName" -Name applicationPool -Value $appPool
+
+    # Stop site during deploy (optional but safer)
+    Stop-Website -Name $siteName -ErrorAction SilentlyContinue
+
+    # Deploy package locally with msdeploy
+    $msdeploy = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+    if (-not (Test-Path $msdeploy)) { throw "msdeploy not found at: $msdeploy" }
+
+    & $msdeploy `
+      -verb:sync `
+      -source:package="$pkg" `
+      -dest:auto,computerName='localhost',authType='NTLM' `
+      "-setParam:name='IIS Web Application Name',value='$siteName'" `
+      -disableLink:AppPoolExtension `
+      -disableLink:ContentExtension `
+      -disableLink:CertificateExtension
+
+    Start-Website -Name $siteName
+  displayName: "Ensure IIS site/app pool & deploy"

@@ -11,9 +11,9 @@
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
     
     <!-- Assembly Version Information -->
-    <AssemblyVersion>1.1.4</AssemblyVersion>
-    <FileVersion>1.1.4</FileVersion>
-    <Version>1.1.4</Version>
+    <AssemblyVersion>1.1.5</AssemblyVersion>
+    <FileVersion>1.1.5</FileVersion>
+    <Version>1.1.5</Version>
     <AssemblyInformationalVersion>1.1.4</AssemblyInformationalVersion>
     <Product>Lisa School Management System</Product>
     <Company>DCE Group</Company>

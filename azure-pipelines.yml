@@ -39,68 +39,92 @@ stages:
     - publish: '$(Build.ArtifactStagingDirectory)'
       artifact: drop
 
-# ===== CD: antonroos.co.za =====
-- stage: deploy antonroos.co.za
-  displayName: Deploy to antonroos.co.za
+# ===== CD: SIT =====
+- stage: DeploySIT
+  displayName: Deploy to SIT
   dependsOn: Build
   jobs:
   - deployment: DeployToDev
-    environment: 'antonroos.co.za'
+    environment: 'SIT'
     pool: { name: Default }
     strategy:
       runOnce:
+        preDeploy:
+          steps:
+          - task: ManualValidation@0
+            inputs:
+              instructions: 'Approve to deploy to SIT'
+              notifyUsers: 'anton@dceg.co.za'
+              onTimeout: 'reject'
+            timeoutInMinutes: 1440
         deploy:
           steps:
           - download: current
             artifact: drop
           - template: deploy-iis-steps.yml
             parameters:
-              siteName:  antonroos.co.za
-              appPool:   antonroos.co.za
-              host:      $(Dev_IIS_Host)
+              siteName:  sit.dceg.co.za
+              appPool:   sit.dceg.co.za
+              host:      sit.dceg.co.za
               # optional:
               # packagePath: '$(Pipeline.Workspace)\drop\WebApp.zip'
               # enableHttps: true
               # certThumbprint: '0123456789ABCDEF0123456789ABCDEF01234567'
 
-# ===== CD: QA =====
-- stage: Deploy_QA
+# ===== CD: UAT =====
+- stage: DeployUAT
   displayName: Deploy to QA
-  dependsOn: Deploy_Dev
+  dependsOn: DeploySIT
   condition: succeeded()
   jobs:
-  - deployment: DeployToQA
-    environment: 'QA'
+  - deployment: DeployToUAT
+    environment: 'UAT'
     pool: { name: Default }
     strategy:
       runOnce:
+        preDeploy:
+          steps:
+          - task: ManualValidation@0
+            inputs:
+              instructions: 'Approve to deploy to UAT'
+              notifyUsers: 'anton@dceg.co.za'
+              onTimeout: 'reject'
+            timeoutInMinutes: 1440
         deploy:
           steps:
           - download: current
             artifact: drop
           - template: deploy-iis-steps.yml
             parameters:
-              siteName:  $(QA_IIS_SiteName)
-              appPool:   $(QA_IIS_AppPool)
-              host:      $(QA_IIS_Host)
+              siteName:  uat.dceg.co.za
+              appPool:   uat.dceg.co.za
+              host:      uat.dceg.co.za
 
 # ===== CD: Prod =====
-- stage: Deploy_Prod
+- stage: DeployProd
   displayName: Deploy to Prod
-  dependsOn: Deploy_QA
+  dependsOn: DeployUAT
   condition: succeeded()
   jobs:
   - deployment: DeployToProd
     environment: 'Prod'
-    pool: { name: Default }   # or a separate locked-down pool
+    pool: { name: Default }
     strategy:
       runOnce:
+        preDeploy:
+          steps:
+          - task: ManualValidation@0
+            inputs:
+              instructions: 'Approve to deploy to Prod'
+              notifyUsers: 'anton@dceg.co.za'
+              onTimeout: 'reject'
+            timeoutInMinutes: 1440
         deploy:
           steps:
           - download: current
             artifact: drop
           - template: deploy-iis-steps.yml
             parameters:
-              siteName:  $(Prod_IIS_SiteName)
-              appPool:   $(Prod_IIS_AppPool)
-              host:      $(Prod_IIS_Host)
+              siteName:  dceg.co.za
+              appPool:   dceg.co.za
+              host:      dceg.co.za

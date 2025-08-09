@@ -16,7 +16,7 @@ stages:
     - task: UseDotNet@2
       displayName: 'Use .NET 10 preview SDK'
       inputs:
-        version: '10.0.100-preview.6'
+        version: '10.0.100-preview.6.25358.103'
         includePreviewVersions: true
     - powershell: dotnet --info
 

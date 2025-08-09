@@ -4,37 +4,64 @@ trigger:
 stages:
 # ===== CI: Build & publish artifact =====
 - stage: Build
-  displayName: Build
+  displayName: Build (.NET 10 preview)
   jobs:
   - job: BuildJob
     pool: { name: Default }
     variables:
       solution: '**/*.sln'
-      buildPlatform: 'Any CPU'
       buildConfiguration: 'Release'
+      NUGET_PACKAGES: 'C:\.nuget\packages'   # short path to avoid MAXPATH flakiness
     steps:
-    - task: NuGetToolInstaller@1
-    - task: NuGetCommand@2
+    - task: UseDotNet@2
+      displayName: 'Use .NET 10 preview SDK'
       inputs:
-        restoreSolution: '$(solution)'
+        version: '10.0.100-preview.6'
+        includePreviewVersions: true
+    - powershell: dotnet --info
 
-    - task: VSBuild@1
+    # Optional but helps if prior partial restores exist
+    - powershell: dotnet nuget locals all --clear
+      displayName: 'Clear dotnet nuget caches'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Restore'
       inputs:
-        solution: '$(solution)'
-        msbuildArgs: >-
+        command: 'restore'
+        projects: '$(solution)'
+      env:
+        NUGET_PACKAGES: '$(NUGET_PACKAGES)'
+        DOTNET_ROLL_FORWARD_TO_PRERELEASE: '1'
+
+    # Use dotnet msbuild to generate WebDeploy package (same args you had)
+    - task: DotNetCoreCLI@2
+      displayName: 'Build & Package (msbuild)'
+      inputs:
+        command: 'custom'
+        custom: 'msbuild'
+        projects: '$(solution)'
+        arguments: >
+          /p:Configuration=$(buildConfiguration)
           /p:DeployOnBuild=true
           /p:WebPublishMethod=Package
           /p:PackageAsSingleFile=true
           /p:SkipInvalidConfigurations=true
           /p:DesktopBuildPackageLocation="$(Build.ArtifactStagingDirectory)\WebApp.zip"
           /p:DeployIisAppPath="Default Web Site"
-        platform: '$(buildPlatform)'
-        configuration: '$(buildConfiguration)'
+      env:
+        NUGET_PACKAGES: '$(NUGET_PACKAGES)'
+        DOTNET_ROLL_FORWARD_TO_PRERELEASE: '1'
 
-    - task: VSTest@2
+    # Tests (dotnet test works better with newer SDKs than VSTest)
+    - task: DotNetCoreCLI@2
+      displayName: 'Test'
       inputs:
-        platform: '$(buildPlatform)'
-        configuration: '$(buildConfiguration)'
+        command: 'test'
+        projects: '$(solution)'
+        arguments: '-c $(buildConfiguration) --no-build'
+      env:
+        NUGET_PACKAGES: '$(NUGET_PACKAGES)'
+        DOTNET_ROLL_FORWARD_TO_PRERELEASE: '1'
 
     - publish: '$(Build.ArtifactStagingDirectory)'
       artifact: drop

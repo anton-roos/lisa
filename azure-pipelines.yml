@@ -1,30 +1,132 @@
-
 trigger:
 - main
 
-pool:
-  name: Default
+# ===== CI: Build & publish artifact =====
+stages:
+- stage: Build
+  displayName: Build
+  jobs:
+  - job: BuildJob
+    pool: { name: Default }
+    variables:
+      solution: '**/*.sln'
+      buildPlatform: 'Any CPU'
+      buildConfiguration: 'Release'
+    steps:
+    - task: NuGetToolInstaller@1
+    - task: NuGetCommand@2
+      inputs:
+        restoreSolution: '$(solution)'
 
-variables:
-  solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
-  buildConfiguration: 'Release'
+    - task: VSBuild@1
+      inputs:
+        solution: '$(solution)'
+        msbuildArgs: >-
+          /p:DeployOnBuild=true
+          /p:WebPublishMethod=Package
+          /p:PackageAsSingleFile=true
+          /p:SkipInvalidConfigurations=true
+          /p:DesktopBuildPackageLocation="$(Build.ArtifactStagingDirectory)\WebApp.zip"
+          /p:DeployIisAppPath="Default Web Site"
+        platform: '$(buildPlatform)'
+        configuration: '$(buildConfiguration)'
 
-steps:
-- task: NuGetToolInstaller@1
+    - task: VSTest@2
+      inputs:
+        platform: '$(buildPlatform)'
+        configuration: '$(buildConfiguration)'
 
-- task: NuGetCommand@2
-  inputs:
-    restoreSolution: '$(solution)'
+    - publish: '$(Build.ArtifactStagingDirectory)'
+      artifact: drop
 
-- task: VSBuild@1
-  inputs:
-    solution: '$(solution)'
-    msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="$(build.artifactStagingDirectory)\WebApp.zip" /p:DeployIisAppPath="Default Web Site"'
-    platform: '$(buildPlatform)'
-    configuration: '$(buildConfiguration)'
+# ===== CD: Dev =====
+- stage: Deploy_Dev
+  displayName: Deploy to Dev
+  dependsOn: Build
+  jobs:
+  - deployment: DeployToDev
+    environment: 'Dev'
+    pool: { name: Default }
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: drop
+          - powershell: |
+              $pkg = "$(Pipeline.Workspace)\drop\WebApp.zip"
+              $siteName   = "$(Dev_IIS_SiteName)"
+              $appPool    = "$(Dev_IIS_AppPool)"
+              $appPath    = "$(Dev_IIS_AppPath)"     # e.g. 'DevSite'
+              $binding    = "$(Dev_IIS_Host)"        # e.g. 'dev.website.com'
+              $port       = 80
 
-- task: VSTest@2
-  inputs:
-    platform: '$(buildPlatform)'
-    configuration: '$(buildConfiguration)'
+              Import-Module WebAdministration
+
+              if (-not (Test-Path IIS:\AppPools\$appPool)) {
+                New-Item IIS:\AppPools\$appPool | Out-Null
+                Set-ItemProperty IIS:\AppPools\$appPool -Name managedRuntimeVersion -Value ""  # No CLR for .NET Core
+                Set-ItemProperty IIS:\AppPools\$appPool -Name startMode -Value AlwaysRunning
+              }
+
+              if (-not (Test-Path IIS:\Sites\$siteName)) {
+                New-Item IIS:\Sites\$siteName -physicalPath "C:\inetpub\wwwroot\$siteName" -bindings @{protocol='http';bindingInformation="*:$port:$binding"} | Out-Null
+                Set-ItemProperty IIS:\Sites\$siteName -Name applicationPool -Value $appPool
+              } else {
+                # ensure host header exists
+                $hasBinding = (Get-WebBinding -Name $siteName | Where-Object { $_.bindingInformation -like "*:$port:$binding" })
+                if (-not $hasBinding) { New-WebBinding -Name $siteName -Protocol http -Port $port -HostHeader $binding }
+                Set-ItemProperty IIS:\Sites\$siteName -Name applicationPool -Value $appPool
+              }
+
+              & "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe" `
+                -verb:sync `
+                -source:package="$pkg" `
+                -dest:auto,computerName='localhost',authType='NTLM' `
+                "-setParam:name='IIS Web Application Name',value='$siteName'"
+
+            displayName: "Ensure IIS site/app pool & deploy (Dev)"
+
+# ===== CD: QA =====
+- stage: Deploy_QA
+  displayName: Deploy to QA
+  dependsOn: Deploy_Dev
+  condition: succeeded()
+  jobs:
+  - deployment: DeployToQA
+    environment: 'QA'
+    pool: { name: Default }
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: drop
+          - template: deploy-iis-steps.yml
+            parameters:
+              siteName:  $(QA_IIS_SiteName)
+              appPool:   $(QA_IIS_AppPool)
+              appPath:   $(QA_IIS_AppPath)
+              host:      $(QA_IIS_Host)
+
+# ===== CD: Prod =====
+- stage: Deploy_Prod
+  displayName: Deploy to Prod
+  dependsOn: Deploy_QA
+  condition: succeeded()
+  jobs:
+  - deployment: DeployToProd
+    environment: 'Prod'
+    pool: { name: Default }               # or a locked-down Prod pool
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: drop
+          - template: deploy-iis-steps.yml
+            parameters:
+              siteName:  $(Prod_IIS_SiteName)
+              appPool:   $(Prod_IIS_AppPool)
+              appPath:   $(Prod_IIS_AppPath)
+              host:      $(Prod_IIS_Host)

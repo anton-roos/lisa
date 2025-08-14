@@ -10,6 +10,13 @@
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
     
+    <!-- Deployment size optimizations -->
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    
     <!-- Assembly Version Information -->
     <AssemblyVersion>1.1.5</AssemblyVersion>
     <FileVersion>1.1.5</FileVersion>

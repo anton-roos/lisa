@@ -76,7 +76,27 @@ steps:
       $setParam `
       -disableLink:AppPoolExtension `
       -disableLink:ContentExtension `
-      -disableLink:CertificateExtension
+      -disableLink:CertificateExtension `
+      "-skip:objectName=filePath,absolutePath=appsettings\.json$" `
+      "-skip:objectName=filePath,absolutePath=.*\\appsettings\.json$" `
+      "-skip:objectName=dirPath,absolutePath=.*\\runtimes\\.*\\lib\\.*" `
+      "-skip:objectName=filePath,absolutePath=.*\\runtimes\\.*\\native\\.*" `
+      "-skip:objectName=filePath,absolutePath=.*\.pdb$" `
+      "-skip:objectName=filePath,absolutePath=.*\.xml$" `
+      "-skip:objectName=filePath,absolutePath=.*\\ref\\.*\.dll$" `
+      "-skip:objectName=dirPath,absolutePath=.*\\cs\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\de\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\es\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\fr\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\it\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\ja\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\ko\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\pl\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\pt-BR\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\ru\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\tr\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\zh-Hans\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\zh-Hant\\.*"
 
 
     Start-Website -Name $siteName

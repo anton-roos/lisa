@@ -77,7 +77,7 @@ public class SchoolService(
 
         if (user.Roles.Contains(Roles.SystemAdministrator))
         {
-            logger.LogError("Returning null for system administrator user {UserId}.", user.Id);
+            logger.LogDebug("System administrator user {UserId} does not have a specific school context - this is expected behavior.", user.Id);
             return null;
         }
 

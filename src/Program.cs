@@ -8,6 +8,7 @@ using Lisa.Models.Entities;
 using Lisa.Repositories;
 using Lisa.Services;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
@@ -69,6 +70,21 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
     })
     .AddEntityFrameworkStores<LisaDbContext>()
     .AddDefaultTokenProviders();
+
+// Configure Data Protection to persist keys and handle multiple instances
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys")))
+    .SetApplicationName("Lisa.School.Management")
+    .SetDefaultKeyLifetime(TimeSpan.FromDays(90)); // Keys valid for 90 days
+
+// Configure Antiforgery options for better error handling
+builder.Services.AddAntiforgery(options =>
+{
+    options.Cookie.Name = "__RequestVerificationToken";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+});
 
 builder.Services.AddHostedService<BackgroundJobService>();
 builder.Services.AddScoped<BackgroundJobService>();

@@ -114,7 +114,9 @@ steps:
       "-skip:objectName=dirPath,absolutePath=.*\\ru\\.*" `
       "-skip:objectName=dirPath,absolutePath=.*\\tr\\.*" `
       "-skip:objectName=dirPath,absolutePath=.*\\zh-Hans\\.*" `
-      "-skip:objectName=dirPath,absolutePath=.*\\zh-Hant\\.*"
+      "-skip:objectName=dirPath,absolutePath=.*\\zh-Hant\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\DataProtection-Keys$" `
+      "-skip:objectName=dirPath,absolutePath=.*\\DataProtection-Keys\\.*"
 
     # Start the app pool and website
     Write-Host "Starting application pool: $appPool"

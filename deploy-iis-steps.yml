@@ -54,7 +54,25 @@ steps:
 
     Set-ItemProperty "IIS:\Sites\$siteName" -Name applicationPool -Value $appPool
 
+    # Stop the app pool and website to release file locks
+    Write-Host "Stopping application pool: $appPool"
+    Stop-WebAppPool -Name $appPool -ErrorAction SilentlyContinue
+    
+    Write-Host "Stopping website: $siteName"
     Stop-Website -Name $siteName -ErrorAction SilentlyContinue
+    
+    # Wait a moment for processes to fully stop
+    Start-Sleep -Seconds 5
+    
+    # Verify app pool is stopped
+    $appPoolState = Get-WebAppPoolState -Name $appPool
+    Write-Host "App pool $appPool state: $($appPoolState.Value)"
+    
+    if ($appPoolState.Value -ne "Stopped") {
+        Write-Host "Force stopping app pool processes..."
+        Get-Process -Name "w3wp" -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -eq "w3wp" } | Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 3
+    }
 
     $msdeploy = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
     if (-not (Test-Path $msdeploy)) { throw "msdeploy not found at: $msdeploy" }
@@ -98,6 +116,26 @@ steps:
       "-skip:objectName=dirPath,absolutePath=.*\\zh-Hans\\.*" `
       "-skip:objectName=dirPath,absolutePath=.*\\zh-Hant\\.*"
 
-
+    # Start the app pool and website
+    Write-Host "Starting application pool: $appPool"
+    Start-WebAppPool -Name $appPool
+    
+    # Wait for app pool to start
+    $timeout = 30
+    $elapsed = 0
+    do {
+        Start-Sleep -Seconds 1
+        $elapsed++
+        $appPoolState = Get-WebAppPoolState -Name $appPool
+        Write-Host "App pool state: $($appPoolState.Value) (${elapsed}s)"
+    } while ($appPoolState.Value -ne "Started" -and $elapsed -lt $timeout)
+    
+    if ($appPoolState.Value -ne "Started") {
+        Write-Warning "App pool did not start within $timeout seconds"
+    }
+    
+    Write-Host "Starting website: $siteName"
     Start-Website -Name $siteName
+    
+    Write-Host "Deployment completed successfully!"
   displayName: "Ensure IIS site/app pool & deploy"

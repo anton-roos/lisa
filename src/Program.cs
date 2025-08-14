@@ -12,23 +12,11 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
-using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", Serilog.Events.LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.AspNetCore.Authorization", Serilog.Events.LogEventLevel.Warning)
-    .WriteTo.Console()
-    .WriteTo.Seq(
-        serverUrl: builder.Configuration["Seq:ServerUrl"] ?? "http://localhost:5341",
-        apiKey: builder.Configuration["Seq:ApiKey"])
-    .Enrich.WithProperty("Application", "Lisa")
-    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
-    .CreateLogger();
 
-builder.Host.UseSerilog();
+builder.Logging.AddSeq();
 
 builder.Services.AddRazorComponents(options =>
         options.DetailedErrors = builder.Environment.IsDevelopment())
@@ -118,7 +106,6 @@ builder.Services.AddScoped<TemplateRenderService>();
 builder.Services.AddScoped<LeaveEarlyService>();
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddBlazorBootstrap();
 builder.Services.AddControllers();
 builder.Services.AddMudServices();
 
@@ -133,7 +120,7 @@ app.Logger.LogInformation("Database migration successful!");
 
 var services = scope.ServiceProvider;
 await DatabaseSeed.Seed(services);
-Log.Information("Database seeding completed successfully.");
+app.Logger.LogInformation("Database seeding completed successfully.");
 
 if (!app.Environment.IsDevelopment())
 {
@@ -152,15 +139,4 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapControllers();
 
-try
-{
-    app.Run();
-}
-catch (Exception ex)
-{
-    Log.Fatal(ex, "Application startup failed.");
-}
-finally
-{
-    Log.CloseAndFlush();
-}
+app.Run();

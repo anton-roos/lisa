@@ -39,12 +39,14 @@
                     var isChecked = _schoolGrades.Any(sg => sg.SystemGradeId == systemGrade.Id);
                     <div class="list-group-item d-flex justify-content-start align-items-center flex-wrap">
                         <div class="col-1">
-                            <Switch Value="isChecked" Reverse="false" ValueChanged="async (bool newValue) =>
+                            <MudSwitch T="bool" 
+                                      Value="isChecked" 
+                                      ValueChanged="async (bool newValue) =>
                                         {
                                             isChecked = newValue;
                                             await ToggleSchoolGrade(systemGrade.Id, newValue);
-                                        }" ValueExpression="() => isChecked">
-                            </Switch>
+                                        }" 
+                                      Color="Color.Primary" />
                         </div>
                         <div class="col-2">
                             <strong>@systemGrade.Name</strong>

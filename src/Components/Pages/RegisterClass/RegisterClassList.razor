@@ -3,6 +3,7 @@
 @inject SchoolService SchoolService
 @inject RegisterClassService RegisterClassService
 @inject NavigationManager NavigationManager
+@inject IDialogService DialogService
 @inherits EventAwareComponentBase
 @inject ILogger<RegisterClassList> Logger
 
@@ -72,8 +73,6 @@
                     }
                 </tbody>
             </table>
-
-            <ConfirmDialog @ref="_dialog" />
         }
     </Authorized>
     <NotAuthorized>
@@ -84,7 +83,6 @@
 @code {
     private School? _selectedSchool;
     private List<RegisterClass> _registerClasses = [];
-    private ConfirmDialog _dialog = null!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -132,12 +130,30 @@
 
     private async Task ShowConfirmationAsync(RegisterClass? registerClass)
     {
-        var confirmation = await _dialog.ShowAsync(
-        title: "Are you sure you want to delete this?",
-        message1: "This will delete the record. Once deleted can not be rolled back.",
-        message2: "Do you want to proceed?");
+        var parameters = new DialogParameters<MudMessageBox>
+        {
+            { x => x.Title, "Delete Register Class" },
+            { x => x.Message, "This will delete the record. Once deleted can not be rolled back. Do you want to proceed?" },
+            { x => x.YesText, "Delete" },
+            { x => x.NoText, "Cancel" },
+            { x => x.CancelText, "" }
+        };
 
-        if (confirmation)
+        var options = new DialogOptions()
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowMessageBox(
+            title: "Delete Register Class",
+            message: "This will delete the record. Once deleted can not be rolled back. Do you want to proceed?",
+            yesText: "Delete",
+            noText: "Cancel",
+            options: options);
+
+        if (dialog == true)
         {
             if (registerClass != null)
             {
@@ -145,9 +161,6 @@
                 await LoadRegisterClasses();
                 await InvokeAsync(StateHasChanged);
             }
-        }
-        else
-        {
         }
     }
 

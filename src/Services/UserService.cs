@@ -1,5 +1,4 @@
 using Lisa.Data;
-using Lisa.Helpers;
 using Lisa.Interfaces;
 using Lisa.Models.Entities;
 using Lisa.Models.ViewModels;
@@ -245,19 +244,6 @@ public class UserService(
             }
 
             await uiEventService.PublishAsync(UiEvents.UsersUpdated, null);
-            
-            // Enhanced structured logging for Seq
-            StructuredLogging.LogUserActivity("UserUpdated", user.Id?.ToString() ?? "Unknown", "User profile updated", 
-                new { 
-                    UserId = user.Id,
-                    Email = user.Email,
-                    SchoolId = user.SchoolId,
-                    CareGroupCount = user.SelectedCareGroupIds.Count,
-                    SubjectCount = user.Subjects?.Count ?? 0,
-                    RoleCount = user.SelectedRoles.Count,
-                    PasswordChanged = !string.IsNullOrEmpty(newPassword)
-                });
-            
             logger.LogInformation("Updated teacher: {TeacherId}", user.Id);
             return true;
         }

@@ -36,15 +36,6 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-builder.Logging.AddSentry(options =>
-{
-    options.Dsn = builder.Configuration["Sentry:Dsn"];
-    options.MinimumBreadcrumbLevel = LogLevel.Information;
-    options.MinimumEventLevel = LogLevel.Error;
-    options.Debug = !builder.Environment.IsProduction();
-    options.TracesSampleRate = 1.0;
-});
-
 builder.Services.AddRazorComponents(options =>
         options.DetailedErrors = builder.Environment.IsDevelopment())
     .AddInteractiveServerComponents();

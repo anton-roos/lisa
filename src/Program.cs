@@ -29,6 +29,11 @@ Log.Logger = new LoggerConfiguration()
         fileSizeLimitBytes: 10_485_760,
         retainedFileCountLimit: 10,
         shared: true)
+    .WriteTo.Seq(
+        serverUrl: builder.Configuration["Seq:ServerUrl"] ?? "http://localhost:5341",
+        apiKey: builder.Configuration["Seq:ApiKey"])
+    .Enrich.WithProperty("Application", "Lisa")
+    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -176,6 +181,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseStaticFiles();
 app.UseAntiforgery();
 app.UseAuthentication();

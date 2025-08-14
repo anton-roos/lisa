@@ -18,10 +18,7 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     
     <!-- Assembly Version Information -->
-    <AssemblyVersion>1.1.5</AssemblyVersion>
-    <FileVersion>1.1.5</FileVersion>
-    <Version>1.1.5</Version>
-    <AssemblyInformationalVersion>1.1.4</AssemblyInformationalVersion>
+    <Version>1.1.6</Version>
     <Product>Lisa School Management System</Product>
     <Company>DCE Group</Company>
     <Copyright>Copyright © 2025 DCE Group</Copyright>
@@ -65,6 +62,7 @@
     <PackageReference Include="Sentry.Extensions.Logging" Version="5.13.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="Serilog.Sinks.Seq" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>

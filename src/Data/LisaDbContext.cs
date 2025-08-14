@@ -158,6 +158,8 @@ public class LisaDbContext
             .Property(l => l.Code)
             .HasMaxLength(20);
         modelBuilder.Entity<Learner>()
+            .HasQueryFilter(l => !l.IsDisabled); // Add query filter to exclude disabled learners
+        modelBuilder.Entity<Learner>()
             .HasOne(r => r.RegisterClass)
             .WithMany(l => l.Learners)
             .HasForeignKey(l => l.RegisterClassId)
@@ -191,7 +193,7 @@ public class LisaDbContext
             .HasOne(lp => lp.Learner)
             .WithMany(l => l.Parents)
             .HasForeignKey(lp => lp.LearnerId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict); // Changed from Cascade to Restrict
 
         // Classes and Subjects
         modelBuilder.Entity<LearnerSubject>()
@@ -200,7 +202,7 @@ public class LisaDbContext
             .HasOne(ls => ls.Learner)
             .WithMany(l => l.LearnerSubjects)
             .HasForeignKey(ls => ls.LearnerId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict); // Changed from Cascade to Restrict
         modelBuilder.Entity<LearnerSubject>()
             .HasOne(ls => ls.Combination)
             .WithMany()
@@ -321,7 +323,7 @@ public class LisaDbContext
             entity.HasOne(r => r.Learner)
                   .WithMany(l => l.Results)
                   .HasForeignKey(r => r.LearnerId)
-                  .OnDelete(DeleteBehavior.Cascade);
+                  .OnDelete(DeleteBehavior.Restrict); // Changed from Cascade to Restrict
             entity.HasOne(r => r.ResultSet)
                   .WithMany(rs => rs.Results)
                   .HasForeignKey(r => r.ResultSetId)
@@ -413,7 +415,7 @@ public class LisaDbContext
             entity.HasOne(r => r.Learner)
                 .WithMany(l => l.EmailReceipts)
                 .HasForeignKey(r => r.LearnerId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict); // Changed from SetNull to Restrict
 
             entity.HasOne(r => r.User)
                 .WithMany(u => u.EmailReceipts)
@@ -451,7 +453,7 @@ public class LisaDbContext
             entity.HasOne(a => a.Learner)
                   .WithMany()
                   .HasForeignKey(a => a.LearnerId)
-                  .OnDelete(DeleteBehavior.Cascade);
+                  .OnDelete(DeleteBehavior.Restrict); // Changed from Cascade to Restrict
 
             entity.HasOne(a => a.Attendance)
                   .WithMany(a => a.AttendanceRecords)
@@ -546,6 +548,7 @@ public class LisaDbContext
             if (entry.State == EntityState.Added)
             {
                 entry.Entity.CreatedAt = DateTime.UtcNow;
+                entry.Entity.UpdatedAt = DateTime.UtcNow;
             }
 
             if (entry.State == EntityState.Modified)

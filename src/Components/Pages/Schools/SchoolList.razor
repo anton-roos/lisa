@@ -2,6 +2,7 @@
 @using Lisa.Models.Entities
 @inject NavigationManager NavigationManager
 @inject SchoolService SchoolService
+@inject IDialogService DialogService
 
 <AuthorizeView Roles="@Roles.SystemAdministrator">
     <Authorized>
@@ -55,21 +56,8 @@
     </NotAuthorized>
 </AuthorizeView>
 
-<ConfirmDialog />
-<Modal @ref="_errorModal" Title="Info">
-    <BodyTemplate>
-        You can't delete this school because of the following:
-        @_exception.Message
-    </BodyTemplate>
-    <FooterTemplate>
-        <Button Color="ButtonColor.Primary" @onclick="CloseErrorModal">Ok</Button>
-    </FooterTemplate>
-</Modal>
-
 @code {
     private List<School>? _schools;
-    private Modal _errorModal = default!;
-    private readonly Exception _exception = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -79,11 +67,6 @@
     private void EditSchool(School school)
     {
         NavigationManager.NavigateTo($"schools/edit/{school.Id}");
-    }
-
-    private async Task CloseErrorModal()
-    {
-        await _errorModal.HideAsync();
     }
 
     private void ViewSchool(School school)

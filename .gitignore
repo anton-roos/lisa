@@ -8,6 +8,9 @@ appsettings.json
 # dotenv files
 .env
 
+# Data Protection Keys (environment-specific)
+DataProtection-Keys/
+
 # Drawio Backup files
 *.bkp
 

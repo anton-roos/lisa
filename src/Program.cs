@@ -2,35 +2,20 @@ using DinkToPdf;
 using DinkToPdf.Contracts;
 using Lisa.Components;
 using Lisa.Data;
+using Lisa.Interfaces;
 using Lisa.Middleware;
 using Lisa.Models.Entities;
 using Lisa.Services;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
-using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", Serilog.Events.LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.AspNetCore.Authorization", Serilog.Events.LogEventLevel.Warning)
-    .WriteTo.Console()
-    .WriteTo.File(
-        path: "Logs/log-.txt",
-        rollingInterval: RollingInterval.Day,
-        fileSizeLimitBytes: 10_485_760,
-        retainedFileCountLimit: 10,
-        shared: true)
-    .CreateLogger();
-
-builder.Host.UseSerilog();
-
-builder.Services.AddRazorComponents(options =>
+builder.Logging.AddSeq();
         options.DetailedErrors = builder.Environment.IsDevelopment())
-    .AddInteractiveServerComponents();
 
 builder.Services.AddDbContextFactory<LisaDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Lisa")));
@@ -54,6 +39,21 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
     .AddEntityFrameworkStores<LisaDbContext>()
     .AddDefaultTokenProviders();
 
+// Configure Data Protection to persist keys and handle multiple instances
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys")))
+    .SetApplicationName("Lisa.School.Management")
+    .SetDefaultKeyLifetime(TimeSpan.FromDays(90)); // Keys valid for 90 days
+
+// Configure Antiforgery options for better error handling
+builder.Services.AddAntiforgery(options =>
+{
+    options.Cookie.Name = "__RequestVerificationToken";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+});
+
 builder.Services.AddHostedService<BackgroundJobService>();
 
 builder.Services.ConfigureApplicationCookie(options =>
@@ -75,6 +75,7 @@ builder.Services.AddScoped<CombinationService>();
 builder.Services.AddScoped<SchoolGradeService>();
 builder.Services.AddScoped<SchoolGradeTimeService>();
 builder.Services.AddScoped<LearnerService>();
+builder.Services.AddScoped<ILearnerService, LearnerService>();
 builder.Services.AddScoped<RegisterClassService>();
 builder.Services.AddScoped<SubjectService>();
 builder.Services.AddScoped<UserService>();
@@ -100,7 +101,7 @@ builder.Services.AddSingleton<ILoginStore, InMemoryLoginStore>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddBlazorBootstrap();
+builder.Services.AddControllers();
 builder.Services.AddMudServices();
 
 var app = builder.Build();
@@ -114,7 +115,7 @@ app.Logger.LogInformation("Database migration successful!");
 
 var services = scope.ServiceProvider;
 await DatabaseSeed.Seed(services);
-Log.Information("Database seeding completed successfully.");
+app.Logger.LogInformation("Database seeding completed successfully.");
 
 if (!app.Environment.IsDevelopment())
 {
@@ -133,15 +134,4 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapControllers();
 
-try
-{
-    app.Run();
-}
-catch (Exception ex)
-{
-    Log.Fatal(ex, "Application startup failed.");
-}
-finally
-{
-    Log.CloseAndFlush();
-}
+app.Run();

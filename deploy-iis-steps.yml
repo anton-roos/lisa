@@ -1,0 +1,143 @@
+# deploy-iis-steps.yml
+parameters:
+  siteName: ''
+  appPool: ''
+  hostHeader: ''          # renamed from "host"
+  packagePath: '$(Pipeline.Workspace)\drop\WebApp.zip'
+  physicalPath: ''
+  httpPort: 80
+  enableHttps: false
+  httpsPort: 443
+  certThumbprint: ''
+
+steps:
+- powershell: |
+    $ErrorActionPreference = 'Stop'
+
+    $pkg          = "${{ parameters.packagePath }}"
+    $siteName     = "${{ parameters.siteName }}"
+    $appPool      = "${{ parameters.appPool }}"
+    $hostHeader   = "${{ parameters.hostHeader }}"
+    $httpPort     = [int]"${{ parameters.httpPort }}"
+    $enableHttps  = [bool]("${{ parameters.enableHttps }}")
+    $httpsPort    = [int]"${{ parameters.httpsPort }}"
+    $thumb        = "${{ parameters.certThumbprint }}"
+    $physicalPath = "${{ parameters.physicalPath }}"
+    if ([string]::IsNullOrWhiteSpace($physicalPath)) { $physicalPath = "C:\inetpub\wwwroot\$siteName" }
+
+    $bindHttp  = "*:${httpPort}:${hostHeader}"
+    $bindHttps = "*:${httpsPort}:${hostHeader}"
+
+    Import-Module WebAdministration
+
+    if (-not (Test-Path "IIS:\AppPools\$appPool")) { New-Item "IIS:\AppPools\$appPool" | Out-Null }
+    Set-ItemProperty "IIS:\AppPools\$appPool" -Name managedRuntimeVersion -Value ""
+    Set-ItemProperty "IIS:\AppPools\$appPool" -Name startMode -Value "AlwaysRunning"
+    Set-ItemProperty "IIS:\AppPools\$appPool" -Name recycling.periodicRestart.time -Value ([TimeSpan]::Zero)
+
+    if (-not (Test-Path $physicalPath)) { New-Item -ItemType Directory -Path $physicalPath -Force | Out-Null }
+
+    if (-not (Test-Path "IIS:\Sites\$siteName")) {
+      New-Item "IIS:\Sites\$siteName" -physicalPath $physicalPath -bindings @{ protocol='http'; bindingInformation=$bindHttp } | Out-Null
+    }
+
+    $hasHttp = Get-WebBinding -Name $siteName -Protocol http | Where-Object { $_.bindingInformation -like $bindHttp }
+    if (-not $hasHttp) { New-WebBinding -Name $siteName -Protocol http -Port $httpPort -HostHeader $hostHeader | Out-Null }
+
+    if ($enableHttps -and -not [string]::IsNullOrWhiteSpace($thumb)) {
+      $hasHttps = Get-WebBinding -Name $siteName -Protocol https | Where-Object { $_.bindingInformation -like $bindHttps }
+      if (-not $hasHttps) { New-WebBinding -Name $siteName -Protocol https -Port $httpsPort -HostHeader $hostHeader | Out-Null }
+      $bindingPath = "IIS:\SslBindings\!${httpsPort}!${hostHeader}"
+      if (-not (Test-Path $bindingPath)) { New-Item $bindingPath -Thumbprint $thumb -SSLFlags 1 | Out-Null }
+      else { Set-Item $bindingPath -Thumbprint $thumb -SSLFlags 1 }
+    }
+
+    Set-ItemProperty "IIS:\Sites\$siteName" -Name applicationPool -Value $appPool
+
+    # Stop the app pool and website to release file locks
+    Write-Host "Stopping application pool: $appPool"
+    Stop-WebAppPool -Name $appPool -ErrorAction SilentlyContinue
+    
+    Write-Host "Stopping website: $siteName"
+    Stop-Website -Name $siteName -ErrorAction SilentlyContinue
+    
+    # Wait a moment for processes to fully stop
+    Start-Sleep -Seconds 5
+    
+    # Verify app pool is stopped
+    $appPoolState = Get-WebAppPoolState -Name $appPool
+    Write-Host "App pool $appPool state: $($appPoolState.Value)"
+    
+    if ($appPoolState.Value -ne "Stopped") {
+        Write-Host "Force stopping app pool processes..."
+        Get-Process -Name "w3wp" -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -eq "w3wp" } | Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 3
+    }
+
+    $msdeploy = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+    if (-not (Test-Path $msdeploy)) { throw "msdeploy not found at: $msdeploy" }
+
+    # Build setParam as ONE argument token
+    $setParam = "-setParam:name=`"IIS Web Application Name`",value=`"$siteName`""
+
+    # Optional: show exactly what we’ll pass
+    Write-Host "msdeploy args:"
+    Write-Host "  -verb:sync"
+    Write-Host "  -source:package=$pkg"
+    Write-Host "  -dest:auto,computerName=localhost,authType=NTLM"
+    Write-Host "  $setParam"
+
+    & $msdeploy `
+      -verb:sync `
+      "-source:package=$pkg" `
+      "-dest:auto,computerName=localhost,authType=NTLM" `
+      $setParam `
+      -disableLink:AppPoolExtension `
+      -disableLink:ContentExtension `
+      -disableLink:CertificateExtension `
+      "-skip:objectName=filePath,absolutePath=appsettings\.json$" `
+      "-skip:objectName=filePath,absolutePath=.*\\appsettings\.json$" `
+      "-skip:objectName=dirPath,absolutePath=.*\\runtimes\\.*\\lib\\.*" `
+      "-skip:objectName=filePath,absolutePath=.*\\runtimes\\.*\\native\\.*" `
+      "-skip:objectName=filePath,absolutePath=.*\.pdb$" `
+      "-skip:objectName=filePath,absolutePath=.*\.xml$" `
+      "-skip:objectName=filePath,absolutePath=.*\\ref\\.*\.dll$" `
+      "-skip:objectName=dirPath,absolutePath=.*\\cs\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\de\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\es\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\fr\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\it\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\ja\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\ko\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\pl\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\pt-BR\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\ru\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\tr\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\zh-Hans\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\zh-Hant\\.*" `
+      "-skip:objectName=dirPath,absolutePath=.*\\DataProtection-Keys$" `
+      "-skip:objectName=dirPath,absolutePath=.*\\DataProtection-Keys\\.*"
+
+    # Start the app pool and website
+    Write-Host "Starting application pool: $appPool"
+    Start-WebAppPool -Name $appPool
+    
+    # Wait for app pool to start
+    $timeout = 30
+    $elapsed = 0
+    do {
+        Start-Sleep -Seconds 1
+        $elapsed++
+        $appPoolState = Get-WebAppPoolState -Name $appPool
+        Write-Host "App pool state: $($appPoolState.Value) (${elapsed}s)"
+    } while ($appPoolState.Value -ne "Started" -and $elapsed -lt $timeout)
+    
+    if ($appPoolState.Value -ne "Started") {
+        Write-Warning "App pool did not start within $timeout seconds"
+    }
+    
+    Write-Host "Starting website: $siteName"
+    Start-Website -Name $siteName
+    
+    Write-Host "Deployment completed successfully!"
+  displayName: "Ensure IIS site/app pool & deploy"

@@ -64,7 +64,7 @@ public class SchoolService(
         var currentUser = await GetCurrentUserAsync();
         if (currentUser == null)
         {
-            logger.LogError("Unable to retrieve current user.");
+            logger.LogDebug("Unable to retrieve current user - user may not be authenticated yet.");
             return null;
         }
 
@@ -77,7 +77,7 @@ public class SchoolService(
 
         if (user.Roles.Contains(Roles.SystemAdministrator))
         {
-            logger.LogError("Returning null for system administrator user {UserId}.", user.Id);
+            logger.LogDebug("System administrator user {UserId} does not have a specific school context - this is expected behavior.", user.Id);
             return null;
         }
 
@@ -110,7 +110,7 @@ public class SchoolService(
 
         if (userPrincipal.Identity is null || !userPrincipal.Identity.IsAuthenticated)
         {
-            logger.LogError("User is not authenticated.");
+            logger.LogDebug("User is not authenticated - this is normal during startup or for anonymous requests.");
             return null;
         }
 

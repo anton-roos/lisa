@@ -1,11 +1,12 @@
 using Lisa.Data;
+using Lisa.Interfaces;
 using Lisa.Models.Entities;
 using Lisa.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<LearnerService> logger)
+public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<LearnerService> logger) : ILearnerService
 {
     public async Task<int> GetCountAsync()
     {
@@ -418,30 +419,126 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
         return learners;
     }
 
-    public async Task<bool> DeleteLearnerAsync(Guid learnerId)
+    public async Task<bool> DisableLearnerAsync(Guid learnerId, string reason)
     {
         try
         {
             await using var context = await dbContextFactory.CreateDbContextAsync();
-            var learner = await context.Learners.FindAsync(learnerId);
+            var learner = await context.Learners
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(l => l.Id == learnerId);
 
             if (learner == null)
             {
-                logger.LogWarning("Attempted to delete non-existent learner {LearnerId}.", learnerId);
+                logger.LogWarning("Attempted to disable non-existent learner with ID: {LearnerId}", learnerId);
                 return false;
             }
 
-            context.Learners.Remove(learner);
-            await context.SaveChangesAsync();
-            logger.LogInformation("Deleted learner {LearnerId}.", learnerId);
+            if (learner.IsDisabled)
+            {
+                logger.LogWarning("Attempted to disable already disabled learner with ID: {LearnerId}", learnerId);
+                return false;
+            }
 
+            learner.IsDisabled = true;
+            learner.DisabledAt = DateTime.UtcNow;
+            learner.DisabledReason = reason;
+            learner.UpdatedAt = DateTime.UtcNow;
+
+            await context.SaveChangesAsync();
+            
+            logger.LogInformation("Successfully disabled learner with ID: {LearnerId}, Reason: {Reason}", learnerId, reason);
             return true;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error deleting learner.");
+            logger.LogError(ex, "Error disabling learner with ID: {LearnerId}", learnerId);
             return false;
         }
+    }
+
+    public async Task<bool> EnableLearnerAsync(Guid learnerId)
+    {
+        try
+        {
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+            var learner = await context.Learners
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(l => l.Id == learnerId);
+
+            if (learner == null)
+            {
+                logger.LogWarning("Attempted to enable non-existent learner with ID: {LearnerId}", learnerId);
+                return false;
+            }
+
+            if (!learner.IsDisabled)
+            {
+                logger.LogWarning("Attempted to enable already active learner with ID: {LearnerId}", learnerId);
+                return false;
+            }
+
+            learner.IsDisabled = false;
+            learner.DisabledAt = null;
+            learner.DisabledReason = null;
+            learner.UpdatedAt = DateTime.UtcNow;
+
+            await context.SaveChangesAsync();
+            
+            logger.LogInformation("Successfully enabled learner with ID: {LearnerId}", learnerId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error enabling learner with ID: {LearnerId}", learnerId);
+            return false;
+        }
+    }
+
+    public async Task<IEnumerable<Learner>> GetDisabledLearnersAsync()
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+        return await context.Learners
+            .IgnoreQueryFilters()
+            .Where(l => l.IsDisabled)
+            .Include(l => l.RegisterClass)
+            .ThenInclude(rc => rc!.SchoolGrade)
+            .ThenInclude(sg => sg!.SystemGrade)
+            .Include(l => l.School)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Learner>> GetAllLearnersIncludingDisabledAsync()
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+        return await context.Learners
+            .IgnoreQueryFilters()
+            .Include(l => l.RegisterClass)
+            .ThenInclude(rc => rc!.SchoolGrade)
+            .ThenInclude(sg => sg!.SystemGrade)
+            .Include(l => l.School)
+            .ToListAsync();
+    }
+
+    public async Task<Learner?> GetByIdIncludingDisabledAsync(Guid id)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+        return await context.Learners
+            .IgnoreQueryFilters()
+            .Include(l => l.RegisterClass)
+            .ThenInclude(rc => rc!.SchoolGrade)
+            .ThenInclude(sg => sg!.SystemGrade)
+            .Include(l => l.Combination)
+            .ThenInclude(c => c!.Subjects)
+            .Include(l => l.LearnerSubjects!)
+            .ThenInclude(ls => ls.Subject)
+            .Include(l => l.CareGroup)
+            .Include(l => l.Parents!)
+            .Include(l => l.School)
+            .Include(l => l.Results!)
+            .ThenInclude(r => r.ResultSet)
+            .ThenInclude(rs => rs!.Subject)
+            .FirstOrDefaultAsync(l => l.Id == id);
     }
 
     private static Guid? FindCombinationId(Dictionary<Guid, int> combinationSelections, int subjectId)

@@ -1,0 +1,166 @@
+trigger:
+- main
+
+stages:
+# ===== CI: Build & publish artifact =====
+- stage: Build
+  displayName: Build (.NET 10 preview)
+  jobs:
+  - job: BuildJob
+    pool: { name: Default }
+    variables:
+      solution: '**/*.sln'
+      buildConfiguration: 'Release'
+      NUGET_PACKAGES: 'C:\.nuget\packages'   # short path to avoid MAXPATH flakiness
+    steps:
+    - task: UseDotNet@2
+      displayName: 'Use .NET 10 preview SDK'
+      inputs:
+        version: '10.0.100-preview.6.25358.103'
+        includePreviewVersions: true
+    - powershell: dotnet --info
+
+    # Optional but helps if prior partial restores exist
+    - powershell: dotnet nuget locals all --clear
+      displayName: 'Clear dotnet nuget caches'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Restore'
+      inputs:
+        command: 'restore'
+        projects: '$(solution)'
+      env:
+        NUGET_PACKAGES: '$(NUGET_PACKAGES)'
+        DOTNET_ROLL_FORWARD_TO_PRERELEASE: '1'
+
+    # Use dotnet msbuild to generate WebDeploy package (same args you had)
+    - task: DotNetCoreCLI@2
+      displayName: 'Build & Package (msbuild)'
+      inputs:
+        command: 'custom'
+        custom: 'msbuild'
+        projects: '$(solution)'
+        arguments: >
+          /p:Configuration=$(buildConfiguration)
+          /p:DeployOnBuild=true
+          /p:WebPublishMethod=Package
+          /p:PackageAsSingleFile=true
+          /p:SkipInvalidConfigurations=true
+          /p:DesktopBuildPackageLocation="$(Build.ArtifactStagingDirectory)\WebApp.zip"
+          /p:DeployIisAppPath="Default Web Site"
+          /p:ExcludeFilesFromDeployment="appsettings.json"
+          /p:SatelliteResourceLanguages="en"
+          /p:PublishReadyToRun=false
+          /p:PublishSingleFile=false
+      env:
+        NUGET_PACKAGES: '$(NUGET_PACKAGES)'
+        DOTNET_ROLL_FORWARD_TO_PRERELEASE: '1'
+
+    # Tests (dotnet test works better with newer SDKs than VSTest)
+    - task: DotNetCoreCLI@2
+      displayName: 'Test'
+      inputs:
+        command: 'test'
+        projects: '$(solution)'
+        arguments: '-c $(buildConfiguration) --no-build'
+      env:
+        NUGET_PACKAGES: '$(NUGET_PACKAGES)'
+        DOTNET_ROLL_FORWARD_TO_PRERELEASE: '1'
+
+    - publish: '$(Build.ArtifactStagingDirectory)'
+      artifact: drop
+
+# ===== CD: SIT =====
+- stage: Deploy_SIT
+  displayName: Deploy to SIT
+  dependsOn: Build
+  jobs:
+  - deployment: DeployToSIT
+    environment: 'SIT'
+    pool: { name: Default }
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: drop
+          - template: deploy-iis-steps.yml
+            parameters:
+              siteName:  'sit.dceg.co.za'
+              appPool:   'sit.dceg.co.za'
+              hostHeader:      'sit.dceg.co.za'
+              physicalPath: 'C:\Sites\sit.dceg.co.za'
+
+# ===== Approve UAT =====
+- stage: Approve_UAT
+  displayName: "Approve UAT"
+  dependsOn: Deploy_SIT
+  jobs:
+  - job: WaitForApproval_UAT
+    pool: server
+    steps:
+    - task: ManualValidation@0
+      inputs:
+        instructions: 'Approve deploy to UAT'
+        notifyUsers: 'anton@dceg.co.za'
+        onTimeout: 'reject'
+      timeoutInMinutes: 1440
+
+# ===== CD: UAT =====
+- stage: Deploy_UAT
+  displayName: Deploy to UAT
+  dependsOn: Approve_UAT
+  condition: succeeded()
+  jobs:
+  - deployment: DeployToUAT
+    environment: 'UAT'
+    pool: { name: Default }
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: drop
+          - template: deploy-iis-steps.yml
+            parameters:
+              siteName:  'uat.dceg.co.za'
+              appPool:   'uat.dceg.co.za'
+              hostHeader:      'uat.dceg.co.za'
+              physicalPath: 'C:\Sites\uat.dceg.co.za'
+
+# ===== Approve Prod =====
+- stage: Approve_Prod
+  displayName: "Approve Prod"
+  dependsOn: Deploy_UAT
+  jobs:
+  - job: WaitForApproval_Prod
+    pool: server
+    steps:
+    - task: ManualValidation@0
+      inputs:
+        instructions: 'Approve deploy to Prod'
+        notifyUsers: 'anton@dceg.co.za'
+        onTimeout: 'reject'
+      timeoutInMinutes: 1440
+
+# ===== CD: Prod =====
+- stage: Deploy_Prod
+  displayName: Deploy to Prod
+  dependsOn: Approve_Prod
+  condition: succeeded()
+  jobs:
+  - deployment: DeployToProd
+    environment: 'Prod'
+    pool: { name: Default }
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: drop
+          - template: deploy-iis-steps.yml
+            parameters:
+              siteName:  'dceg.co.za'
+              appPool:   'dceg.co.za'
+              hostHeader:      'dceg.co.za'
+              physicalPath: 'C:\Sites\dceg.co.za'

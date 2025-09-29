@@ -16,6 +16,14 @@
         else
         {
             <div class="row mb-3">
+                <div class="col-12 col-md-2 mb-2">
+                    <label for="statusFilter" class="form-label">Status</label>
+                    <select id="statusFilter" class="form-select" @bind="SelectedStatus" @bind:after="OnStatusFilterChanged">
+                        <option value="Active">Active Only</option>
+                        <option value="Disabled">Disabled Only</option>
+                        <option value="All">All Learners</option>
+                    </select>
+                </div>
                 <div class="col-12 col-md-3 mb-2">
                     <label for="gradeFilter" class="form-label">Filter by Grade</label>
                     <select id="gradeFilter" class="form-select" @bind="SelectedGradeId">
@@ -33,12 +41,12 @@
                     <label for="nameSearch" class="form-label">Search by Name</label>
                     <input id="nameSearch" type="text" class="form-control" @oninput="OnSearchTermChanged" @bind="SearchTerm" placeholder="Type name..." />
                 </div>
-                <div class="col-12 col-md-3 mb-2 d-flex align-items-end">
+                <div class="col-12 col-md-2 mb-2 d-flex align-items-end">
                     <button class="btn btn-secondary" @onclick="ToggleSort">
                         Sort by: @(_sortByLastName ? "First Name" : "Last Name")
                     </button>
                 </div>
-                <div class="col-12 col-md-3 mb-2 d-flex align-items-end justify-content-md-end">
+                <div class="col-12 col-md-2 mb-2 d-flex align-items-end justify-content-md-end">
                     <button class="btn btn-primary" @onclick="AddLearner">Add Learner</button>
                 </div>
             </div>
@@ -49,8 +57,18 @@
                 @foreach (var learner in SortedLearners)
                 {
                     <div class="col-12 mb-3">
-                        <div class="card shadow-sm h-100">
-                            <div class="card-body">
+                        <div class="card shadow-sm h-100 @(learner.IsDisabled ? "border-danger" : "")">
+                            @if (learner.IsDisabled)
+                            {
+                                <div class="card-header bg-danger text-white py-1">
+                                    <small><i class="fas fa-ban me-1"></i>DISABLED - @(learner.DisabledAt?.ToString("yyyy-MM-dd") ?? "Unknown Date")</small>
+                                    @if (!string.IsNullOrEmpty(learner.DisabledReason))
+                                    {
+                                        <br><small>Reason: @learner.DisabledReason</small>
+                                    }
+                                </div>
+                            }
+                            <div class="card-body @(learner.IsDisabled ? "text-muted" : "")">
                                 <div class="row">
                                     <div class="col-sm-8">
                                         <h5 class="card-title mb-1">@learner.Surname, @learner.Name</h5>
@@ -118,14 +136,24 @@
                                             @onclick="() => ViewLearner(learner)">
                                         View
                                     </button>
-                                    <button class="btn btn-sm btn-outline-secondary ms-2" 
-                                            @onclick="() => EditLearner(learner)">
-                                        Edit
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger ms-2" 
-                                            @onclick="() => DeleteLearner(learner)">
-                                        Delete
-                                    </button>
+                                    @if (!learner.IsDisabled)
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary ms-2" 
+                                                @onclick="() => EditLearner(learner)">
+                                            Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger ms-2" 
+                                                @onclick="() => DisableLearner(learner)">
+                                            Disable
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-success ms-2" 
+                                                @onclick="() => EnableLearner(learner)">
+                                            Enable
+                                        </button>
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -159,6 +187,7 @@
 
     private string? SelectedGradeId { get; set; }
     private string? SearchTerm { get; set; }
+    private string SelectedStatus { get; set; } = "Active";
     private List<SchoolGrade>? AvailableGrades { get; set; }
 
     protected override async Task OnInitializedAsync()
@@ -183,7 +212,9 @@
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         if (_selectedSchool?.Id != null)
         {
-            _learners = await LearnerService.GetBySchoolAsync(_selectedSchool.Id);
+            // Get all learners including disabled ones to allow filtering
+            var allLearners = await LearnerService.GetAllLearnersIncludingDisabledAsync();
+            _learners = allLearners.Where(l => l.SchoolId == _selectedSchool.Id).ToList();
             _learners.ForEach(l => l.LearnerSubjects = l.LearnerSubjects?.OrderBy(ls => ls.Subject.Order).ToList());
 
             AvailableGrades = _learners
@@ -202,6 +233,15 @@
     private IEnumerable<Learner> ApplyFilters()
     {
         var query = _learners.AsEnumerable();
+
+        // Apply status filter
+        query = SelectedStatus switch
+        {
+            "Active" => query.Where(l => !l.IsDisabled),
+            "Disabled" => query.Where(l => l.IsDisabled),
+            "All" => query,
+            _ => query.Where(l => !l.IsDisabled) // Default to active only
+        };
 
         if (!string.IsNullOrEmpty(SelectedGradeId))
         {
@@ -229,6 +269,11 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private async Task OnStatusFilterChanged()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
     private void EditLearner(Learner learner)
     {
         NavigationManager.NavigateTo($"/learners/manage/{learner.Id}");
@@ -244,9 +289,17 @@
         NavigationManager.NavigateTo("/learners/manage");
     }
 
-    private async Task DeleteLearner(Learner learner)
+    private async Task DisableLearner(Learner learner)
     {
-        await LearnerService.DeleteLearnerAsync(learner.Id);
+        var reason = $"Learner disabled from UI on {DateTime.Now:yyyy-MM-dd HH:mm}";
+        await LearnerService.DisableLearnerAsync(learner.Id, reason);
+        await LoadLearners();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task EnableLearner(Learner learner)
+    {
+        await LearnerService.EnableLearnerAsync(learner.Id);
         await LoadLearners();
         await InvokeAsync(StateHasChanged);
     }

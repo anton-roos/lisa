@@ -2,6 +2,7 @@
 @using Lisa.Models.Entities
 @inject SchoolService SchoolService
 @inject NavigationManager NavigationManager
+@inject IDialogService DialogService
 
 <PageTitle>Confirm School Delete</PageTitle>
 <h2>Confirm School Delete</h2>
@@ -12,7 +13,7 @@
         {
             <div class="alert alert-warning">
                 <p>
-                    <Icon Name="IconName.ExclamationDiamondFill"></Icon>
+                    <MudIcon Icon="Icons.Material.Filled.Warning" Color="Color.Warning" Class="me-2" />
                     Are you sure you want to delete the school
                     <strong>@School.ShortName</strong>?
                 </p>
@@ -58,22 +59,11 @@
     </NotAuthorized>
 </AuthorizeView>
 
-<Modal @ref="_errorModal" Title="Info">
-    <BodyTemplate>
-        You can't delete this school because of the following:
-        @_exception.Message
-    </BodyTemplate>
-    <FooterTemplate>
-        <Button Color="ButtonColor.Primary" @onclick="CloseErrorModal">Ok</Button>
-    </FooterTemplate>
-</Modal>
-
 
 @code
 {
     [Parameter] public Guid? Id { get; set; }
     private School? School { get; set; }
-    private Modal _errorModal = null!;
     private Exception _exception = new();
 
     protected override async Task OnInitializedAsync()
@@ -103,13 +93,24 @@
             catch (Exception ex)
             {
                 _exception = ex;
-                await _errorModal.ShowAsync();
+                await ShowErrorDialog();
             }
         }
     }
 
-    private async Task CloseErrorModal()
+    private async Task ShowErrorDialog()
     {
-        await _errorModal.HideAsync();
+        var options = new DialogOptions()
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+
+        await DialogService.ShowMessageBox(
+            title: "Error",
+            message: $"You can't delete this school because of the following: {_exception.Message}",
+            yesText: "Ok",
+            options: options);
     }
 }

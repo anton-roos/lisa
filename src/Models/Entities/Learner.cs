@@ -54,6 +54,12 @@ public class Learner
     public string? DietaryRequirements { get; set; }
     public MedicalTransport MedicalTransport { get; set; }
     public Gender Gender { get; set; }
+    
+    // Soft delete properties
+    public bool IsDisabled { get; set; } = false;
+    public DateTime? DisabledAt { get; set; }
+    [MaxLength(500)]
+    public string? DisabledReason { get; set; }
 }
 
 public enum MedicalTransport

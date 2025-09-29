@@ -1,4 +1,3 @@
-using Lisa.Repositories;
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -29,11 +28,7 @@ public class EventBus(IServiceProvider serviceProvider) : IEventBus
         try
         {
             using var scope = serviceProvider.CreateScope();
-            var eventLogRepository = scope.ServiceProvider.GetRequiredService<IEventLogRepository>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<EventBus>>();
-
-            await eventLogRepository.LogEventAsync(eventType, eventData);
-            logger.LogInformation("Event published: {EventType}", eventType);
 
             if (_handlers.TryGetValue(typeof(TEvent), out var handlers))
             {

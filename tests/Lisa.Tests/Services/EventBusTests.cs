@@ -1,5 +1,4 @@
 using Lisa.Tests.Helpers;
-using Lisa.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Lisa.Tests.Services;
@@ -8,7 +7,6 @@ public class EventBusTests : TestBase
 {
     private readonly Mock<IServiceProvider> _mockServiceProvider;
     private readonly Mock<IServiceScope> _mockScope;
-    private readonly Mock<IEventLogRepository> _mockEventLogRepository;
     private readonly FakeLogger<EventBus> _fakeEventBusLogger;
     private readonly EventBus _eventBus;
 
@@ -18,7 +16,6 @@ public class EventBusTests : TestBase
         var mockScopeFactory = new Mock<IServiceScopeFactory>();
         _mockScope = new Mock<IServiceScope>();
         _mockServiceProvider = new Mock<IServiceProvider>();
-        _mockEventLogRepository = new Mock<IEventLogRepository>();
         _fakeEventBusLogger = new FakeLogger<EventBus>();
 
         // Setup the scope factory to return our mock scope
@@ -28,8 +25,6 @@ public class EventBusTests : TestBase
         _mockScope.Setup(s => s.ServiceProvider).Returns(_mockServiceProvider.Object);
         
         // Setup the scoped service provider to return required services
-        _mockServiceProvider.Setup(p => p.GetService(typeof(IEventLogRepository)))
-            .Returns(_mockEventLogRepository.Object);
         _mockServiceProvider.Setup(p => p.GetService(typeof(ILogger<EventBus>)))
             .Returns(_fakeEventBusLogger);
 
@@ -63,9 +58,6 @@ public class EventBusTests : TestBase
         // Arrange
         var testEvent = new TestEvent { Message = "Test", Id = Guid.NewGuid() };
         
-        _mockEventLogRepository.Setup(r => r.LogEventAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .ThrowsAsync(new Exception("Database error"));
-
         // Act & Assert
         var exception = await Record.ExceptionAsync(() => _eventBus.PublishAsync(testEvent));
         

@@ -4,16 +4,12 @@ using Lisa.Components;
 using Lisa.Data;
 using Lisa.Middleware;
 using Lisa.Models.Entities;
-using Lisa.Repositories;
 using Lisa.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using MudBlazor.Services;
 using Serilog;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,58 +28,12 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-builder.Logging.AddSentry(options =>
-{
-    options.Dsn = builder.Configuration["Sentry:Dsn"];
-    options.MinimumBreadcrumbLevel = LogLevel.Information;
-    options.MinimumEventLevel = LogLevel.Error;
-    options.Debug = !builder.Environment.IsProduction();
-    options.TracesSampleRate = 1.0;
-});
-
 builder.Services.AddRazorComponents(options =>
         options.DetailedErrors = builder.Environment.IsDevelopment())
     .AddInteractiveServerComponents();
 
 builder.Services.AddDbContextFactory<LisaDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Lisa")));
-
-builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey =
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? string.Empty))
-        };
-
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                var accessToken = context.Request.Query["access_token"];
-
-                var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hub"))
-                {
-                    context.Token = accessToken;
-                }
-
-                return Task.CompletedTask;
-            }
-        };
-    });
-
 
 builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
     {
@@ -105,7 +55,6 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
     .AddDefaultTokenProviders();
 
 builder.Services.AddHostedService<BackgroundJobService>();
-builder.Services.AddScoped<BackgroundJobService>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -136,10 +85,7 @@ builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<DailyRegisterService>();
 builder.Services.AddScoped<AcademicDevelopmentClassService>();
 builder.Services.AddScoped<ProtectedSessionStorage>();
-builder.Services.AddScoped<IEventLogRepository, EventLogRepository>();
-builder.Services.AddSingleton<ILoginStore, InMemoryLoginStore>();
 builder.Services.AddScoped<SystemGradeService>();
-builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<EmailCampaignService>();
 builder.Services.AddScoped<ProgressFeedbackService>();
@@ -149,9 +95,12 @@ builder.Services.AddScoped<AttendanceRecordService>();
 builder.Services.AddScoped<TemplateRenderService>();
 builder.Services.AddScoped<LeaveEarlyService>();
 
+// Security
+builder.Services.AddSingleton<ILoginStore, InMemoryLoginStore>();
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorBootstrap();
-builder.Services.AddControllers();
 builder.Services.AddMudServices();
 
 var app = builder.Build();

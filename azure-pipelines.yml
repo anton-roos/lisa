@@ -21,7 +21,12 @@ stages:
     - powershell: dotnet --info
 
     # Optional but helps if prior partial restores exist
-    - powershell: dotnet nuget locals all --clear
+    - powershell: |
+        try {
+          dotnet nuget locals all --clear
+        } catch {
+          Write-Host "NuGet cache clear failed, continuing."
+        }
       displayName: 'Clear dotnet nuget caches'
 
     - task: DotNetCoreCLI@2
@@ -102,7 +107,7 @@ stages:
     - task: ManualValidation@0
       inputs:
         instructions: 'Approve deploy to UAT'
-        notifyUsers: 'anton@dceg.co.za'
+        notifyUsers: 'antonr@dcegroup.co.za'
         onTimeout: 'reject'
       timeoutInMinutes: 1440
 
@@ -139,7 +144,7 @@ stages:
     - task: ManualValidation@0
       inputs:
         instructions: 'Approve deploy to Prod'
-        notifyUsers: 'anton@dceg.co.za'
+        notifyUsers: 'antonr@dcegroup.co.za'
         onTimeout: 'reject'
       timeoutInMinutes: 1440
 

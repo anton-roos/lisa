@@ -91,11 +91,7 @@ public class SchoolService(
         _selectedSchool = await context.Schools
             .AsNoTracking().Include(school => school.Learners)
             .FirstOrDefaultAsync(s => s.Id == user.SchoolId);
-        Guard.Against.Null(_selectedSchool, nameof(_selectedSchool),
-        $"School not found for non-system administrator user {user.Id} with SchoolId: {user.SchoolId}. " +
-        "Non-system administrator user must have a valid associated school.");
-
-        logger.LogInformation("Main return returned school as {school} ", _selectedSchool.Learners);
+        
         return _selectedSchool;
     }
 

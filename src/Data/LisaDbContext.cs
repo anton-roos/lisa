@@ -10,8 +10,7 @@ public class LisaDbContext
 (
     DbContextOptions<LisaDbContext> options,
     ILogger<LisaDbContext> logger
-)
-    : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options)
+) : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options)
 {
     public DbSet<School> Schools { get; set; } = null!;
     public DbSet<SchoolType> SchoolTypes { get; set; } = null!;

@@ -6,18 +6,18 @@ using System.Net.Sockets;
 
 namespace Lisa.Services;
 
-public class EmailService(SchoolService schoolService, ILogger<EmailService> logger) : IEmailService
+public class EmailService
+(
+    SchoolService schoolService,
+    ILogger<EmailService> logger
+) : IEmailService
 {
-    private readonly SchoolService _schoolService = Guard.Against.Null(schoolService, nameof(schoolService));
-    private readonly ILogger<EmailService> _logger = Guard.Against.Null(logger, nameof(logger));
     private const int DefaultRetryCount = 3;
     private const int DefaultRetryDelayMs = 2000;
     private const int DefaultTimeoutMs = 60000;
 
     public async Task SendEmailAsync(string to, string subject, string body, Guid schoolId)
     {
-        Guard.Against.NullOrEmpty(to, nameof(to), "Email recipient address cannot be empty");
-        Guard.Against.Null(schoolId, nameof(schoolId));
 
         var retryCount = 0;
         Exception? lastException = null;
@@ -26,13 +26,15 @@ public class EmailService(SchoolService schoolService, ILogger<EmailService> log
         {
             try
             {
-                var school = await _schoolService.GetSchoolAsync(schoolId);
-                Guard.Against.Null(school, nameof(school), $"School with ID {schoolId} not found");
+                var school = await schoolService.GetSchoolAsync(schoolId);
+
+                if (school is null)
+                    return;
 
                 using var smtpClient = CreateSmtpClient(school);
                 using var mailMessage = CreateMailMessage(to, subject, body, school);
 
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Attempt {RetryCount}: Sending email from {Sender} ({SenderName}) to {Recipient} with subject '{Subject}' using SMTP server {SmtpHost}:{SmtpPort}",
                     retryCount + 1,
                     mailMessage.From!.Address,
@@ -45,34 +47,34 @@ public class EmailService(SchoolService schoolService, ILogger<EmailService> log
                 using var cts = new CancellationTokenSource(DefaultTimeoutMs);
                 await smtpClient.SendMailAsync(mailMessage, cts.Token);
 
-                _logger.LogInformation("Email sent successfully to {Recipient}", to);
+                logger.LogInformation("Email sent successfully to {Recipient}", to);
                 return;
             }
             catch (OperationCanceledException ex)
             {
                 lastException = ex;
-                _logger.LogWarning(ex, "Email sending timed out on attempt {RetryCount} to {Recipient}: {Message}",
+                logger.LogWarning(ex, "Email sending timed out on attempt {RetryCount} to {Recipient}: {Message}",
                     retryCount + 1, to, ex.Message);
             }
             catch (SmtpException ex) when (IsTransientSmtpError(ex))
             {
                 lastException = ex;
-                _logger.LogWarning(ex, "Transient SMTP error on attempt {RetryCount} sending email to {Recipient}: {Message}",
+                logger.LogWarning(ex, "Transient SMTP error on attempt {RetryCount} sending email to {Recipient}: {Message}",
                     retryCount + 1, to, ex.Message);
             }
             catch (SmtpException ex)
             {
-                _logger.LogError(ex, "Non-transient SMTP error sending email to {Recipient}: {Message}", to, ex.Message);
+                logger.LogError(ex, "Non-transient SMTP error sending email to {Recipient}: {Message}", to, ex.Message);
                 throw new EmailSendException($"Failed to send email: {ex.Message}", ex);
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogError(ex, "Invalid SMTP configuration for email to {Recipient}: {Message}", to, ex.Message);
+                logger.LogError(ex, "Invalid SMTP configuration for email to {Recipient}: {Message}", to, ex.Message);
                 throw new EmailConfigurationException($"Email configuration error: {ex.Message}", ex);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error sending email to {Recipient}: {Message}", to, ex.Message);
+                logger.LogError(ex, "Unexpected error sending email to {Recipient}: {Message}", to, ex.Message);
                 throw new EmailSendException($"Unexpected error sending email: {ex.Message}", ex);
             }
 
@@ -83,15 +85,13 @@ public class EmailService(SchoolService schoolService, ILogger<EmailService> log
             }
         }
 
-        _logger.LogError(lastException, "Failed to send email to {Recipient} after {RetryCount} attempts",
+        logger.LogError(lastException, "Failed to send email to {Recipient} after {RetryCount} attempts",
             to, DefaultRetryCount);
         throw new EmailSendException($"Failed to send email after {DefaultRetryCount} attempts: {lastException?.Message}", lastException);
     }
 
     private SmtpClient CreateSmtpClient(School school)
     {
-        Guard.Against.Null(school, nameof(school));
-
         var smtpClient = new SmtpClient
         {
             Host = school.SmtpHost ?? "smtp.office365.com",
@@ -106,25 +106,15 @@ public class EmailService(SchoolService schoolService, ILogger<EmailService> log
             ? school.SmtpUsername
             : school.SmtpEmail;
 
-        Guard.Against.NullOrEmpty(username, nameof(username),
-            "SMTP username/email not configured for this school");
-        Guard.Against.NullOrEmpty(school.SmtpPassword, nameof(school.SmtpPassword),
-            "SMTP password not configured for this school");
-
         smtpClient.Credentials = new NetworkCredential(username, school.SmtpPassword);
         return smtpClient;
     }
 
     private MailMessage CreateMailMessage(string to, string subject, string body, School school)
     {
-        Guard.Against.Null(school, nameof(school));
-
         var fromEmailAddress = !string.IsNullOrEmpty(school.FromEmail)
             ? school.FromEmail
             : school.SmtpEmail;
-
-        Guard.Against.NullOrEmpty(fromEmailAddress, nameof(fromEmailAddress),
-            $"No from email address configured for school {school.Id}");
 
         var senderName = !string.IsNullOrEmpty(school.LongName)
             ? school.LongName
@@ -132,7 +122,7 @@ public class EmailService(SchoolService schoolService, ILogger<EmailService> log
 
         var mailMessage = new MailMessage
         {
-            From = new MailAddress(fromEmailAddress, senderName),
+            From = new MailAddress(fromEmailAddress ?? string.Empty, senderName),
             Subject = subject,
             Body = body,
             IsBodyHtml = true,

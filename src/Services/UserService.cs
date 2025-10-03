@@ -107,8 +107,6 @@ public class UserService(
 
     public async Task<User?> GetTeacherForGradeAndSubjectAsync(Guid? schoolId, Guid gradeId, int subjectId)
     {
-        Guard.Against.Default(gradeId, nameof(gradeId), "Grade ID cannot be an empty GUID");
-
         try
         {
             await using var context = await dbContextFactory.CreateDbContextAsync();
@@ -147,8 +145,6 @@ public class UserService(
                 return;
             }
 
-            Guard.Against.Null(user, nameof(user));
-
             existing.SchoolId = user.SchoolId;
 
             await context.SaveChangesAsync();
@@ -162,8 +158,6 @@ public class UserService(
 
     public async Task<bool> UpdateAsync(UserViewModel user, string? newPassword)
     {
-        Guard.Against.Null(user, nameof(user));
-
         try
         {
             await using var context = await dbContextFactory.CreateDbContextAsync();
@@ -172,7 +166,7 @@ public class UserService(
                 .Include(t => t.Subjects)
                 .FirstOrDefaultAsync(t => t.Id == user.Id);
 
-            if (existing == null)
+            if (existing is null)
             {
                 logger.LogWarning("Attempted to update non-existent teacher. TeacherId: {TeacherId}", user.Id);
                 return false;
@@ -207,23 +201,20 @@ public class UserService(
 
             if (!string.IsNullOrWhiteSpace(newPassword))
             {
-                Guard.Against.Null(existing, nameof(existing), "User cannot be null when updating password");
-                existing.PasswordHash = passwordHasher.HashPassword(existing, newPassword);
+                existing!.PasswordHash = passwordHasher.HashPassword(existing, newPassword);
                 logger.LogInformation("Updated password for teacher: {TeacherId}", user.Id);
             }
 
             await context.SaveChangesAsync();
 
-            Guard.Against.Null(existing, nameof(existing), $"User no longer exists after save. UserId: {user.Id}");
-
-            var currentRoles = await userManager.GetRolesAsync(existing);
+            var currentRoles = await userManager.GetRolesAsync(existing!);
 
             var rolesToAdd = user.SelectedRoles.Except(currentRoles).ToArray();
             var rolesToRemove = currentRoles.Except(user.SelectedRoles).ToArray();
 
             if (rolesToRemove.Length != 0)
             {
-                var removeResult = await userManager.RemoveFromRolesAsync(existing, rolesToRemove);
+                var removeResult = await userManager.RemoveFromRolesAsync(existing!, rolesToRemove);
                 if (!removeResult.Succeeded)
                 {
                     var errorMessage = string.Join(", ", removeResult.Errors.Select(e => e.Description));
@@ -234,7 +225,7 @@ public class UserService(
 
             if (rolesToAdd.Length != 0)
             {
-                var addResult = await userManager.AddToRolesAsync(existing, rolesToAdd);
+                var addResult = await userManager.AddToRolesAsync(existing!, rolesToAdd);
                 if (!addResult.Succeeded)
                 {
                     var errorMessage = string.Join(", ", addResult.Errors.Select(e => e.Description));
@@ -256,8 +247,6 @@ public class UserService(
 
     public async Task<bool> DeleteAsync(Guid id)
     {
-        Guard.Against.Default(id, nameof(id), "User ID cannot be an empty GUID");
-
         try
         {
             await using var context = await dbContextFactory.CreateDbContextAsync();
@@ -305,8 +294,6 @@ public class UserService(
 
     public async Task<List<User>> GetAvailableTeachersAsync(Guid userId)
     {
-        Guard.Against.Default(userId, nameof(userId), "User ID cannot be an empty GUID");
-
         try
         {
             await using var context = await dbContextFactory.CreateDbContextAsync();
@@ -332,9 +319,6 @@ public class UserService(
 
     public async Task<bool> TransferRegisterClassesAsync(Guid oldUserId, Guid newUserId)
     {
-        Guard.Against.Default(oldUserId, nameof(oldUserId), "Old user ID cannot be an empty GUID");
-        Guard.Against.Default(newUserId, nameof(newUserId), "New user ID cannot be an empty GUID");
-
         try
         {
             await using var context = await dbContextFactory.CreateDbContextAsync();
@@ -366,8 +350,6 @@ public class UserService(
 
     public async Task<List<User>?> GetLearnerPrincipal(Guid learnerId)
     {
-        Guard.Against.Default(learnerId, nameof(learnerId), "Learner ID cannot be an empty GUID");
-
         try
         {
             await using var context = await dbContextFactory.CreateDbContextAsync();

@@ -6,7 +6,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<LearnerService> logger) : ILearnerService
+public class LearnerService
+(
+    IDbContextFactory<LisaDbContext> dbContextFactory,
+    ILogger<LearnerService> logger
+) : ILearnerService
 {
     public async Task<int> GetCountAsync()
     {
@@ -446,7 +450,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             learner.UpdatedAt = DateTime.UtcNow;
 
             await context.SaveChangesAsync();
-            
+
             logger.LogInformation("Successfully disabled learner with ID: {LearnerId}, Reason: {Reason}", learnerId, reason);
             return true;
         }
@@ -484,7 +488,7 @@ public class LearnerService(IDbContextFactory<LisaDbContext> dbContextFactory, I
             learner.UpdatedAt = DateTime.UtcNow;
 
             await context.SaveChangesAsync();
-            
+
             logger.LogInformation("Successfully enabled learner with ID: {LearnerId}", learnerId);
             return true;
         }

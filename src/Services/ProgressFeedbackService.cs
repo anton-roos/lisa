@@ -16,7 +16,10 @@ public class ProgressFeedbackService
     {
         var learner = await learnerService.GetByIdAsync(learnerId, activeOnly: true);
 
-        Guard.Against.Null(learner, nameof(learner), "Learner not found or inactive in get progress feedback.");
+        if (learner is null)
+        {
+            return null;
+        }
 
         var resultsBySubject = new Dictionary<string, List<Result>>();
 

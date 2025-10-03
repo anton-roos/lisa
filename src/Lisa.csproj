@@ -38,7 +38,6 @@
   </ItemGroup>
 
   <ItemGroup>    
-    <PackageReference Include="Ardalis.GuardClauses" Version="5.0.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="DinkToPdf" Version="1.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0-preview.6.25358.103" />
@@ -61,10 +60,6 @@
     <EmbeddedResource Include="Templates\_ProgressFeedback.cshtml" />
     <EmbeddedResource Include="Templates\_TestEmail.cshtml" />
     <EmbeddedResource Include="Templates\_ProgressFeedbackTemplate.cshtml" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Using Include="Ardalis.GuardClauses" />
   </ItemGroup>
 
 </Project>

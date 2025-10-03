@@ -25,8 +25,6 @@ public class EmailCampaignService
     private const int ProgressComplete = 100;
     private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled); public async Task<EmailCampaign> CreateAsync(CommunicationCommand command)
     {
-        Guard.Against.Null(command, nameof(command));
-
         await using var context = await contextFactory.CreateDbContextAsync();
         await using var transaction = await context.Database.BeginTransactionAsync();
         try
@@ -523,8 +521,6 @@ public class EmailCampaignService
     }
     private bool ValidateCampaign(EmailCampaign campaign)
     {
-        Guard.Against.Null(campaign, nameof(campaign));
-
         if (string.IsNullOrWhiteSpace(campaign.Name))
         {
             logger.LogWarning("Campaign {CampaignId} has an invalid name.", campaign.Id);

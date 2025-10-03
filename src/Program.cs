@@ -15,7 +15,6 @@ using MudBlazor.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Logging.AddSeq();
-        options.DetailedErrors = builder.Environment.IsDevelopment())
 
 builder.Services.AddDbContextFactory<LisaDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Lisa")));

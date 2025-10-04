@@ -89,6 +89,8 @@ stages:
               appPool:   'sit.dceg.co.za'
               hostHeader:      'sit.dceg.co.za'
               physicalPath: 'C:\Sites\sit.dceg.co.za'
+              deployTarget: 'sit-server.dceg.co.za'
+              deployUser: 'dcegroup\svc-deploy'
 
 # ===== Approve UAT =====
 - stage: Approve_UAT
@@ -126,6 +128,8 @@ stages:
               appPool:   'uat.dceg.co.za'
               hostHeader:      'uat.dceg.co.za'
               physicalPath: 'C:\Sites\uat.dceg.co.za'
+              deployTarget: 'uat-server.dceg.co.za'
+              deployUser: 'dcegroup\svc-deploy'
 
 # ===== Approve Prod =====
 - stage: Approve_Prod
@@ -163,3 +167,5 @@ stages:
               appPool:   'dceg.co.za'
               hostHeader:      'dceg.co.za'
               physicalPath: 'C:\Sites\dceg.co.za'
+              deployTarget: 'prod-server.dceg.co.za'
+              deployUser: 'dcegroup\svc-deploy'

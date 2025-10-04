@@ -60,6 +60,14 @@ stages:
       env:
         NUGET_PACKAGES: '$(NUGET_PACKAGES)'
         DOTNET_ROLL_FORWARD_TO_PRERELEASE: '1'
+    
+    # Publish the package/artifacts so downstream deployment stages can download them
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish artifact: drop'
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)'
+        artifact: 'drop'
+        publishLocation: 'pipeline'
 
 # ===== CD: SIT =====
 - stage: Deploy_SIT

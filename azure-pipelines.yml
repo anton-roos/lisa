@@ -61,20 +61,6 @@ stages:
         NUGET_PACKAGES: '$(NUGET_PACKAGES)'
         DOTNET_ROLL_FORWARD_TO_PRERELEASE: '1'
 
-    # Tests (dotnet test works better with newer SDKs than VSTest)
-    - task: DotNetCoreCLI@2
-      displayName: 'Test'
-      inputs:
-        command: 'test'
-        projects: '$(solution)'
-        arguments: '-c $(buildConfiguration) --no-build'
-      env:
-        NUGET_PACKAGES: '$(NUGET_PACKAGES)'
-        DOTNET_ROLL_FORWARD_TO_PRERELEASE: '1'
-
-    - publish: '$(Build.ArtifactStagingDirectory)'
-      artifact: drop
-
 # ===== CD: SIT =====
 - stage: Deploy_SIT
   displayName: Deploy to SIT

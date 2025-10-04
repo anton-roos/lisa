@@ -8,27 +8,26 @@
  - Teacher
  - GateOfficer
 
-Roles per Page:
-Home – All
-Schools – SA
-Care Groups – SA, Principal
-Staff – SA, Principal
-Grades – SA, Principal
-Register Class – SA, Principal
-Subjects – SA
-Assessment Types – SA
-Sign in / out -  SA, GateOfficer
-Daily Attendance – SA, Principal, SchoolManagement, Administrator, Teacher
-Leave Early – SA, Principal, Administrator
-Combinations – SA, Principal
-Learners – SA, Principal, SchoolManagement, Administrator
-Class Lists – SA, Principal, SchoolManagement, Administrator, Teacher
-Capture Results – SA, Principal, SchoolManagement, Administrator, Teacher
-Results – SA, Principal, SchoolManagement, Administrator, Teacher
-Progress Feedback – SA, Principal, SchoolManagement, Administrator, Teacher
-Communication – SA, Principal, SchoolManagement
-Email Campaigns – SA, Principal, SchoolManagement
-
+## Roles per Page
+ - Home – All users
+ - Schools – System Administrator (SA)
+ - Care Groups – SA, Principal
+ - Staff – SA, Principal
+ - Grades – SA, Principal
+ - Register Class – SA, Principal
+ - Subjects – SA
+ - Assessment Types – SA
+ - Sign in / Sign out – SA, Gate Officer
+ - Daily Attendance – SA, Principal, School Management, Administrator, Teacher
+ - Leave Early – SA, Principal, Administrator
+ - Combinations – SA, Principal
+ - Learners – SA, Principal, School Management, Administrator
+ - Class Lists – SA, Principal, School Management, Administrator, Teacher
+ - Capture Results – SA, Principal, School Management, Administrator, Teacher
+ - Results – SA, Principal, School Management, Administrator, Teacher
+ - Progress Feedback – SA, Principal, School Management, Administrator, Teacher
+ - Communication – SA, Principal, School Management
+ - Email Campaigns – SA, Principal, School Management
 
 ## User Type Privileges
 ### Super Admin
@@ -67,10 +66,9 @@ Email Campaigns – SA, Principal, SchoolManagement
  - Can manage period attendance
 
 # Workflow
- 1. Seed the Database (Roles, Admin User, School Types)
- 1. Setup the System Administrator (When app runs with DB Seed)
- 2. Setup the School
- 
+ 1. Seed the database (roles, admin user, school types).
+ 2. Set up the System Administrator account (the app will seed data on first run if configured).
+ 3. Set up the school(s).
 
 ## SchoolGrade
 Link to School with OnDelete.Cascade → if a School is deleted, all related Grades are deleted.
@@ -118,28 +116,6 @@ The system checks that StartTime is less than EndTime.
 
 ## Result
 A Result is a record. If we delete a Learner or a Subject, nothing automatically happens to Results. We need to decide the policy for Results when a Learner is deleted because Result records reference the Learner; if the Learner is deleted we will no longer be able to tell whose result it was.
-
-Roles per page:
- - Home – All users
- - Schools – System Administrator (SA)
- - Care Groups – SA, Principal
- - Staff – SA, Principal
- - Grades – SA, Principal
- - Register Class – SA, Principal
- - Subjects – SA
- - Assessment Types – SA
- - Sign in / Sign out – SA, Gate Officer
- - Daily Attendance – SA, Principal, School Management, Administrator, Teacher
- - Leave Early – SA, Principal, Administrator
- - Combinations – SA, Principal
- - Learners – SA, Principal, School Management, Administrator
- - Class Lists – SA, Principal, School Management, Administrator, Teacher
- - Capture Results – SA, Principal, School Management, Administrator, Teacher
- - Results – SA, Principal, School Management, Administrator, Teacher
- - Progress Feedback – SA, Principal, School Management, Administrator, Teacher
- - Communication – SA, Principal, School Management
- - Email Campaigns – SA, Principal, School Management
-
 
 ## User Type Privileges
 ### Super Admin

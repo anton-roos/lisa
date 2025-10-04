@@ -5,8 +5,6 @@ VisualStudioVersion = 17.5.002.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lisa", "src\Lisa.csproj", "{08CBB9A8-78C2-47D9-9F5D-56D086DACDFA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lisa.Tests", "tests\Lisa.Tests\Lisa.Tests.csproj", "{9A5A5E72-3D9B-4F8E-8B3C-1E2F3A4B5C6D}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,10 +15,6 @@ Global
 		{08CBB9A8-78C2-47D9-9F5D-56D086DACDFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{08CBB9A8-78C2-47D9-9F5D-56D086DACDFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{08CBB9A8-78C2-47D9-9F5D-56D086DACDFA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9A5A5E72-3D9B-4F8E-8B3C-1E2F3A4B5C6D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9A5A5E72-3D9B-4F8E-8B3C-1E2F3A4B5C6D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9A5A5E72-3D9B-4F8E-8B3C-1E2F3A4B5C6D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9A5A5E72-3D9B-4F8E-8B3C-1E2F3A4B5C6D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

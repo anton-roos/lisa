@@ -80,7 +80,7 @@ steps:
     # Build setParam as ONE argument token
     $setParam = "-setParam:name=`"IIS Web Application Name`",value=`"$siteName`""
 
-    # Optional: show exactly what we’ll pass
+    # Optional: show exactly what we'll pass
     Write-Host "msdeploy args:"
     Write-Host "  -verb:sync"
     Write-Host "  -source:package=$pkg"

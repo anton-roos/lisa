@@ -1,25 +1,10 @@
-# deploy-iis-steps.yml
 parameters:
   siteName: ''
   appPool: ''
-  hostHeader: ''          # renamed from "host"
+  hostHeader: '' 
   packagePath: '$(Pipeline.Workspace)\drop\WebApp.zip'
   physicalPath: ''
   httpPort: 80
-  # deploy-iis-steps.yml
-  parameters:
-    siteName: ''
-    appPool: ''
-    hostHeader: ''          # renamed from "host"
-    packagePath: '$(Pipeline.Workspace)\drop\WebApp.zip'
-    physicalPath: ''
-    httpPort: 80
-    enableHttps: false
-    httpsPort: 443
-    certThumbprint: ''
-    deployTarget: ''
-    deployUser: ''
-
   steps:
   - task: WindowsMachineFileCopy@2
     displayName: 'Copy package to target machine'
@@ -165,5 +150,3 @@ parameters:
         Start-Website -Name $siteName
 
         Write-Host "Deployment completed successfully!"
-    displayName: "Ensure IIS site/app pool & deploy"
-                    Start-Sleep -Seconds 1

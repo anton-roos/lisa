@@ -1,7 +1,5 @@
 # Learner Information System Administrator (LISA)
 
-![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/anton-roos/lisa?utm_source=oss&utm_medium=github&utm_campaign=anton-roos%2Flisa&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
-
 ## User Types
  - System Administrator
  - Principal
@@ -11,7 +9,7 @@
  - GateOfficer
 
 Roles per Page:
-Home – Alle gebruikers
+Home – All
 Schools – SA
 Care Groups – SA, Principal
 Staff – SA, Principal
@@ -75,137 +73,256 @@ Email Campaigns – SA, Principal, SchoolManagement
  
 
 ## SchoolGrade
-Link na School met OnDelete.Cascade → as die Skool delete word, word alle Grades ook delete.
-RegisterClass link na SchoolGrade met OnDelete.Restrict → jy moet eers RegisterClass verwyder of aanpas voordat jy die SchoolGrade kan uitvee.
+Link to School with OnDelete.Cascade → if a School is deleted, all related Grades are deleted.
+RegisterClass links to SchoolGrade with OnDelete.Restrict → you must remove or update RegisterClass entries before you can delete the SchoolGrade.
 
-# Learner
-Link na School met OnDelete.Cascade → as die Skool delete word, word Learners ook delete.
-Link na RegisterClass met OnDelete.Restrict → kan nie RegisterClass uitvee as Learners steeds daaraan gekoppel is nie.
-Link na Combination met OnDelete.Restrict → kan nie Combination uitvee as Learners steeds daaraan gekoppel is nie.
-Het meer as een Parents → OnDelete.Cascade vanaf die Learner-kant: As ’n Learner delete word, word sy Parents ook delete.
-Het meer as een LearnerSubjects → OnDelete.Cascade vanaf die Learner kant: As ’n Learner delete word, word sy LearnerSubject-rye ook delete.
+## Learner
+Link to School with OnDelete.Cascade → if the School is deleted, Learners are also deleted.
+Link to RegisterClass with OnDelete.Restrict → you cannot delete a RegisterClass while Learners are still linked to it.
+Link to Combination with OnDelete.Restrict → you cannot delete a Combination while Learners are still linked to it.
+Has multiple Parents → OnDelete.Cascade from the Learner side: if a Learner is deleted, their Parents are also deleted.
+Has multiple LearnerSubjects → OnDelete.Cascade from the Learner side: if a Learner is deleted, their LearnerSubject rows are also deleted.
 
-# Parent
-Link na Learner met OnDelete.Cascade → as ’n Learner delete word, word sy Parents ook delete.
+## Parent
+Link to Learner with OnDelete.Cascade → if the Learner is deleted, the Parents are also deleted.
 
-# RegisterClass
-Link na SchoolGrade met OnDelete.Restrict → Kan nie n SchoolGrade delete as daar n RegisterClass gekoppel is nie.
-Link na Teacher met OnDelete.Restrict → kan nie n Teacher delete as daar n RegisterClass gekoppel is nie.
-Het baie Learners OnDelete.Restrict → Waneer n RegisterClass delete word hou hy die Learners "unparented". 
+## RegisterClass
+Link to SchoolGrade with OnDelete.Restrict → you cannot delete a SchoolGrade if there are RegisterClasses linked to it.
+Link to Teacher with OnDelete.Restrict → you cannot delete a Teacher if there are RegisterClasses linked to them.
+Has many Learners with OnDelete.Restrict → when a RegisterClass is deleted it leaves the Learners "unparented" (they remain but lose the RegisterClass link).
 
-# RegisterClassSubject
-OnDelete.Restrict aan die SubjectId-kant, Waneer n RegisterClassSubject delete word delete hy nie die Subject nie.
-OnDelete.Cascade aan die RegisterClassId-kant, Waneer n RegisterClass delete word, delete hy al die RegisterClassSubjects.
+## RegisterClassSubject
+OnDelete.Restrict on the SubjectId side: deleting a RegisterClassSubject does not delete the Subject.
+OnDelete.Cascade on the RegisterClassId side: deleting a RegisterClass deletes its RegisterClassSubjects.
 
-# Combination
-Link na SchoolGrade met OnDelete.Restrict → kan nie SchoolGrade delete as daar Combinations is wat daarna Link nie.
-Baie-tot-baie met Subject via CombinationSubject:
-OnDelete.Restrict aan die SubjectId-kant, sal nie n subject delete as die CombinationSubject delete word nie.
-OnDelete.Cascade aan die CombinationId-kant. As n combination delete word delete dit al sy CombinationSubjects.
+## Combination
+Link to SchoolGrade with OnDelete.Restrict → you cannot delete a SchoolGrade if Combinations link to it.
+Many-to-many with Subject via CombinationSubject:
+OnDelete.Restrict on the SubjectId side: deleting a CombinationSubject will not delete the Subject.
+OnDelete.Cascade on the CombinationId side: deleting a Combination will delete its CombinationSubjects.
 
-# Subject
-Om ’n Subject uit te vee is beperk as dit in enige van die volgende voorkom:
-Link aan LearnerSubject (OnDelete.Restrict op SubjectId),
-Link aan RegisterClassSubject (Restrict),
-Link aan CombinationSubject (Restrict).
+## Subject
+Deleting a Subject is restricted if it appears in any of the following:
+- Linked to LearnerSubject (OnDelete.Restrict on SubjectId)
+- Linked to RegisterClassSubject (Restrict)
+- Linked to CombinationSubject (Restrict).
 
-# LearnerSubject
-Link na Learner met OnDelete.Cascade → as ’n Learner delete word, word sy LearnerSubject ook delete.
-Link na Subject met OnDelete.Restrict → kan nie Subject uitvee as ’n LearnerSubject nog daarna Link nie.
+## LearnerSubject
+Link to Learner with OnDelete.Cascade → if a Learner is deleted, their LearnerSubject entries are deleted.
+Link to Subject with OnDelete.Restrict → you cannot delete a Subject if LearnerSubject entries still reference it.
 
-# Period
-Link na Teacher, Subject en SchoolGrade met OnDelete.Restrict → jy moet eers die Period verwyder/aanpas as jy daardie entiteite wil uitvee.
-Die databassis maak seker n Teacher het net een Period op n slag tussen n StartTime en EndTime. 
-En die sisteem check dat StartTime kleiner is as EndTime.
+## Period
+Links to Teacher, Subject and SchoolGrade with OnDelete.Restrict → you must remove or update the Period before deleting those entities.
+The database enforces that a Teacher can only have one Period at a time between a StartTime and EndTime.
+The system checks that StartTime is less than EndTime.
 
-# Result
-n Result is n rekord so as ons n Learner of n Subject Delete dan gebeer daar niks met n resultaat nie. Ons moet besluit wat ons wil doen as die Learner delete word want die resultaat link na n Learner toe as ons die Learner delete gaan ons nie weet wie se resultaat dit is nie.
+## Result
+A Result is a record. If we delete a Learner or a Subject, nothing automatically happens to Results. We need to decide the policy for Results when a Learner is deleted because Result records reference the Learner; if the Learner is deleted we will no longer be able to tell whose result it was.
 
-# CareGroup
-Waneer n Skool Delete word word alle CareGroups Delete.
-Waneer n CareGroup Delete Word Unlink hy alle Learners van daai CareGroup af.
-
-
-# Audience per campaing
-# Caregroup <--> Teacher
-
-# Subject show on UI which grades it is applicable for
-# public List<SystemGrade>? GradesApplicable { get; set; }
-
-Select 1 (Mathematics or Maths Literacy)
- Mathematics
- Mathematical Literacy
-
-Combination -> Validation for each combination at least one needs to be selected.
-
-Extra subject for only 10, 11, 12
-
-# Class List
---> Register Class bv 8A -> Export
---> Combination Class List (10 - 12)
-  --> SchoolGrade
-  --> Physical Science -> Export
---> Combination Class List
-
-# Leave Early
-It integrates with the sign out module, if a learner is leaving early before the sign out record was created for the day it will confirm the school end time before continuing, here is the flow
-
-1. Select a school
-2. Check if a sign out record was created for the day
-3. If no sign out record it should create one with the confirmed end of day time -- this will pull throug when a user now goes and navigate to the sign out module
-4. If a sign out record was created before either through leave early or the sign out module the confirm time will be skipped on the leave early module
-5. You select a learner before you can continue
-6. Once a learner is selected the main flow will appear
-
-When selecting Telephonic, notes needs to be mandatory
-When selecting Letter, email or whatsapp it should expose a dragover and paste box where the user needs to paste evidence of the permission.
-
-# Sign In / Sign Out
-Configure at school level what the start time is (7:30) will pull through on the confirmation.
-Attendance roles can't sign out learners before school end time.
-If a learner left early for the instead of 'Absent' 'Left Early'
-Cellphone handed in on sign in cellphone retreived at sign out or leave early.
-
-# Daily Register
-The daily register opens and check if there is a selected school like most pages, then a user selects a register class, after selecting the register class a list of learners in that register class will load with the default Absent pill. When clikcing on the Absent button it tunrs to Present.
-
-# Communication
-If the email is not sucessfully authenticated, a error must go to the user.
-
-# Per Period Attendance
-If a learner left early for the instead of 'Absent' 'Left Early'
-If a leaner is clicked you will see the time of when he arrived.
-Lock in
-Then if you come in after lock in it will show late with red border
-
-!SignenIn && !Registered == Show Absent [Not Signed In]
-SignedIn && !Registered == Show Absent [Not Registered]
-SignedIn && Registered == Show Absent
-
-After lock in all Present on Daily Register but not in class Shows Not Attending
-After lock in all Abent on Daily Register shows Absent
-After lock in all Marked not Attending that shows up reads Late (11:33)
-
-MAT
+Roles per page:
+ - Home – All users
+ - Schools – System Administrator (SA)
+ - Care Groups – SA, Principal
+ - Staff – SA, Principal
+ - Grades – SA, Principal
+ - Register Class – SA, Principal
+ - Subjects – SA
+ - Assessment Types – SA
+ - Sign in / Sign out – SA, Gate Officer
+ - Daily Attendance – SA, Principal, School Management, Administrator, Teacher
+ - Leave Early – SA, Principal, Administrator
+ - Combinations – SA, Principal
+ - Learners – SA, Principal, School Management, Administrator
+ - Class Lists – SA, Principal, School Management, Administrator, Teacher
+ - Capture Results – SA, Principal, School Management, Administrator, Teacher
+ - Results – SA, Principal, School Management, Administrator, Teacher
+ - Progress Feedback – SA, Principal, School Management, Administrator, Teacher
+ - Communication – SA, Principal, School Management
+ - Email Campaigns – SA, Principal, School Management
 
 
-Changelog
--- Fixed Learner Code clashing between schools.
--- Fixed Historical Subjects not pulling through
--- Fixed Inactive Learners getting sent Progress Feedback
--- Fixed Date Oredering on Progress Feedbacks
+## User Type Privileges
+### Super Admin
+ - Can perform the actions a Principal can at every school.
+ - Add or remove other Super Admins.
+ - Configure communication templates.
+ - Change school information:
+   - Add curriculum information
+   - Add school color
+   - Add care groups to a school
+ - Add teachers
 
-[X] State Management (Results)
-[X] Progress Feedback (Printing) Font smaller Print on one page
-[X] Attendance if not signed in. Create a special record that says not sign in but present. (Active not at school for being present)
-[] ADI (Attendance Module + Adhoc Learners) Build on Per Period
-[] Reporting and Communication (WA + Email + Print) for Attendance
-[] Clean up and refactor
+### Principal
+ - Can perform the actions the School Management team can do at a specific school.
 
-Daily Register --> Daily Attendance
-Add Period 1 - 12 to the per period attendance
-Stop Period automatically called after 30 mins
-Start with fresh list
-Stop Period functions like a submit button
-(ADI) - Academic Development Improvement
-(MAP) - Matric Achievement Project
+### School Management Team
+ - Can perform the actions an Administrator can do at a specific school.
+ - Can query results.
+ - Can query communications.
+
+### Administrator
+ - Can add, edit or deactivate learners.
+ - Can add, edit or remove parents linked to learners.
+ - Can send progress feedback.
+   - Progress feedback must be scheduled to send at a specific time.
+   - Ensure that emails are staggered so you don't hit provider limits.
+   - Microsoft 365 limit: 30 emails per minute.
+   - Proper error handling when SMTP details are not configured for a school.
+ - Can set up subject combinations.
+ - Can add or edit grades.
+ - Move learners between care groups.
+
+### Teacher
+ - Can capture marks for their subjects.
+ - Can monitor behaviour per period.
+ - Can manage attendance for their periods.
+
+# Workflow
+ 1. Seed the database (roles, admin user, school types).
+ 2. Set up the System Administrator account (the app will seed data on first run if configured).
+ 3. Set up the school(s).
+
+
+## Database relations and delete behaviour
+
+### SchoolGrade
+ - Link to School with OnDelete.Cascade → if a School is deleted, all related Grades are deleted.
+ - RegisterClass links to SchoolGrade with OnDelete.Restrict → you must remove or update RegisterClass entries before you can delete the SchoolGrade.
+
+### Learner
+ - Link to School with OnDelete.Cascade → if the School is deleted, Learners are also deleted.
+ - Link to RegisterClass with OnDelete.Restrict → you cannot delete a RegisterClass while Learners are still linked to it.
+ - Link to Combination with OnDelete.Restrict → you cannot delete a Combination while Learners are still linked to it.
+ - Has multiple Parents → OnDelete.Cascade from the Learner side: if a Learner is deleted, their Parents are also deleted.
+ - Has multiple LearnerSubjects → OnDelete.Cascade from the Learner side: if a Learner is deleted, their LearnerSubject rows are also deleted.
+
+### Parent
+ - Link to Learner with OnDelete.Cascade → if the Learner is deleted, the Parents are also deleted.
+
+### RegisterClass
+ - Link to SchoolGrade with OnDelete.Restrict → you cannot delete a SchoolGrade if there are RegisterClasses linked to it.
+ - Link to Teacher with OnDelete.Restrict → you cannot delete a Teacher if there are RegisterClasses linked to them.
+ - Has many Learners with OnDelete.Restrict → when a RegisterClass is deleted it leaves the Learners "unparented" (they remain but lose the RegisterClass link).
+
+### RegisterClassSubject
+ - OnDelete.Restrict on the SubjectId side: deleting a RegisterClassSubject does not delete the Subject.
+ - OnDelete.Cascade on the RegisterClassId side: deleting a RegisterClass deletes its RegisterClassSubjects.
+
+### Combination
+ - Link to SchoolGrade with OnDelete.Restrict → you cannot delete a SchoolGrade if Combinations link to it.
+ - Many-to-many with Subject via CombinationSubject:
+   - OnDelete.Restrict on the SubjectId side: deleting a CombinationSubject will not delete the Subject.
+   - OnDelete.Cascade on the CombinationId side: deleting a Combination will delete its CombinationSubjects.
+
+### Subject
+ Deleting a Subject is restricted if it appears in any of the following:
+ - Linked to LearnerSubject (OnDelete.Restrict on SubjectId)
+ - Linked to RegisterClassSubject (Restrict)
+ - Linked to CombinationSubject (Restrict)
+
+### LearnerSubject
+ - Link to Learner with OnDelete.Cascade → if a Learner is deleted, their LearnerSubject entries are deleted.
+ - Link to Subject with OnDelete.Restrict → you cannot delete a Subject if LearnerSubject entries still reference it.
+
+### Period
+ - Links to Teacher, Subject and SchoolGrade with OnDelete.Restrict → you must remove or update the Period before deleting those entities.
+ - The database enforces that a Teacher can only have one Period at a time between a StartTime and EndTime.
+ - The system checks that StartTime is less than EndTime.
+
+### Result
+ A Result is a record. If we delete a Learner or a Subject, nothing automatically happens to Results. We need to decide the policy for Results when a Learner is deleted because Result records reference the Learner; if the Learner is deleted we will no longer be able to tell whose result it was.
+
+### CareGroup
+ - When a School is deleted, all CareGroups for that school are deleted.
+ - When a CareGroup is deleted it unlinks all Learners from that CareGroup.
+
+
+## Audience per campaign
+ - CareGroup <--> Teacher mapping exists for targeting campaigns.
+
+## Subject applicability in the UI
+ - Show which grades a Subject is applicable for (e.g., public List<SystemGrade>? GradesApplicable { get; set; }).
+
+Select one (Mathematics or Mathematical Literacy):
+ - Mathematics
+ - Mathematical Literacy
+
+Combinations: validation must ensure at least one subject is selected for each combination.
+
+Extra subject options are available only for grades 10, 11 and 12.
+
+## Class Lists
+ - Register Class (e.g., 8A) -> Export
+ - Combination Class List (grades 10 - 12):
+   - by SchoolGrade
+   - by subject (e.g., Physical Science) -> Export
+ - Combination Class List reports
+
+## Leave Early
+This integrates with the sign-out module. If a learner is leaving early and no sign-out record exists for the day, the system will confirm the school's end time before continuing. Flow:
+ 1. Select a school.
+ 2. Check if a sign-out record exists for the day.
+ 3. If no sign-out record exists, create one with the confirmed end-of-day time — this will then be available when navigating to the sign-out module.
+ 4. If a sign-out record was already created (either via Leave Early or the Sign Out module), the confirmation step is skipped in the Leave Early flow.
+ 5. Select a learner to continue.
+ 6. Once a learner is selected, the main flow appears.
+
+When selecting "Telephonic", notes must be mandatory.
+When selecting "Letter", "Email" or "WhatsApp", expose a drag-and-drop / paste box where the user must attach evidence of permission.
+
+## Sign In / Sign Out
+ - Configure the school's start time (e.g., 07:30) at the school level; it will be used in confirmations.
+ - Attendance roles cannot sign out learners before the configured school end time.
+ - If a learner left early, mark them as 'Left Early' instead of 'Absent'.
+ - If a cellphone is handed in at sign-in, it should be returned at sign-out or when the learner is marked as leaving early.
+
+## Daily Register
+The daily register page checks that a school is selected (like most pages). The user selects a Register Class; after selecting the Register Class a list of learners will load with the default status of "Absent". Clicking the "Absent" pill toggles it to "Present".
+
+## Communication
+If the email account is not successfully authenticated, an error must be shown to the user.
+
+## Per-Period Attendance
+ - If a learner left early, mark them as 'Left Early' instead of 'Absent'.
+ - Clicking a learner shows the time they arrived.
+ - "Lock in" finalizes attendance; if a learner arrives after lock-in they will be shown as late (e.g., with a red border).
+
+Logic examples:
+ - !SignedIn && !Registered => Show Absent [Not Signed In]
+ - SignedIn && !Registered => Show Absent [Not Registered]
+ - SignedIn && Registered => Show Present
+
+After lock-in:
+ - All those marked Present on the Daily Register but not in class show as Not Attending.
+ - All those marked Absent on the Daily Register remain Absent.
+ - Learners marked Not Attending after lock-in show as Late with a timestamp (example: 11:33).
+
+## Misc
+ - MAT (context-specific)
+
+
+## Changelog
+ - Fixed learner code clashes between schools.
+ - Fixed historical subjects not pulling through.
+ - Fixed inactive learners being sent progress feedback.
+ - Fixed date ordering on progress feedbacks.
+
+### Progress / TODO
+ - [X] State Management (Results)
+ - [X] Progress Feedback (Printing): smaller font to fit on one page
+ - [X] Attendance when not signed in: create a special record that marks "not signed in but present" (active not at school but present)
+ - [ ] ADI (Attendance Module + Ad-hoc Learners): build Per-Period support
+ - [ ] Reporting and Communication (WhatsApp + Email + Print) for Attendance
+ - [ ] Clean up and refactor
+
+Planned attendance improvements:
+ - Daily Register -> Daily Attendance
+ - Add Period 1 - 12 to per-period attendance
+ - Automatically stop a Period after 30 minutes
+ - Start each period with a fresh list
+ - Stop Period acts like a submit button
+
+Acronyms:
+ - (ADI) Academic Development Improvement
+ - (MAP) Matric Achievement Project
+```

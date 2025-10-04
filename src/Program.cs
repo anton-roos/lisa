@@ -1,9 +1,8 @@
 using DinkToPdf;
 using DinkToPdf.Contracts;
-using Lisa.Components;
 using Lisa.Data;
-using Lisa.Middleware;
 using Lisa.Models.Entities;
+using Lisa.Pages;
 using Lisa.Services;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.DataProtection;
@@ -19,31 +18,31 @@ builder.Services.AddDbContextFactory<LisaDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Lisa")));
 
 builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
-    {
-        options.Password.RequireDigit = true;
-        options.Password.RequireLowercase = true;
-        options.Password.RequireNonAlphanumeric = true;
-        options.Password.RequireUppercase = true;
-        options.Password.RequiredLength = 8;
-        options.Password.RequiredUniqueChars = 1;
+{
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequiredLength = 8;
+    options.Password.RequiredUniqueChars = 1;
 
-        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
-        options.Lockout.MaxFailedAccessAttempts = 5;
-        options.Lockout.AllowedForNewUsers = true;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.AllowedForNewUsers = true;
 
-        options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
-        options.User.RequireUniqueEmail = true;
-    })
+    options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
+    options.User.RequireUniqueEmail = true;
+})
     .AddEntityFrameworkStores<LisaDbContext>()
-    .AddDefaultTokenProviders();
+    .AddDefaultTokenProviders()
+    .AddDefaultUI();
 
-// Configure Data Protection to persist keys and handle multiple instances
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys")))
     .SetApplicationName("Lisa.School.Management")
-    .SetDefaultKeyLifetime(TimeSpan.FromDays(90)); // Keys valid for 90 days
+    .SetDefaultKeyLifetime(TimeSpan.FromDays(90));
 
-// Configure Antiforgery options for better error handling
+
 builder.Services.AddAntiforgery(options =>
 {
     options.Cookie.Name = "__RequestVerificationToken";
@@ -60,13 +59,14 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.Name = "lisa_auth_token";
     options.ExpireTimeSpan = TimeSpan.FromHours(12);
     options.SlidingExpiration = true;
-    options.AccessDeniedPath = "/access-denied";
-    options.LoginPath = "/login";
-    options.LogoutPath = "/logout";
+    options.LoginPath = "/Identity/Account/Login";
+    options.LogoutPath = "/Identity/Account/Logout";
+    options.AccessDeniedPath = "/Identity/Account/AccessDenied";
 });
 
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IConverter>(new SynchronizedConverter(new PdfTools()));
+builder.Services.AddAuthorizationBuilder();
 
 builder.Services.AddScoped<CareGroupService>();
 builder.Services.AddScoped<CombinationService>();
@@ -94,13 +94,13 @@ builder.Services.AddScoped<AttendanceRecordService>();
 builder.Services.AddScoped<TemplateRenderService>();
 builder.Services.AddScoped<LeaveEarlyService>();
 
-// Security
-builder.Services.AddSingleton<ILoginStore, InMemoryLoginStore>();
-builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
-
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers();
 builder.Services.AddMudServices();
+
+builder.Services.AddRazorPages();
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
 
 var app = builder.Build();
 
@@ -110,10 +110,6 @@ var db = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
 app.Logger.LogInformation("Attempting database migration...");
 db.Database.Migrate();
 app.Logger.LogInformation("Database migration successful!");
-
-var services = scope.ServiceProvider;
-await DatabaseSeed.Seed(services);
-app.Logger.LogInformation("Database seeding completed successfully.");
 
 if (!app.Environment.IsDevelopment())
 {
@@ -126,10 +122,10 @@ app.UseStaticFiles();
 app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseMiddleware<BlazorAuthMiddleware>();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+app.MapRazorPages();
 app.MapControllers();
 
 app.Run();

@@ -153,12 +153,6 @@ A Result is a record. If we delete a Learner or a Subject, nothing automatically
  - Can monitor behaviour per period.
  - Can manage attendance for their periods.
 
-# Workflow
- 1. Seed the database (roles, admin user, school types).
- 2. Set up the System Administrator account (the app will seed data on first run if configured).
- 3. Set up the school(s).
-
-
 ## Database relations and delete behaviour
 
 ### SchoolGrade

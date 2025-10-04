@@ -1,0 +1,15 @@
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"] - Lisa</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body class="identity-layout">
+    <main class="container py-5">
+        @RenderBody()
+    </main>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

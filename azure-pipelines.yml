@@ -83,14 +83,77 @@ stages:
           steps:
           - download: current
             artifact: drop
-          - template: deploy-iis-steps.yml
-            parameters:
-              siteName:  'sit.dceg.co.za'
-              appPool:   'sit.dceg.co.za'
-              hostHeader:      'sit.dceg.co.za'
-              physicalPath: 'C:\Sites\sit.dceg.co.za'
-              deployTarget: 'sit-server.dceg.co.za'
-              deployUser: 'dcegroup\svc-deploy'
+          - task: WindowsMachineFileCopy@2
+            displayName: 'Copy package to target machine'
+            inputs:
+              SourcePath: '$(Pipeline.Workspace)\drop\WebApp.zip'
+              MachineNames: 'sit-server.dceg.co.za'
+              AdminUserName: 'dcegroup\svc-deploy'
+              AdminPassword: '$(deploy_password)'
+              TargetPath: 'C:\Temp\$(Build.BuildId)'
+
+          - powershell: |
+              $ErrorActionPreference = 'Stop'
+
+              $pkgRemote = "C:\Temp\$($env:BUILD_BUILDID)\WebApp.zip"
+              $siteName     = 'sit.dceg.co.za'
+              $appPool      = 'sit.dceg.co.za'
+              $hostHeader   = 'sit.dceg.co.za'
+              $httpPort     = 80
+              $enableHttps  = $false
+              $httpsPort    = 443
+              $thumb        = ''
+              $physicalPath = 'C:\Sites\sit.dceg.co.za'
+
+              $sec = ConvertTo-SecureString "$(deploy_password)" -AsPlainText -Force
+              $cred = New-Object System.Management.Automation.PSCredential ("dcegroup\svc-deploy", $sec)
+
+              $script = {
+                param($pkg, $siteName, $appPool, $hostHeader, $httpPort, $enableHttps, $httpsPort, $thumb, $physicalPath)
+                $ErrorActionPreference = 'Stop'
+                Import-Module WebAdministration
+
+                $bindHttp  = "*:${httpPort}:${hostHeader}"
+                $bindHttps = "*:${httpsPort}:${hostHeader}"
+
+                if (-not (Test-Path "IIS:\AppPools\$appPool")) { New-Item "IIS:\AppPools\$appPool" | Out-Null }
+                Set-ItemProperty "IIS:\AppPools\$appPool" -Name managedRuntimeVersion -Value ""
+                Set-ItemProperty "IIS:\AppPools\$appPool" -Name startMode -Value "AlwaysRunning"
+                Set-ItemProperty "IIS:\AppPools\$appPool" -Name recycling.periodicRestart.time -Value ([TimeSpan]::Zero)
+
+                if (-not (Test-Path $physicalPath)) { New-Item -ItemType Directory -Path $physicalPath -Force | Out-Null }
+
+                if (-not (Test-Path "IIS:\Sites\$siteName")) {
+                  New-Item "IIS:\Sites\$siteName" -physicalPath $physicalPath -bindings @{ protocol='http'; bindingInformation=$bindHttp } | Out-Null
+                }
+
+                $hasHttp = Get-WebBinding -Name $siteName -Protocol http | Where-Object { $_.bindingInformation -like $bindHttp }
+                if (-not $hasHttp) { New-WebBinding -Name $siteName -Protocol http -Port $httpPort -HostHeader $hostHeader | Out-Null }
+
+                if ($enableHttps -and -not [string]::IsNullOrWhiteSpace($thumb)) {
+                  $hasHttps = Get-WebBinding -Name $siteName -Protocol https | Where-Object { $_.bindingInformation -like $bindHttps }
+                  if (-not $hasHttps) { New-WebBinding -Name $siteName -Protocol https -Port $httpsPort -HostHeader $hostHeader | Out-Null }
+                  $bindingPath = "IIS:\SslBindings\!${httpsPort}!${hostHeader}"
+                  if (-not (Test-Path $bindingPath)) { New-Item $bindingPath -Thumbprint $thumb -SSLFlags 1 | Out-Null }
+                  else { Set-Item $bindingPath -Thumbprint $thumb -SSLFlags 1 }
+                }
+
+                Set-ItemProperty "IIS:\Sites\$siteName" -Name applicationPool -Value $appPool
+
+                Write-Host "Stopping application pool: $appPool"
+                Stop-WebAppPool -Name $appPool -ErrorAction SilentlyContinue
+                Write-Host "Stopping website: $siteName"
+                Stop-Website -Name $siteName -ErrorAction SilentlyContinue
+                Start-Sleep -Seconds 5
+
+                $msdeploy = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+                if (-not (Test-Path $msdeploy)) { throw "msdeploy not found at: $msdeploy" }
+
+                $setParam = "-setParam:name=`"IIS Web Application Name`",value=`"$siteName`""
+                & $msdeploy -verb:sync "-source:package=$pkg" "-dest:auto,computerName=localhost,authType=NTLM" $setParam -disableLink:AppPoolExtension -disableLink:ContentExtension -disableLink:CertificateExtension
+              }
+
+              Invoke-Command -ComputerName 'sit-server.dceg.co.za' -Credential $cred -ScriptBlock $script -ArgumentList $pkgRemote, $siteName, $appPool, $hostHeader, $httpPort, $enableHttps, $httpsPort, $thumb, $physicalPath
 
 # ===== Approve UAT =====
 - stage: Approve_UAT
@@ -122,14 +185,77 @@ stages:
           steps:
           - download: current
             artifact: drop
-          - template: deploy-iis-steps.yml
-            parameters:
-              siteName:  'uat.dceg.co.za'
-              appPool:   'uat.dceg.co.za'
-              hostHeader:      'uat.dceg.co.za'
-              physicalPath: 'C:\Sites\uat.dceg.co.za'
-              deployTarget: 'uat-server.dceg.co.za'
-              deployUser: 'dcegroup\svc-deploy'
+          - task: WindowsMachineFileCopy@2
+            displayName: 'Copy package to target machine'
+            inputs:
+              SourcePath: '$(Pipeline.Workspace)\drop\WebApp.zip'
+              MachineNames: 'uat-server.dceg.co.za'
+              AdminUserName: 'dcegroup\svc-deploy'
+              AdminPassword: '$(deploy_password)'
+              TargetPath: 'C:\Temp\$(Build.BuildId)'
+
+          - powershell: |
+              $ErrorActionPreference = 'Stop'
+
+              $pkgRemote = "C:\Temp\$($env:BUILD_BUILDID)\WebApp.zip"
+              $siteName     = 'uat.dceg.co.za'
+              $appPool      = 'uat.dceg.co.za'
+              $hostHeader   = 'uat.dceg.co.za'
+              $httpPort     = 80
+              $enableHttps  = $false
+              $httpsPort    = 443
+              $thumb        = ''
+              $physicalPath = 'C:\Sites\uat.dceg.co.za'
+
+              $sec = ConvertTo-SecureString "$(deploy_password)" -AsPlainText -Force
+              $cred = New-Object System.Management.Automation.PSCredential ("dcegroup\svc-deploy", $sec)
+
+              $script = {
+                param($pkg, $siteName, $appPool, $hostHeader, $httpPort, $enableHttps, $httpsPort, $thumb, $physicalPath)
+                $ErrorActionPreference = 'Stop'
+                Import-Module WebAdministration
+
+                $bindHttp  = "*:${httpPort}:${hostHeader}"
+                $bindHttps = "*:${httpsPort}:${hostHeader}"
+
+                if (-not (Test-Path "IIS:\AppPools\$appPool")) { New-Item "IIS:\AppPools\$appPool" | Out-Null }
+                Set-ItemProperty "IIS:\AppPools\$appPool" -Name managedRuntimeVersion -Value ""
+                Set-ItemProperty "IIS:\AppPools\$appPool" -Name startMode -Value "AlwaysRunning"
+                Set-ItemProperty "IIS:\AppPools\$appPool" -Name recycling.periodicRestart.time -Value ([TimeSpan]::Zero)
+
+                if (-not (Test-Path $physicalPath)) { New-Item -ItemType Directory -Path $physicalPath -Force | Out-Null }
+
+                if (-not (Test-Path "IIS:\Sites\$siteName")) {
+                  New-Item "IIS:\Sites\$siteName" -physicalPath $physicalPath -bindings @{ protocol='http'; bindingInformation=$bindHttp } | Out-Null
+                }
+
+                $hasHttp = Get-WebBinding -Name $siteName -Protocol http | Where-Object { $_.bindingInformation -like $bindHttp }
+                if (-not $hasHttp) { New-WebBinding -Name $siteName -Protocol http -Port $httpPort -HostHeader $hostHeader | Out-Null }
+
+                if ($enableHttps -and -not [string]::IsNullOrWhiteSpace($thumb)) {
+                  $hasHttps = Get-WebBinding -Name $siteName -Protocol https | Where-Object { $_.bindingInformation -like $bindHttps }
+                  if (-not $hasHttps) { New-WebBinding -Name $siteName -Protocol https -Port $httpsPort -HostHeader $hostHeader | Out-Null }
+                  $bindingPath = "IIS:\SslBindings\!${httpsPort}!${hostHeader}"
+                  if (-not (Test-Path $bindingPath)) { New-Item $bindingPath -Thumbprint $thumb -SSLFlags 1 | Out-Null }
+                  else { Set-Item $bindingPath -Thumbprint $thumb -SSLFlags 1 }
+                }
+
+                Set-ItemProperty "IIS:\Sites\$siteName" -Name applicationPool -Value $appPool
+
+                Write-Host "Stopping application pool: $appPool"
+                Stop-WebAppPool -Name $appPool -ErrorAction SilentlyContinue
+                Write-Host "Stopping website: $siteName"
+                Stop-Website -Name $siteName -ErrorAction SilentlyContinue
+                Start-Sleep -Seconds 5
+
+                $msdeploy = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+                if (-not (Test-Path $msdeploy)) { throw "msdeploy not found at: $msdeploy" }
+
+                $setParam = "-setParam:name=`"IIS Web Application Name`",value=`"$siteName`""
+                & $msdeploy -verb:sync "-source:package=$pkg" "-dest:auto,computerName=localhost,authType=NTLM" $setParam -disableLink:AppPoolExtension -disableLink:ContentExtension -disableLink:CertificateExtension
+              }
+
+              Invoke-Command -ComputerName 'uat-server.dceg.co.za' -Credential $cred -ScriptBlock $script -ArgumentList $pkgRemote, $siteName, $appPool, $hostHeader, $httpPort, $enableHttps, $httpsPort, $thumb, $physicalPath
 
 # ===== Approve Prod =====
 - stage: Approve_Prod
@@ -161,11 +287,74 @@ stages:
           steps:
           - download: current
             artifact: drop
-          - template: deploy-iis-steps.yml
-            parameters:
-              siteName:  'dceg.co.za'
-              appPool:   'dceg.co.za'
-              hostHeader:      'dceg.co.za'
-              physicalPath: 'C:\Sites\dceg.co.za'
-              deployTarget: 'prod-server.dceg.co.za'
-              deployUser: 'dcegroup\svc-deploy'
+          - task: WindowsMachineFileCopy@2
+            displayName: 'Copy package to target machine'
+            inputs:
+              SourcePath: '$(Pipeline.Workspace)\drop\WebApp.zip'
+              MachineNames: 'prod-server.dceg.co.za'
+              AdminUserName: 'dcegroup\svc-deploy'
+              AdminPassword: '$(deploy_password)'
+              TargetPath: 'C:\Temp\$(Build.BuildId)'
+
+          - powershell: |
+              $ErrorActionPreference = 'Stop'
+
+              $pkgRemote = "C:\Temp\$($env:BUILD_BUILDID)\WebApp.zip"
+              $siteName     = 'dceg.co.za'
+              $appPool      = 'dceg.co.za'
+              $hostHeader   = 'dceg.co.za'
+              $httpPort     = 80
+              $enableHttps  = $false
+              $httpsPort    = 443
+              $thumb        = ''
+              $physicalPath = 'C:\Sites\dceg.co.za'
+
+              $sec = ConvertTo-SecureString "$(deploy_password)" -AsPlainText -Force
+              $cred = New-Object System.Management.Automation.PSCredential ("dcegroup\svc-deploy", $sec)
+
+              $script = {
+                param($pkg, $siteName, $appPool, $hostHeader, $httpPort, $enableHttps, $httpsPort, $thumb, $physicalPath)
+                $ErrorActionPreference = 'Stop'
+                Import-Module WebAdministration
+
+                $bindHttp  = "*:${httpPort}:${hostHeader}"
+                $bindHttps = "*:${httpsPort}:${hostHeader}"
+
+                if (-not (Test-Path "IIS:\AppPools\$appPool")) { New-Item "IIS:\AppPools\$appPool" | Out-Null }
+                Set-ItemProperty "IIS:\AppPools\$appPool" -Name managedRuntimeVersion -Value ""
+                Set-ItemProperty "IIS:\AppPools\$appPool" -Name startMode -Value "AlwaysRunning"
+                Set-ItemProperty "IIS:\AppPools\$appPool" -Name recycling.periodicRestart.time -Value ([TimeSpan]::Zero)
+
+                if (-not (Test-Path $physicalPath)) { New-Item -ItemType Directory -Path $physicalPath -Force | Out-Null }
+
+                if (-not (Test-Path "IIS:\Sites\$siteName")) {
+                  New-Item "IIS:\Sites\$siteName" -physicalPath $physicalPath -bindings @{ protocol='http'; bindingInformation=$bindHttp } | Out-Null
+                }
+
+                $hasHttp = Get-WebBinding -Name $siteName -Protocol http | Where-Object { $_.bindingInformation -like $bindHttp }
+                if (-not $hasHttp) { New-WebBinding -Name $siteName -Protocol http -Port $httpPort -HostHeader $hostHeader | Out-Null }
+
+                if ($enableHttps -and -not [string]::IsNullOrWhiteSpace($thumb)) {
+                  $hasHttps = Get-WebBinding -Name $siteName -Protocol https | Where-Object { $_.bindingInformation -like $bindHttps }
+                  if (-not $hasHttps) { New-WebBinding -Name $siteName -Protocol https -Port $httpsPort -HostHeader $hostHeader | Out-Null }
+                  $bindingPath = "IIS:\SslBindings\!${httpsPort}!${hostHeader}"
+                  if (-not (Test-Path $bindingPath)) { New-Item $bindingPath -Thumbprint $thumb -SSLFlags 1 | Out-Null }
+                  else { Set-Item $bindingPath -Thumbprint $thumb -SSLFlags 1 }
+                }
+
+                Set-ItemProperty "IIS:\Sites\$siteName" -Name applicationPool -Value $appPool
+
+                Write-Host "Stopping application pool: $appPool"
+                Stop-WebAppPool -Name $appPool -ErrorAction SilentlyContinue
+                Write-Host "Stopping website: $siteName"
+                Stop-Website -Name $siteName -ErrorAction SilentlyContinue
+                Start-Sleep -Seconds 5
+
+                $msdeploy = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+                if (-not (Test-Path $msdeploy)) { throw "msdeploy not found at: $msdeploy" }
+
+                $setParam = "-setParam:name=`"IIS Web Application Name`",value=`"$siteName`""
+                & $msdeploy -verb:sync "-source:package=$pkg" "-dest:auto,computerName=localhost,authType=NTLM" $setParam -disableLink:AppPoolExtension -disableLink:ContentExtension -disableLink:CertificateExtension
+              }
+
+              Invoke-Command -ComputerName 'prod-server.dceg.co.za' -Credential $cred -ScriptBlock $script -ArgumentList $pkgRemote, $siteName, $appPool, $hostHeader, $httpPort, $enableHttps, $httpsPort, $thumb, $physicalPath

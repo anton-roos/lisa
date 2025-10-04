@@ -1,5 +1,4 @@
 using Lisa.Data;
-using Lisa.Interfaces;
 using Lisa.Models.Entities;
 using Lisa.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +9,7 @@ public class LearnerService
 (
     IDbContextFactory<LisaDbContext> dbContextFactory,
     ILogger<LearnerService> logger
-) : ILearnerService
+)
 {
     public async Task<int> GetCountAsync()
     {

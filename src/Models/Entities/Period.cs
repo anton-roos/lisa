@@ -1,9 +1,8 @@
-using Lisa.Interfaces;
 using System.ComponentModel.DataAnnotations;
 
 namespace Lisa.Models.Entities;
 
-public class Period : IValidatable
+public class Period
 {
     public Guid Id { get; set; }
     public Guid? SchoolId { get; set; }
@@ -19,11 +18,4 @@ public class Period : IValidatable
     public User? Teacher { get; set; }
     public int SubjectId { get; set; }
     public Subject? Subject { get; set; }
-    public void Validate()
-    {
-        if (StartTime >= EndTime)
-        {
-            throw new InvalidOperationException("Period start time must be before end time.");
-        }
-    }
 }

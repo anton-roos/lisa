@@ -8,8 +8,7 @@ namespace Lisa.Data;
 
 public class LisaDbContext
 (
-    DbContextOptions<LisaDbContext> options,
-    ILogger<LisaDbContext> logger
+    DbContextOptions<LisaDbContext> options
 ) : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options)
 {
     public DbSet<School> Schools { get; set; } = null!;
@@ -528,14 +527,12 @@ public class LisaDbContext
 
     public override int SaveChanges()
     {
-        ValidateEntities();
         SetAuditProperties();
         return base.SaveChanges();
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        ValidateEntities();
         SetAuditProperties();
         return await base.SaveChangesAsync(cancellationToken);
     }
@@ -567,28 +564,6 @@ public class LisaDbContext
             if (entry.State == EntityState.Modified)
             {
                 entry.Entity.UpdatedAt = DateTime.UtcNow;
-            }
-        }
-    }
-
-    private void ValidateEntities()
-    {
-        foreach (var entry in ChangeTracker.Entries())
-        {
-
-            {
-                if (entry.Entity is IValidatable validatable)
-                {
-                    try
-                    {
-                        validatable.Validate();
-                    }
-                    catch (Exception exception)
-                    {
-                        logger.LogError(exception, "Validation failed for entity of type {EntityType} with values: {CurrentValues}.", entry.Entity.GetType().Name, entry.CurrentValues);
-                        throw new InvalidOperationException($"Validation failed for entity of type {entry.Entity.GetType().Name}.", exception);
-                    }
-                }
             }
         }
     }

@@ -26,6 +26,6 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<LisaDbCont
         var optionsBuilder = new DbContextOptionsBuilder<LisaDbContext>();
         optionsBuilder.UseNpgsql(connectionString);
 
-        return new LisaDbContext(optionsBuilder.Options, logger);
+        return new LisaDbContext(optionsBuilder.Options);
     }
 }

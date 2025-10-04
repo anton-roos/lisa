@@ -3,7 +3,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class SchoolGradeTimeService(
+public class SchoolGradeTimeService
+(
     IDbContextFactory<LisaDbContext> dbContextFactory,
     ILogger<SchoolGradeTimeService> logger
 )

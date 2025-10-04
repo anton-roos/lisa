@@ -1,4 +1,3 @@
-using Lisa.Interfaces;
 using Lisa.Models.Entities;
 using System.Net;
 using System.Net.Mail;
@@ -10,7 +9,7 @@ public class EmailService
 (
     SchoolService schoolService,
     ILogger<EmailService> logger
-) : IEmailService
+)
 {
     private const int DefaultRetryCount = 3;
     private const int DefaultRetryDelayMs = 2000;

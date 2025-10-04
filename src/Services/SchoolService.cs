@@ -1,5 +1,4 @@
 using Lisa.Data;
-using Lisa.Interfaces;
 using Lisa.Models.Entities;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -14,7 +13,7 @@ public class SchoolService(
     UserService userService,
     AuthenticationStateProvider authenticationStateProvider,
     ILogger<SchoolService> logger
-) : ISchoolService
+)
 {
     private School? _selectedSchool;
 

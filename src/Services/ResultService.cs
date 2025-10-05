@@ -74,7 +74,7 @@ public class ResultService
     public async Task<int> GetCountAsync()
     {
         await using var context = await dbContextFactory.CreateDbContextAsync();
-        return await context.Results.CountAsync();
+        return await context.ResultSets.CountAsync();
     }
 
     public async Task<int> GetCountAsync(Guid schoolId)

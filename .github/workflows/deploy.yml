@@ -14,25 +14,21 @@ on:
 
 jobs:
   deploy:
-    # run directly on your IIS server
     runs-on: self-hosted
     env:
-      # ---- Adjust these to your actual site roots and app pools ----
       QA_PATH:   C:\Sites\dceg-learn
       PROD_PATH: C:\Sites\dceg-lis
       QA_POOL:   dceg-learn.co.za
       PROD_POOL: dceg-lis.co.za
-      # Optional: keep these folders on server untouched during mirror
       ROBOT_SAFE_XD: "logs uploads"
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Select target paths
+      - name: Select target paths (push=>QA, manual=>selected)
         shell: pwsh
         run: |
-          if ("${{ github.event.inputs.environment }}" -eq "qa") {
+          if ("${{ github.event_name }}" -eq "push" -or "${{ github.event.inputs.environment }}" -eq "qa") {
             "DEPLOY_PATH=$env:QA_PATH"   | Out-File -FilePath $env:GITHUB_ENV -Append
             "APP_POOL=$env:QA_POOL"      | Out-File -FilePath $env:GITHUB_ENV -Append
           } else {
@@ -43,25 +39,29 @@ jobs:
 
       - name: Restore
         run: dotnet restore
-
       - name: Build
         run: dotnet build --configuration Release --no-restore
-
       - name: Publish
         run: dotnet publish --configuration Release --no-build --output "$env:PUBLISH_DIR"
 
-      - name: Stop site cleanly (app_offline + stop app pool)
-        shell: powershell
-        run: |
-          New-Item -ItemType File -Path "$env:DEPLOY_PATH\app_offline.htm" -Force | Out-Null
-          Import-Module WebAdministration
-          try { Stop-WebAppPool -Name $env:APP_POOL -ErrorAction Stop }
-          catch { Write-Host "Stop-WebAppPool failed: $($_.Exception.Message)"; throw }
+      # Use app_offline to release locks (you can keep/skip the app pool stop if you want)
+      - name: Take site offline
+        shell: pwsh
+        run: New-Item -ItemType File -Path "$env:DEPLOY_PATH\app_offline.htm" -Force | Out-Null
 
-      - name: Start app pool & bring site online
-        shell: powershell
+      # ---------- MISSING STEP ADDED ----------
+      - name: Deploy (mirror, KEEP appsettings*.json)
+        shell: pwsh
         run: |
-          Import-Module WebAdministration
-          try { Start-WebAppPool -Name $env:APP_POOL -ErrorAction Stop }
-          catch { Write-Host "Start-WebAppPool failed: $($_.Exception.Message)"; throw }
-          Remove-Item "$env:DEPLOY_PATH\app_offline.htm" -Force -ErrorAction SilentlyContinue
+          $src = $env:PUBLISH_DIR
+          $dst = $env:DEPLOY_PATH
+          # exclude server-side config; add 'web.config' if you also want to preserve it
+          $cmd = "robocopy `"$src`" `"$dst`" /MIR /R:2 /W:2 /NFL /NDL /NP /XF appsettings.json appsettings.*.json"
+          Write-Host $cmd
+          cmd.exe /c $cmd
+          if ($LASTEXITCODE -ge 8) { exit $LASTEXITCODE }
+      # ---------------------------------------
+
+      - name: Bring site online
+        shell: pwsh
+        run: Remove-Item "$env:DEPLOY_PATH\app_offline.htm" -Force -ErrorAction SilentlyContinue

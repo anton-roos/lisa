@@ -49,18 +49,33 @@ jobs:
         shell: pwsh
         run: New-Item -ItemType File -Path "$env:DEPLOY_PATH\app_offline.htm" -Force | Out-Null
 
-      # ---------- MISSING STEP ADDED ----------
-      - name: Deploy (mirror, KEEP appsettings*.json)
+      - name: Deploy (mirror, KEEP appsettings* and key folders)
         shell: pwsh
         run: |
           $src = $env:PUBLISH_DIR
           $dst = $env:DEPLOY_PATH
-          # exclude server-side config; add 'web.config' if you also want to preserve it
-          $cmd = "robocopy `"$src`" `"$dst`" /MIR /R:2 /W:2 /NFL /NDL /NP /XF appsettings.json appsettings.*.json"
+
+          # Files you never want to overwrite on the server
+          $excludeFiles = @("appsettings.json","appsettings.*.json")
+          # Folders you want to preserve on the server (add your own)
+          $excludeDirs  = @("DataProtection-Keys","logs","uploads","app_offline.htm")
+
+          $xfArgs = $excludeFiles | ForEach-Object { "/XF `"$($_)`"" } | Out-String
+          $xdArgs = $excludeDirs  | ForEach-Object { "/XD `"$($_)`"" } | Out-String
+
+          $cmd = "robocopy `"$src`" `"$dst`" /MIR /R:2 /W:2 /NFL /NDL /NP $xfArgs $xdArgs"
           Write-Host $cmd
           cmd.exe /c $cmd
-          if ($LASTEXITCODE -ge 8) { exit $LASTEXITCODE }
-      # ---------------------------------------
+          $code = $LASTEXITCODE
+
+          # Robocopy: 0-7 = success-ish, 8+ = failure
+          if ($code -le 7) {
+            Write-Host "Robocopy completed with exit code $code (treated as success)."
+            exit 0
+          } else {
+            Write-Error "Robocopy failed with exit code $code"
+            exit $code
+          }
 
       - name: Bring site online
         shell: pwsh

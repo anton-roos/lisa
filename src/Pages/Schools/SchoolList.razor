@@ -6,53 +6,71 @@
 
 <AuthorizeView Roles="@Roles.SystemAdministrator">
     <Authorized>
-        <h3>Schools</h3>
-        <button class="btn btn-primary mb-3" @onclick="() => AddSchool()">
+        <MudText Typo="Typo.h3" Class="mb-4">Schools</MudText>
+        
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="AddSchool"
+                   Class="mb-3">
             Add School
-        </button>
+        </MudButton>
+
         @if (_schools == null)
         {
-            <p>Loading...</p>
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
         }
         else if (_schools.Count == 0)
         {
-            <div class="alert alert-info">
+            <MudAlert Severity="Severity.Info" Class="mt-3">
                 No Schools found, please add a School.
-            </div>
+            </MudAlert>
         }
         else
         {
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Short Name</th>
-                        <th>Long Name</th>
-                        <th>Color</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var school in _schools)
-                    {
-                        <tr>
-                            <td class="align-middle">@school.ShortName</td>
-                            <td class="align-middle">@school.LongName</td>
-                            <td class="align-middle">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="color-box" style="background-color:@(school.Color);"></div>
-                                    @school.Color
-                                </div>
-                            </td>
-                            <ActionButtons TEntity="School" Entity="school" OnView="ViewSchool" OnEdit="EditSchool"
-                                OnDelete="DeleteSchool" />
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            <MudTable Items="@_schools" 
+                      Hover="true" 
+                      Striped="true" 
+                      Dense="true"
+                      Elevation="2">
+                <HeaderContent>
+                    <MudTh>Short Name</MudTh>
+                    <MudTh>Long Name</MudTh>
+                    <MudTh>Color</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="school">
+                    <MudTd DataLabel="Short Name">@school.ShortName</MudTd>
+                    <MudTd DataLabel="Long Name">@school.LongName</MudTd>
+                    <MudTd DataLabel="Color">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="color-box" style="background-color:@school.Color;"></div>
+                            @school.Color
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                       Color="Color.Primary" 
+                                       Size="Size.Small"
+                                       OnClick="@(() => ViewSchool(school))"
+                                       Title="View" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                       Color="Color.Secondary" 
+                                       Size="Size.Small"
+                                       OnClick="@(() => EditSchool(school))"
+                                       Title="Edit" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                       Color="Color.Error" 
+                                       Size="Size.Small"
+                                       OnClick="@(() => DeleteSchool(school))"
+                                       Title="Delete" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
         }
     </Authorized>
     <NotAuthorized>
-        <h3>You are not authorized to access this page.</h3>
+        <Unauthorized />
     </NotAuthorized>
 </AuthorizeView>
 

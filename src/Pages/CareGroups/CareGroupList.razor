@@ -8,7 +8,7 @@
 <PageTitle>Care Groups</PageTitle>
 <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
-        <h3>Care Groups</h3>
+        <MudText Typo="Typo.h3" Class="mb-4">Care Groups</MudText>
 
         @if (_selectedSchool == null)
         {
@@ -16,45 +16,51 @@
         }
         else if (_careGroups == null)
         {
-            <p>Loading...</p>
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
         }
         else if (!_careGroups.Any())
         {
-            <button class="btn btn-primary mb-3" @onclick="AddCareGroup">Add Care Group</button>
-            <div class="alert alert-info">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mb-3" OnClick="AddCareGroup">Add Care Group</MudButton>
+            <MudAlert Severity="Severity.Info">
                 No Care Groups for <strong>@_selectedSchool.ShortName</strong>.
-            </div>
+            </MudAlert>
         }
         else
         {
-            <button class="btn btn-primary mb-3" @onclick="AddCareGroup">Add Care Group</button>
-            <div class="care-group-container">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mb-3" OnClick="AddCareGroup">Add Care Group</MudButton>
+            <MudGrid Spacing="3">
                 @foreach (var careGroup in _careGroups)
                 {
-                    <div class="card mb-3 p-3 card shadow-sm">
-                        <h5 class="card-title">@careGroup.Name</h5>
-                        <div class="d-flex flex-wrap gap-2">
-                            @if (careGroup.Users != null && careGroup.Users.Any())
-                            {
-                                @foreach (var user in careGroup.Users)
-                                {
-                                    <span class="badge bg-primary">@user.Abbreviation</span>
-                                }
-                            }
-                            else
-                            {
-                                <span class="badge bg-danger">No Teacher</span>
-                            }
-                        </div>
-                        <p class="mt-2">Learner Count: @careGroup.CareGroupMembers?.Count().ToString()</p>
-                        <ActionButtons TEntity="CareGroup" 
-                                       Entity="careGroup"
-                                       OnView="ViewCareGroup"
-                                       OnEdit="EditCareGroup"
-                                       OnDelete="DeleteCareGroup"/>
-                    </div>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudCard Elevation="2">
+                            <MudCardContent>
+                                <MudText Typo="Typo.h5" Class="mb-3">@careGroup.Name</MudText>
+                                <MudStack Row="true" Spacing="1" Class="mb-3 flex-wrap">
+                                    @if (careGroup.Users != null && careGroup.Users.Any())
+                                    {
+                                        @foreach (var user in careGroup.Users)
+                                        {
+                                            <MudChip T="string" Color="Color.Primary" Size="Size.Small">@user.Abbreviation</MudChip>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <MudChip T="string" Color="Color.Error" Size="Size.Small">No Teacher</MudChip>
+                                    }
+                                </MudStack>
+                                <MudText Typo="Typo.body2">Learner Count: @careGroup.CareGroupMembers?.Count().ToString()</MudText>
+                            </MudCardContent>
+                            <MudCardActions>
+                                <ActionButtons TEntity="CareGroup" 
+                                               Entity="careGroup"
+                                               OnView="ViewCareGroup"
+                                               OnEdit="EditCareGroup"
+                                               OnDelete="DeleteCareGroup"/>
+                            </MudCardActions>
+                        </MudCard>
+                    </MudItem>
                 }
-            </div>
+            </MudGrid>
         }
     </Authorized>
     <NotAuthorized>

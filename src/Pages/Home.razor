@@ -15,52 +15,40 @@
             <Authorized>
                 @if (_loading)
                 {
-                    <div class="text-center">
-                        <p>Loading...</p>
-                    </div>
+                    <MudContainer Class="d-flex justify-center align-center" Style="height: 200px;">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                    </MudContainer>
                 }
                 else
                 {
-                    <div class="container mt-4">
-                        <div class="text-center py-3">
-                            <h3>Learner Information System Dashboard</h3>
-                        </div>
-                        <div class="row mt-4">
-                            <div class="col">
-                                <div class="card mb-4">
-                                    <div class="card-body">
-                                        <h3 class="card-title">Welcome System Administrator</h3>
-                                    </div>
-                                </div>
-                                <div class="row mb-4">
-                                    <div class="col-md-4">
-                                        <div class="card text-center">
-                                            <div class="card-body bg-light">
-                                                <h4 class="card-title">Schools</h4>
-                                                <p class="card-text display-4">@_schoolCount</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="card text-center">
-                                            <div class="card-body bg-light">
-                                                <h4 class="card-title">Learners</h4>
-                                                <p class="card-text display-4">@_learnerCount</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="card text-center">
-                                            <div class="card-body bg-light">
-                                                <h4 class="card-title">Results Submitted</h4>
-                                                <p class="card-text display-4">@_resultCount</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+                        <MudGrid>
+                            <MudItem xs="12" sm="4">
+                                <MudCard>
+                                    <MudCardContent Class="text-center">
+                                        <MudText Typo="Typo.h5" Class="mb-2">Schools</MudText>
+                                        <MudText Typo="Typo.h2">@_schoolCount</MudText>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                            <MudItem xs="12" sm="4">
+                                <MudCard>
+                                    <MudCardContent Class="text-center">
+                                        <MudText Typo="Typo.h5" Class="mb-2">Learners</MudText>
+                                        <MudText Typo="Typo.h2">@_learnerCount</MudText>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                            <MudItem xs="12" sm="4">
+                                <MudCard>
+                                    <MudCardContent Class="text-center">
+                                        <MudText Typo="Typo.h5" Class="mb-2">Results Submitted</MudText>
+                                        <MudText Typo="Typo.h2">@_resultCount</MudText>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        </MudGrid>
+                    </MudContainer>
                 }
             </Authorized>
         </AuthorizeView>
@@ -69,40 +57,35 @@
             <Authorized>
                 @if (_loading)
                 {
-                    <div class="text-center">
-                        <p>Loading...</p>
-                    </div>
+                    <MudContainer Class="d-flex justify-center align-center" Style="height: 200px;">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                    </MudContainer>
                 }
                 else if (_selectedSchool != null)
                 {
-                    <div class="container mt-4">
-                        <div class="text-center py-3">
-                            <h3>Welcome to the Learner Information System</h3>
-                            <h3>@_selectedSchool.LongName</h3>
-                        </div>
-                        <div class="row mt-4">
-                            <div class="col">
-                                <div class="row mb-4">
-                                    <div class="col-md-4">
-                                        <div class="card text-center">
-                                            <div class="card-body bg-light">
-                                                <h4 class="card-title">Learners</h4>
-                                                <p class="card-text display-4">@_schoolLearnerCount</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="card text-center">
-                                            <div class="card-body bg-light">
-                                                <h4 class="card-title">Results Submitted</h4>
-                                                <p class="card-text display-4">@_schoolResultCount</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+                        <MudText Typo="Typo.h3" Align="Align.Center" Class="mb-2">Welcome to the Learner Information System</MudText>
+                        <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-6">@_selectedSchool.LongName</MudText>
+                        
+                        <MudGrid>
+                            <MudItem xs="12" sm="6">
+                                <MudCard>
+                                    <MudCardContent Class="text-center">
+                                        <MudText Typo="Typo.h5" Class="mb-2">Learners</MudText>
+                                        <MudText Typo="Typo.h2">@_schoolLearnerCount</MudText>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudCard>
+                                    <MudCardContent Class="text-center">
+                                        <MudText Typo="Typo.h5" Class="mb-2">Results Submitted</MudText>
+                                        <MudText Typo="Typo.h2">@_schoolResultCount</MudText>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        </MudGrid>
+                    </MudContainer>
                 }
             </Authorized>
         </AuthorizeView>
@@ -111,27 +94,27 @@
             <Authorized>
                 @if (_loading)
                 {
-                    <div class="text-center">
-                        <p>Loading...</p>
-                    </div>
+                    <MudContainer Class="d-flex justify-center align-center" Style="height: 200px;">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                    </MudContainer>
                 }
                 else if (_selectedSchool != null)
                 {
-                    <div class="container mt-4">
-                        <div class="row">
-                            <div class="col-md-12">
-                                <div class="card mb-4">
-                                    <div class="card-body">
-                                        <div class="row">
-                                            <div class="col-md-8">
+                    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+                        <MudGrid>
+                            <MudItem xs="12">
+                                <MudCard>
+                                    <MudCardContent>
+                                        <MudGrid>
+                                            <MudItem xs="12" md="8">
                                                 <SignInAndOutComponent @key="_selectedSchool?.Id" SelectedSchool="@_selectedSchool" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                                            </MudItem>
+                                        </MudGrid>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        </MudGrid>
+                    </MudContainer>
                 }
             
             </Authorized>

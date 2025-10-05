@@ -59,26 +59,20 @@ jobs:
             Stop-WebAppPool -Name $env:APP_POOL
           }
 
-      - name: Deploy (mirror, but KEEP appsettings*.json)
-        shell: pwsh
+      - name: Stop site cleanly (app_offline + stop app pool)
+        shell: powershell
         run: |
-          $xf = @("appsettings*.json")        # never overwrite your server configs
-          $xd = @()                           # folders to ignore during mirror
-          if ($env:ROBOT_SAFE_XD) { $xd = $env:ROBOT_SAFE_XD.Split(' ') }
-
-          $xfArgs = $xf | ForEach-Object { "/XF `"$($_)`"" } | Out-String
-          $xdArgs = $xd | Where-Object { $_ -ne "" } | ForEach-Object { "/XD `"$($_)`"" } | Out-String
-
-          $cmd = "robocopy `"$env:PUBLISH_DIR`" `"$env:DEPLOY_PATH`" /MIR /NFL /NDL /NP /R:2 /W:2 $xfArgs $xdArgs"
-          Write-Host $cmd
-          cmd.exe /c $cmd
-        # Notes:
-        # /MIR mirrors (adds/updates/deletes) but respects /XF, so appsettings*.json remains untouched.
+          New-Item -ItemType File -Path "$env:DEPLOY_PATH\app_offline.htm" -Force | Out-Null
+          Import-Module WebAdministration
+          try { Stop-WebAppPool -Name $env:APP_POOL -ErrorAction Stop }
+          catch { Write-Host "Stop-WebAppPool failed: $($_.Exception.Message)"; throw }
 
       - name: Start app pool & bring site online
-        shell: pwsh
+        shell: powershell
         run: |
           Import-Module WebAdministration
-          Start-WebAppPool -Name $env:APP_POOL
+          try { Start-WebAppPool -Name $env:APP_POOL -ErrorAction Stop }
+          catch { Write-Host "Start-WebAppPool failed: $($_.Exception.Message)"; throw }
           Remove-Item "$env:DEPLOY_PATH\app_offline.htm" -Force -ErrorAction SilentlyContinue
+
 

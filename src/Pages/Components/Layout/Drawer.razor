@@ -1,0 +1,110 @@
+@using MudBlazor
+@inherits LayoutComponentBase
+@inject NavigationManager Nav
+
+<MudDrawer @bind-Open="Open"
+           Variant="Variant"
+           Anchor="Anchor.Left"
+           Elevation="0"
+           Class="pa-2"
+           Width="@Width"
+           DisableOverlay="@DisableOverlay">
+
+    <MudNavMenu Dense="true">
+
+        <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
+
+        <AuthorizeView Roles="@Roles.SystemAdministrator">
+            <MudNavLink Href="/schools" Icon="@Icons.Material.Filled.School">Schools</MudNavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+            <MudNavLink Href="/care-groups" Icon="@Icons.Material.Filled.VolunteerActivism">Care Groups</MudNavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+            <MudNavLink Href="/users" Icon="@Icons.Material.Filled.Badge">Staff</MudNavLink>
+            <MudNavLink Href="/grades" Icon="@Icons.Material.Filled.AutoStories">Grades</MudNavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+            <MudNavLink Href="/register-class" Icon="@Icons.Material.Filled.PeopleAlt">Register Class</MudNavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@Roles.SystemAdministrator">
+            <MudNavLink Href="/subjects" Icon="@Icons.Material.Filled.MenuBook">Subjects</MudNavLink>
+            <MudNavLink Href="/assessment-types" Icon="@Icons.Material.Filled.Rule">Assessment Types</MudNavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@Roles.SystemAdministrator">
+            <MudNavLink Href="/sign-in-and-out" Icon="@Icons.Material.Filled.HowToReg">Sign In / Out</MudNavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Teacher}")">
+            <MudNavLink Href="/daily-register" Icon="@Icons.Material.Filled.EventAvailable">Daily Attendance</MudNavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.Administrator},{Roles.Teacher}")">
+            <MudNavLink Href="/per-period-attendance" Icon="@Icons.Material.Filled.Schedule">Per Period Attendance</MudNavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.Reception}")">
+            <MudNavLink Href="/leave-early" Icon="@Icons.Material.Filled.ExitToApp">Leave Early</MudNavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+            <MudNavLink Href="/combinations" Icon="@Icons.Material.Filled.Category">Combinations</MudNavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
+            <MudNavLink Href="/learners" Icon="@Icons.Material.Filled.School">Learners</MudNavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
+            <MudNavLink Href="/class-lists" Icon="@Icons.Material.Filled.ListAlt">Class Lists</MudNavLink>
+            <MudNavLink Href="/results/manage" Icon="@Icons.Material.Filled.EditNote">Capture Results</MudNavLink>
+            <MudNavLink Href="/results" Icon="@Icons.Material.Filled.Assessment">Results</MudNavLink>
+            <MudNavLink Href="/progress-feedback" Icon="@Icons.Material.Filled.GetApp">Progress Feedback</MudNavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
+            <MudNavLink Href="/communication" Icon="@Icons.Material.Filled.Campaign">Communication</MudNavLink>
+            <MudNavLink Href="/email-campaigns" Icon="@Icons.Material.Filled.MarkEmailRead">Email Campaigns</MudNavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
+            <MudNavLink Href="/adi-creator" Icon="@Icons.Material.Filled.AddCircle">ADI Creator</MudNavLink>
+        </AuthorizeView>
+
+    </MudNavMenu>
+</MudDrawer>
+
+@code {
+    // --- Parameters so MainLayout can control the drawer ---
+    [Parameter] public bool Open { get; set; } = true;
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter] public DrawerVariant Variant { get; set; } = DrawerVariant.Responsive;
+    [Parameter] public bool DisableOverlay { get; set; } = false;
+    [Parameter] public string Width { get; set; } = "260px";
+
+    protected override void OnInitialized()
+    {
+        // Close the drawer when navigation happens (nice on mobile/temporary variants)
+        Nav.LocationChanged += HandleLocationChanged;
+    }
+
+    private async void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        if (Variant != DrawerVariant.Persistent && Open)
+        {
+            Open = false;
+            await OpenChanged.InvokeAsync(Open);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= HandleLocationChanged;
+    }
+}

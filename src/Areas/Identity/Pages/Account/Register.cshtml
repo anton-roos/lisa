@@ -1,67 +1,104 @@
 ﻿@page
-@model RegisterModel
+@model Lisa.Areas.Identity.Pages.Account.RegisterModel
 @{
     ViewData["Title"] = "Register";
+    Layout = "/Pages/Shared/_IdentityLayout.cshtml";
 }
 
-<h1>@ViewData["Title"]</h1>
+<div class="login-page">
+  <div class="form">
+    <img class="logo" src="~/images/logo.png" alt="DCEG Learn" />
+    <p class="subtitle">Create your account</p>
 
-<div class="row">
-    <div class="col-md-4">
-        <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
-            <h2>Create a new account.</h2>
-            <hr />
-            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                <label asp-for="Input.Email">Email</label>
-                <span asp-validation-for="Input.Email" class="text-danger"></span>
+    <form id="registerForm" method="post" asp-route-returnUrl="@Model.ReturnUrl" novalidate>
+        <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+        <div class="field">
+            <label asp-for="Input.Email"></label>
+            <div class="input">
+                <i class="bi bi-envelope"></i>
+                <input asp-for="Input.Email"
+                       autocomplete="username"
+                       inputmode="email"
+                       autocapitalize="none"
+                       spellcheck="false" />
             </div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label asp-for="Input.Password">Password</label>
-                <span asp-validation-for="Input.Password" class="text-danger"></span>
+            <span asp-validation-for="Input.Email" class="text-danger"></span>
+        </div>
+
+        <div class="field">
+            <label asp-for="Input.Password"></label>
+            <div class="input">
+                <i class="bi bi-lock"></i>
+                <input asp-for="Input.Password" id="password" autocomplete="new-password" />
+                <button type="button" class="toggle" aria-label="Show password" onclick="togglePwd('password', this)">
+                    <i class="bi bi-eye"></i>
+                </button>
             </div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label asp-for="Input.ConfirmPassword">Confirm Password</label>
-                <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+            <span asp-validation-for="Input.Password" class="text-danger"></span>
+        </div>
+
+        <div class="field">
+            <label asp-for="Input.ConfirmPassword"></label>
+            <div class="input">
+                <i class="bi bi-lock"></i>
+                <input asp-for="Input.ConfirmPassword" id="confirmPassword" autocomplete="new-password" />
+                <button type="button" class="toggle" aria-label="Show password" onclick="togglePwd('confirmPassword', this)">
+                    <i class="bi bi-eye"></i>
+                </button>
             </div>
-            <button id="registerSubmit" type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
-        </form>
-    </div>
-    <div class="col-md-6 col-md-offset-2">
-        <section>
-            <h3>Use another service to register.</h3>
-            <hr />
-            @{
-                if ((Model.ExternalLogins?.Count ?? 0) == 0)
-                {
-                    <div>
-                        <p>
-                            There are no external authentication services configured. See this <a href="https://go.microsoft.com/fwlink/?LinkID=532715">article
-                            about setting up this ASP.NET application to support logging in via external services</a>.
-                        </p>
-                    </div>
-                }
-                else
-                {
-                    <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
-                        <div>
-                            <p>
-                                @foreach (var provider in Model.ExternalLogins!)
-                                {
-                                    <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
-                                }
-                            </p>
-                        </div>
-                    </form>
-                }
-            }
-        </section>
-    </div>
+            <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+        </div>
+
+        <!-- Simple user type radios (plain HTML). 
+             If you want this bound, add a property to RegisterModel.Input and rename name="Input.UserType". -->
+        <div class="field">
+            <label>User type</label>
+            <div class="row" style="justify-content:flex-start; gap:1rem;">
+                <label class="form-check">
+                    <input class="form-check-input" type="radio" name="UserType" value="parent" checked>
+                    <span class="form-check-label">Parent</span>
+                </label>
+                <label class="form-check">
+                    <input class="form-check-input" type="radio" name="UserType" value="learner">
+                    <span class="form-check-label">Learner</span>
+                </label>
+            </div>
+        </div>
+
+        <button id="registerBtn" type="submit" class="btn-primary">
+            <span class="btn-text">Create account</span>
+            <span class="spinner" aria-hidden="true"></span>
+        </button>
+
+        <p class="subtitle" style="margin-top:12px;">
+            Already have an account? <a asp-page="./Login">Log in</a>
+        </p>
+    </form>
+  </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+      const regBtn = document.getElementById('registerBtn');
+      const regForm = document.getElementById('registerForm');
+
+      regForm?.addEventListener('submit', () => {
+        regBtn.classList.add('loading');
+        regBtn.disabled = true;
+      });
+
+      function togglePwd(id, btn){
+        const input = document.getElementById(id);
+        const icon = btn.querySelector('i');
+        if (input.type === 'password'){
+          input.type = 'text';
+          icon.classList.replace('bi-eye','bi-eye-slash');
+        } else {
+          input.type = 'password';
+          icon.classList.replace('bi-eye-slash','bi-eye');
+        }
+      }
+    </script>
 }

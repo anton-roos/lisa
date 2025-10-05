@@ -1,36 +1,75 @@
 ﻿@page
-@model LoginModel
-
+@model Lisa.Areas.Identity.Pages.Account.LoginModel
 @{
-    ViewData["Title"] = "Log in";
-    Layout = "/Pages/Shared/_IdentityLayout.cshtml";
+  ViewData["Title"] = "Log in";
 }
 
-<div class="row">
-    <div class="col-md-4">
-        <section>
-            <form id="account" method="post">
-                <h2>Log In</h2>
-                <hr />
-                <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-                <div class="form-floating mb-3">
-                    <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                    <label asp-for="Input.Email" class="form-label">Email</label>
-                    <span asp-validation-for="Input.Email" class="text-danger"></span>
-                </div>
-                <div class="form-floating mb-3">
-                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
-                    <label asp-for="Input.Password" class="form-label">Password</label>
-                    <span asp-validation-for="Input.Password" class="text-danger"></span>
-                </div>
-                <div>
-                    <button id="login-submit" type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
-                </div>
-            </form>
-        </section>
-    </div>
+<div class="login-page">
+  <div class="form">
+    <img class="logo" src="~/images/logo.png" alt="DCEG Learn" />
+    <p class="subtitle">Sign in to continue</p>
+
+    <form id="account" method="post" novalidate>
+        <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+        <div class="field">
+            <div class="input">
+                <i class="bi bi-envelope"></i>
+                <input asp-for="Input.Email"
+                       placeholder="Email"
+                       autocomplete="username"
+                       inputmode="email"
+                       autocapitalize="none"
+                       spellcheck="false"
+                       autofocus />
+            </div>
+            <span asp-validation-for="Input.Email" class="text-danger"></span>
+        </div>
+
+        <div class="field">
+            <div class="input">
+                <i class="bi bi-lock"></i>
+                <input asp-for="Input.Password"
+                       id="password"
+                       placeholder="Pasword"
+                       autocomplete="current-password"
+                       enterkeyhint="go" />
+                <button type="button" class="toggle" aria-label="Show password" onclick="togglePwd()">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </div>
+            <span asp-validation-for="Input.Password" class="text-danger"></span>
+        </div>
+
+        <button id="loginBtn" type="submit" class="btn-primary">
+            <span class="btn-text">Log in</span>
+            <span class="spinner" aria-hidden="true"></span>
+        </button>
+    </form>
+  </div>
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+  <partial name="_ValidationScriptsPartial" />
+  <script>
+    const btn = document.getElementById('loginBtn');
+    const form = document.getElementById('account');
+
+    form?.addEventListener('submit', () => {
+      btn.classList.add('loading');
+      btn.disabled = true;
+    });
+
+    function togglePwd(){
+      const input = document.getElementById('password');
+      const icon = event.currentTarget.querySelector('i');
+      if (input.type === 'password'){
+        input.type = 'text';
+        icon.classList.replace('bi-eye','bi-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.replace('bi-eye-slash','bi-eye');
+      }
+    }
+  </script>
 }

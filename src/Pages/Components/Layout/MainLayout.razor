@@ -23,7 +23,7 @@
             <div class="d-flex align-items-center py-3">
                 <AuthorizeView Context="_">
                     <Authorized>
-                        <form action="/Identity/Account/Logout" method="post" class="m-0">
+                        <form action="/logout" method="post" class="m-0">
                             @if (_afToken is not null)
                             {
                                 <input type="hidden" name="@_afField" value="@_afToken" />
@@ -35,7 +35,7 @@
                         </form>
                     </Authorized>
                     <NotAuthorized>
-                        <a href="/Identity/Account/Login" class="btn btn-primary btn-sm">Login</a>
+                        <a href="/login" class="btn btn-primary btn-sm">Login</a>
                     </NotAuthorized>
                 </AuthorizeView>
             </div>

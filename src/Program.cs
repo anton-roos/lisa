@@ -59,9 +59,9 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.Name = "lisa_auth_token";
     options.ExpireTimeSpan = TimeSpan.FromHours(12);
     options.SlidingExpiration = true;
-    options.LoginPath = "/Identity/Account/Login";
-    options.LogoutPath = "/Identity/Account/Logout";
-    options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+    options.LoginPath = "/login";
+    options.LogoutPath = "/logout";
+    options.AccessDeniedPath = "/denied";
 });
 
 builder.Services.AddHttpClient();
@@ -98,7 +98,15 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers();
 builder.Services.AddMudServices();
 
-builder.Services.AddRazorPages();
+builder.Services.AddRazorPages(options =>
+{
+    options.Conventions.AddAreaPageRoute("Identity", "/Account/Login", "/login");
+    options.Conventions.AddAreaPageRoute("Identity", "/Account/Logout", "/logout");
+    options.Conventions.AddAreaPageRoute("Identity", "/Account/Register", "/register");
+    options.Conventions.AddAreaPageRoute("Identity", "/Account/AccessDenied", "/denied");
+    options.Conventions.AddAreaPageRoute("Identity", "/Account/Manage/Index", "/account");
+});
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -127,5 +135,11 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapRazorPages();
 app.MapControllers();
+
+app.Use(async (ctx, next) =>
+{
+    ctx.Response.Headers["X-Robots-Tag"] = "noindex, nofollow, noarchive";
+    await next();
+});
 
 app.Run();

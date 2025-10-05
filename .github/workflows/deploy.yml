@@ -51,15 +51,6 @@ jobs:
         run: dotnet publish --configuration Release --no-build --output "$env:PUBLISH_DIR"
 
       - name: Stop site cleanly (app_offline + stop app pool)
-        shell: pwsh
-        run: |
-          New-Item -ItemType File -Path "$env:DEPLOY_PATH\app_offline.htm" -Force | Out-Null
-          Import-Module WebAdministration
-          if (Get-WebAppPoolState -Name $env:APP_POOL) {
-            Stop-WebAppPool -Name $env:APP_POOL
-          }
-
-      - name: Stop site cleanly (app_offline + stop app pool)
         shell: powershell
         run: |
           New-Item -ItemType File -Path "$env:DEPLOY_PATH\app_offline.htm" -Force | Out-Null

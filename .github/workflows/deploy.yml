@@ -18,8 +18,8 @@ jobs:
     runs-on: self-hosted
     env:
       # ---- Adjust these to your actual site roots and app pools ----
-      QA_PATH:   D:\Sites\dceg-learn
-      PROD_PATH: D:\Sites\dceg-lis
+      QA_PATH:   C:\Sites\dceg-learn
+      PROD_PATH: C:\Sites\dceg-lis
       QA_POOL:   dceg-learn.co.za
       PROD_POOL: dceg-lis.co.za
       # Optional: keep these folders on server untouched during mirror

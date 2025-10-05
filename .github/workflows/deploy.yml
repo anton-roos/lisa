@@ -74,5 +74,3 @@ jobs:
           try { Start-WebAppPool -Name $env:APP_POOL -ErrorAction Stop }
           catch { Write-Host "Start-WebAppPool failed: $($_.Exception.Message)"; throw }
           Remove-Item "$env:DEPLOY_PATH\app_offline.htm" -Force -ErrorAction SilentlyContinue
-
-

@@ -81,3 +81,4 @@ jobs:
           Import-Module WebAdministration
           Start-WebAppPool -Name $env:APP_POOL
           Remove-Item "$env:DEPLOY_PATH\app_offline.htm" -Force -ErrorAction SilentlyContinue
+

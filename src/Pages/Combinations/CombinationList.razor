@@ -5,69 +5,119 @@
 @inject SchoolGradeService SchoolGradeService
 @inherits EventAwareComponentBase
 @inject SchoolService SchoolService
+@inject IDialogService DialogService
 
 <PageTitle>Subject Combinations</PageTitle>
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
-        <h3>Subject Combinations</h3>
         @if (_selectedSchool == null)
         {
              <NoSchoolSelected Message=" Please select a school to view subject combinations." />
         }
         else if (_subjectCombinations == null)
         {
-            <p>Loading...</p>
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
         }
         else if (_schoolGrades == null || !_schoolGrades.Any())
         {
-            <button class="btn btn-primary mb-3" @onclick="AddCombination">Add Combination</button>
-            <div class="alert alert-warning">
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="AddCombination"
+                       Class="mb-3">
+                Add Combination
+            </MudButton>
+            <MudAlert Severity="Severity.Warning" Class="mt-3">
                 No Grades found. Please add a grade first before adding Subject combination.
-            </div>
+            </MudAlert>
         }
         else if (!_subjectCombinations.Any())
         {
-            <button class="btn btn-primary mb-3" @onclick="AddCombination">Add Combination</button>
-            <div class="alert alert-info">
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="AddCombination"
+                       Class="mb-3">
+                Add Combination
+            </MudButton>
+            <MudAlert Severity="Severity.Info" Class="mt-3">
                 No Subject Combinations found.
-            </div>
+            </MudAlert>
         }
         else
         {
-            <button class="btn btn-primary mb-3" @onclick="AddCombination">Add Combination</button>
-            <div>
-                <div class="row">
-                    @foreach (var combination in _subjectCombinations)
-                    {
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card shadow-sm mb-4">
-                                <div class="card-body">
-                                    <h5 class="card-title fw-bold">@combination.Name</h5>
-                                    <p class="mb-2"><strong>Grade:</strong>
-                                        @combination.SchoolGrade?.SystemGrade.Name</p>
-
-                                    <div class="mb-3">
-                                        <strong>Subjects:</strong>
-                                        <div class="mt-1">
-                                            @if (combination.Subjects != null)
-                                            {
-                                                foreach (var subject in combination.Subjects)
-                                                {
-                                                    <Pill Color="danger" AdditionalClasses="me-1">@subject.Code</Pill>
-                                                }
-                                            }
-                                        </div>
-                                    </div>
-
-                                    <ActionButtons TEntity="Combination" Entity="combination" OnView="ViewCombination"
-                                        OnEdit="EditCombination" OnDelete="DeleteCombination" />
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
-
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="AddCombination"
+                       Class="mb-3">
+                Add Combination
+            </MudButton>
+            
+            <MudTable Items="@_subjectCombinations" 
+                      Hover="true" 
+                      Striped="true" 
+                      Dense="true"
+                      Elevation="2"
+                      Breakpoint="Breakpoint.Sm">
+                <HeaderContent>
+                    <MudTh>Name</MudTh>
+                    <MudTh>Grade</MudTh>
+                    <MudTh>Subjects</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="combination">
+                    <MudTd DataLabel="Name">
+                        <MudText Typo="Typo.body1">@combination.Name</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Grade">
+                        @if (combination.SchoolGrade?.SystemGrade != null)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary">
+                                @combination.SchoolGrade.SystemGrade.Name
+                            </MudChip>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Subjects">
+                        @if (combination.Subjects != null && combination.Subjects.Any())
+                        {
+                            <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                @foreach (var subject in combination.Subjects)
+                                {
+                                    <MudChip T="string" Color="Color.Error" Size="Size.Small">@subject.Code</MudChip>
+                                }
+                            </MudStack>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">No subjects</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudStack Row="true" Spacing="1">
+                            <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                           Color="Color.Primary" 
+                                           Size="Size.Small"
+                                           OnClick="@(() => ViewCombination(combination))"
+                                           Title="View" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                           Color="Color.Secondary" 
+                                           Size="Size.Small"
+                                           OnClick="@(() => EditCombination(combination))"
+                                           Title="Edit" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                           Color="Color.Error" 
+                                           Size="Size.Small"
+                                           OnClick="@(() => DeleteCombination(combination))"
+                                           Title="Delete" />
+                        </MudStack>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
         }
     </Authorized>
     <NotAuthorized>

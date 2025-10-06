@@ -23,7 +23,9 @@ public class EmailCampaignService
     private static readonly ConcurrentDictionary<Guid, CancellationTokenSource> CampaignIds = new();
     private const int BatchSize = 100;
     private const int ProgressComplete = 100;
-    private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled); public async Task<EmailCampaign> CreateAsync(CommunicationCommand command)
+    private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled);
+
+    public async Task<EmailCampaign> CreateAsync(CommunicationCommand command)
     {
         await using var context = await contextFactory.CreateDbContextAsync();
         await using var transaction = await context.Database.BeginTransactionAsync();
@@ -63,7 +65,9 @@ public class EmailCampaignService
     {
         await using var context = await contextFactory.CreateDbContextAsync();
         return await context.EmailCampaigns
+            .Include(c => c.EmailRecipients)
             .Where(c => c.SchoolId == schoolId)
+            .OrderByDescending(c => c.CreatedAt)
             .AsNoTracking()
             .ToListAsync();
     }
@@ -71,13 +75,18 @@ public class EmailCampaignService
     public async Task<EmailCampaign?> GetByIdAsync(Guid id)
     {
         await using var context = await contextFactory.CreateDbContextAsync();
-        return await context.EmailCampaigns.FindAsync(id);
+        return await context.EmailCampaigns
+            .Include(c => c.EmailRecipients)
+                .ThenInclude(r => r.Learner)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id);
     }
 
     public async Task StartCampaignAsync(Guid campaignId)
     {
-        await using var context = await contextFactory.CreateDbContextAsync(); var campaign = await context.EmailCampaigns
-            .AsNoTracking()
+        await using var context = await contextFactory.CreateDbContextAsync();
+
+        var campaign = await context.EmailCampaigns
             .Include(c => c.EmailRecipients)
             .FirstOrDefaultAsync(c => c.Id == campaignId);
 
@@ -93,16 +102,19 @@ public class EmailCampaignService
             return;
         }
 
-        var tokenSource = new CancellationTokenSource();
-        campaign.Status = EmailCampaignStatus.Sending;
-        await context.SaveChangesAsync();
+        if (campaign.Status == EmailCampaignStatus.Cancelled)
+        {
+            logger.LogWarning("Campaign {CampaignId} is cancelled and cannot be restarted.", campaignId);
+            return;
+        }
 
         if (CampaignIds.ContainsKey(campaignId))
         {
             logger.LogWarning("Campaign {CampaignId} is already running.", campaignId);
-            tokenSource.Dispose();
             return;
         }
+
+        var tokenSource = new CancellationTokenSource();
         if (!CampaignIds.TryAdd(campaignId, tokenSource))
         {
             logger.LogWarning("Campaign {CampaignId} is already running.", campaignId);
@@ -115,9 +127,31 @@ public class EmailCampaignService
             if (!ValidateCampaign(campaign))
             {
                 campaign.Status = EmailCampaignStatus.Failed;
+                campaign.UpdatedAt = DateTime.UtcNow;
                 await context.SaveChangesAsync();
                 return;
             }
+
+            // If resuming a campaign, skip already processed recipients
+            var pendingRecipients = campaign.EmailRecipients?
+                .Where(r => r.Status == EmailRecipientStatus.Pending)
+                .ToList() ?? [];
+
+            if (pendingRecipients.Count == 0)
+            {
+                logger.LogInformation("Campaign {CampaignId} has no pending recipients - marking as complete", campaignId);
+                campaign.Status = EmailCampaignStatus.Sent;
+                campaign.UpdatedAt = DateTime.UtcNow;
+                await context.SaveChangesAsync();
+                await uiEventService.PublishAsync(UiEvents.EmailCampaignCompleted, new { campaign.Id });
+                return;
+            }
+
+            campaign.Status = EmailCampaignStatus.Sending;
+            campaign.UpdatedAt = DateTime.UtcNow;
+            await context.SaveChangesAsync();
+            logger.LogInformation("Campaign {CampaignId} status set to Sending in database. {Pending} pending recipients.",
+                campaignId, pendingRecipients.Count);
 
             await uiEventService.PublishAsync(UiEvents.EmailCampaignStarted, new { campaign.Id });
             await ProcessEmailsAsync(context, campaign, tokenSource.Token);
@@ -126,6 +160,7 @@ public class EmailCampaignService
         {
             logger.LogError(ex, "Error starting campaign {CampaignId}", campaignId);
             campaign.Status = EmailCampaignStatus.Failed;
+            campaign.UpdatedAt = DateTime.UtcNow;
             await context.SaveChangesAsync();
         }
         finally
@@ -139,46 +174,56 @@ public class EmailCampaignService
 
     public async Task PauseCampaignAsync(Guid campaignId)
     {
-        if (!TryCancelCampaign(campaignId))
-        {
-            logger.LogWarning("No active campaign found to pause for {CampaignId}", campaignId);
-            return;
-        }
-
+        // First update the database status
         await using var context = await contextFactory.CreateDbContextAsync();
         var campaign = await context.EmailCampaigns.FindAsync(campaignId);
         if (campaign != null)
         {
             campaign.Status = EmailCampaignStatus.Paused;
+            campaign.UpdatedAt = DateTime.UtcNow;
             await context.SaveChangesAsync();
-            await uiEventService.PublishAsync(UiEvents.EmailCampaignPaused, new { Id = campaignId });
+            logger.LogInformation("Campaign {CampaignId} status set to Paused in database", campaignId);
         }
         else
         {
             logger.LogWarning("Campaign {CampaignId} not found during pause.", campaignId);
+            return;
         }
+
+        // Then cancel the token to stop processing
+        if (!TryCancelCampaign(campaignId))
+        {
+            logger.LogWarning("No active campaign token found to cancel for {CampaignId}", campaignId);
+        }
+
+        await uiEventService.PublishAsync(UiEvents.EmailCampaignPaused, new { Id = campaignId });
     }
 
     public async Task StopCampaignAsync(Guid campaignId)
     {
-        if (!TryCancelCampaign(campaignId))
-        {
-            logger.LogWarning("No active campaign found to stop for {CampaignId}", campaignId);
-            return;
-        }
-
+        // First update the database status
         await using var context = await contextFactory.CreateDbContextAsync();
         var campaign = await context.EmailCampaigns.FindAsync(campaignId);
         if (campaign != null)
         {
             campaign.Status = EmailCampaignStatus.Cancelled;
+            campaign.UpdatedAt = DateTime.UtcNow;
             await context.SaveChangesAsync();
-            await uiEventService.PublishAsync(UiEvents.EmailCampaignCancelled, new { Id = campaignId });
+            logger.LogInformation("Campaign {CampaignId} status set to Cancelled in database", campaignId);
         }
         else
         {
             logger.LogWarning("Campaign {CampaignId} not found during stop.", campaignId);
+            return;
         }
+
+        // Then cancel the token to stop processing
+        if (!TryCancelCampaign(campaignId))
+        {
+            logger.LogWarning("No active campaign token found to cancel for {CampaignId}", campaignId);
+        }
+
+        await uiEventService.PublishAsync(UiEvents.EmailCampaignCancelled, new { Id = campaignId });
     }
 
     private bool TryCancelCampaign(Guid campaignId)
@@ -217,6 +262,7 @@ public class EmailCampaignService
             }
 
             var uniqueRecipients = recipients
+                .Where(r => r.Status == EmailRecipientStatus.Pending)
                 .GroupBy(r => new { r.EmailAddress, r.LearnerId })
                 .Select(g => g.First())
                 .ToList();
@@ -239,52 +285,70 @@ public class EmailCampaignService
         catch (OperationCanceledException)
         {
             logger.LogInformation("Email campaign {CampaignId} was cancelled.", campaign.Id);
-            campaign.Status = EmailCampaignStatus.Cancelled;
-            await context.SaveChangesAsync(cancellationToken);
+            // Don't update status here - it was already set by PauseCampaignAsync or StopCampaignAsync
+            var cancelledCampaign = await context.EmailCampaigns.FindAsync(campaign.Id);
+            if (cancelledCampaign != null)
+            {
+                logger.LogInformation("Campaign {CampaignId} status after cancellation: {Status}", campaign.Id, cancelledCampaign.Status);
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Unexpected error in ProcessEmailsAsync for campaign {CampaignId}", campaign.Id);
             campaign.Status = EmailCampaignStatus.Failed;
-            await context.SaveChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(CancellationToken.None);
         }
     }
 
     private async Task<int> ProcessBatchAsync(EmailCampaign campaign, IEnumerable<EmailRecipient> batch,
         int total, int processedCount, CancellationToken cancellationToken)
     {
-        var delayInterval = 0;
+        // Send at 25 emails per minute = 1 email every 2.4 seconds
+        const int delayMilliseconds = 2400; // 60000ms / 25 = 2400ms
 
         var emailRecipients = batch as EmailRecipient[] ?? batch.ToArray();
         foreach (var recipient in emailRecipients)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await Task.Delay(TimeSpan.FromSeconds(delayInterval), cancellationToken);
-            await ProcessRecipientAsync(campaign, recipient);
-            delayInterval += 5;
+
+            await ProcessRecipientAsync(campaign, recipient, cancellationToken);
+
+            // Add delay between emails (except after the last one in the batch)
+            if (recipient != emailRecipients.Last())
+            {
+                await Task.Delay(delayMilliseconds, cancellationToken);
+            }
         }
 
         processedCount += emailRecipients.Count();
-        var progress = CalculateProgress(processedCount, total);
-        await uiEventService.PublishAsync(UiEvents.EmailCampaignProgressUpdated, new
-        {
-            campaign.Id,
-            Progress = progress,
-            Total = total,
-            Sent = processedCount
-        });
+
+        // Publish summary progress at end of batch
+        await PublishBatchProgress(campaign.Id, total, processedCount, cancellationToken);
 
         return processedCount;
     }
 
-    private async Task ProcessRecipientAsync(EmailCampaign campaign, EmailRecipient recipient)
+    private async Task ProcessRecipientAsync(EmailCampaign campaign, EmailRecipient recipient, CancellationToken cancellationToken)
     {
+        await using var recipientContext = await contextFactory.CreateDbContextAsync();
+
         try
         {
             if (string.IsNullOrWhiteSpace(recipient.EmailAddress) || !EmailRegex.IsMatch(recipient.EmailAddress))
             {
                 logger.LogWarning("Recipient for campaign {CampaignId} has invalid email address: {Email}", campaign.Id, recipient.EmailAddress);
                 recipient.Status = EmailRecipientStatus.Bounced;
+                recipient.BouncedAt = DateTime.UtcNow;
+                recipient.UpdatedAt = DateTime.UtcNow;
+
+                recipientContext.EmailRecipients.Attach(recipient);
+                recipientContext.Entry(recipient).Property(r => r.Status).IsModified = true;
+                recipientContext.Entry(recipient).Property(r => r.BouncedAt).IsModified = true;
+                recipientContext.Entry(recipient).Property(r => r.UpdatedAt).IsModified = true;
+                await recipientContext.SaveChangesAsync(cancellationToken);
+
+                // Notify UI immediately
+                await NotifyRecipientStatusChange(campaign.Id);
                 return;
             }
 
@@ -315,17 +379,84 @@ public class EmailCampaignService
             {
                 logger.LogError("Failed to render email body for recipient {RecipientEmail} in campaign {CampaignId}", recipient.EmailAddress, campaign.Id);
                 recipient.Status = EmailRecipientStatus.Bounced;
+                recipient.BouncedAt = DateTime.UtcNow;
+                recipient.UpdatedAt = DateTime.UtcNow;
+
+                recipientContext.EmailRecipients.Attach(recipient);
+                recipientContext.Entry(recipient).Property(r => r.Status).IsModified = true;
+                recipientContext.Entry(recipient).Property(r => r.BouncedAt).IsModified = true;
+                recipientContext.Entry(recipient).Property(r => r.UpdatedAt).IsModified = true;
+                await recipientContext.SaveChangesAsync(cancellationToken);
+
+                // Notify UI immediately
+                await NotifyRecipientStatusChange(campaign.Id);
                 return;
             }
 
             await emailService.SendEmailAsync(recipient.EmailAddress, subject, body, campaign.SchoolId);
+
             recipient.Status = EmailRecipientStatus.Sent;
+            recipient.UpdatedAt = DateTime.UtcNow;
+
+            recipientContext.EmailRecipients.Attach(recipient);
+            recipientContext.Entry(recipient).Property(r => r.Status).IsModified = true;
+            recipientContext.Entry(recipient).Property(r => r.UpdatedAt).IsModified = true;
+            await recipientContext.SaveChangesAsync(cancellationToken);
+
+            // Notify UI immediately
+            await NotifyRecipientStatusChange(campaign.Id);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error sending email to {RecipientEmail}", recipient.EmailAddress);
             recipient.Status = EmailRecipientStatus.Bounced;
+            recipient.BouncedAt = DateTime.UtcNow;
+            recipient.UpdatedAt = DateTime.UtcNow;
+
+            recipientContext.EmailRecipients.Attach(recipient);
+            recipientContext.Entry(recipient).Property(r => r.Status).IsModified = true;
+            recipientContext.Entry(recipient).Property(r => r.BouncedAt).IsModified = true;
+            recipientContext.Entry(recipient).Property(r => r.UpdatedAt).IsModified = true;
+            await recipientContext.SaveChangesAsync(cancellationToken);
+
+            // Notify UI immediately
+            await NotifyRecipientStatusChange(campaign.Id);
         }
+    }
+
+    private async Task PublishBatchProgress(Guid campaignId, int total, int processedCount, CancellationToken cancellationToken)
+    {
+        var progress = CalculateProgress(processedCount, total);
+
+        // Get actual counts from database for accuracy
+        await using var context = await contextFactory.CreateDbContextAsync();
+        var sentCount = await context.EmailRecipients
+            .Where(r => r.EmailCampaignId == campaignId && r.Status == EmailRecipientStatus.Sent)
+            .CountAsync(cancellationToken);
+
+        var bouncedCount = await context.EmailRecipients
+            .Where(r => r.EmailCampaignId == campaignId && r.Status == EmailRecipientStatus.Bounced)
+            .CountAsync(cancellationToken);
+
+        await uiEventService.PublishAsync(UiEvents.EmailCampaignProgressUpdated, new
+        {
+            Id = campaignId,
+            Progress = progress,
+            Total = total,
+            Sent = processedCount,
+            ActualSent = sentCount,
+            ActualBounced = bouncedCount
+        });
+    }
+
+    private async Task NotifyRecipientStatusChange(Guid campaignId)
+    {
+        // Publish a lightweight event to trigger UI refresh
+        await uiEventService.PublishAsync(UiEvents.EmailCampaignProgressUpdated, new
+        {
+            Id = campaignId,
+            RecipientStatusChanged = true
+        });
     }
 
     private async Task PublishProgressAsync(Guid campaignId, int total, int sent, bool isEmpty = false)
@@ -387,6 +518,7 @@ public class EmailCampaignService
             UpdatedAt = DateTime.UtcNow
         }).ToList();
     }
+
     private async Task<List<(string Email, Guid LearnerId)>> GetProgressFeedbackRecipientsAsync(CommunicationCommand command)
     {
         if (command.RecipientTemplate == RecipientTemplate.ProgressFeedback &&
@@ -519,6 +651,7 @@ public class EmailCampaignService
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
+
     private bool ValidateCampaign(EmailCampaign campaign)
     {
         if (string.IsNullOrWhiteSpace(campaign.Name))
@@ -581,7 +714,7 @@ public class EmailCampaignService
             return learner != null ? [learner] : [];
         }
 
-        await using var context = await contextFactory.CreateDbContextAsync();        // Use the injected service
+        await using var context = await contextFactory.CreateDbContextAsync();
         var progressService = progressFeedbackService;
 
         DateTime? fromDateUtc = command.FromDate.HasValue ? command.FromDate.Value : null;

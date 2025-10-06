@@ -1,6 +1,7 @@
 @page "/email-campaigns"
 
 @using Lisa.Models.Entities
+@using Lisa.Enums
 @inject SchoolService SchoolService
 @inject EmailCampaignService CampaignService
 @inject NavigationManager NavigationManager
@@ -10,56 +11,88 @@
 <PageTitle>Email Campaigns</PageTitle>
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
     <Authorized>
-        <h3>Email Campaigns for @_selectedSchool?.ShortName</h3>
         @if (_selectedSchool is null)
         {
             <NoSchoolSelected Message="Please select a school to view email campaigns." />
         }
-        else if (_emailCampaignList?.Count == 0)
+        else if (_emailCampaignList == null)
         {
-            <div class="alert alert-info">
-                No campaigns found for this school.
-            </div>
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+        }
+        else if (_emailCampaignList.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Class="mt-3">
+                No campaigns found for <strong>@_selectedSchool.ShortName</strong>.
+            </MudAlert>
         }
         else
         {
-            <h3>Email Campaigns for @_selectedSchool?.ShortName</h3>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Status</th>
-                        <th>Subject Line</th>
-                        <th>Created At</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (_emailCampaignList == null)
-                    {
-                        <tr>
-                            <td colspan="5">No Email Campaigns Found</td>
-                        </tr>
-                    }
-                    else
-                    {
-                        @foreach (var campaign in _emailCampaignList)
+            <MudText Typo="Typo.h4" Class="mb-4">Email Campaigns for @_selectedSchool.ShortName</MudText>
+            
+            <MudTable Items="@_emailCampaignList" 
+                      Hover="true" 
+                      Striped="true" 
+                      Dense="true"
+                      Elevation="2"
+                      Breakpoint="Breakpoint.Sm">
+                <HeaderContent>
+                    <MudTh>Name</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Subject Line</MudTh>
+                    <MudTh>Recipients</MudTh>
+                    <MudTh>Template</MudTh>
+                    <MudTh>Created</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="campaign">
+                    <MudTd DataLabel="Name">
+                        <MudText Typo="Typo.body1">@campaign.Name</MudText>
+                        @if (!string.IsNullOrEmpty(campaign.Description))
                         {
-                            <tr>
-                                <td>@campaign.Name</td>
-                                <td>@campaign.Status</td>
-                                <td>@campaign.SubjectLine</td>
-                                <td>@campaign.CreatedAt.ToLocalTime()</td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary" @onclick="@(() => ViewCampaign(campaign.Id))">
-                                    View
-                                </button>
-                            </td>
-                        </tr>
-                    }
-        }
-                </tbody>
-            </table>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@campaign.Description</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudChip T="string" 
+                                 Size="Size.Small" 
+                                 Color="@GetStatusColor(campaign.Status)"
+                                 Icon="@GetStatusIcon(campaign.Status)">
+                            @campaign.Status
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Subject Line">
+                        <MudText Typo="Typo.body2">@campaign.SubjectLine</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Recipients">
+                        <MudText Typo="Typo.body2">
+                            @(campaign.EmailRecipients?.Count ?? 0)
+                        </MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Template">
+                        @if (campaign.RecipientTemplate != RecipientTemplate.None)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                                @campaign.RecipientTemplate
+                            </MudChip>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Created">
+                        <MudText Typo="Typo.body2">@campaign.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@campaign.CreatedAt.ToLocalTime().ToString("HH:mm")</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                       Color="Color.Primary" 
+                                       Size="Size.Small"
+                                       OnClick="@(() => ViewCampaign(campaign.Id))"
+                                       Title="View Campaign" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
         }
     </Authorized>
     <NotAuthorized>
@@ -99,6 +132,36 @@
     private void ViewCampaign(Guid campaignId)
     {
         NavigationManager.NavigateTo($"/email-campaign/{campaignId}");
+    }
+
+    private Color GetStatusColor(EmailCampaignStatus status)
+    {
+        return status switch
+        {
+            EmailCampaignStatus.Draft => Color.Default,
+            EmailCampaignStatus.Scheduled => Color.Info,
+            EmailCampaignStatus.Sending => Color.Warning,
+            EmailCampaignStatus.Sent => Color.Success,
+            EmailCampaignStatus.Paused => Color.Warning,
+            EmailCampaignStatus.Cancelled => Color.Error,
+            EmailCampaignStatus.Failed => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private string GetStatusIcon(EmailCampaignStatus status)
+    {
+        return status switch
+        {
+            EmailCampaignStatus.Draft => Icons.Material.Filled.Edit,
+            EmailCampaignStatus.Scheduled => Icons.Material.Filled.Schedule,
+            EmailCampaignStatus.Sending => Icons.Material.Filled.Send,
+            EmailCampaignStatus.Sent => Icons.Material.Filled.CheckCircle,
+            EmailCampaignStatus.Paused => Icons.Material.Filled.Pause,
+            EmailCampaignStatus.Cancelled => Icons.Material.Filled.Cancel,
+            EmailCampaignStatus.Failed => Icons.Material.Filled.Error,
+            _ => Icons.Material.Filled.Info
+        };
     }
 
     protected override async Task HandleEventAsync(string eventName, object? payload)

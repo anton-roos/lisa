@@ -33,8 +33,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="libwkhtmltox.dll" CopyToOutputDirectory="Always" />
-    <None Include="libwkhtmltox.dylib" CopyToOutputDirectory="Always" />
-    <None Include="libwkhtmltox.so" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
   <ItemGroup>    

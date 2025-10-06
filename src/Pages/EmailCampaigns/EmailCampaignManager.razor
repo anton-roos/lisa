@@ -1,57 +1,270 @@
 @page "/email-campaign/{Id:guid}"
 @using Lisa.Models.Entities
+@using Lisa.Enums
 @inject EmailCampaignService EmailCampaignService
 @inject ILogger<EmailCampaignManager> Logger
+@inject ISnackbar Snackbar
 @inherits EventAwareComponentBase
 
-<PageTitle>Email Campaign</PageTitle>
+<PageTitle>Email Campaign Manager</PageTitle>
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
     <Authorized>
         @if (_isLoading)
         {
-            <p>Loading campaign details...</p>
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+            <MudText Align="Align.Center" Typo="Typo.body1" Color="Color.Secondary">
+                Loading campaign details...
+            </MudText>
         }
         else if (Campaign == null)
         {
-            <div class="alert alert-danger">Campaign not found.</div>
-        }
-        else if (Campaign != null && Campaign.Status == EmailCampaignStatus.Sent)
-        {
-            <div class="alert alert-success mt-3">Campaign Finished</div>
+            <MudAlert Severity="Severity.Error" Class="mt-3">
+                Campaign not found.
+            </MudAlert>
         }
         else
         {
-            <div class="card p-4 shadow-lg">
-                <h3>@Campaign?.Name</h3>
+            <MudStack Spacing="3">
+                <!-- Campaign Card -->
+                <MudPaper Elevation="2" Class="pa-4">
+                    <MudStack Spacing="3">
+                        <!-- Campaign Header -->
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.h4">@Campaign.Name</MudText>
+                                @if (!string.IsNullOrEmpty(Campaign.Description))
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@Campaign.Description</MudText>
+                                }
+                            </div>
+                            <MudChip T="string" 
+                                     Color="@GetStatusColor(Campaign.Status)"
+                                     Icon="@GetStatusIcon(Campaign.Status)"
+                                     Size="Size.Large">
+                                @Campaign.Status
+                            </MudChip>
+                        </MudStack>
 
-                <div class="progress my-3">
-                    <div class="progress-bar" role="progressbar" style="width: @ProgressPercent%;"
-                        aria-valuenow="@ProgressPercent" aria-valuemin="0" aria-valuemax="100">
-                        @ProgressPercent%
-                    </div>
-                </div>
+                        <MudDivider />
 
-                <p>Sent @SentCount of @TotalRecipients emails...</p>
+                        <!-- Campaign Details -->
+                        <MudGrid>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Template</MudText>
+                                <MudText Typo="Typo.body1">@Campaign.RecipientTemplate</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Subject Line</MudText>
+                                <MudText Typo="Typo.body1">@(Campaign.SubjectLine ?? "N/A")</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Created</MudText>
+                                <MudText Typo="Typo.body1">@Campaign.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Total Recipients</MudText>
+                                <MudText Typo="Typo.h6" Color="Color.Primary">@TotalRecipients</MudText>
+                            </MudItem>
+                        </MudGrid>
 
-                <div class="d-flex gap-3">
-                    <button class="btn btn-success" @onclick="StartCampaign" disabled="@_isProcessing">
-                        <i class="bi bi-play-fill"></i> Start
-                    </button>
+                        <MudDivider />
 
-                    <button class="btn btn-warning" @onclick="PauseCampaign" disabled="@_isProcessing">
-                        <i class="bi bi-pause-fill"></i> Pause
-                    </button>
+                        <!-- Progress Section -->
+                        @if (Campaign.Status == EmailCampaignStatus.Sending || Campaign.Status == EmailCampaignStatus.Paused)
+                        {
+                            <MudStack Spacing="2">
+                                <MudText Typo="Typo.h6">Progress</MudText>
+                                <MudProgressLinear Color="Color.Primary" 
+                                                 Value="@ProgressPercent" 
+                                                 Size="Size.Large"
+                                                 Class="my-2">
+                                    <MudText Typo="Typo.body1">@ProgressPercent%</MudText>
+                                </MudProgressLinear>
+                                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                                    Processed @(SentCount + BouncedCount) of @TotalRecipients emails (@SentCount sent, @BouncedCount bounced)
+                                </MudText>
+                            </MudStack>
+                        }
+                        else if (Campaign.Status == EmailCampaignStatus.Sent)
+                        {
+                            <MudAlert Severity="Severity.Success" Icon="@Icons.Material.Filled.CheckCircle">
+                                Campaign completed! @SentCount of @TotalRecipients emails sent successfully (@BouncedCount bounced).
+                            </MudAlert>
+                        }
+                        else if (Campaign.Status == EmailCampaignStatus.Cancelled)
+                        {
+                            <MudAlert Severity="Severity.Warning" Icon="@Icons.Material.Filled.Cancel">
+                                Campaign was cancelled. @SentCount of @TotalRecipients emails were sent (@BouncedCount bounced).
+                            </MudAlert>
+                        }
+                        else if (Campaign.Status == EmailCampaignStatus.Failed)
+                        {
+                            <MudAlert Severity="Severity.Error" Icon="@Icons.Material.Filled.Error">
+                                Campaign failed. Please check the logs for more information.
+                            </MudAlert>
+                        }
 
-                    <button class="btn btn-danger" @onclick="StopCampaign" disabled="@_isProcessing">
-                        <i class="bi bi-x-circle-fill"></i> Cancel
-                    </button>
-                </div>
+                        <!-- Action Buttons -->
+                        @if (Campaign.Status != EmailCampaignStatus.Sent && Campaign.Status != EmailCampaignStatus.Cancelled)
+                        {
+                            <MudDivider />
+                            <MudStack Row="true" Spacing="2">
+                                @if (Campaign.Status == EmailCampaignStatus.Draft || Campaign.Status == EmailCampaignStatus.Paused)
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Success"
+                                               StartIcon="@Icons.Material.Filled.PlayArrow"
+                                               OnClick="StartCampaign"
+                                               Disabled="@_isProcessing">
+                                        @(Campaign.Status == EmailCampaignStatus.Paused ? "Resume" : "Start") Campaign
+                                    </MudButton>
+                                }
 
-                @if (!string.IsNullOrEmpty(_statusMessage))
+                                @if (Campaign.Status == EmailCampaignStatus.Sending)
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Warning"
+                                               StartIcon="@Icons.Material.Filled.Pause"
+                                               OnClick="PauseCampaign"
+                                               Disabled="@_isProcessing">
+                                        Pause Campaign
+                                    </MudButton>
+                                }
+
+                                @if (Campaign.Status == EmailCampaignStatus.Sending || Campaign.Status == EmailCampaignStatus.Paused)
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Error"
+                                               StartIcon="@Icons.Material.Filled.Cancel"
+                                               OnClick="StopCampaign"
+                                               Disabled="@_isProcessing">
+                                        Cancel Campaign
+                                    </MudButton>
+                                }
+                            </MudStack>
+                        }
+
+                        <!-- Recipient Status Breakdown -->
+                        @if (Campaign.EmailRecipients != null && Campaign.EmailRecipients.Any())
+                        {
+                            <MudDivider />
+                            <MudText Typo="Typo.h6">Recipient Status</MudText>
+                            <MudGrid>
+                                <MudItem xs="12" sm="6" md="3">
+                                    <MudPaper Elevation="0" Class="pa-3" Style="background-color: var(--mud-palette-info-lighten);">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.caption">Pending</MudText>
+                                            <MudText Typo="Typo.h5">@PendingCount</MudText>
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudItem>
+                                <MudItem xs="12" sm="6" md="3">
+                                    <MudPaper Elevation="0" Class="pa-3" Style="background-color: var(--mud-palette-success-lighten);">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.caption">Sent</MudText>
+                                            <MudText Typo="Typo.h5">@SentCount</MudText>
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudItem>
+                                <MudItem xs="12" sm="6" md="3">
+                                    <MudPaper Elevation="0" Class="pa-3" Style="background-color: var(--mud-palette-error-lighten);">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.caption">Bounced</MudText>
+                                            <MudText Typo="Typo.h5">@BouncedCount</MudText>
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudItem>
+                                <MudItem xs="12" sm="6" md="3">
+                                    <MudPaper Elevation="0" Class="pa-3" Style="background-color: var(--mud-palette-warning-lighten);">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.caption">Opened</MudText>
+                                            <MudText Typo="Typo.h5">@OpenedCount</MudText>
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudItem>
+                            </MudGrid>
+                        }
+                    </MudStack>
+                </MudPaper>
+
+                <!-- Recipients List -->
+                @if (Campaign.EmailRecipients != null && Campaign.EmailRecipients.Any())
                 {
-                    <div class="alert alert-info mt-3">@_statusMessage</div>
+                    <MudPaper Elevation="2" Class="pa-4">
+                        <MudStack Spacing="3">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.h5">Recipients (@TotalRecipients)</MudText>
+                                <MudTextField T="string"
+                                              @bind-Value="_searchTerm"
+                                              Placeholder="Search email address..."
+                                              Adornment="Adornment.Start"
+                                              AdornmentIcon="@Icons.Material.Filled.Search"
+                                              Variant="Variant.Outlined"
+                                              Margin="Margin.Dense"
+                                              Style="max-width: 300px;"
+                                              Immediate="true" />
+                            </MudStack>
+
+                            <MudTable Items="@FilteredRecipients"
+                                      Dense="true"
+                                      Hover="true"
+                                      Striped="true"
+                                      Elevation="0"
+                                      Breakpoint="Breakpoint.Sm"
+                                      Loading="@_isLoading"
+                                      LoadingProgressColor="Color.Primary">
+                                <HeaderContent>
+                                    <MudTh>Email Address</MudTh>
+                                    <MudTh>Learner</MudTh>
+                                    <MudTh>Status</MudTh>
+                                    <MudTh>Opened</MudTh>
+                                    <MudTh>Updated</MudTh>
+                                </HeaderContent>
+                                <RowTemplate Context="recipient">
+                                    <MudTd DataLabel="Email Address">
+                                        <MudText Typo="Typo.body2">@recipient.EmailAddress</MudText>
+                                    </MudTd>
+                                    <MudTd DataLabel="Learner">
+                                        @if (recipient.Learner != null)
+                                        {
+                                            <MudText Typo="Typo.body2">@recipient.Learner.Surname, @recipient.Learner.Name</MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                                        }
+                                    </MudTd>
+                                    <MudTd DataLabel="Status">
+                                        <MudChip T="string"
+                                                 Size="Size.Small"
+                                                 Color="@GetRecipientStatusColor(recipient.Status)"
+                                                 Icon="@GetRecipientStatusIcon(recipient.Status)">
+                                            @recipient.Status
+                                        </MudChip>
+                                    </MudTd>
+                                    <MudTd DataLabel="Opened">
+                                        @if (recipient.OpenedAt != null)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.MarkEmailRead" Color="Color.Success" Size="Size.Small" />
+                                            <MudText Typo="Typo.caption">@recipient.OpenedAt.Value.ToLocalTime().ToString("dd MMM HH:mm")</MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                                        }
+                                    </MudTd>
+                                    <MudTd DataLabel="Updated">
+                                        <MudText Typo="Typo.caption">@recipient.UpdatedAt.ToLocalTime().ToString("dd MMM HH:mm")</MudText>
+                                    </MudTd>
+                                </RowTemplate>
+                                <PagerContent>
+                                    <MudTablePager PageSizeOptions="new int[] { 25, 50, 100 }" />
+                                </PagerContent>
+                            </MudTable>
+                        </MudStack>
+                    </MudPaper>
                 }
-            </div>
+            </MudStack>
         }
     </Authorized>
     <NotAuthorized>
@@ -65,9 +278,34 @@
     private int ProgressPercent { get; set; }
     private int SentCount { get; set; }
     private int TotalRecipients { get; set; }
-    private string? _statusMessage;
+    private int PendingCount { get; set; }
+    private int BouncedCount { get; set; }
+    private int OpenedCount { get; set; }
     private bool _isLoading = true;
     private bool _isProcessing;
+    private string _searchTerm = string.Empty;
+
+    private IEnumerable<EmailRecipient> FilteredRecipients
+    {
+        get
+        {
+            if (Campaign?.EmailRecipients == null)
+                return Enumerable.Empty<EmailRecipient>();
+
+            var recipients = Campaign.EmailRecipients.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(_searchTerm))
+            {
+                var search = _searchTerm.ToLower();
+                recipients = recipients.Where(r =>
+                    r.EmailAddress?.ToLower().Contains(search) == true ||
+                    r.Learner?.Name?.ToLower().Contains(search) == true ||
+                    r.Learner?.Surname?.ToLower().Contains(search) == true);
+            }
+
+            return recipients.OrderBy(r => r.Status).ThenBy(r => r.EmailAddress);
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -92,18 +330,22 @@
                     ProgressPercent = data.Progress;
                     SentCount = data.Sent;
                     TotalRecipients = data.Total;
+                    
+                    // Reload campaign to get updated recipient counts
+                    await LoadCampaignSilently();
+                    await InvokeAsync(StateHasChanged);
                 }
                 else if (eventName == UiEvents.EmailCampaignCompleted ||
-                eventName == UiEvents.EmailCampaignPaused ||
-                eventName == UiEvents.EmailCampaignCancelled ||
-                eventName == UiEvents.EmailCampaignStarted)
+                         eventName == UiEvents.EmailCampaignPaused ||
+                         eventName == UiEvents.EmailCampaignCancelled ||
+                         eventName == UiEvents.EmailCampaignStarted)
                 {
                     await LoadCampaign();
+                    await InvokeAsync(StateHasChanged);
                 }
             }
         }
 
-        await InvokeAsync(StateHasChanged);
         await base.HandleEventAsync(eventName, payload);
     }
 
@@ -115,21 +357,50 @@
             Campaign = await EmailCampaignService.GetByIdAsync(Id);
             if (Campaign != null)
             {
-                TotalRecipients = Campaign.EmailRecipients?.Count() ?? 0;
-                SentCount = Campaign.EmailRecipients?.Count(r => r.Status != EmailRecipientStatus.Pending) ?? 0;
-                ProgressPercent = TotalRecipients == 0 ? 0 : (int)Math.Round((double)SentCount / TotalRecipients * 100);
+                UpdateCounts();
             }
         }
         catch (Exception ex)
         {
-            Logger.LogError("Error loading campaign: {ex.Message}", ex.Message);
-            _statusMessage = "Failed to load campaign details.";
+            Logger.LogError(ex, "Error loading campaign {CampaignId}", Id);
+            Snackbar.Add("Failed to load campaign details.", Severity.Error);
         }
         finally
         {
             _isLoading = false;
-            await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private async Task LoadCampaignSilently()
+    {
+        try
+        {
+            var updatedCampaign = await EmailCampaignService.GetByIdAsync(Id);
+            if (updatedCampaign != null)
+            {
+                Campaign = updatedCampaign;
+                UpdateCounts();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error reloading campaign {CampaignId}", Id);
+        }
+    }
+
+    private void UpdateCounts()
+    {
+        if (Campaign?.EmailRecipients == null) return;
+
+        TotalRecipients = Campaign.EmailRecipients.Count;
+        SentCount = Campaign.EmailRecipients.Count(r => r.Status == EmailRecipientStatus.Sent);
+        PendingCount = Campaign.EmailRecipients.Count(r => r.Status == EmailRecipientStatus.Pending);
+        BouncedCount = Campaign.EmailRecipients.Count(r => r.Status == EmailRecipientStatus.Bounced);
+        OpenedCount = Campaign.EmailRecipients.Count(r => r.OpenedAt != null);
+        
+        // Calculate processed count (sent + bounced)
+        var processedCount = SentCount + BouncedCount;
+        ProgressPercent = TotalRecipients == 0 ? 0 : (int)Math.Round((double)processedCount / TotalRecipients * 100);
     }
 
     private async Task StartCampaign()
@@ -137,8 +408,8 @@
         await ExecuteCampaignAction(async () =>
         {
             await EmailCampaignService.StartCampaignAsync(Id);
-            _statusMessage = "Campaign Started";
-        });
+            Snackbar.Add("Campaign started successfully", Severity.Success);
+        }, "Starting campaign...");
     }
 
     private async Task PauseCampaign()
@@ -146,8 +417,8 @@
         await ExecuteCampaignAction(async () =>
         {
             await EmailCampaignService.PauseCampaignAsync(Id);
-            _statusMessage = "Campaign Paused";
-        });
+            Snackbar.Add("Campaign paused", Severity.Warning);
+        }, "Pausing campaign...");
     }
 
     private async Task StopCampaign()
@@ -155,25 +426,78 @@
         await ExecuteCampaignAction(async () =>
         {
             await EmailCampaignService.StopCampaignAsync(Id);
-            _statusMessage = "Campaign Cancelled";
-        });
+            Snackbar.Add("Campaign cancelled", Severity.Warning);
+        }, "Cancelling campaign...");
     }
 
-    private async Task ExecuteCampaignAction(Func<Task> campaignAction)
+    private async Task ExecuteCampaignAction(Func<Task> campaignAction, string loadingMessage)
     {
         try
         {
             _isProcessing = true;
+            Snackbar.Add(loadingMessage, Severity.Info);
             await campaignAction();
         }
         catch (Exception ex)
         {
-            Logger.LogError("Error updating campaign: {ex.Message}", ex.Message);
-            _statusMessage = "Error processing campaign action.";
+            Logger.LogError(ex, "Error executing campaign action for {CampaignId}", Id);
+            Snackbar.Add("Error processing campaign action.", Severity.Error);
         }
         finally
         {
             _isProcessing = false;
         }
+    }
+
+    private Color GetStatusColor(EmailCampaignStatus status)
+    {
+        return status switch
+        {
+            EmailCampaignStatus.Draft => Color.Default,
+            EmailCampaignStatus.Scheduled => Color.Info,
+            EmailCampaignStatus.Sending => Color.Warning,
+            EmailCampaignStatus.Sent => Color.Success,
+            EmailCampaignStatus.Paused => Color.Warning,
+            EmailCampaignStatus.Cancelled => Color.Error,
+            EmailCampaignStatus.Failed => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private string GetStatusIcon(EmailCampaignStatus status)
+    {
+        return status switch
+        {
+            EmailCampaignStatus.Draft => Icons.Material.Filled.Edit,
+            EmailCampaignStatus.Scheduled => Icons.Material.Filled.Schedule,
+            EmailCampaignStatus.Sending => Icons.Material.Filled.Send,
+            EmailCampaignStatus.Sent => Icons.Material.Filled.CheckCircle,
+            EmailCampaignStatus.Paused => Icons.Material.Filled.Pause,
+            EmailCampaignStatus.Cancelled => Icons.Material.Filled.Cancel,
+            EmailCampaignStatus.Failed => Icons.Material.Filled.Error,
+            _ => Icons.Material.Filled.Info
+        };
+    }
+
+    private Color GetRecipientStatusColor(EmailRecipientStatus status)
+    {
+        return status switch
+        {
+            EmailRecipientStatus.Pending => Color.Info,
+            EmailRecipientStatus.Sent => Color.Success,
+            EmailRecipientStatus.Bounced => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private string GetRecipientStatusIcon(EmailRecipientStatus status)
+    {
+        return status switch
+        {
+            EmailRecipientStatus.Pending => Icons.Material.Filled.Schedule,
+            EmailRecipientStatus.Sent => Icons.Material.Filled.CheckCircle,
+            EmailRecipientStatus.Bounced => Icons.Material.Filled.ErrorOutline,
+            _ => Icons.Material.Filled.Info
+        };
     }
 }

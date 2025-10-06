@@ -519,6 +519,10 @@ public class LearnerService
             .Include(l => l.RegisterClass)
             .ThenInclude(rc => rc!.SchoolGrade)
             .ThenInclude(sg => sg!.SystemGrade)
+            .Include(l => l.LearnerSubjects!)
+            .ThenInclude(ls => ls.Subject)
+            .Include(l => l.CareGroup)
+            .Include(l => l.Parents!)
             .Include(l => l.School)
             .ToListAsync();
     }

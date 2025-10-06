@@ -52,6 +52,7 @@ builder.Services.AddAntiforgery(options =>
 });
 
 builder.Services.AddHostedService<BackgroundJobService>();
+builder.Services.AddHostedService<EmailCampaignBackgroundService>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {

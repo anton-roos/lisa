@@ -9,7 +9,6 @@ public class UiEventService
 ) : IDisposable
 {
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<Guid, WeakReference<IEventSubscriber>>> _subscribers = new();
-    private readonly SynchronizationContext? _syncContext = SynchronizationContext.Current;
 
     public Guid Subscribe(string eventName, IEventSubscriber subscriber)
     {
@@ -43,23 +42,32 @@ public class UiEventService
     {
         if (!_subscribers.TryGetValue(eventName, out var subscribers) || subscribers.IsEmpty)
         {
-            logger.LogWarning("No subscribers found for event {EventName}.", eventName);
+            logger.LogDebug("No subscribers found for event {EventName}.", eventName);
             return;
         }
 
+        logger.LogInformation("Publishing event {EventName} to {Count} potential subscribers", eventName, subscribers.Count);
+
         var tasks = new List<Task>();
+        var aliveCount = 0;
+        var deadCount = 0;
 
         foreach (var kvp in subscribers)
         {
             if (kvp.Value.TryGetTarget(out var subscriber))
             {
+                aliveCount++;
                 tasks.Add(InvokeSubscriberAsync(subscriber, eventName, payload));
             }
             else
             {
+                deadCount++;
                 subscribers.TryRemove(kvp.Key, out _);
             }
         }
+
+        logger.LogInformation("Event {EventName}: {Alive} alive subscribers, {Dead} dead subscribers (GC'd)", 
+            eventName, aliveCount, deadCount);
 
         await Task.WhenAll(tasks);
     }
@@ -68,14 +76,7 @@ public class UiEventService
     {
         try
         {
-            if (_syncContext != null)
-            {
-                await Task.Run(async () => await subscriber.HandleEventAsync(eventName, payload));
-            }
-            else
-            {
-                await subscriber.HandleEventAsync(eventName, payload);
-            }
+            await subscriber.HandleEventAsync(eventName, payload);
         }
         catch (Exception ex)
         {

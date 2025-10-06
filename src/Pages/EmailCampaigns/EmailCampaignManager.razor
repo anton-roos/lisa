@@ -284,6 +284,7 @@
     private bool _isLoading = true;
     private bool _isProcessing;
     private string _searchTerm = string.Empty;
+    private System.Timers.Timer? _refreshTimer;
 
     private IEnumerable<EmailRecipient> FilteredRecipients
     {
@@ -309,44 +310,66 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Logger.LogInformation("EmailCampaignManager initialized for campaign {CampaignId}", Id);
+        
         SubscribeToEvent(UiEvents.EmailCampaignProgressUpdated);
         SubscribeToEvent(UiEvents.EmailCampaignCompleted);
         SubscribeToEvent(UiEvents.EmailCampaignStarted);
         SubscribeToEvent(UiEvents.EmailCampaignPaused);
         SubscribeToEvent(UiEvents.EmailCampaignCancelled);
 
+        Logger.LogInformation("EmailCampaignManager subscribed to events for campaign {CampaignId}", Id);
+        
         await LoadCampaign();
+        StartAutoRefresh();
     }
 
-    protected override async Task HandleEventAsync(string eventName, object? payload)
+    private void StartAutoRefresh()
     {
-        if (payload != null)
+        // Only auto-refresh if campaign is actively running
+        if (Campaign?.Status == EmailCampaignStatus.Sending || Campaign?.Status == EmailCampaignStatus.Paused)
         {
-            dynamic data = payload;
-            if (data.Id != null && Id.Equals(data.Id))
-            {
-                if (eventName == UiEvents.EmailCampaignProgressUpdated)
-                {
-                    ProgressPercent = data.Progress;
-                    SentCount = data.Sent;
-                    TotalRecipients = data.Total;
-                    
-                    // Reload campaign to get updated recipient counts
-                    await LoadCampaignSilently();
-                    await InvokeAsync(StateHasChanged);
-                }
-                else if (eventName == UiEvents.EmailCampaignCompleted ||
-                         eventName == UiEvents.EmailCampaignPaused ||
-                         eventName == UiEvents.EmailCampaignCancelled ||
-                         eventName == UiEvents.EmailCampaignStarted)
-                {
-                    await LoadCampaign();
-                    await InvokeAsync(StateHasChanged);
-                }
-            }
+            _refreshTimer = new System.Timers.Timer(3000); // Refresh every 3 seconds
+            _refreshTimer.Elapsed += async (sender, e) => await RefreshCampaignData();
+            _refreshTimer.AutoReset = true;
+            _refreshTimer.Start();
+            Logger.LogInformation("Auto-refresh timer started for campaign {CampaignId}", Id);
         }
+    }
 
-        await base.HandleEventAsync(eventName, payload);
+    private void StopAutoRefresh()
+    {
+        if (_refreshTimer != null)
+        {
+            _refreshTimer.Stop();
+            _refreshTimer.Dispose();
+            _refreshTimer = null;
+            Logger.LogInformation("Auto-refresh timer stopped for campaign {CampaignId}", Id);
+        }
+    }
+
+    private async Task RefreshCampaignData()
+    {
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                await LoadCampaignSilently();
+                StateHasChanged();
+                
+                // Stop refreshing if campaign is complete
+                if (Campaign?.Status == EmailCampaignStatus.Sent || 
+                    Campaign?.Status == EmailCampaignStatus.Cancelled ||
+                    Campaign?.Status == EmailCampaignStatus.Failed)
+                {
+                    StopAutoRefresh();
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error refreshing campaign data for {CampaignId}", Id);
+        }
     }
 
     private async Task LoadCampaign()
@@ -499,5 +522,15 @@
             EmailRecipientStatus.Bounced => Icons.Material.Filled.ErrorOutline,
             _ => Icons.Material.Filled.Info
         };
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            Logger.LogWarning("EmailCampaignManager disposing for campaign {CampaignId}", Id);
+            StopAutoRefresh();
+        }
+        base.Dispose(disposing);
     }
 }

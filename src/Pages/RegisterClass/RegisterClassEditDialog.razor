@@ -1,0 +1,244 @@
+@using Lisa.Models.Entities
+@using Lisa.Models.ViewModels
+@using MudBlazor
+@inject RegisterClassService RegisterClassService
+@inject SchoolService SchoolService
+@inject SubjectService SubjectService
+@inject SchoolGradeService SchoolGradeService
+@inject UserService UserService
+@inject ILogger<RegisterClassEditDialog> Logger
+@inherits EventAwareComponentBase
+
+<MudDialog>
+    <DialogContent>
+        @if (IsLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+        }
+        else if (_selectedSchool == null)
+        {
+            <MudAlert Severity="Severity.Warning">No school is selected. Please select a school first.</MudAlert>
+        }
+        else
+        {
+            <EditForm Model="@RegisterClassModel" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <MudStack Spacing="3">
+                    <MudTextField Label="Class Name"
+                                  @bind-Value="RegisterClassModel.Name"
+                                  For="@(() => RegisterClassModel.Name)"
+                                  Variant="Variant.Outlined" />
+
+                    <MudStack Spacing="1">
+                        <MudSelect T="Guid"
+                                   Label="Grade"
+                                   Value="@RegisterClassModel.GradeId"
+                                   ValueChanged="OnGradeSelected"
+                                   Variant="Variant.Outlined"
+                                   AnchorOrigin="Origin.BottomCenter">
+                            <MudSelectItem T="Guid" Value="Guid.Empty">-- Select Grade --</MudSelectItem>
+                            @if (_schoolGrades != null)
+                            {
+                                @foreach (var grade in _schoolGrades)
+                                {
+                                    <MudSelectItem T="Guid" Value="@grade.Id">@grade.SystemGrade.Name</MudSelectItem>
+                                }
+                            }
+                        </MudSelect>
+                        @if (RegisterClassModel.Grade != null)
+                        {
+                            <MudStack Row="true" Spacing="1">
+                                @if (RegisterClassModel.Grade.SystemGrade.MathGrade)
+                                {
+                                    <MudChip T="string" Color="Color.Success" Size="Size.Small">Math</MudChip>
+                                }
+                                @if (RegisterClassModel.Grade.SystemGrade.CombinationGrade)
+                                {
+                                    <MudChip T="string" Color="Color.Error" Size="Size.Small">Combination</MudChip>
+                                }
+                            </MudStack>
+                        }
+                    </MudStack>
+
+                    <MudSelect T="Guid"
+                               Label="Teacher"
+                               @bind-Value="RegisterClassModel.TeacherId"
+                               Variant="Variant.Outlined"
+                               AnchorOrigin="Origin.BottomCenter">
+                        <MudSelectItem T="Guid" Value="Guid.Empty">-- Select Teacher --</MudSelectItem>
+                        @if (_users != null)
+                        {
+                            @foreach (var teacher in _users)
+                            {
+                                <MudSelectItem T="Guid" Value="@teacher.Id">@($"{teacher.Surname} {teacher.Name}")</MudSelectItem>
+                            }
+                        }
+                    </MudSelect>
+
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.subtitle1">Compulsory Subjects</MudText>
+                        <MudTextField Label="Search Subjects"
+                                      @bind-Value="_searchText"
+                                      Variant="Variant.Outlined"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
+                                      Immediate="true"
+                                      Placeholder="Type to filter subjects..." />
+                        
+                        <MudPaper Elevation="0" Class="pa-2" Style="max-height: 300px; overflow-y: auto;">
+                            @foreach (var subject in FilteredSubjects)
+                            {
+                                <MudCheckBox T="bool"
+                                             Checked="@RegisterClassModel.SubjectIds.Contains(subject.Id)"
+                                             CheckedChanged="@((bool isChecked) => ToggleSubject(subject.Id, isChecked))"
+                                             Label="@subject.Name"
+                                             Color="Color.Primary" />
+                            }
+                        </MudPaper>
+                    </MudStack>
+                </MudStack>
+            </EditForm>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="HandleValidSubmit"
+                   Disabled="@IsLoading">
+            @(IsLoading ? "Saving..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public MudBlazor.IDialogReference MudDialog { get; set; } = default!;
+    
+    [Parameter] public Guid? RegisterClassId { get; set; }
+
+    private bool IsEdit => RegisterClassId.HasValue && RegisterClassId.Value != Guid.Empty;
+    private bool IsLoading { get; set; } = true;
+    private RegisterClassViewModel RegisterClassModel { get; set; } = new();
+    private School? _selectedSchool;
+    private List<SchoolGrade>? _schoolGrades;
+    private List<User>? _users;
+    private List<Subject> _allSubjectsMaster = [];
+    private List<Subject> _allSubjects = [];
+    private string _searchText = string.Empty;
+
+    private IEnumerable<Subject> FilteredSubjects =>
+        _allSubjects.Where(s => string.IsNullOrEmpty(_searchText)
+        || (s.Name != null && s.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase)));
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            SubscribeToEvent(UiEvents.SchoolSelected);
+            _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+
+            if (_selectedSchool != null)
+            {
+                _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
+                _users = await UserService.GetAllByRoleAndSchoolAsync([Roles.Teacher], _selectedSchool.Id);
+
+                _allSubjectsMaster = await SubjectService.GetAllAsync();
+                _allSubjectsMaster = _allSubjectsMaster.Where(s => s.SubjectType == SubjectType.Compulsory).ToList();
+
+                if (IsEdit && RegisterClassId != null)
+                {
+                    var existingRegisterClass = await RegisterClassService.GetByIdAsync(RegisterClassId.Value);
+                    if (existingRegisterClass != null)
+                    {
+                        RegisterClassModel = new RegisterClassViewModel
+                        {
+                            Name = existingRegisterClass.Name,
+                            TeacherId = existingRegisterClass.UserId,
+                            GradeId = existingRegisterClass.SchoolGradeId,
+                            SubjectIds = existingRegisterClass.CompulsorySubjects?.Select(s => s.Id).ToList() ?? new List<int>(),
+                            Grade = existingRegisterClass.SchoolGrade
+                        };
+                    }
+                }
+
+                if (RegisterClassModel.GradeId != Guid.Empty)
+                {
+                    await OnGradeSelected(RegisterClassModel.GradeId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading register class dialog");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            if (_selectedSchool == null)
+            {
+                return;
+            }
+
+            IsLoading = true;
+            var success = await RegisterClassService.CreateAsync(RegisterClassModel, RegisterClassId);
+
+            if (success)
+            {
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving register class");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Close();
+
+    private void ToggleSubject(int subjectId, bool isChecked)
+    {
+        if (isChecked)
+        {
+            if (!RegisterClassModel.SubjectIds.Contains(subjectId))
+            {
+                RegisterClassModel.SubjectIds.Add(subjectId);
+            }
+        }
+        else
+        {
+            RegisterClassModel.SubjectIds.Remove(subjectId);
+        }
+    }
+
+    private async Task OnGradeSelected(Guid selectedGradeId)
+    {
+        var grade = await SchoolGradeService.GetByIdAsync(selectedGradeId);
+
+        if (grade != null)
+        {
+            RegisterClassModel.GradeId = grade.Id;
+            RegisterClassModel.Grade = grade;
+
+            _allSubjects = _allSubjectsMaster
+                .Where(s => s.GradesApplicable != null && s.GradesApplicable.Contains(grade.SystemGrade.SequenceNumber))
+                .ToList();
+        }
+        else
+        {
+            Logger.LogError("Grade is null");
+        }
+        
+        await InvokeAsync(StateHasChanged);
+    }
+}

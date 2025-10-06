@@ -8,59 +8,76 @@
 <PageTitle>Care Groups</PageTitle>
 <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
-        <MudText Typo="Typo.h3" Class="mb-4">Care Groups</MudText>
-
         @if (_selectedSchool == null)
         {
-            <NoSchoolSelected Message="Please select a school to to view care groups." />
-        }
-        else if (_careGroups == null)
-        {
-            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-        }
-        else if (!_careGroups.Any())
-        {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mb-3" OnClick="AddCareGroup">Add Care Group</MudButton>
-            <MudAlert Severity="Severity.Info">
-                No Care Groups for <strong>@_selectedSchool.ShortName</strong>.
-            </MudAlert>
+            <NoSchoolSelected Message="Please select a school to view care groups." />
         }
         else
         {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mb-3" OnClick="AddCareGroup">Add Care Group</MudButton>
-            <MudGrid Spacing="3">
-                @foreach (var careGroup in _careGroups)
-                {
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudCard Elevation="2">
-                            <MudCardContent>
-                                <MudText Typo="Typo.h5" Class="mb-3">@careGroup.Name</MudText>
-                                <MudStack Row="true" Spacing="1" Class="mb-3 flex-wrap">
-                                    @if (careGroup.Users != null && careGroup.Users.Any())
-                                    {
-                                        @foreach (var user in careGroup.Users)
-                                        {
-                                            <MudChip T="string" Color="Color.Primary" Size="Size.Small">@user.Abbreviation</MudChip>
-                                        }
-                                    }
-                                    else
-                                    {
-                                        <MudChip T="string" Color="Color.Error" Size="Size.Small">No Teacher</MudChip>
-                                    }
-                                </MudStack>
-                                <MudText Typo="Typo.body2">Learner Count: @careGroup.CareGroupMembers?.Count().ToString()</MudText>
-                            </MudCardContent>
-                            <MudCardActions>
-                                <ActionButtons TEntity="CareGroup" 
-                                               Entity="careGroup"
-                                               OnView="ViewCareGroup"
-                                               OnEdit="EditCareGroup"
-                                               OnDelete="DeleteCareGroup"/>
-                            </MudCardActions>
-                        </MudCard>
-                    </MudItem>
-                }
-            </MudGrid>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="AddCareGroup"
+                       Class="mb-3">
+                Add Care Group
+            </MudButton>
+
+            @if (_careGroups == null)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+            }
+            else if (!_careGroups.Any())
+            {
+                <MudAlert Severity="Severity.Info" Class="mt-3">
+                    No Care Groups found for <strong>@_selectedSchool.ShortName</strong>.
+                </MudAlert>
+            }
+            else
+            {
+                <MudTable Items="@_careGroups" 
+                          Hover="true" 
+                          Striped="true" 
+                          Dense="true"
+                          Elevation="2">
+                    <HeaderContent>
+                        <MudTh>Name</MudTh>
+                        <MudTh>Teachers</MudTh>
+                        <MudTh>Learner Count</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="careGroup">
+                        <MudTd DataLabel="Name">@careGroup.Name</MudTd>
+                        <MudTd DataLabel="Teachers">
+                            @if (careGroup.Users != null && careGroup.Users.Any())
+                            {
+                                @string.Join(", ", careGroup.Users.Select(u => u.Abbreviation))
+                            }
+                            else
+                            {
+                                <MudChip T="string" Color="Color.Error" Size="Size.Small">No Teacher</MudChip>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Learner Count">@(careGroup.CareGroupMembers?.Count() ?? 0)</MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                           Color="Color.Primary" 
+                                           Size="Size.Small"
+                                           OnClick="@(() => ViewCareGroup(careGroup))"
+                                           Title="View" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                           Color="Color.Secondary" 
+                                           Size="Size.Small"
+                                           OnClick="@(() => EditCareGroup(careGroup))"
+                                           Title="Edit" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                           Color="Color.Error" 
+                                           Size="Size.Small"
+                                           OnClick="@(() => DeleteCareGroup(careGroup))"
+                                           Title="Delete" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
         }
     </Authorized>
     <NotAuthorized>

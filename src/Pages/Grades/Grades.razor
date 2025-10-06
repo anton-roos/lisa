@@ -3,112 +3,97 @@
 @inject SchoolService SchoolService
 @inject SchoolGradeService SchoolGradeService
 @inject SystemGradeService SystemGradeService
+@inject IDialogService DialogService
 @inherits EventAwareComponentBase
 
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
-        <h3>Manage Grades for @_selectedSchool?.ShortName</h3>
         @if (_selectedSchool == null)
         {
             <NoSchoolSelected Message="Please select a school to manage grades." />
         }
         else if (_loading)
         {
-            <div class="list-group">
-                @for (var i = 0; i < _systemGrades.Count(); i++)
-                {
-                    <div class="list-group-item d-flex justify-content-start align-items-center flex-wrap">
-                        <div class="col-1">
-                            <div class="skeleton skeleton-switch"></div>
-                        </div>
-                        <div class="col-1">
-                            <div class="skeleton skeleton-text"></div>
-                        </div>
-                        <div class="col-3">
-                            <div class="skeleton skeleton-pill"></div>
-                        </div>
-                    </div>
-                }
-            </div>
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
         }
         else
         {
-            <div class="list-group">
-                @foreach (var systemGrade in _systemGrades)
-                {
-                    var isChecked = _schoolGrades.Any(sg => sg.SystemGradeId == systemGrade.Id);
-                    <div class="list-group-item d-flex justify-content-start align-items-center flex-wrap">
-                        <div class="col-1">
-                            <MudSwitch T="bool" 
-                                      Value="isChecked" 
-                                      ValueChanged="async (bool newValue) =>
-                                        {
-                                            isChecked = newValue;
-                                            await ToggleSchoolGrade(systemGrade.Id, newValue);
-                                        }" 
-                                      Color="Color.Primary" />
-                        </div>
-                        <div class="col-2">
-                            <strong>@systemGrade.Name</strong>
-                        </div>
-                        <div class="col-2">
-                            @{
-                                var schoolGrade = _schoolGrades.FirstOrDefault(sg => sg.SystemGradeId == systemGrade.Id);
-                                var startTime = schoolGrade?.StartTime?.ToString("HH:mm") ?? "08:00";
-                                var endTime = schoolGrade?.EndTime?.ToString("HH:mm") ?? "14:00";
-                            }
-                            <div class="mb-2">
-                                <label class="form-label small">Start Time:</label>
-                                <input type="time" class="form-control form-control-sm" 
-                                       value="@startTime" 
-                                       disabled="@(!isChecked)"
-                                       @onchange="@(async (e) => await UpdateSchoolGradeTime(systemGrade.Id, e.Value?.ToString(), true))" />
-                            </div>
-                            <div>
-                                <label class="form-label small">End Time:</label>
-                                <input type="time" class="form-control form-control-sm" 
-                                       value="@endTime" 
-                                       disabled="@(!isChecked)"
-                                       @onchange="@(async (e) => await UpdateSchoolGradeTime(systemGrade.Id, e.Value?.ToString(), false))" />
-                            </div>
-                        </div>
-                        <div class="col-3">
+            <MudTable Items="@_systemGrades" 
+                      Hover="true" 
+                      Striped="true" 
+                      Dense="false"
+                      Elevation="2">
+                <HeaderContent>
+                    <MudTh Style="width: 100px;">Enabled</MudTh>
+                    <MudTh Style="width: 150px;">Grade</MudTh>
+                    <MudTh Style="width: 200px;">Start Time</MudTh>
+                    <MudTh Style="width: 200px;">End Time</MudTh>
+                    <MudTh>Attributes</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="systemGrade">
+                    @{
+                        var isChecked = _schoolGrades.Any(sg => sg.SystemGradeId == systemGrade.Id);
+                        var schoolGrade = _schoolGrades.FirstOrDefault(sg => sg.SystemGradeId == systemGrade.Id);
+                        var startTime = schoolGrade?.StartTime?.ToTimeSpan() ?? new TimeSpan(8, 0, 0);
+                        var endTime = schoolGrade?.EndTime?.ToTimeSpan() ?? new TimeSpan(14, 0, 0);
+                    }
+                    <MudTd DataLabel="Enabled">
+                        <MudSwitch T="bool" 
+                                  Value="@isChecked" 
+                                  ValueChanged="@(async (bool newValue) => await ToggleSchoolGrade(systemGrade.Id, newValue))" 
+                                  Color="Color.Primary" />
+                    </MudTd>
+                    <MudTd DataLabel="Grade">
+                        <strong>@systemGrade.Name</strong>
+                    </MudTd>
+                    <MudTd DataLabel="Start Time">
+                        <MudTimePicker Label="Start Time"
+                                       Time="@startTime"
+                                       TimeChanged="@((TimeSpan? newTime) => UpdateSchoolGradeTime(systemGrade.Id, newTime, true))"
+                                       Disabled="@(!isChecked)"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       AmPm="false" />
+                    </MudTd>
+                    <MudTd DataLabel="End Time">
+                        <MudTimePicker Label="End Time"
+                                       Time="@endTime"
+                                       TimeChanged="@((TimeSpan? newTime) => UpdateSchoolGradeTime(systemGrade.Id, newTime, false))"
+                                       Disabled="@(!isChecked)"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       AmPm="false" />
+                    </MudTd>
+                    <MudTd DataLabel="Attributes">
+                        <MudStack Row="true" Spacing="1">
                             @if (systemGrade.MathGrade)
                             {
-                                <Pill Color="success" AdditionalClasses="me-2">Math</Pill>
+                                <MudChip T="string" Color="Color.Success" Size="Size.Small">Math</MudChip>
                             }
                             @if (systemGrade.CombinationGrade)
                             {
-                                <Pill Color="danger">Combination</Pill>
+                                <MudChip T="string" Color="Color.Error" Size="Size.Small">Combination</MudChip>
                             }
                             @if (systemGrade.AchievementLevelRating)
                             {
-                                <Pill Color="primary">Acievement Level Rating</Pill>
+                                <MudChip T="string" Color="Color.Primary" Size="Size.Small">Achievement Level Rating</MudChip>
                             }
-                        </div>
-                    </div>
-                }
-            </div>
+                        </MudStack>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
         }
     </Authorized>
     <NotAuthorized>
         <Unauthorized />
     </NotAuthorized>
 </AuthorizeView>
-@if (_showModal)
-{
-    <LisaModal Show="@_showModal" Title="@_modalTitle" Message="@_modalMessage" OnConfirm="CloseModal" OnCancel="CloseModal" />
-}
-
 
 @code {
     private School? _selectedSchool;
     private bool _loading;
     private List<SystemGrade> _systemGrades = [];
     private List<SchoolGrade> _schoolGrades = [];
-    private bool _showModal;
-    private string _modalTitle = "";
-    private string _modalMessage = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -144,7 +129,7 @@
 
         _loading = true;
         await InvokeAsync(StateHasChanged);
-        await Task.Delay(1000);
+        
         var existingSchoolGrade = await SchoolGradeService.GetBySystemGradeAndSchoolAsync(systemGradeId, _selectedSchool.Id);
 
         if (isChecked)
@@ -162,8 +147,6 @@
 
                 await SchoolGradeService.CreateAsync(newSchoolGrade);
                 await LoadGrades();
-                _loading = false;
-                await InvokeAsync(StateHasChanged);
             }
         }
         else
@@ -180,22 +163,25 @@
 
                     if (hasRegisterClasses || hasCombinations)
                     {
-                        ShowWarningModal("Warring", $"You can't disable {existingSchoolGrade.SystemGrade.Name} because it has {registerClassCount} Register Classes and {combinationCount} Combinations assigned.");
+                        await ShowWarningDialog("Warning", $"You can't disable {existingSchoolGrade.SystemGrade.Name} because it has {registerClassCount} Register Classes and {combinationCount} Combinations assigned.");
+                        _loading = false;
+                        await InvokeAsync(StateHasChanged);
                         return;
                     }
                 }
 
                 await SchoolGradeService.DeleteAsync(existingSchoolGrade.Id);
                 await LoadGrades();
-                _loading = false;
-                await InvokeAsync(StateHasChanged);
             }
         }
+        
+        _loading = false;
+        await InvokeAsync(StateHasChanged);
     }
 
-    private async Task UpdateSchoolGradeTime(int systemGradeId, string? timeValue, bool isStartTime)
+    private async Task UpdateSchoolGradeTime(int systemGradeId, TimeSpan? newTime, bool isStartTime)
     {
-        if (_selectedSchool == null || string.IsNullOrEmpty(timeValue))
+        if (_selectedSchool == null || newTime == null)
         {
             return;
         }
@@ -206,21 +192,19 @@
             return;
         }
 
-        if (TimeOnly.TryParse(timeValue, out var parsedTime))
+        var timeOnly = TimeOnly.FromTimeSpan(newTime.Value);
+        
+        var schoolGradeToUpdate = new SchoolGrade
         {
-            var schoolGradeToUpdate = new SchoolGrade
-            {
-                Id = existingSchoolGrade.Id,
-                SchoolId = existingSchoolGrade.SchoolId,
-                SystemGradeId = existingSchoolGrade.SystemGradeId,
-                StartTime = isStartTime ? parsedTime : existingSchoolGrade.StartTime,
-                EndTime = isStartTime ? existingSchoolGrade.EndTime : parsedTime
-            };
+            Id = existingSchoolGrade.Id,
+            SchoolId = existingSchoolGrade.SchoolId,
+            SystemGradeId = existingSchoolGrade.SystemGradeId,
+            StartTime = isStartTime ? timeOnly : existingSchoolGrade.StartTime,
+            EndTime = isStartTime ? existingSchoolGrade.EndTime : timeOnly
+        };
 
-            await SchoolGradeService.UpdateAsync(schoolGradeToUpdate);
-            await LoadGrades();
-            await InvokeAsync(StateHasChanged);
-        }
+        await SchoolGradeService.UpdateAsync(schoolGradeToUpdate);
+        await LoadGrades();
     }
 
     private async Task LoadGrades()
@@ -235,18 +219,11 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private void CloseModal()
+    private async Task ShowWarningDialog(string title, string message)
     {
-        _showModal = false;
-        _loading = false;
-        StateHasChanged();
-    }
-
-    private void ShowWarningModal(string title, string message)
-    {
-        _modalTitle = title;
-        _modalMessage = message;
-        _showModal = true;
-        StateHasChanged();
+        await DialogService.ShowMessageBox(
+            title,
+            message,
+            yesText: "OK");
     }
 }

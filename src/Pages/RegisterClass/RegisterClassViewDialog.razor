@@ -1,0 +1,128 @@
+@using Lisa.Models.Entities
+@using MudBlazor
+@using Lisa.Pages.Learners
+@inject RegisterClassService RegisterClassService
+@inject IDialogService DialogService
+
+<MudDialog>
+    <DialogContent>
+        @if (_registerClass == null)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+        }
+        else
+        {
+            <MudStack Spacing="3">
+                <MudPaper Elevation="0" Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Class Information</MudText>
+                    <MudGrid>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Class Name</MudText>
+                            <MudText Typo="Typo.body1">@_registerClass.Name</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Grade</MudText>
+                            <MudText Typo="Typo.body1">@_registerClass.SchoolGrade?.SystemGrade.Name</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Teacher</MudText>
+                            <MudText Typo="Typo.body1">
+                                @($"{_registerClass.User?.Surname} {_registerClass.User?.Name}")
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Math/Math Lit Selection</MudText>
+                            <MudText Typo="Typo.body1">
+                                @(_registerClass.SchoolGrade is { SystemGrade.MathGrade: true } ? "Yes" : "No")
+                            </MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+
+                @if (_registerClass.CompulsorySubjects != null && _registerClass.CompulsorySubjects.Any())
+                {
+                    <MudPaper Elevation="0" Class="pa-4">
+                        <MudText Typo="Typo.h6" Class="mb-3">Compulsory Subjects</MudText>
+                        <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                            @foreach (var subject in _registerClass.CompulsorySubjects)
+                            {
+                                <MudChip T="string" Color="Color.Primary" Size="Size.Small">@subject.Name</MudChip>
+                            }
+                        </MudStack>
+                    </MudPaper>
+                }
+
+                <MudPaper Elevation="0" Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Enrolled Learners (@(_registerClass.Learners?.Count ?? 0))</MudText>
+                    @if (_registerClass.Learners == null || _registerClass.Learners.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Info">No learners in this class.</MudAlert>
+                    }
+                    else
+                    {
+                        <MudTable Items="@_registerClass.Learners" 
+                                  Hover="true" 
+                                  Dense="true"
+                                  Elevation="0"
+                                  Breakpoint="Breakpoint.Sm">
+                            <HeaderContent>
+                                <MudTh>Full Name</MudTh>
+                                <MudTh>Actions</MudTh>
+                            </HeaderContent>
+                            <RowTemplate Context="learner">
+                                <MudTd DataLabel="Full Name">@($"{learner.Surname} {learner.Name}")</MudTd>
+                                <MudTd DataLabel="Actions">
+                                    <MudButton Variant="Variant.Text" 
+                                               Color="Color.Primary" 
+                                               Size="Size.Small"
+                                               OnClick="@(() => ViewLearner(learner.Id))">
+                                        View Learner
+                                    </MudButton>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudPaper>
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+    
+    [Parameter] public Guid RegisterClassId { get; set; }
+    
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private RegisterClass? _registerClass;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _registerClass = await RegisterClassService.GetByIdAsync(RegisterClassId);
+    }
+
+    private void Cancel() => MudDialog.Close();
+
+    private async Task ViewLearner(Guid learnerId)
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(LearnerViewDialog.LearnerId), learnerId }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseButton = true,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        await DialogService.ShowAsync<LearnerViewDialog>("Learner Details", parameters, options);
+    }
+}

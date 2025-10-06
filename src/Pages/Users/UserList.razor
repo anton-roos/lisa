@@ -7,85 +7,101 @@
 <PageTitle>Staff</PageTitle>
 <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
-        <h3>Staff</h3>
         @if (_selectedSchool == null)
         {
-            <NoSchoolSelected Message="Please select a school to to manage staff." />
-        }
-        else if (_users == null)
-        {
-            <LoadingSpinner />
+            <NoSchoolSelected Message="Please select a school to manage staff." />
         }
         else
         {
-            <button class="btn btn-primary mb-3" @onclick="GoToAddUser" disabled="@(_selectedSchool == null)">
-                Add Staff Member
-             </button>
-            <div class="mb-3 d-flex flex-wrap align-items-center">
-                <!-- Search Filter -->
-                <div class="me-3">
-                    <input type="text" class="form-control" placeholder="Search users..." @bind="_searchQuery"
-                           @oninput="FilterUsers">
-                </div>
+            @if (_users == null)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+            }
+            else
+            {
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mb-3">
+                    <MudButton Variant="Variant.Filled" 
+                              Color="Color.Primary" 
+                              StartIcon="@Icons.Material.Filled.Add"
+                              OnClick="GoToAddUser"
+                              Class="me-4">
+                        Add Staff Member
+                    </MudButton>
 
-                <!-- Role Filter Buttons -->
-                <button class="btn @(_selectedRole == null ? "btn-primary" : "btn-secondary") me-2"
-                        @onclick="ClearRoleFilter">
-                    All Roles
-                </button>
+                    <!-- Search Filter -->
+                    <MudTextField @bind-Value="_searchQuery"
+                                Placeholder="Search users..."
+                                Adornment="Adornment.Start"
+                                AdornmentIcon="@Icons.Material.Filled.Search"
+                                IconSize="Size.Medium"
+                                Immediate="true"
+                                Variant="Variant.Outlined"
+                                Margin="Margin.Dense"
+                                Style="max-width: 300px;" />
 
-                @foreach (var role in _availableRoles)
-                {
-                    <button class="btn @(_selectedRole == role ? "btn-primary" : "btn-secondary") me-2"
-                            @onclick="() => SelectRole(role)">
-                        @role
-                    </button>
-                }
-            </div>
+                    <!-- Role Filter Buttons -->
+                    <MudChipSet T="string" @bind-SelectedChip="_selectedChip" 
+                               Filter="true" 
+                               Mandatory="false"
+                               SelectionMode="SelectionMode.SingleSelection">
+                        @foreach (var role in _availableRoles)
+                        {
+                            <MudChip Text="@role" Value="@role" Color="Color.Primary">@role</MudChip>
+                        }
+                    </MudChipSet>
+                </MudStack>
 
-            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
                 @if (!FilteredUsers.Any())
                 {
-                    <div class="col-12">
-                        <p>No users found matching your search/filter.</p>
-                    </div>
+                    <MudAlert Severity="Severity.Info" Class="mt-3">
+                        No staff members found matching your search/filter.
+                    </MudAlert>
                 }
                 else
                 {
-                    @foreach (var user in FilteredUsers)
-                    {
-                        <div class="col">
-                            <div class="card shadow-sm">
-                                <div class="card-body">
-                                    <h5 class="card-title">
-                                        @if (!string.IsNullOrWhiteSpace(user.Abbreviation))
-                                        {
-                                            <span class="badge bg-secondary me-2">@user.Abbreviation</span>
-                                        }
-                                        @user.Surname @user.Name
-                                    </h5>
-                                    <h6 class="card-subtitle mb-2 text-muted">@user.Email</h6>
-
-                                    <div class="mb-2">
-                                        @foreach (var role in user.Roles)
-                                        {
-                                            <span class="badge bg-primary me-1">@role</span>
-                                        }
-                                    </div>
-
-                                    <div class="d-flex justify-content-between">
-                                        <button class="btn btn-sm btn-secondary" @onclick="() => EditUser(user.Id)">
-                                            Edit
-                                        </button>
-                                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteUser(user)">Delete
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    }
+                    <MudTable Items="@FilteredUsers" 
+                              Hover="true" 
+                              Striped="true" 
+                              Dense="true"
+                              Elevation="2">
+                        <HeaderContent>
+                            <MudTh>Abbreviation</MudTh>
+                            <MudTh>Name</MudTh>
+                            <MudTh>Email</MudTh>
+                            <MudTh>Roles</MudTh>
+                            <MudTh>Actions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate Context="user">
+                            <MudTd DataLabel="Abbreviation">
+                                @if (!string.IsNullOrWhiteSpace(user.Abbreviation))
+                                {
+                                    <MudChip T="string" Color="Color.Secondary" Size="Size.Small">@user.Abbreviation</MudChip>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="Name">@user.Surname @user.Name</MudTd>
+                            <MudTd DataLabel="Email">@user.Email</MudTd>
+                            <MudTd DataLabel="Roles">
+                                @foreach (var role in user.Roles)
+                                {
+                                    <MudChip T="string" Color="Color.Primary" Size="Size.Small" Class="me-1">@role</MudChip>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="Actions">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                               Color="Color.Secondary" 
+                                               Size="Size.Small"
+                                               OnClick="@(() => EditUser(user.Id))"
+                                               Title="Edit" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                               Color="Color.Error" 
+                                               Size="Size.Small"
+                                               OnClick="@(() => DeleteUser(user))"
+                                               Title="Delete" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
                 }
-            </div>
+            }
         }
     </Authorized>
     <NotAuthorized>
@@ -98,7 +114,7 @@
 
     private School? _selectedSchool;
     private List<User>? _users;
-    private string? _selectedRole;
+    private MudChip<string>? _selectedChip;
     private string _searchQuery = string.Empty;
 
     private readonly List<string> _availableRoles =
@@ -164,30 +180,23 @@
         }
     }
 
-    private IEnumerable<User> FilteredUsers =>
-        _users == null
-            ? []
-            : _users.Where(u =>
-                (_selectedRole == null || u.Roles.Contains(_selectedRole)) &&
+    private IEnumerable<User> FilteredUsers
+    {
+        get
+        {
+            if (_users == null)
+                return [];
+
+            var selectedRole = _selectedChip?.Text;
+            
+            return _users.Where(u =>
+                (selectedRole == null || u.Roles.Contains(selectedRole)) &&
                 (string.IsNullOrWhiteSpace(_searchQuery) ||
                  u.Name!.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
                  u.Surname!.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
                  (u.Abbreviation?.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ?? false)
                 ));
-
-    private void FilterUsers(ChangeEventArgs e)
-    {
-        _searchQuery = e.Value?.ToString() ?? string.Empty;
-    }
-
-    private void SelectRole(string role)
-    {
-        _selectedRole = _selectedRole == role ? null : role;
-    }
-
-    private void ClearRoleFilter()
-    {
-        _selectedRole = null;
+        }
     }
 
     private void GoToAddUser()

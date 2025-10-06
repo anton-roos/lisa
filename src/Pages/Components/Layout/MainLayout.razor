@@ -1,10 +1,14 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
 @using MudBlazor
 @inject NavigationManager NavigationManager
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Anti
 @inject IHttpContextAccessor Http
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="@_darkMode" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 <MudCssBaseline />
 
 <MudLayout>
@@ -16,6 +20,19 @@
                        Edge="Edge.Start"
                        OnClick="@ToggleDrawer" />
         <MudText Typo="Typo.h6">LISA</MudText>
+        
+        @if (_breadcrumbItems.Count > 1)
+        {
+            <MudBreadcrumbs Items="_breadcrumbItems" Style="color: white; padding: 0; margin: 0">
+                <ItemTemplate Context="item">
+                   <MudText Typo="Typo.h6" Color="Color.Inherit">@item.Text</MudText>
+                </ItemTemplate>
+                <SeparatorTemplate>
+                    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Style="color: white;" />
+                </SeparatorTemplate>
+            </MudBreadcrumbs>
+        }
+        
         <MudSpacer />
 
         <!-- Dark / Light toggle -->
@@ -80,6 +97,7 @@
 @code {
     private bool _drawerOpen = true;
     private bool _darkMode = false;
+    private List<BreadcrumbItem> _breadcrumbItems = new();
 
     private string _afField = "__RequestVerificationToken";
     private string? _afToken;
@@ -139,6 +157,98 @@
             _afField = t.FormFieldName;
             _afToken = t.RequestToken;
         }
+
+        GenerateBreadcrumbs();
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        GenerateBreadcrumbs();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void GenerateBreadcrumbs()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var path = uri.AbsolutePath.TrimStart('/');
+
+        _breadcrumbItems = new List<BreadcrumbItem>
+        {
+            new BreadcrumbItem(string.Empty, href: "/", icon: Icons.Material.Filled.Home)
+        };
+
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var currentPath = "";
+
+        for (int i = 0; i < segments.Length; i++)
+        {
+            currentPath += "/" + segments[i];
+            var isLast = i == segments.Length - 1;
+            var displayName = GetDisplayName(segments[i]);
+
+            _breadcrumbItems.Add(new BreadcrumbItem(
+                displayName,
+                href: isLast ? null : currentPath,
+                disabled: isLast
+            ));
+        }
+    }
+
+    private string GetDisplayName(string segment)
+    {
+        // Convert kebab-case and handle special cases
+        return segment switch
+        {
+            "schools" => "Schools",
+            "care-groups" => "Care Groups",
+            "register-class" => "Register Class",
+            "subjects" => "Subjects",
+            "assessment-types" => "Assessment Types",
+            "users" => "Staff",
+            "grades" => "Grades",
+            "learners" => "Learners",
+            "class-lists" => "Class Lists",
+            "results" => "Results",
+            "daily-register" => "Daily Attendance",
+            "per-period-attendance" => "Per Period Attendance",
+            "leave-early" => "Leave Early",
+            "combinations" => "Combinations",
+            "communication" => "Communication",
+            "email-campaigns" => "Email Campaigns",
+            "adi-creator" => "ADI Creator",
+            "progress-feedback" => "Progress Feedback",
+            "sign-in-and-out" => "Sign In / Out",
+            "add" => "Add",
+            "edit" => "Edit",
+            "details" => "Details",
+            "manage" => "Manage",
+            _ => FormatSegment(segment)
+        };
+    }
+
+    private string FormatSegment(string segment)
+    {
+        // Check if it's a GUID or number (typically an ID)
+        if (Guid.TryParse(segment, out _) || int.TryParse(segment, out _))
+        {
+            return "Details";
+        }
+
+        // Convert kebab-case or PascalCase to Title Case
+        var words = System.Text.RegularExpressions.Regex.Replace(segment, "([a-z])([A-Z])", "$1 $2");
+        words = words.Replace("-", " ").Replace("_", " ");
+        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(words.ToLower());
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
     }
 
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;

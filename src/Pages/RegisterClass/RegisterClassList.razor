@@ -7,72 +7,88 @@
 @inherits EventAwareComponentBase
 @inject ILogger<RegisterClassList> Logger
 
-<PageTitle>Care Group Details</PageTitle>
+<PageTitle>Register Classes</PageTitle>
 <AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
-        <h3>Register Classes</h3>
         @if (_selectedSchool == null)
         {
             <NoSchoolSelected Message="Please select a school to view register classes." />
         }
-        else if (!_registerClasses.Any())
-        {
-            <div>
-                <h3>Register Classes</h3>
-                <button class="btn btn-primary mb-3" @onclick="AddRegisterClass">Add Register Class</button>
-                <div class="alert alert-info">
-                    No register classes found for <strong>@_selectedSchool.ShortName</strong>.
-                </div>
-            </div>
-        }
         else
         {
-            <button class="btn btn-primary mb-3" @onclick="AddRegisterClass">Add Register Class</button>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Grade</th>
-                        <th>Learner Count</th>
-                        <th>Teacher</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var registerClass in _registerClasses)
-                    {
-                        <tr>
-                            <td>@registerClass.Name</td>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="AddRegisterClass"
+                       Class="mb-3">
+                Add Register Class
+            </MudButton>
+
+            @if (!_registerClasses.Any())
+            {
+                <MudAlert Severity="Severity.Info" Class="mt-3">
+                    No register classes found for <strong>@_selectedSchool.ShortName</strong>.
+                </MudAlert>
+            }
+            else
+            {
+                <MudTable Items="@_registerClasses" 
+                          Hover="true" 
+                          Striped="true" 
+                          Dense="true"
+                          Elevation="2">
+                    <HeaderContent>
+                        <MudTh>Name</MudTh>
+                        <MudTh>Grade</MudTh>
+                        <MudTh>Learner Count</MudTh>
+                        <MudTh>Teacher</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="registerClass">
+                        <MudTd DataLabel="Name">@registerClass.Name</MudTd>
+                        <MudTd DataLabel="Grade">
                             @if (registerClass.SchoolGrade != null)
                             {
-                                <td>@registerClass.SchoolGrade.SystemGrade.Name</td>
+                                @registerClass.SchoolGrade.SystemGrade.Name
                             }
                             else
                             {
-                                <td>Grade not found</td>
+                                <MudChip T="string" Color="Color.Error" Size="Size.Small">Grade not found</MudChip>
                             }
-                            @if (registerClass.Learners != null)
-                            {
-                                <td>@registerClass.Learners.Count.ToString()</td>
-                            }
-                            else
-                            {
-                                <td>Learners not found</td>
-                            }
+                        </MudTd>
+                        <MudTd DataLabel="Learner Count">
+                            @(registerClass.Learners?.Count ?? 0)
+                        </MudTd>
+                        <MudTd DataLabel="Teacher">
                             @if (registerClass.User != null)
                             {
-                                <td>@registerClass.User.Surname @registerClass.User.Name</td>
+                                @registerClass.User.Surname @registerClass.User.Name
                             }
                             else
                             {
-                                <td>Teacher not found</td>
+                                <MudChip T="string" Color="Color.Error" Size="Size.Small">No Teacher</MudChip>
                             }
-                            <ActionButtons TEntity="RegisterClass" Entity="registerClass" OnView="ViewRegisterClass"
-                                OnEdit="EditRegisterClass" OnDelete="ShowConfirmationAsync" />
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                           Color="Color.Primary" 
+                                           Size="Size.Small"
+                                           OnClick="@(() => ViewRegisterClass(registerClass))"
+                                           Title="View" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                           Color="Color.Secondary" 
+                                           Size="Size.Small"
+                                           OnClick="@(() => EditRegisterClass(registerClass))"
+                                           Title="Edit" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                           Color="Color.Error" 
+                                           Size="Size.Small"
+                                           OnClick="@(() => ShowConfirmationAsync(registerClass))"
+                                           Title="Delete" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
         }
     </Authorized>
     <NotAuthorized>
@@ -118,28 +134,51 @@
             .ToList();
     }
 
-    private void EditRegisterClass(RegisterClass registerClass)
+    private async Task EditRegisterClass(RegisterClass registerClass)
     {
-        NavigationManager.NavigateTo($"/register-class/manage/{registerClass.Id}");
+        var parameters = new DialogParameters<RegisterClassEditDialog>
+        {
+            { x => x.RegisterClassId, registerClass.Id }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        var result = await DialogService.ShowAsync<RegisterClassEditDialog>("Edit Register Class", parameters, options);
+        
+        if (result != null)
+        {
+            await LoadRegisterClasses();
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
-    private void ViewRegisterClass(RegisterClass registerClass)
+    private async Task ViewRegisterClass(RegisterClass registerClass)
     {
-        NavigationManager.NavigateTo($"/register-class/details/{registerClass.Id}");
+        var parameters = new DialogParameters<RegisterClassViewDialog>
+        {
+            { x => x.RegisterClassId, registerClass.Id }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseButton = true,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        await DialogService.ShowAsync<RegisterClassViewDialog>($"Register Class: {registerClass.Name}", parameters, options);
     }
 
     private async Task ShowConfirmationAsync(RegisterClass? registerClass)
     {
-        var parameters = new DialogParameters<MudMessageBox>
-        {
-            { x => x.Title, "Delete Register Class" },
-            { x => x.Message, "This will delete the record. Once deleted can not be rolled back. Do you want to proceed?" },
-            { x => x.YesText, "Delete" },
-            { x => x.NoText, "Cancel" },
-            { x => x.CancelText, "" }
-        };
-
-        var options = new DialogOptions()
+        var options = new DialogOptions
         {
             CloseButton = true,
             MaxWidth = MaxWidth.Small,
@@ -150,22 +189,38 @@
             title: "Delete Register Class",
             message: "This will delete the record. Once deleted can not be rolled back. Do you want to proceed?",
             yesText: "Delete",
-            noText: "Cancel",
+            cancelText: "Cancel",
             options: options);
 
-        if (dialog == true)
+        if (dialog == true && registerClass != null)
         {
-            if (registerClass != null)
-            {
-                await RegisterClassService.DeleteAsync(registerClass.Id);
-                await LoadRegisterClasses();
-                await InvokeAsync(StateHasChanged);
-            }
+            await RegisterClassService.DeleteAsync(registerClass.Id);
+            await LoadRegisterClasses();
+            await InvokeAsync(StateHasChanged);
         }
     }
 
-    private void AddRegisterClass()
+    private async Task AddRegisterClass()
     {
-        NavigationManager.NavigateTo("/register-class/manage/");
+        var parameters = new DialogParameters<RegisterClassEditDialog>
+        {
+            { x => x.RegisterClassId, null }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        var result = await DialogService.ShowAsync<RegisterClassEditDialog>("Add Register Class", parameters, options);
+        
+        if (result != null)
+        {
+            await LoadRegisterClasses();
+            await InvokeAsync(StateHasChanged);
+        }
     }
 }

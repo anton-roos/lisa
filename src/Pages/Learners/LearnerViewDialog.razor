@@ -1,0 +1,197 @@
+@using Lisa.Models.Entities
+@using MudBlazor
+@inject LearnerService LearnerService
+
+<MudDialog>
+    <DialogContent>
+        @if (_learner == null)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+        }
+        else
+        {
+            <MudStack Spacing="3">
+                <!-- Personal Information -->
+                <MudPaper Elevation="0" Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Personal Information</MudText>
+                    <MudGrid>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Code</MudText>
+                            <MudText Typo="Typo.body1">@_learner.Code</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Full Name</MudText>
+                            <MudText Typo="Typo.body1">@_learner.Surname @_learner.Name</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Gender</MudText>
+                            <MudText Typo="Typo.body1">@_learner.Gender</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Status</MudText>
+                            <MudChip T="string" Color="@(_learner.Active ? Color.Success : Color.Error)" Size="Size.Small">
+                                @(_learner.Active ? "Active" : "Inactive")
+                            </MudChip>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+
+                <!-- School Information -->
+                <MudPaper Elevation="0" Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">School Information</MudText>
+                    <MudGrid>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Register Class</MudText>
+                            @if (_learner.RegisterClass == null)
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Error">No register class assigned</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body1">@_learner.RegisterClass.Name</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    Grade: @_learner.RegisterClass.SchoolGrade?.SystemGrade.Name
+                                </MudText>
+                            }
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Care Group</MudText>
+                            @if (_learner.CareGroup == null)
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Error">No care group assigned</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body1">@_learner.CareGroup.Name</MudText>
+                            }
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+
+                <!-- Subjects -->
+                <MudPaper Elevation="0" Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Subjects</MudText>
+                    @if (_learner.LearnerSubjects == null || !_learner.LearnerSubjects.Any())
+                    {
+                        <MudAlert Severity="Severity.Info">No subjects assigned.</MudAlert>
+                    }
+                    else
+                    {
+                        <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                            @foreach (var ls in _learner.LearnerSubjects)
+                            {
+                                <MudChip T="string" Color="Color.Primary" Size="Size.Small">@ls.Subject.Name</MudChip>
+                            }
+                        </MudStack>
+                    }
+                </MudPaper>
+
+                <!-- Medical Details -->
+                <MudPaper Elevation="0" Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Medical Details</MudText>
+                    <MudGrid>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Medical Aid Name</MudText>
+                            <MudText Typo="Typo.body1">@(_learner.MedicalAidName ?? "N/A")</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Medical Aid Number</MudText>
+                            <MudText Typo="Typo.body1">@(_learner.MedicalAidNumber ?? "N/A")</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Medical Aid Plan</MudText>
+                            <MudText Typo="Typo.body1">@(_learner.MedicalAidPlan ?? "N/A")</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Medical Transport</MudText>
+                            <MudText Typo="Typo.body1">@_learner.MedicalTransport.ToString()</MudText>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Allergies</MudText>
+                            <MudText Typo="Typo.body1">@(_learner.Allergies ?? "None")</MudText>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Medical Ailments</MudText>
+                            <MudText Typo="Typo.body1">@(_learner.MedicalAilments ?? "None")</MudText>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Medical Instructions</MudText>
+                            <MudText Typo="Typo.body1">@(_learner.MedicalInstructions ?? "None")</MudText>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Dietary Requirements</MudText>
+                            <MudText Typo="Typo.body1">@(_learner.DietaryRequirements ?? "None")</MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+
+                <!-- Parents -->
+                <MudPaper Elevation="0" Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Parents (@(_learner.Parents?.Count ?? 0))</MudText>
+                    @if (_learner.Parents == null || !_learner.Parents.Any())
+                    {
+                        <MudAlert Severity="Severity.Info">No parents associated.</MudAlert>
+                    }
+                    else
+                    {
+                        <MudTable Items="@_learner.Parents" 
+                                  Hover="true" 
+                                  Dense="true"
+                                  Elevation="0"
+                                  Breakpoint="Breakpoint.Sm">
+                            <HeaderContent>
+                                <MudTh>Name</MudTh>
+                                <MudTh>Relationship</MudTh>
+                                <MudTh>Primary Email</MudTh>
+                                <MudTh>Primary Number</MudTh>
+                                <MudTh>WhatsApp</MudTh>
+                            </HeaderContent>
+                            <RowTemplate Context="parent">
+                                <MudTd DataLabel="Name">@(parent.Surname ?? "") @(parent.Name ?? "")</MudTd>
+                                <MudTd DataLabel="Relationship">@(parent.Relationship ?? "Unknown")</MudTd>
+                                <MudTd DataLabel="Primary Email">@(parent.PrimaryEmail ?? "N/A")</MudTd>
+                                <MudTd DataLabel="Primary Number">@(parent.PrimaryCellNumber ?? "N/A")</MudTd>
+                                <MudTd DataLabel="WhatsApp">@(parent.WhatsAppNumber ?? "N/A")</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudPaper>
+
+                <!-- Timestamps -->
+                <MudPaper Elevation="0" Class="pa-4">
+                    <MudGrid>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Created: @_learner.CreatedAt.ToString("dd MMM yyyy HH:mm")
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Updated: @_learner.UpdatedAt.ToString("dd MMM yyyy HH:mm")
+                            </MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public Guid LearnerId { get; set; }
+
+    private Learner? _learner;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _learner = await LearnerService.GetByIdAsync(LearnerId);
+    }
+
+    private void Cancel() => MudDialog.Close();
+}

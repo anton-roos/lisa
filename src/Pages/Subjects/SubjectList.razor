@@ -2,65 +2,115 @@
 @using Lisa.Models.Entities
 @inject NavigationManager Navigation
 @inject SubjectService SubjectService
+@inject IDialogService DialogService
 
 <AuthorizeView Roles="@Roles.SystemAdministrator">
     <Authorized>
-        <h3>Subjects</h3>
+        <PageTitle>Subjects</PageTitle>
 
-        <div class="d-flex">
-            <button class="btn btn-primary mb-3 me-3" @onclick="AddSubject">Add Subject</button>
-            <div>
-                <InputText class="form-control" @bind-Value="_searchText" @oninput="OnInputChange"
-                    placeholder="Type to filter subjects..." />
-            </div>
-        </div>
+        <MudStack Row="true" Spacing="2" Class="mb-3">
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="AddSubject"
+                       Style="height: 38px"
+                       Class="mt-1"
+                        >
+                Add Subject
+            </MudButton>
+            <MudTextField @bind-Value="_searchText"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Placeholder="Type to filter subjects..."
+                          Immediate="true"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Style="max-width: 300px;" />
+        </MudStack>
 
         @if (_subjects == null)
         {
-            <p>Loading subjects...</p>
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
         }
         else if (!FilteredSubjects.Any())
         {
-            <p>No subjects found matching your search.</p>
+            <MudAlert Severity="Severity.Info" Class="mt-3">
+                No subjects found matching your search.
+            </MudAlert>
         }
         else
         {
-            <div class="list-group">
-                @foreach (var subject in FilteredSubjects)
-                {
-                    <div class="list-group-item d-flex justify-content-start align-items-center subject-row"
-                        @ondragover="OnDragOver" @ondragover:preventDefault="true" @ondrop="(_) => OnDrop(subject)"
-                        @ondrop:preventDefault="true">
-                        <div>
-                            @if (string.IsNullOrWhiteSpace(_searchText))
-                            {
-                                <button class="btn btn-sm btn-secondary me-1 drag-handle" draggable="true"
-                                    @ondragstart="(_) => OnDragStart(subject)">
-                                    <i class="bi bi-grip-vertical"></i>
-                                </button>
-                            }
-                        </div>
-                        <div class="col-md-3 col-12 mb-2 mb-md-0">
-                            <strong>@subject.Name</strong>
-                        </div>
-                        <div class="col-md-2 col-12 mb-2 mb-md-0">
-                            @subject.Code
-                        </div>
-                        <div class="col-md-2 col-12 mb-2 mb-md-0">
-                            <div class="d-flex flex-wrap gap-2">
-                                <Pill Color="info">@GetFirstAndLastGrade(subject)</Pill>
-                                <Pill Color="@GetPillColorForSubjectType(subject.SubjectType)">
-                                    @GetPillTextForSubjectType(subject.SubjectType)
-                                </Pill>
+            <MudTable Items="@FilteredSubjects" 
+                      Hover="true" 
+                      Striped="true" 
+                      Dense="true"
+                      Elevation="2">
+                <HeaderContent>
+                    @if (string.IsNullOrWhiteSpace(_searchText))
+                    {
+                        <MudTh Style="width: 120px;">Order</MudTh>
+                    }
+                    <MudTh>Name</MudTh>
+                    <MudTh>Code</MudTh>
+                    <MudTh>Grades</MudTh>
+                    <MudTh>Type</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="subject">
+                    @if (string.IsNullOrWhiteSpace(_searchText))
+                    {
+                        <MudTd DataLabel="Order">
+                            <div class="d-flex align-items-center gap-1">
+                                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" 
+                                               Color="Color.Default" 
+                                               Size="Size.Small"
+                                               OnClick="@(() => MoveUp(subject))"
+                                               Disabled="@IsFirst(subject)"
+                                               Title="Move Up" />
+                                <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" 
+                                               Color="Color.Default" 
+                                               Size="Size.Small"
+                                               OnClick="@(() => MoveDown(subject))"
+                                               Disabled="@IsLast(subject)"
+                                               Title="Move Down" />
                             </div>
-                        </div>
-                        <div class="col-md-4 col-12 d-flex justify-content-end">
-                            <ActionButtons TEntity="Subject" Entity="subject" OnView="ViewSubject" OnEdit="EditSubject"
-                                OnDelete="DeleteSubject" />
-                        </div>
-                    </div>
-                }
-            </div>
+                        </MudTd>
+                    }
+                    <MudTd DataLabel="Name">
+                        <strong>@subject.Name</strong>
+                    </MudTd>
+                    <MudTd DataLabel="Code">
+                        @subject.Code
+                    </MudTd>
+                    <MudTd DataLabel="Grades">
+                        <MudChip T="string" Color="Color.Info" Size="Size.Small">@GetFirstAndLastGrade(subject)</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Type">
+                        <MudChip T="string" 
+                                 Color="@GetMudColorForSubjectType(subject.SubjectType)" 
+                                 Size="Size.Small">
+                            @GetPillTextForSubjectType(subject.SubjectType)
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                       Color="Color.Primary" 
+                                       Size="Size.Small"
+                                       OnClick="@(() => ViewSubject(subject))"
+                                       Title="View" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                       Color="Color.Secondary" 
+                                       Size="Size.Small"
+                                       OnClick="@(() => EditSubject(subject))"
+                                       Title="Edit" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                       Color="Color.Error" 
+                                       Size="Size.Small"
+                                       OnClick="@(() => DeleteSubject(subject))"
+                                       Title="Delete" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
         }
     </Authorized>
     <NotAuthorized>
@@ -71,7 +121,6 @@
 @code {
     private List<Subject>? _subjects;
     private string _searchText = string.Empty;
-    private Subject? _draggedSubject;
 
     protected override async Task OnInitializedAsync()
     {
@@ -103,24 +152,28 @@
 
     private async Task DeleteSubject(Subject? subject)
     {
-        if (subject is not null)
+        if (subject is null) return;
+
+        var result = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            $"Are you sure you want to delete '{subject.Name}'?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (result == true)
         {
             await SubjectService.DeleteAsync(subject.Id);
             _subjects = await SubjectService.GetAllAsync();
+            await InvokeAsync(StateHasChanged);
         }
     }
 
-    private void OnInputChange(ChangeEventArgs e)
+    private Color GetMudColorForSubjectType(SubjectType subjectType) => subjectType switch
     {
-        _searchText = e.Value?.ToString() ?? string.Empty;
-    }
-
-    private string GetPillColorForSubjectType(SubjectType subjectType) => subjectType switch
-    {
-        SubjectType.Compulsory => "primary",
-        SubjectType.Combination => "danger",
-        SubjectType.MathCombination => "success",
-        _ => ""
+        SubjectType.Compulsory => Color.Primary,
+        SubjectType.Combination => Color.Error,
+        SubjectType.MathCombination => Color.Success,
+        _ => Color.Default
     };
 
     private string GetPillTextForSubjectType(SubjectType subjectType) => subjectType switch
@@ -155,38 +208,42 @@
         _ => grade.ToString()
     };
 
-    private void OnDragStart(Subject subject)
+    private async Task MoveUp(Subject subject)
     {
-        _draggedSubject = subject;
+        if (_subjects == null) return;
+        
+        var index = _subjects.IndexOf(subject);
+        if (index > 0)
+        {
+            _subjects.RemoveAt(index);
+            _subjects.Insert(index - 1, subject);
+            await SaveOrderChanges();
+        }
     }
 
-    private static void OnDragOver(DragEventArgs e)
+    private async Task MoveDown(Subject subject)
     {
-        e.DataTransfer.DropEffect = "move";
+        if (_subjects == null) return;
+        
+        var index = _subjects.IndexOf(subject);
+        if (index < _subjects.Count - 1)
+        {
+            _subjects.RemoveAt(index);
+            _subjects.Insert(index + 1, subject);
+            await SaveOrderChanges();
+        }
     }
 
-    private async Task OnDrop(Subject targetSubject)
+    private bool IsFirst(Subject subject)
     {
-        if (_draggedSubject == null || _draggedSubject == targetSubject)
-        {
-            return;
-        }
+        if (_subjects == null || !FilteredSubjects.Any()) return true;
+        return FilteredSubjects.First() == subject;
+    }
 
-        if (_subjects is not null)
-        {
-            var oldIndex = _subjects.IndexOf(_draggedSubject);
-            var newIndex = _subjects.IndexOf(targetSubject);
-
-            if (oldIndex < newIndex) newIndex--;
-            if (newIndex < 0) newIndex = 0;
-
-            _subjects.RemoveAt(oldIndex);
-            _subjects.Insert(newIndex, _draggedSubject);
-        }
-
-        await SaveOrderChanges();
-
-        _draggedSubject = null;
+    private bool IsLast(Subject subject)
+    {
+        if (_subjects == null || !FilteredSubjects.Any()) return true;
+        return FilteredSubjects.Last() == subject;
     }
 
     private async Task SaveOrderChanges()

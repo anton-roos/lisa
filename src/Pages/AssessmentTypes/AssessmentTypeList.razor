@@ -2,52 +2,56 @@
 @using Lisa.Models.Entities
 @inject AssessmentTypeService AssessmentTypeService
 @inject NavigationManager Navigation
-@inject IJSRuntime JsRuntime
+@inject IDialogService DialogService
 
 <PageTitle>Assessment Types</PageTitle>
-<h3>Assessment Types</h3>
+
+<MudButton Variant="Variant.Filled" 
+           Color="Color.Primary" 
+           StartIcon="@Icons.Material.Filled.Add"
+           OnClick="CreateAssessmentType"
+           Class="mb-3">
+    Add Assessment Type
+</MudButton>
 
 @if (_loading)
 {
-    <div class="d-flex justify-content-center my-5">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-    </div>
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
 }
 else if (!AssessmentTypes.Any())
 {
-    <p>No assessment types found.</p>
+    <MudAlert Severity="Severity.Info" Class="mt-3">
+        No assessment types found, please add an Assessment Type.
+    </MudAlert>
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Id</th>
-                <th>Name</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var type in AssessmentTypes)
-            {
-                <tr>
-                    <td>@type.Id</td>
-                    <td>@type.Name</td>
-                    <td>
-                        <button class="btn btn-link" @onclick="@(() => EditAssessmentType(type.Id))">Edit</button>
-                        <button class="btn btn-link text-danger" @onclick="@(() => DeleteAssessmentType(type.Id))">Delete</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <MudTable Items="@AssessmentTypes" 
+              Hover="true" 
+              Striped="true" 
+              Dense="true"
+              Elevation="2">
+        <HeaderContent>
+            <MudTh>Name</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate Context="type">
+            <MudTd DataLabel="Name">@type.Name</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                               Color="Color.Secondary" 
+                               Size="Size.Small"
+                               OnClick="@(() => EditAssessmentType(type.Id))"
+                               Title="Edit" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                               Color="Color.Error" 
+                               Size="Size.Small"
+                               OnClick="@(() => DeleteAssessmentType(type.Id))"
+                               Title="Delete" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
 }
-
-<div class="mt-3">
-    <button class="btn btn-primary" @onclick="CreateAssessmentType">Create New Assessment Type</button>
-</div>
 
 @code {
     private List<AssessmentType> AssessmentTypes { get; set; } = [];
@@ -84,8 +88,13 @@ else
 
     private async Task DeleteAssessmentType(int id)
     {
-        var confirmed = await JsRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete assessment type {id}?");
-        if (confirmed)
+        var result = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            $"Are you sure you want to delete assessment type {id}?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (result == true)
         {
             try
             {

@@ -3,5 +3,6 @@
 ## 1. General Architecture & Principles
 - Use Primary Constructors everywhere.
 
-## UI and Styling
-Use Bootstrap and use Lisa\wwwroot\app.css for custom styles.
+## MudBlazor
+- Use MudBlazor components for UI elements.
+- Use MudBlazor's built-in dialog system for modals.

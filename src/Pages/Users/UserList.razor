@@ -40,13 +40,13 @@
                                 Style="max-width: 300px;" />
 
                     <!-- Role Filter Buttons -->
-                    <MudChipSet T="string" @bind-SelectedChip="_selectedChip" 
+                    <MudChipSet T="string" @bind-SelectedValue="_selectedRole" 
                                Filter="true" 
                                Mandatory="false"
                                SelectionMode="SelectionMode.SingleSelection">
                         @foreach (var role in _availableRoles)
                         {
-                            <MudChip Text="@role" Value="@role" Color="Color.Primary">@role</MudChip>
+                            <MudChip T="string" Value="@role" Color="Color.Primary">@role</MudChip>
                         }
                     </MudChipSet>
                 </MudStack>
@@ -114,7 +114,7 @@
 
     private School? _selectedSchool;
     private List<User>? _users;
-    private MudChip<string>? _selectedChip;
+    private string? _selectedRole;
     private string _searchQuery = string.Empty;
 
     private readonly List<string> _availableRoles =
@@ -186,11 +186,9 @@
         {
             if (_users == null)
                 return [];
-
-            var selectedRole = _selectedChip?.Text;
             
             return _users.Where(u =>
-                (selectedRole == null || u.Roles.Contains(selectedRole)) &&
+                (string.IsNullOrEmpty(_selectedRole) || u.Roles.Contains(_selectedRole)) &&
                 (string.IsNullOrWhiteSpace(_searchQuery) ||
                  u.Name!.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
                  u.Surname!.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||

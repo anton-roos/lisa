@@ -44,10 +44,14 @@ jobs:
       - name: Publish
         run: dotnet publish --configuration Release --no-build --output "$env:PUBLISH_DIR"
 
-      # Use app_offline to release locks (you can keep/skip the app pool stop if you want)
+      # Use app_offline to release locks
       - name: Take site offline
         shell: pwsh
-        run: New-Item -ItemType File -Path "$env:DEPLOY_PATH\app_offline.htm" -Force | Out-Null
+        run: |
+          # Create app_offline.htm to gracefully stop the application
+          New-Item -ItemType File -Path "$env:DEPLOY_PATH\app_offline.htm" -Force | Out-Null
+          # Give IIS a moment to detect the file and release locks
+          Start-Sleep -Seconds 3
 
       - name: Deploy (mirror, KEEP appsettings* and key folders)
         shell: pwsh
@@ -56,9 +60,9 @@ jobs:
           $dst = $env:DEPLOY_PATH
 
           # Files you never want to overwrite on the server
-          $excludeFiles = @("appsettings.json","appsettings.*.json")
+          $excludeFiles = @("appsettings.json","appsettings.*.json","app_offline.htm")
           # Folders you want to preserve on the server (add your own)
-          $excludeDirs  = @("DataProtection-Keys","logs","uploads","app_offline.htm")
+          $excludeDirs  = @("DataProtection-Keys","logs","uploads")
 
           $xfArgs = $excludeFiles | ForEach-Object { "/XF `"$($_)`"" } | Out-String
           $xdArgs = $excludeDirs  | ForEach-Object { "/XD `"$($_)`"" } | Out-String

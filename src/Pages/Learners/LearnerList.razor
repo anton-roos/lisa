@@ -110,7 +110,7 @@
                         <HeaderContent>
                             <MudTh>Name</MudTh>
                             <MudTh>Code</MudTh>
-                            <MudTh>Grade</MudTh>
+                            <MudTh>Register Class</MudTh>
                             <MudTh>Care Group</MudTh>
                             <MudTh>Parents</MudTh>
                             <MudTh>Subjects</MudTh>
@@ -119,7 +119,10 @@
                         </HeaderContent>
                         <RowTemplate Context="learner">
                             <MudTd DataLabel="Name">
-                                <MudText Typo="Typo.body1">@learner.Surname, @learner.Name</MudText>
+                                <MudText Typo="Typo.body1">@learner.Surname, @learner.Name, @if (learner.RegisterClass?.SchoolGrade != null)
+                                {
+                                        @learner.RegisterClass.SchoolGrade.SystemGrade.Name
+                                } </MudText>
                             </MudTd>
                             <MudTd DataLabel="Code">
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">@learner.Code</MudText>
@@ -127,8 +130,8 @@
                             <MudTd DataLabel="Grade">
                                 @if (learner.RegisterClass?.SchoolGrade != null)
                                 {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Info">
-                                        @learner.RegisterClass.SchoolGrade.SystemGrade.Name
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" OnClick="Promote">
+                                        @learner.RegisterClass.Name
                                     </MudChip>
                                 }
                                 else
@@ -388,6 +391,16 @@
             await LoadLearners();
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private async Task Promote()
+    {
+        var dialog = await DialogService.ShowMessageBox(
+            title: "Promote Learner",
+            message: $"Are you sure you want to promote Learner?",
+            yesText: "Promoted",
+            cancelText: "Not Promoted"
+            );
     }
 
     private async Task EnableLearner(Learner learner)

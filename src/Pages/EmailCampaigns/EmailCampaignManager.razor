@@ -377,10 +377,13 @@
         try
         {
             _isLoading = true;
+            StateHasChanged(); // Force UI update to show loading state
+            
             Campaign = await EmailCampaignService.GetByIdAsync(Id);
             if (Campaign != null)
             {
                 UpdateCounts();
+                Logger.LogInformation("Campaign {CampaignId} loaded with status {Status}", Id, Campaign.Status);
             }
         }
         catch (Exception ex)
@@ -391,6 +394,7 @@
         finally
         {
             _isLoading = false;
+            StateHasChanged(); // Force UI update after loading completes
         }
     }
 
@@ -431,7 +435,12 @@
         await ExecuteCampaignAction(async () =>
         {
             await EmailCampaignService.StartCampaignAsync(Id);
+            await InvokeAsync(StateHasChanged); // Update UI to show processing state
             Snackbar.Add("Campaign started successfully", Severity.Success);
+            
+            // Reload campaign to get updated status and start auto-refresh
+            await LoadCampaign();
+            StartAutoRefresh();
         }, "Starting campaign...");
     }
 
@@ -441,6 +450,10 @@
         {
             await EmailCampaignService.PauseCampaignAsync(Id);
             Snackbar.Add("Campaign paused", Severity.Warning);
+            
+            // Reload campaign to get updated status and stop auto-refresh
+            await LoadCampaign();
+            StopAutoRefresh();
         }, "Pausing campaign...");
     }
 
@@ -450,6 +463,10 @@
         {
             await EmailCampaignService.StopCampaignAsync(Id);
             Snackbar.Add("Campaign cancelled", Severity.Warning);
+            
+            // Reload campaign to get updated status and stop auto-refresh
+            await LoadCampaign();
+            StopAutoRefresh();
         }, "Cancelling campaign...");
     }
 
@@ -458,6 +475,8 @@
         try
         {
             _isProcessing = true;
+            StateHasChanged(); // Update UI to show processing state
+            
             Snackbar.Add(loadingMessage, Severity.Info);
             await campaignAction();
         }
@@ -469,6 +488,7 @@
         finally
         {
             _isProcessing = false;
+            StateHasChanged(); // Update UI after processing completes
         }
     }
 

@@ -147,14 +147,21 @@ public class EmailCampaignService
                 return;
             }
 
+            // Update status to Sending IMMEDIATELY before starting background processing
             campaign.Status = EmailCampaignStatus.Sending;
             campaign.UpdatedAt = DateTime.UtcNow;
             await context.SaveChangesAsync();
             logger.LogInformation("Campaign {CampaignId} status set to Sending in database. {Pending} pending recipients.",
                 campaignId, pendingRecipients.Count);
 
+            // Publish start event and initial progress IMMEDIATELY
             await uiEventService.PublishAsync(UiEvents.EmailCampaignStarted, new { campaign.Id });
-            await ProcessEmailsAsync(context, campaign, tokenSource.Token);
+            
+            var totalRecipients = campaign.EmailRecipients?.Count ?? 0;
+            await PublishProgressAsync(campaignId, totalRecipients, 0);
+
+            // Start background processing WITHOUT awaiting it
+            _ = Task.Run(async () => await ProcessEmailsAsync(context, campaign, tokenSource.Token), tokenSource.Token);
         }
         catch (Exception ex)
         {
@@ -162,9 +169,7 @@ public class EmailCampaignService
             campaign.Status = EmailCampaignStatus.Failed;
             campaign.UpdatedAt = DateTime.UtcNow;
             await context.SaveChangesAsync();
-        }
-        finally
-        {
+            
             if (CampaignIds.TryRemove(campaignId, out var cts))
             {
                 cts.Dispose();
@@ -297,6 +302,14 @@ public class EmailCampaignService
             logger.LogError(ex, "Unexpected error in ProcessEmailsAsync for campaign {CampaignId}", campaign.Id);
             campaign.Status = EmailCampaignStatus.Failed;
             await context.SaveChangesAsync(CancellationToken.None);
+        }
+        finally
+        {
+            // Clean up the CancellationTokenSource when processing completes
+            if (CampaignIds.TryRemove(campaign.Id, out var cts))
+            {
+                cts.Dispose();
+            }
         }
     }
 

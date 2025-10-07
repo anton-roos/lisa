@@ -47,20 +47,13 @@
 
         <AuthorizeView>
             <Authorized>
-                <form action="/logout" method="post" class="m-0">
-                    @if (_afToken is not null)
-                    {
-                        <input type="hidden" name="@_afField" value="@_afToken" />
-                        <input type="hidden" name="returnUrl" value="/" />
-                    }
-                    <MudButton Type="ButtonType.Submit"
-                               Variant="Variant.Outlined"
-                               Color="Color.Error"
-                               Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Logout">
-                        Logout
-                    </MudButton>
-                </form>
+                <MudButton OnClick="@Logout"
+                           Variant="Variant.Outlined"
+                           Color="Color.Error"
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Logout">
+                    Logout
+                </MudButton>
             </Authorized>
             <NotAuthorized>
                 <MudButton Href="/login"
@@ -244,6 +237,13 @@
         var words = System.Text.RegularExpressions.Regex.Replace(segment, "([a-z])([A-Z])", "$1 $2");
         words = words.Replace("-", " ").Replace("_", " ");
         return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(words.ToLower());
+    }
+
+    private void Logout()
+    {
+        // Force a full page navigation to the logout page
+        // This breaks out of the Blazor SignalR connection and performs a proper HTTP GET
+        NavigationManager.NavigateTo("/logout", forceLoad: true);
     }
 
     public void Dispose()

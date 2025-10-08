@@ -15,28 +15,6 @@
         <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
 
         <AuthorizeView Roles="@Roles.SystemAdministrator">
-            <MudNavLink Href="/schools" Icon="@Icons.Material.Filled.School">Schools</MudNavLink>
-        </AuthorizeView>
-
-        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
-            <MudNavLink Href="/care-groups" Icon="@Icons.Material.Filled.VolunteerActivism">Care Groups</MudNavLink>
-        </AuthorizeView>
-
-        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
-            <MudNavLink Href="/users" Icon="@Icons.Material.Filled.Badge">Staff</MudNavLink>
-            <MudNavLink Href="/grades" Icon="@Icons.Material.Filled.AutoStories">Grades</MudNavLink>
-        </AuthorizeView>
-
-        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
-            <MudNavLink Href="/register-class" Icon="@Icons.Material.Filled.PeopleAlt">Register Class</MudNavLink>
-        </AuthorizeView>
-
-        <AuthorizeView Roles="@Roles.SystemAdministrator">
-            <MudNavLink Href="/subjects" Icon="@Icons.Material.Filled.MenuBook">Subjects</MudNavLink>
-            <MudNavLink Href="/assessment-types" Icon="@Icons.Material.Filled.Rule">Assessment Types</MudNavLink>
-        </AuthorizeView>
-
-        <AuthorizeView Roles="@Roles.SystemAdministrator">
             <MudNavLink Href="/sign-in-and-out" Icon="@Icons.Material.Filled.HowToReg">Sign In / Out</MudNavLink>
         </AuthorizeView>
 
@@ -50,14 +28,6 @@
 
         <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.Reception}")">
             <MudNavLink Href="/leave-early" Icon="@Icons.Material.Filled.ExitToApp">Leave Early</MudNavLink>
-        </AuthorizeView>
-
-        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
-            <MudNavLink Href="/combinations" Icon="@Icons.Material.Filled.Category">Combinations</MudNavLink>
-        </AuthorizeView>
-
-        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator}")">
-            <MudNavLink Href="/learners" Icon="@Icons.Material.Filled.School">Learners</MudNavLink>
         </AuthorizeView>
 
         <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
@@ -74,6 +44,26 @@
 
         <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
             <MudNavLink Href="/adi-creator" Icon="@Icons.Material.Filled.AddCircle">ADI Creator</MudNavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@Roles.SystemAdministrator">
+            <MudNavGroup Title="System Settings" Icon="@Icons.Material.Filled.Settings" Expanded="false">
+                <MudNavLink Href="/schools" Icon="@Icons.Material.Filled.School">Schools</MudNavLink>
+                <MudNavLink Href="/subjects" Icon="@Icons.Material.Filled.MenuBook">Subjects</MudNavLink>
+                <MudNavLink Href="/assessment-types" Icon="@Icons.Material.Filled.Rule">Assessment Types</MudNavLink>
+                <MudNavLink Href="/school-year" Icon="@Icons.Material.Filled.CalendarMonth">School Year</MudNavLink>
+            </MudNavGroup>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+            <MudNavGroup Title="School Settings" Icon="@Icons.Material.Filled.SettingsApplications" Expanded="false">
+                <MudNavLink Href="/care-groups" Icon="@Icons.Material.Filled.VolunteerActivism">Care Groups</MudNavLink>
+                <MudNavLink Href="/grades" Icon="@Icons.Material.Filled.AutoStories">Grades</MudNavLink>
+                <MudNavLink Href="/register-class" Icon="@Icons.Material.Filled.PeopleAlt">Register Class</MudNavLink>
+                <MudNavLink Href="/combinations" Icon="@Icons.Material.Filled.Category">Combinations</MudNavLink>
+                <MudNavLink Href="/learners" Icon="@Icons.Material.Filled.School">Learners</MudNavLink>
+                <MudNavLink Href="/users" Icon="@Icons.Material.Filled.Badge">Staff</MudNavLink>
+            </MudNavGroup>
         </AuthorizeView>
 
     </MudNavMenu>

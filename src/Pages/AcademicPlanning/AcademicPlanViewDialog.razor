@@ -1,0 +1,49 @@
+@using Lisa.Models.Entities
+@using MudBlazor
+@inject AcademicPlanningService AcademicPlanningService
+
+<MudDialog>
+    <DialogContent>
+        @if (_academicPlan == null)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+        }
+        else
+        {
+            <MudStack Spacing="3">
+                <MudPaper Elevation="0" Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Plan Information</MudText>
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Plan Name</MudText>
+                            <MudText Typo="Typo.body1">@_academicPlan.Name</MudText>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Plan ID</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@_academicPlan.Id</MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    public required IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public Guid AcademicPlanId { get; set; }
+
+    private AcademicPlan? _academicPlan;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _academicPlan = await AcademicPlanningService.GetByIdAsync(AcademicPlanId);
+    }
+
+    private void Cancel() => MudDialog.Close();
+}

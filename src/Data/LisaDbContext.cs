@@ -37,6 +37,7 @@ public class LisaDbContext
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
     public DbSet<LeaveEarly> LeaveEarlies { get; set; } = null!;
     public DbSet<AcademicDevelopmentClass> AcademicDevelopmentClasses { get; set; } = null!;
+    public DbSet<AcademicPlan> AcademicPlans { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

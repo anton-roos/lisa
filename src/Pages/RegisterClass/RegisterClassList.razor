@@ -149,8 +149,9 @@
             CloseOnEscapeKey = true
         };
 
-        var result = await DialogService.ShowAsync<RegisterClassEditDialog>("Edit Register Class", parameters, options);
-        
+        var dialog = await DialogService.ShowAsync<RegisterClassEditDialog>("Edit Register Class", parameters, options);
+        var result = await dialog.Result;
+
         if (result != null)
         {
             await LoadRegisterClasses();
@@ -215,7 +216,8 @@
             CloseOnEscapeKey = true
         };
 
-        var result = await DialogService.ShowAsync<RegisterClassEditDialog>("Add Register Class", parameters, options);
+        var dialog = await DialogService.ShowAsync<RegisterClassEditDialog>("Add Register Class", parameters, options);
+        var result = await dialog.Result;
         
         if (result != null)
         {

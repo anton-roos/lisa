@@ -112,7 +112,7 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] public MudBlazor.IDialogReference MudDialog { get; set; } = default!;
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = default!;
     
     [Parameter] public Guid? RegisterClassId { get; set; }
 

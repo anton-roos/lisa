@@ -69,6 +69,9 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IConverter>(new SynchronizedConverter(new PdfTools()));
 builder.Services.AddAuthorizationBuilder();
 
+builder.Services.AddScoped<AcademicDevelopmentClassService>();
+builder.Services.AddScoped<AcademicPlanningService>();
+builder.Services.AddScoped<AttendanceRecordService>();
 builder.Services.AddScoped<CareGroupService>();
 builder.Services.AddScoped<CombinationService>();
 builder.Services.AddScoped<SchoolGradeService>();
@@ -83,7 +86,6 @@ builder.Services.AddScoped<UiEventService>();
 builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<DailyRegisterService>();
-builder.Services.AddScoped<AcademicDevelopmentClassService>();
 builder.Services.AddScoped<ProtectedSessionStorage>();
 builder.Services.AddScoped<SystemGradeService>();
 builder.Services.AddScoped<EmailService>();
@@ -91,7 +93,6 @@ builder.Services.AddScoped<EmailCampaignService>();
 builder.Services.AddScoped<ProgressFeedbackService>();
 builder.Services.AddScoped<AssessmentTypeService>();
 builder.Services.AddScoped<AuditService>();
-builder.Services.AddScoped<AttendanceRecordService>();
 builder.Services.AddScoped<TemplateRenderService>();
 builder.Services.AddScoped<LeaveEarlyService>();
 

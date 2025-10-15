@@ -1,0 +1,168 @@
+@page "/academic-planning"
+@using Lisa.Models.Entities
+@inject AcademicPlanningService AcademicPlanningService
+@inject IDialogService DialogService
+
+<PageTitle>Academic Plans</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">Academic Plans</MudText>
+
+<MudButton Variant="Variant.Filled" 
+           Color="Color.Primary" 
+           StartIcon="@Icons.Material.Filled.Add"
+           OnClick="AddAcademicPlan"
+           Class="mb-3">
+    Add Academic Plan
+</MudButton>
+
+@if (isLoading)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="mx-auto d-block my-5" />
+}
+else if (academicPlans.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Class="mt-3">
+        No academic plans found.
+    </MudAlert>
+}
+else
+{
+    <MudTable Items="@academicPlans" 
+              Hover="true" 
+              Striped="true" 
+              Dense="true"
+              Elevation="2">
+        <HeaderContent>
+            <MudTh>Name</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate Context="plan">
+            <MudTd DataLabel="Name">@plan.Name</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                               Color="Color.Primary" 
+                               Size="Size.Small"
+                               OnClick="@(() => ViewAcademicPlan(plan))"
+                               Title="View" />
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                               Color="Color.Secondary" 
+                               Size="Size.Small"
+                               OnClick="@(() => EditAcademicPlan(plan))"
+                               Title="Edit" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                               Color="Color.Error" 
+                               Size="Size.Small"
+                               OnClick="@(() => ShowDeleteConfirmationAsync(plan))"
+                               Title="Delete" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    private List<AcademicPlan> academicPlans = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAcademicPlans();
+    }
+
+    private async Task LoadAcademicPlans()
+    {
+        isLoading = true;
+        await InvokeAsync(StateHasChanged);
+        academicPlans = await AcademicPlanningService.GetAllAsync();
+        isLoading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task AddAcademicPlan()
+    {
+        var parameters = new DialogParameters<AcademicPlanEditDialog>
+        {
+            { x => x.AcademicPlanId, null }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AcademicPlanEditDialog>("Add Academic Plan", parameters, options);
+        var result = await dialog.Result;
+        
+        if (result != null)
+        {
+            await LoadAcademicPlans();
+        }
+    }
+
+    private async Task EditAcademicPlan(AcademicPlan plan)
+    {
+        var parameters = new DialogParameters<AcademicPlanEditDialog>
+        {
+            { x => x.AcademicPlanId, plan.Id }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AcademicPlanEditDialog>("Edit Academic Plan", parameters, options);
+        var result = await dialog.Result;
+        
+        if (result != null)
+        {
+            await LoadAcademicPlans();
+        }
+    }
+
+    private async Task ViewAcademicPlan(AcademicPlan plan)
+    {
+        var parameters = new DialogParameters<AcademicPlanViewDialog>
+        {
+            { x => x.AcademicPlanId, plan.Id }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        await DialogService.ShowAsync<AcademicPlanViewDialog>($"Academic Plan: {plan.Name}", parameters, options);
+    }
+
+    private async Task ShowDeleteConfirmationAsync(AcademicPlan plan)
+    {
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowMessageBox(
+            title: "Delete Academic Plan",
+            message: "This will delete the academic plan. Once deleted it cannot be rolled back. Do you want to proceed?",
+            yesText: "Delete",
+            cancelText: "Cancel",
+            options: options);
+
+        if (dialog == true)
+        {
+            await AcademicPlanningService.DeleteAsync(plan.Id);
+            await LoadAcademicPlans();
+        }
+    }
+}

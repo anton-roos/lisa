@@ -1,0 +1,110 @@
+@using Lisa.Models.Entities
+@using MudBlazor
+@inject AcademicPlanningService AcademicPlanningService
+@inject ILogger<AcademicPlanEditDialog> Logger
+
+<MudDialog>
+    <DialogContent>
+        @if (IsLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+        }
+        else
+        {
+            <EditForm Model="@AcademicPlanModel" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <MudStack Spacing="3">
+                    <MudTextField Label="Plan Name"
+                                  @bind-Value="AcademicPlanModel.Name"
+                                  For="@(() => AcademicPlanModel.Name)"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  MaxLength="256" />
+                </MudStack>
+            </EditForm>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="HandleValidSubmit"
+                   Disabled="@IsLoading">
+            @(IsLoading ? "Saving..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    public required IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public Guid? AcademicPlanId { get; set; }
+
+    private bool IsEdit => AcademicPlanId.HasValue && AcademicPlanId.Value != Guid.Empty;
+    private bool IsLoading { get; set; } = true;
+    private AcademicPlan AcademicPlanModel { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (IsEdit && AcademicPlanId != null)
+            {
+                var existingPlan = await AcademicPlanningService.GetByIdAsync(AcademicPlanId.Value);
+                if (existingPlan != null)
+                {
+                    AcademicPlanModel = new AcademicPlan
+                    {
+                        Id = existingPlan.Id,
+                        Name = existingPlan.Name
+                    };
+                }
+            }
+            else
+            {
+                AcademicPlanModel = new AcademicPlan
+                {
+                    Id = Guid.NewGuid()
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading academic plan dialog");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            IsLoading = true;
+            
+            if (IsEdit)
+            {
+                await AcademicPlanningService.UpdateAsync(AcademicPlanModel);
+            }
+            else
+            {
+                await AcademicPlanningService.CreateAsync(AcademicPlanModel);
+            }
+
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving academic plan");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Close();
+}

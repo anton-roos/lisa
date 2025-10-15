@@ -1,5 +1,27 @@
 # Learner Information System Administrator (LISA)
 
+## Migrations
+When changing the database, run a migration
+
+
+```bash
+# To install the dotnet ef tool run:
+dotnet tool install --global dotnet-ef
+
+# To add a new migration run:
+cd src
+dotnet ef migrations add <MigrationName>
+
+# Example
+cd src
+dotnet ef migrations add AddAcademicPlanning
+```
+
+## To Update the databse
+```bash
+dotnet ef migrations database update
+```
+
 ## User Types
  - System Administrator
  - Principal

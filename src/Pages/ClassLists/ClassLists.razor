@@ -39,7 +39,7 @@
                 </MudPaper>
 
                 <!-- Dynamic Filter Section -->
-                <MudPaper Elevation="2" Class="pa-4">
+                <MudPaper Elevation="2">
                     <MudStack Spacing="3">
                         @if (_viewMode == "Combination")
                         {
@@ -50,6 +50,7 @@
                                        Variant="Variant.Outlined"
                                        AnchorOrigin="Origin.BottomCenter"
                                        Clearable="true"
+                                       Style="width: 300px;"
                                        Adornment="Adornment.Start"
                                        AdornmentIcon="@Icons.Material.Filled.School">
                                 @foreach (var grade in _schoolGrades)

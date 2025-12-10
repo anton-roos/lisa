@@ -23,7 +23,7 @@ public class LearnerViewModel
     public string? Email { get; set; }
 
     public string? CellNumber { get; set; }
-    public bool Active { get; set; }
+    public LearnerStatus Status { get; set; } = LearnerStatus.Active;
 
     [Required(AllowEmptyStrings = false, ErrorMessage = "Learner needs to be assigned to a Register Class.")]
     public Guid? RegisterClassId { get; set; }

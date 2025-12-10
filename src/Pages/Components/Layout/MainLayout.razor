@@ -9,7 +9,6 @@
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
-<MudCssBaseline />
 
 <MudLayout>
 
@@ -39,7 +38,7 @@
         <MudIconButton Icon="@(_darkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
                        OnClick="@ToggleDark"
                        Color="Color.Inherit"
-                       AriaLabel="Toggle theme" />
+                       aria-label="Toggle theme" />
 
         <AuthorizeView Roles="@Roles.SystemAdministrator">
             <SelectSchool />

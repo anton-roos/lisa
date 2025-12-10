@@ -1,7 +1,9 @@
 ﻿@page "/learners"
 @using Lisa.Models.Entities
+@using Lisa.Enums
 @inject SchoolService SchoolService
 @inject LearnerService LearnerService
+@inject LearnerPromotionService LearnerPromotionService
 @inject NavigationManager NavigationManager
 @inject IDialogService DialogService
 @inherits EventAwareComponentBase
@@ -16,73 +18,130 @@
         else
         {
             <MudStack Spacing="3">
+                <!-- Year-End Mode Alert -->
+                @if (_selectedSchool?.IsYearEndMode == true)
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Icon="@Icons.Material.Filled.School">
+                        <strong>Year-End Mode Active:</strong> Showing learners awaiting promotion decisions. Subjects and results have been archived.
+                    </MudAlert>
+                }
+
                 <!-- Header with Add Button -->
                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                     <MudButton Variant="Variant.Filled" 
                                Color="Color.Primary" 
                                StartIcon="@Icons.Material.Filled.Add"
                                OnClick="AddLearner"
-                               Disabled="@_isLoading">
+                               Disabled="@(_isLoading || _selectedSchool?.IsYearEndMode == true)">
                         Add Learner
                     </MudButton>
                 </MudStack>
 
                 <!-- Filters -->
-                <MudPaper Elevation="2" Class="pa-4">
-                    <MudGrid>
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudSelect T="string" 
-                                       Label="Status" 
-                                       @bind-Value="SelectedStatus"
-                                       Variant="Variant.Outlined"
-                                       AnchorOrigin="Origin.BottomCenter"
-                                       Disabled="@_isLoading">
-                                <MudSelectItem T="string" Value="@("Active")">Active Only</MudSelectItem>
-                                <MudSelectItem T="string" Value="@("Disabled")">Disabled Only</MudSelectItem>
-                                <MudSelectItem T="string" Value="@("All")">All Learners</MudSelectItem>
-                            </MudSelect>
-                        </MudItem>
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudSelect T="string" 
-                                       Label="Filter by Grade" 
-                                       @bind-Value="SelectedGradeId"
-                                       Variant="Variant.Outlined"
-                                       AnchorOrigin="Origin.BottomCenter"
-                                       Clearable="true"
-                                       Disabled="@_isLoading">
-                                <MudSelectItem T="string" Value="@(string.Empty)">All Grades</MudSelectItem>
-                                @if (AvailableGrades != null)
-                                {
-                                    @foreach (var grade in AvailableGrades)
+                @if (_selectedSchool?.IsYearEndMode != true)
+                {
+                    <MudPaper Elevation="2" Class="pa-4">
+                        <MudGrid>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudSelect T="string" 
+                                           Label="Status" 
+                                           @bind-Value="SelectedStatus"
+                                           Variant="Variant.Outlined"
+                                           AnchorOrigin="Origin.BottomCenter"
+                                           Disabled="@_isLoading">
+                                    <MudSelectItem T="string" Value="@("Active")">Active Only</MudSelectItem>
+                                    <MudSelectItem T="string" Value="@("Disabled")">Disabled Only</MudSelectItem>
+                                    <MudSelectItem T="string" Value="@("All")">All Learners</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudSelect T="string" 
+                                           Label="Filter by Grade" 
+                                           @bind-Value="SelectedGradeId"
+                                           Variant="Variant.Outlined"
+                                           AnchorOrigin="Origin.BottomCenter"
+                                           Clearable="true"
+                                           Disabled="@_isLoading">
+                                    <MudSelectItem T="string" Value="@(string.Empty)">All Grades</MudSelectItem>
+                                    @if (AvailableGrades != null)
                                     {
-                                        <MudSelectItem T="string" Value="@grade.Id.ToString()">@grade.SystemGrade.Name</MudSelectItem>
+                                        @foreach (var grade in AvailableGrades)
+                                        {
+                                            <MudSelectItem T="string" Value="@grade.Id.ToString()">@grade.SystemGrade.Name</MudSelectItem>
+                                        }
                                     }
-                                }
-                            </MudSelect>
-                        </MudItem>
-                        <MudItem xs="12" sm="6" md="4">
-                            <MudTextField T="string" 
-                                          Label="Search by Name" 
-                                          @bind-Value="SearchTerm"
-                                          Variant="Variant.Outlined"
-                                          Adornment="Adornment.Start"
-                                          AdornmentIcon="@Icons.Material.Filled.Search"
-                                          Immediate="true"
-                                          Placeholder="Type name..."
-                                          Disabled="@_isLoading" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6" md="2">
-                            <MudButton Variant="Variant.Outlined" 
-                                       Color="Color.Secondary"
-                                       FullWidth="true"
-                                       OnClick="ToggleSort"
-                                       Style="height: 56px;"
-                                       Disabled="@_isLoading">
-                                Sort: @(_sortByLastName ? "Last Name" : "First Name")
-                            </MudButton>
-                        </MudItem>
-                    </MudGrid>
-                </MudPaper>
+                                </MudSelect>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="4">
+                                <MudTextField T="string" 
+                                              Label="Search by Name" 
+                                              @bind-Value="SearchTerm"
+                                              Variant="Variant.Outlined"
+                                              Adornment="Adornment.Start"
+                                              AdornmentIcon="@Icons.Material.Filled.Search"
+                                              Immediate="true"
+                                              Placeholder="Type name..."
+                                              Disabled="@_isLoading" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="2">
+                                <MudButton Variant="Variant.Outlined" 
+                                           Color="Color.Secondary"
+                                           FullWidth="true"
+                                           OnClick="ToggleSort"
+                                           Style="height: 56px;"
+                                           Disabled="@_isLoading">
+                                    Sort: @(_sortByLastName ? "Last Name" : "First Name")
+                                </MudButton>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                }
+                else
+                {
+                    <MudPaper Elevation="2" Class="pa-4">
+                        <MudGrid>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudSelect T="string" 
+                                           Label="Filter by Grade" 
+                                           @bind-Value="SelectedGradeId"
+                                           Variant="Variant.Outlined"
+                                           AnchorOrigin="Origin.BottomCenter"
+                                           Clearable="true"
+                                           Disabled="@_isLoading">
+                                    <MudSelectItem T="string" Value="@(string.Empty)">All Grades</MudSelectItem>
+                                    @if (AvailableGrades != null)
+                                    {
+                                        @foreach (var grade in AvailableGrades)
+                                        {
+                                            <MudSelectItem T="string" Value="@grade.Id.ToString()">@grade.SystemGrade.Name</MudSelectItem>
+                                        }
+                                    }
+                                </MudSelect>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="7">
+                                <MudTextField T="string" 
+                                              Label="Search by Name" 
+                                              @bind-Value="SearchTerm"
+                                              Variant="Variant.Outlined"
+                                              Adornment="Adornment.Start"
+                                              AdornmentIcon="@Icons.Material.Filled.Search"
+                                              Immediate="true"
+                                              Placeholder="Type name..."
+                                              Disabled="@_isLoading" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="2">
+                                <MudButton Variant="Variant.Outlined" 
+                                           Color="Color.Secondary"
+                                           FullWidth="true"
+                                           OnClick="ToggleSort"
+                                           Style="height: 56px;"
+                                           Disabled="@_isLoading">
+                                    Sort: @(_sortByLastName ? "Last Name" : "First Name")
+                                </MudButton>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                }
 
                 <!-- Loading Indicator -->
                 @if (_isLoading)
@@ -113,7 +172,14 @@
                             <MudTh>Register Class</MudTh>
                             <MudTh>Care Group</MudTh>
                             <MudTh>Parents</MudTh>
-                            <MudTh>Subjects</MudTh>
+                            @if (!_selectedSchool?.IsYearEndMode == true)
+                            {
+                                <MudTh>Subjects</MudTh>
+                            }
+                            @if (_selectedSchool?.IsYearEndMode == true)
+                            {
+                                <MudTh>Promotion Status</MudTh>
+                            }
                             <MudTh>Status</MudTh>
                             <MudTh>Actions</MudTh>
                         </HeaderContent>
@@ -152,45 +218,76 @@
                             <MudTd DataLabel="Parents">
                                 <MudText Typo="Typo.body2">@(learner.Parents?.Count() ?? 0)</MudText>
                             </MudTd>
-                            <MudTd DataLabel="Subjects">
-                                @if (learner.Active && learner.LearnerSubjects is not null && learner.LearnerSubjects.Any())
-                                {
-                                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
-                                        @foreach (var subject in learner.LearnerSubjects.Take(3))
-                                        {
-                                            <MudChip T="string" 
-                                                     Size="Size.Small"
-                                                     Color="@(subject.Subject.SubjectType switch {
-                                                         SubjectType.Compulsory => Color.Primary,
-                                                         SubjectType.MathCombination => Color.Success,
-                                                         SubjectType.Combination => Color.Error,
-                                                         SubjectType.AdditionalSubject => Color.Secondary,
-                                                         _ => Color.Default
-                                                     })">
-                                                @subject.Subject.Code
+                            @if (!_selectedSchool?.IsYearEndMode == true)
+                            {
+                                <MudTd DataLabel="Subjects">
+                                    @if (learner.Status == Lisa.Enums.LearnerStatus.Active && learner.LearnerSubjects is not null && learner.LearnerSubjects.Any())
+                                    {
+                                        <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                            @foreach (var subject in learner.LearnerSubjects.Take(3))
+                                            {
+                                                <MudChip T="string" 
+                                                         Size="Size.Small"
+                                                         Color="@(subject.Subject.SubjectType switch {
+                                                             SubjectType.Compulsory => Color.Primary,
+                                                             SubjectType.MathCombination => Color.Success,
+                                                             SubjectType.Combination => Color.Error,
+                                                             SubjectType.AdditionalSubject => Color.Secondary,
+                                                             _ => Color.Default
+                                                         })">
+                                                    @subject.Subject.Code
+                                                </MudChip>
+                                            }
+                                            @if (learner.LearnerSubjects.Count() > 3)
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Default">
+                                                    +@(learner.LearnerSubjects.Count() - 3)
+                                                </MudChip>
+                                            }
+                                        </MudStack>
+                                    }
+                                    else if (learner.Status != Lisa.Enums.LearnerStatus.Active)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary">@learner.Status.ToString()</MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">None</MudText>
+                                    }
+                                </MudTd>
+                            }
+                            @if (_selectedSchool?.IsYearEndMode == true)
+                            {
+                                <MudTd DataLabel="Promotion Status">
+                                    @switch (learner.PromotionStatus)
+                                    {
+                                        case PromotionStatus.PromotionPending:
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.HourglassEmpty">
+                                                Pending
                                             </MudChip>
-                                        }
-                                        @if (learner.LearnerSubjects.Count() > 3)
-                                        {
+                                            break;
+                                        case PromotionStatus.Promoted:
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.TrendingUp">
+                                                Promoted
+                                            </MudChip>
+                                            break;
+                                        case PromotionStatus.Retained:
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Icon="@Icons.Material.Filled.TrendingFlat">
+                                                Retained
+                                            </MudChip>
+                                            break;
+                                        default:
                                             <MudChip T="string" Size="Size.Small" Color="Color.Default">
-                                                +@(learner.LearnerSubjects.Count() - 3)
+                                                None
                                             </MudChip>
-                                        }
-                                    </MudStack>
-                                }
-                                else if (!learner.Active)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary">Inactive</MudChip>
-                                }
-                                else
-                                {
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">None</MudText>
-                                }
-                            </MudTd>
+                                            break;
+                                    }
+                                </MudTd>
+                            }
                             <MudTd DataLabel="Status">
                                 @if (learner.IsDisabled)
                                 {
-                                    <MudTooltip Text="@($"Disabled on {learner.DisabledAt?.ToString("yyyy-MM-dd") ?? "Unknown"}: {learner.DisabledReason}")">
+                                    <MudTooltip Text="@learner.DisabledReason">
                                         <MudChip T="string" Size="Size.Small" Color="Color.Error" Icon="@Icons.Material.Filled.Block">
                                             Disabled
                                         </MudChip>
@@ -209,19 +306,27 @@
                                                    Color="Color.Primary" 
                                                    Size="Size.Small"
                                                    OnClick="@(() => ViewLearner(learner))"
-                                                   Title="View" />
+                                                   title="View" />
                                     @if (!learner.IsDisabled)
                                     {
                                         <MudIconButton Icon="@Icons.Material.Filled.Edit" 
                                                        Color="Color.Secondary" 
                                                        Size="Size.Small"
                                                        OnClick="@(() => EditLearner(learner))"
-                                                       Title="Edit" />
+                                                       title="Edit" />
+                                        @if (learner.PromotionStatus == PromotionStatus.PromotionPending && _selectedSchool?.IsYearEndMode == true)
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Filled.School" 
+                                                           Color="Color.Warning" 
+                                                           Size="Size.Small"
+                                                           OnClick="@(() => ProcessLearnerPromotion(learner.Id))"
+                                                           title="Process Promotion" />
+                                        }
                                         <MudIconButton Icon="@Icons.Material.Filled.Block" 
                                                        Color="Color.Error" 
                                                        Size="Size.Small"
                                                        OnClick="@(() => DisableLearner(learner))"
-                                                       Title="Disable" />
+                                                       title="Disable" />
                                     }
                                     else
                                     {
@@ -229,7 +334,7 @@
                                                        Color="Color.Success" 
                                                        Size="Size.Small"
                                                        OnClick="@(() => EnableLearner(learner))"
-                                                       Title="Enable" />
+                                                       title="Enable" />
                                     }
                                 </MudStack>
                             </MudTd>
@@ -311,14 +416,22 @@
     {
         var query = _learners.AsEnumerable();
 
-        // Apply status filter
-        query = SelectedStatus switch
+        // When in year-end mode, show only YearEndArchived learners
+        if (_selectedSchool?.IsYearEndMode == true)
         {
-            "Active" => query.Where(l => !l.IsDisabled),
-            "Disabled" => query.Where(l => l.IsDisabled),
-            "All" => query,
-            _ => query.Where(l => !l.IsDisabled) // Default to active only
-        };
+            query = query.Where(l => l.Status == Lisa.Enums.LearnerStatus.YearEndArchived);
+        }
+        else
+        {
+            // Apply status filter (normal mode)
+            query = SelectedStatus switch
+            {
+                "Active" => query.Where(l => !l.IsDisabled && l.Status == Lisa.Enums.LearnerStatus.Active),
+                "Disabled" => query.Where(l => l.IsDisabled),
+                "All" => query,
+                _ => query.Where(l => !l.IsDisabled && l.Status == Lisa.Enums.LearnerStatus.Active) // Default to active only
+            };
+        }
 
         if (!string.IsNullOrEmpty(SelectedGradeId))
         {
@@ -401,6 +514,31 @@
             yesText: "Promoted",
             cancelText: "Not Promoted"
             );
+    }
+
+    private async Task ProcessLearnerPromotion(Guid learnerId)
+    {
+        var parameters = new DialogParameters<LearnerPromotionDialog>
+        {
+            { x => x.LearnerId, learnerId }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        var dialog = await DialogService.ShowAsync<LearnerPromotionDialog>("Process Learner Promotion", parameters, options);
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled)
+        {
+            await LoadLearners();
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task EnableLearner(Learner learner)

@@ -245,4 +245,152 @@ public class SchoolService(
             return false;
         }
     }
+
+    public async Task<bool> ActivateYearEndModeAsync(Guid schoolId)
+    {
+        try
+        {
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+            
+            var school = await context.Schools.FirstOrDefaultAsync(s => s.Id == schoolId);
+            if (school == null)
+            {
+                logger.LogWarning("School not found with ID: {SchoolId}", schoolId);
+                return false;
+            }
+
+            school.IsYearEndMode = true;
+            context.Schools.Update(school);
+
+            // Get all active learners with their subjects, results, and related data
+            var learners = await context.Learners
+                .Include(l => l.LearnerSubjects!)
+                    .ThenInclude(ls => ls.Subject)
+                .Include(l => l.Results)
+                .Include(l => l.RegisterClass)
+                    .ThenInclude(rc => rc!.SchoolGrade)
+                .Include(l => l.Combination)
+                .Where(l => l.SchoolId == schoolId && l.Status == Enums.LearnerStatus.Active)
+                .ToListAsync();
+
+            int academicYear = DateTime.UtcNow.Year;
+            int subjectsArchived = 0;
+            int resultsArchived = 0;
+
+            foreach (var learner in learners)
+            {
+                // Create academic record to archive current state
+                var subjectSnapshot = learner.LearnerSubjects?
+                    .Select(ls => new { ls.SubjectId, ls.Subject?.Name, ls.Subject?.Code })
+                    .ToList();
+
+                var historyRecord = new LearnerAcademicRecord
+                {
+                    Id = Guid.NewGuid(),
+                    LearnerId = learner.Id,
+                    Year = academicYear,
+                    SchoolGradeId = learner.RegisterClass?.SchoolGradeId ?? learner.Combination?.SchoolGradeId ?? Guid.Empty,
+                    RegisterClassId = learner.RegisterClassId,
+                    CombinationId = learner.CombinationId,
+                    SubjectSnapshot = subjectSnapshot != null ? System.Text.Json.JsonSerializer.Serialize(subjectSnapshot) : "[]",
+                    Outcome = Lisa.Enums.PromotionStatus.PromotionPending,
+                    CreatedAt = DateTime.UtcNow
+                };
+                
+                context.LearnerAcademicRecords.Add(historyRecord);
+
+                // Archive the learner's state
+                learner.Status = Enums.LearnerStatus.YearEndArchived;
+                learner.PromotionStatus = Lisa.Enums.PromotionStatus.PromotionPending;
+                
+                // Remove all subjects (now archived in academic record)
+                if (learner.LearnerSubjects != null && learner.LearnerSubjects.Any())
+                {
+                    subjectsArchived += learner.LearnerSubjects.Count;
+                    context.Set<LearnerSubject>().RemoveRange(learner.LearnerSubjects);
+                }
+                
+                // Remove all results (archived in academic record)
+                if (learner.Results != null && learner.Results.Any())
+                {
+                    resultsArchived += learner.Results.Count;
+                    context.Results.RemoveRange(learner.Results);
+                }
+            }
+
+            await context.SaveChangesAsync();
+            await uiEventService.PublishAsync(UiEvents.SchoolsUpdated, _selectedSchool);
+
+            logger.LogInformation("Year-end mode activated for school {SchoolId}. {LearnerCount} learners archived. {SubjectsArchived} subjects and {ResultsArchived} results archived to academic records.", 
+                schoolId, learners.Count, subjectsArchived, resultsArchived);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error activating year-end mode for school {SchoolId}", schoolId);
+            return false;
+        }
+    }
+
+    public async Task<bool> DeactivateYearEndModeAsync(Guid schoolId)
+    {
+        try
+        {
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+            
+            var school = await context.Schools.FirstOrDefaultAsync(s => s.Id == schoolId);
+            if (school == null)
+            {
+                logger.LogWarning("School not found with ID: {SchoolId}", schoolId);
+                return false;
+            }
+
+            // Check for learners still pending promotion decisions
+            var pendingLearners = await context.Learners
+                .Where(l => l.SchoolId == schoolId && 
+                           l.Status == Enums.LearnerStatus.YearEndArchived &&
+                           l.PromotionStatus == Lisa.Enums.PromotionStatus.PromotionPending)
+                .ToListAsync();
+
+            if (pendingLearners.Any())
+            {
+                logger.LogWarning("Cannot deactivate year-end mode for school {SchoolId}. {Count} learner(s) still have pending promotion decisions.", 
+                    schoolId, pendingLearners.Count);
+                return false;
+            }
+
+            school.IsYearEndMode = false;
+            context.Schools.Update(school);
+
+            // Restore learners from YearEndArchived state
+            // Only restore learners who haven't been processed (still in PromotionPending)
+            // Promoted/Retained learners should have already been moved to their new grades
+            var archivedLearners = await context.Learners
+                .Where(l => l.SchoolId == schoolId && 
+                           l.Status == Enums.LearnerStatus.YearEndArchived &&
+                           l.PromotionStatus == Lisa.Enums.PromotionStatus.PromotionPending)
+                .ToListAsync();
+
+            foreach (var learner in archivedLearners)
+            {
+                // Restore learners who weren't processed back to Active
+                learner.Status = Enums.LearnerStatus.Active;
+                learner.PromotionStatus = Lisa.Enums.PromotionStatus.None;
+            }
+
+            await context.SaveChangesAsync();
+            await uiEventService.PublishAsync(UiEvents.SchoolsUpdated, _selectedSchool);
+
+            logger.LogInformation("Year-end mode deactivated for school {SchoolId}. {LearnerCount} unprocessed learners restored to Active status.", 
+                schoolId, archivedLearners.Count);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error deactivating year-end mode for school {SchoolId}", schoolId);
+            return false;
+        }
+    }
 }

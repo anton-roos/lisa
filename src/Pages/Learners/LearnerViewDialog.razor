@@ -29,8 +29,8 @@
                         </MudItem>
                         <MudItem xs="12" sm="6">
                             <MudText Typo="Typo.subtitle2" Color="Color.Primary">Status</MudText>
-                            <MudChip T="string" Color="@(_learner.Active ? Color.Success : Color.Error)" Size="Size.Small">
-                                @(_learner.Active ? "Active" : "Inactive")
+                            <MudChip T="string" Color="@(_learner.Status == Lisa.Enums.LearnerStatus.Active ? Color.Success : Color.Error)" Size="Size.Small">
+                                @_learner.Status.ToString()
                             </MudChip>
                         </MudItem>
                     </MudGrid>

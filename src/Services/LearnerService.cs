@@ -45,7 +45,7 @@ public class LearnerService
 
         if (activeOnly)
         {
-            query = query.Where(l => l.Active);
+            query = query.Where(l => l.Status == Lisa.Enums.LearnerStatus.Active);
         }
 
         return await query.FirstOrDefaultAsync(l => l.Id == id);
@@ -96,7 +96,7 @@ public class LearnerService
             var learner = new Learner
             {
                 Id = newLearnerId,
-                Active = model.Active,
+                Status = model.Status,
                 CareGroupId = model.CareGroupId,
                 CellNumber = model.CellNumber,
                 Code = model.Code,
@@ -271,7 +271,7 @@ public class LearnerService
 
     private static void UpdateLearnerProperties(Learner learner, LearnerViewModel model)
     {
-        learner.Active = model.Active;
+        learner.Status = model.Status;
         learner.CareGroupId = model.CareGroupId;
         learner.CellNumber = model.CellNumber;
         learner.Code = model.Code;

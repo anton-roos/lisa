@@ -76,7 +76,7 @@ public class EmailCampaignService
     {
         await using var context = await contextFactory.CreateDbContextAsync();
         return await context.EmailCampaigns
-            .Include(c => c.EmailRecipients)
+            .Include(c => c.EmailRecipients!)
                 .ThenInclude(r => r.Learner)
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == id);

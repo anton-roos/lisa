@@ -89,8 +89,8 @@
                             @foreach (var subject in FilteredSubjects)
                             {
                                 <MudCheckBox T="bool"
-                                             Checked="@RegisterClassModel.SubjectIds.Contains(subject.Id)"
-                                             CheckedChanged="@((bool isChecked) => ToggleSubject(subject.Id, isChecked))"
+                                             Value="@RegisterClassModel.SubjectIds.Contains(subject.Id)"
+                                             ValueChanged="@((bool isChecked) => ToggleSubject(subject.Id, isChecked))"
                                              Label="@subject.Name"
                                              Color="Color.Primary" />
                             }

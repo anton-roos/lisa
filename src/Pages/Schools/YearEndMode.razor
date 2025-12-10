@@ -1,0 +1,259 @@
+@page "/schools/yearend/{SchoolId:guid}"
+@using Lisa.Models.Entities
+@using Lisa.Enums
+@inject SchoolService SchoolService
+@inject LearnerService LearnerService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>Year-End Mode</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h4" Class="mb-4">Year-End Mode</MudText>
+
+        @if (_school == null)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            <MudText>Loading school information...</MudText>
+        }
+        else
+        {
+            <MudText Typo="Typo.h6" Class="mb-2">@_school.LongName</MudText>
+            
+            <MudAlert Severity="Severity.Info" Class="my-4">
+                <MudText>
+                    Current Status: <strong>@(_school.IsYearEndMode ? "Year-End Mode Active" : "Normal Mode")</strong>
+                </MudText>
+                <MudText Class="mt-2">
+                    Active Learners: <strong>@_activeLearnerCount</strong>
+                </MudText>
+            </MudAlert>
+
+            @if (_school.IsYearEndMode)
+            {
+                <MudAlert Severity="Severity.Warning" Class="my-4">
+                    Year-End Mode is currently active. All learners have been archived with subjects and results removed.
+                    Learners are awaiting promotion decisions. You can deactivate year-end mode when the year-end process is complete.
+                </MudAlert>
+
+                @if (_pendingPromotionCount > 0)
+                {
+                    <MudAlert Severity="Severity.Info" Class="my-4">
+                        <strong>@_pendingPromotionCount learner@(_pendingPromotionCount != 1 ? "s" : "")</strong> still @(_pendingPromotionCount != 1 ? "have" : "has") pending promotion decisions.
+                        Please process all learners before deactivating year-end mode.
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Success" Class="my-4">
+                        All learners have been processed! You can now safely deactivate year-end mode.
+                    </MudAlert>
+                }
+
+                <MudGrid Class="mt-4">
+                    <MudItem xs="12" sm="6">
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Secondary" 
+                                   FullWidth="true"
+                                   OnClick="DeactivateYearEndMode"
+                                   Disabled="_isProcessing || _pendingPromotionCount > 0">
+                            @if (_isProcessing)
+                            {
+                                <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+                            }
+                            Deactivate Year-End Mode
+                        </MudButton>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Default" 
+                                   FullWidth="true"
+                                   OnClick="GoBack">
+                            Back to School Details
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Warning" Class="my-4">
+                    <MudText Typo="Typo.h6" Class="mb-2">⚠️ Warning</MudText>
+                    <MudText>
+                        Activating Year-End Mode will:
+                    </MudText>
+                    <ul class="mt-2">
+                        <li>Create academic records archiving all learner subjects and results</li>
+                        <li>Remove current learner subjects and results (preserved in academic history)</li>
+                        <li>Set all active learners to "Year-End Archived" status with promotion pending</li>
+                        <li>Enable year-end processing features</li>
+                        <li>Mark the school as being in year-end transition</li>
+                    </ul>
+                    <MudText Class="mt-2 font-weight-bold" Color="Color.Warning">
+                        This action affects <strong>@_activeLearnerCount active learner@(_activeLearnerCount != 1 ? "s" : "")</strong>. Historical data will be preserved in academic records.
+                    </MudText>
+                </MudAlert>
+
+                <MudGrid Class="mt-4">
+                    <MudItem xs="12" sm="6">
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Primary" 
+                                   FullWidth="true"
+                                   OnClick="ActivateYearEndMode"
+                                   Disabled="_isProcessing">
+                            @if (_isProcessing)
+                            {
+                                <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+                            }
+                            Activate Year-End Mode
+                        </MudButton>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Default" 
+                                   FullWidth="true"
+                                   OnClick="GoBack">
+                            Back to School Details
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            }
+
+            @if (_promotionSummary != null && _promotionSummary.Any())
+            {
+                <MudPaper Class="pa-4 mt-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Promotion Status Summary</MudText>
+                    <MudSimpleTable Dense="true" Hover="true">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in _promotionSummary)
+                            {
+                                <tr>
+                                    <td>@item.Status</td>
+                                    <td>@item.Count</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </MudPaper>
+            }
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Parameter]
+    public Guid SchoolId { get; set; }
+
+    private School? _school;
+    private int _activeLearnerCount;
+    private int _pendingPromotionCount;
+    private bool _isProcessing;
+    private List<PromotionStatusSummary>? _promotionSummary;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSchoolData();
+    }
+
+    private async Task LoadSchoolData()
+    {
+        _school = await SchoolService.GetSchoolAsync(SchoolId);
+        if (_school != null)
+        {
+            _activeLearnerCount = await LearnerService.GetCountAsync(SchoolId);
+            
+            // Count learners pending promotion decisions
+            _pendingPromotionCount = _school.Learners?
+                .Count(l => l.Status == Lisa.Enums.LearnerStatus.YearEndArchived && 
+                           l.PromotionStatus == Lisa.Enums.PromotionStatus.PromotionPending) ?? 0;
+            
+            await LoadPromotionSummary();
+        }
+    }
+
+    private async Task LoadPromotionSummary()
+    {
+        // Get learners from the school and group by promotion status
+        if (_school?.Learners != null)
+        {
+            _promotionSummary = _school.Learners
+                .Where(l => l.Status == Lisa.Enums.LearnerStatus.Active)
+                .GroupBy(l => l.PromotionStatus)
+                .Select(g => new PromotionStatusSummary
+                {
+                    Status = g.Key.ToString(),
+                    Count = g.Count()
+                })
+                .OrderBy(s => s.Status)
+                .ToList();
+        }
+    }
+
+    private async Task ActivateYearEndMode()
+    {
+        _isProcessing = true;
+        try
+        {
+            var success = await SchoolService.ActivateYearEndModeAsync(SchoolId);
+            if (success)
+            {
+                Snackbar.Add($"Year-End Mode activated successfully. {_activeLearnerCount} learners set to Promotion Pending.", Severity.Success);
+                await LoadSchoolData();
+            }
+            else
+            {
+                Snackbar.Add("Failed to activate Year-End Mode. Please try again.", Severity.Error);
+            }
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private async Task DeactivateYearEndMode()
+    {
+        _isProcessing = true;
+        try
+        {
+            var success = await SchoolService.DeactivateYearEndModeAsync(SchoolId);
+            if (success)
+            {
+                Snackbar.Add("Year-End Mode deactivated successfully.", Severity.Success);
+                await LoadSchoolData();
+            }
+            else
+            {
+                if (_pendingPromotionCount > 0)
+                {
+                    Snackbar.Add($"Cannot deactivate Year-End Mode. {_pendingPromotionCount} learner(s) still have pending promotion decisions.", Severity.Warning);
+                }
+                else
+                {
+                    Snackbar.Add("Failed to deactivate Year-End Mode. Please try again.", Severity.Error);
+                }
+            }
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo($"/schools/details/{SchoolId}");
+    }
+
+    private class PromotionStatusSummary
+    {
+        public string Status { get; set; } = string.Empty;
+        public int Count { get; set; }
+    }
+}

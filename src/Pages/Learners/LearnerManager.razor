@@ -67,8 +67,13 @@
         
 
             <div class="mb-3">
-                <label for="Active">Active</label>
-                <InputCheckbox id="Active" @bind-Value="_learnerModel.Active" />
+                <label for="Status">Status</label>
+                <InputSelect id="Status" @bind-Value="_learnerModel.Status" class="form-control">
+                    @foreach (var status in Enum.GetValues<Lisa.Enums.LearnerStatus>())
+                    {
+                        <option value="@status">@status</option>
+                    }
+                </InputSelect>
             </div>
 
             <div class="mb-3">
@@ -416,7 +421,7 @@
             _learnerModel = new LearnerViewModel
             {
                 Id = existingLearner.Id,
-                Active = existingLearner.Active,
+                Status = existingLearner.Status,
                 CareGroupId = existingLearner.CareGroupId,
                 CellNumber = existingLearner.CellNumber,
                 Code = existingLearner.Code,

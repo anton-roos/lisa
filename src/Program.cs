@@ -77,7 +77,7 @@ builder.Services.AddScoped<CombinationService>();
 builder.Services.AddScoped<SchoolGradeService>();
 builder.Services.AddScoped<SchoolGradeTimeService>();
 builder.Services.AddScoped<LearnerService>();
-builder.Services.AddScoped<LearnerService>();
+builder.Services.AddScoped<LearnerPromotionService>();
 builder.Services.AddScoped<RegisterClassService>();
 builder.Services.AddScoped<SubjectService>();
 builder.Services.AddScoped<UserService>();

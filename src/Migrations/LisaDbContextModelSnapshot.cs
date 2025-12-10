@@ -18,7 +18,7 @@ namespace Lisa.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.0-rc.1.25451.107")
+                .HasAnnotation("ProductVersion", "10.0.1")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -497,9 +497,6 @@ namespace Lisa.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<bool>("Active")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Allergies")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -573,11 +570,17 @@ namespace Lisa.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<int>("PromotionStatus")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("RegisterClassId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Surname")
                         .HasMaxLength(30)
@@ -599,6 +602,56 @@ namespace Lisa.Migrations
                     b.HasIndex("SchoolId");
 
                     b.ToTable("Learners");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.LearnerAcademicRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CombinationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("LearnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Outcome")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RegisterClassId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SchoolGradeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SubjectSnapshot")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CombinationId");
+
+                    b.HasIndex("LearnerId");
+
+                    b.HasIndex("RegisterClassId");
+
+                    b.HasIndex("SchoolGradeId");
+
+                    b.ToTable("LearnerAcademicRecords");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.LearnerSubject", b =>
@@ -925,6 +978,9 @@ namespace Lisa.Migrations
                     b.Property<string>("FromEmail")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("IsYearEndMode")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("LongName")
                         .HasMaxLength(64)
@@ -1446,8 +1502,7 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.Learner", "Learner")
                         .WithMany()
                         .HasForeignKey("LearnerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Attendance");
 
@@ -1539,6 +1594,38 @@ namespace Lisa.Migrations
                     b.Navigation("School");
                 });
 
+            modelBuilder.Entity("Lisa.Models.Entities.LearnerAcademicRecord", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.Combination", "Combination")
+                        .WithMany()
+                        .HasForeignKey("CombinationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Lisa.Models.Entities.Learner", "Learner")
+                        .WithMany()
+                        .HasForeignKey("LearnerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Lisa.Models.Entities.RegisterClass", "RegisterClass")
+                        .WithMany()
+                        .HasForeignKey("RegisterClassId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Lisa.Models.Entities.SchoolGrade", "SchoolGrade")
+                        .WithMany()
+                        .HasForeignKey("SchoolGradeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Combination");
+
+                    b.Navigation("Learner");
+
+                    b.Navigation("RegisterClass");
+
+                    b.Navigation("SchoolGrade");
+                });
+
             modelBuilder.Entity("Lisa.Models.Entities.LearnerSubject", b =>
                 {
                     b.HasOne("Lisa.Models.Entities.Combination", "Combination")
@@ -1549,8 +1636,7 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.Learner", "Learner")
                         .WithMany("LearnerSubjects")
                         .HasForeignKey("LearnerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Lisa.Models.Entities.Subject", "Subject")
                         .WithMany()
@@ -1594,8 +1680,7 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.Learner", "Learner")
                         .WithMany("Parents")
                         .HasForeignKey("LearnerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Learner");
                 });
@@ -1662,8 +1747,7 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.Learner", "Learner")
                         .WithMany("Results")
                         .HasForeignKey("LearnerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Lisa.Models.Entities.ResultSet", "ResultSet")
                         .WithMany("Results")

@@ -23,7 +23,7 @@ public class Learner
     public string? Email { get; set; }
     [MaxLength(30)]
     public string? CellNumber { get; set; }
-    public bool Active { get; set; }
+    public LearnerStatus Status { get; set; } = LearnerStatus.Active;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public Guid? RegisterClassId { get; set; }
@@ -60,6 +60,7 @@ public class Learner
     public DateTime? DisabledAt { get; set; }
     [MaxLength(500)]
     public string? DisabledReason { get; set; }
+    public PromotionStatus PromotionStatus { get; set; }
 }
 
 public enum MedicalTransport

@@ -43,17 +43,17 @@ else
                                Color="Color.Primary" 
                                Size="Size.Small"
                                OnClick="@(() => ViewAcademicPlan(plan))"
-                               Title="View" />
+                               title="View" />
                 <MudIconButton Icon="@Icons.Material.Filled.Edit" 
                                Color="Color.Secondary" 
                                Size="Size.Small"
                                OnClick="@(() => EditAcademicPlan(plan))"
-                               Title="Edit" />
+                               title="Edit" />
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                Color="Color.Error" 
                                Size="Size.Small"
                                OnClick="@(() => ShowDeleteConfirmationAsync(plan))"
-                               Title="Delete" />
+                               title="Delete" />
             </MudTd>
         </RowTemplate>
     </MudTable>

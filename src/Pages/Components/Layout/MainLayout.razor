@@ -4,6 +4,7 @@
 @inject NavigationManager NavigationManager
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Anti
 @inject IHttpContextAccessor Http
+@inject IConfiguration Configuration
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="@_darkMode" />
 <MudPopoverProvider />
@@ -72,6 +73,18 @@
            Width="260px" />
 
     <MudMainContent>
+        @if (IsDevEnvironment)
+        {
+            <MudAlert Severity="Severity.Error" 
+                      Class="rounded-0" 
+                      Elevation="0" 
+                      Style="border-radius: 0; margin: 0;">
+                <MudText Typo="Typo.body1">
+                    <strong>🚨 Test Environment:</strong> This is a test environment. Data here is not production data. 
+                    For actual production data, please visit <MudLink Href="https://dceg-lis.co.za" Target="_blank" Color="Color.Inherit" Style="text-decoration: underline; font-weight: 600;">dceg-lis.co.za</MudLink>
+                </MudText>
+            </MudAlert>
+        }
         <CustomErrorBoundary>
             <ChildContent>
                 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4">
@@ -90,6 +103,7 @@
     private bool _drawerOpen = true;
     private bool _darkMode = false;
     private List<BreadcrumbItem> _breadcrumbItems = new();
+    private bool IsDevEnvironment => Configuration["Environment"] == "DEV";
 
     private string _afField = "__RequestVerificationToken";
     private string? _afToken;

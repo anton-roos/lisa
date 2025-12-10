@@ -39,7 +39,7 @@ public class LearnerPromotionService
                 return false;
             }
 
-            var activeLearners = school.Learners?.Where(l => !l.IsDisabled && l.Status == Lisa.Enums.LearnerStatus.Active).ToList() ?? [];
+            var activeLearners = school.Learners?.Where(l => l.Status == Lisa.Enums.LearnerStatus.Active).ToList() ?? [];
 
             foreach (var learner in activeLearners)
             {
@@ -64,7 +64,7 @@ public class LearnerPromotionService
                 context.LearnerAcademicRecords.Add(historyRecord);
 
                 // Update Learner State
-                learner.PromotionStatus = PromotionStatus.PromotionPending;
+                learner.Status = LearnerStatus.PendingPromotion;
                 learner.RegisterClassId = null;
                 learner.CombinationId = null;
                 
@@ -96,8 +96,6 @@ public class LearnerPromotionService
              var learner = await context.Learners.FindAsync(learnerId);
              if (learner == null) return false;
 
-             learner.PromotionStatus = outcome;
-             
              // Update the most recent AcademicRecord
              var lastRecord = await context.LearnerAcademicRecords
                  .Where(r => r.LearnerId == learnerId)
@@ -168,6 +166,8 @@ public class LearnerPromotionService
                 .Include(l => l.LearnerSubjects)
                 .Include(l => l.RegisterClass)
                     .ThenInclude(rc => rc!.SchoolGrade)
+                        .ThenInclude(sg => sg!.SystemGrade)
+                .Include(l => l.School)
                 .FirstOrDefaultAsync(l => l.Id == learnerId);
 
             if (learner == null)
@@ -176,29 +176,54 @@ public class LearnerPromotionService
                 return false;
             }
 
-            if (learner.PromotionStatus != PromotionStatus.PromotionPending)
+            if (learner.Status != LearnerStatus.PendingPromotion)
             {
-                logger.LogWarning("Learner {LearnerId} is not in PromotionPending status.", learnerId);
+                logger.LogWarning("Learner {LearnerId} is not in PendingPromotion status.", learnerId);
                 return false;
             }
 
             if (promote)
             {
-                // Promote the learner
-                learner.PromotionStatus = PromotionStatus.Promoted;
-                learner.Status = LearnerStatus.Active; // Restore to Active status
+                // Check if learner is in the highest grade of the school
+                var currentGradeSequence = learner.RegisterClass?.SchoolGrade?.SystemGrade?.SequenceNumber;
                 
-                // If a target grade is specified, we'll need to assign them to a class in that grade
-                // For now, we clear their current assignments
+                if (currentGradeSequence.HasValue)
+                {
+                    // Get the highest grade in the school
+                    var highestGrade = await context.SchoolGrades
+                        .Include(sg => sg.SystemGrade)
+                        .Where(sg => sg.SchoolId == learner.SchoolId)
+                        .OrderByDescending(sg => sg.SystemGrade.SequenceNumber)
+                        .FirstOrDefaultAsync();
+
+                    if (highestGrade != null && currentGradeSequence.Value == highestGrade.SystemGrade.SequenceNumber)
+                    {
+                        // Learner is graduating from the highest grade
+                        learner.Status = LearnerStatus.Graduated;
+                        logger.LogInformation("Learner {LearnerId} is graduating from the highest grade.", learnerId);
+                    }
+                    else
+                    {
+                        // Normal promotion - mark as Promoted (temporary status)
+                        learner.Status = LearnerStatus.Promoted;
+                    }
+                }
+                else
+                {
+                    // Fallback if no grade info available
+                    learner.Status = LearnerStatus.Promoted;
+                }
+                
+                // Clear current assignments - will be reassigned to new grade
                 learner.RegisterClassId = null;
                 learner.CombinationId = null;
             }
             else
             {
                 // Retain the learner - they stay in the same grade
-                learner.PromotionStatus = PromotionStatus.Retained;
-                learner.Status = LearnerStatus.Active; // Restore to Active status
-                // Keep their register class but clear subjects for reassignment
+                learner.Status = LearnerStatus.Retained;
+                // Keep their register class reference for now, but clear combination
+                learner.CombinationId = null;
             }
 
             // Clear all subjects (they should already be cleared during year-end activation, but double-check)
@@ -222,7 +247,8 @@ public class LearnerPromotionService
 
             await context.SaveChangesAsync();
             
-            logger.LogInformation("Learner {LearnerId} promotion processed: {Outcome}", learnerId, promote ? "Promoted" : "Retained");
+            var outcome = learner.Status == LearnerStatus.Graduated ? "Graduated" : (promote ? "Promoted" : "Retained");
+            logger.LogInformation("Learner {LearnerId} promotion processed: {Outcome}", learnerId, outcome);
             return true;
         }
         catch (Exception ex)
@@ -243,8 +269,7 @@ public class LearnerPromotionService
                     .ThenInclude(rc => rc!.SchoolGrade)
                         .ThenInclude(sg => sg!.SystemGrade)
                 .Where(l => l.SchoolId == schoolId && 
-                           l.Status == LearnerStatus.YearEndArchived &&
-                           l.PromotionStatus == PromotionStatus.PromotionPending)
+                           l.Status == LearnerStatus.PendingPromotion)
                 .OrderBy(l => l.Surname)
                 .ThenBy(l => l.Name)
                 .ToListAsync();

@@ -1,0 +1,358 @@
+@page "/archives"
+@using Lisa.Models.Entities
+@using Lisa.Services
+@using Lisa.Enums
+@using Lisa.Data
+@using Microsoft.EntityFrameworkCore
+@inject SchoolService SchoolService
+@inject IDbContextFactory<LisaDbContext> DbContextFactory
+@inject ILogger<Index> Logger
+@inherits EventAwareComponentBase
+
+<PageTitle>Archives - Lisa</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Archive" Class="mr-2" />
+        Archives
+    </MudText>
+
+    @if (_selectedSchool == null)
+    {
+        <MudAlert Severity="Severity.Info">Please select a school to view archives.</MudAlert>
+    }
+    else
+    {
+        <MudPaper Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <strong>@_selectedSchool.ShortName</strong> - Historical Records
+            </MudText>
+
+            <!-- Year Selection -->
+            <MudPaper Class="pa-4 mb-4" Elevation="0" Style="background-color: var(--mud-palette-background-grey);">
+                @if (_isLoading)
+                {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                }
+                else if (!_academicYears.Any())
+                {
+                    <MudAlert Severity="Severity.Info">No archived academic years found.</MudAlert>
+                }
+                else
+                {
+                    <MudSelect T="int?" 
+                               Label="Select Academic Year" 
+                               @bind-Value="_selectedYear"
+                               Variant="Variant.Outlined"
+                               AnchorOrigin="Origin.BottomCenter"
+                               Placeholder="Choose a year to view archives"
+                               Clearable="true">
+                        @foreach (var year in _academicYears.OrderByDescending(y => y))
+                        {
+                            <MudSelectItem T="int?" Value="@year">@year</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+            </MudPaper>
+
+            @if (_selectedYear != null)
+            {
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+
+                <!-- Archived Results Tab -->
+                <MudTabPanel Text="Archived Results" Icon="@Icons.Material.Filled.Assessment">
+                    @if (_loadingResults)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                    }
+                    else if (!_archivedResultSets.Any())
+                    {
+                        <MudAlert Severity="Severity.Info">No archived results found for @_selectedYear.</MudAlert>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.h6" Class="mb-3">Results for @_selectedYear</MudText>
+                        <MudTable Items="@_archivedResultSets" Hover="true" Striped="true" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Subject</MudTh>
+                                <MudTh>Grade</MudTh>
+                                <MudTh>Assessment Type</MudTh>
+                                <MudTh>Topic</MudTh>
+                                <MudTh>Date</MudTh>
+                                <MudTh>Results Count</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Subject">@context.Subject?.Name</MudTd>
+                                <MudTd DataLabel="Grade">@context.SchoolGrade?.SystemGrade?.Name</MudTd>
+                                <MudTd DataLabel="Assessment Type">@context.AssessmentType?.Name</MudTd>
+                                <MudTd DataLabel="Topic">@context.AssessmentTopic</MudTd>
+                                <MudTd DataLabel="Date">@context.AssessmentDate?.ToString("dd MMM yyyy")</MudTd>
+                                <MudTd DataLabel="Results Count">@(context.Results?.Count ?? 0)</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudTabPanel>
+
+                <!-- Archived Combinations Tab -->
+                <MudTabPanel Text="Archived Combinations" Icon="@Icons.Material.Filled.LibraryBooks">
+                    @if (_loadingCombinations)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                    }
+                    else if (!_archivedCombinations.Any())
+                    {
+                        <MudAlert Severity="Severity.Info">No archived combinations found for @_selectedYear.</MudAlert>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.h6" Class="mb-3">Combinations for @_selectedYear</MudText>
+                        <MudTable Items="@_archivedCombinations" Hover="true" Striped="true" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Name</MudTh>
+                                <MudTh>Grade</MudTh>
+                                <MudTh>Type</MudTh>
+                                <MudTh>Subjects</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Name">@context.Name</MudTd>
+                                <MudTd DataLabel="Grade">@context.SchoolGrade?.SystemGrade?.Name</MudTd>
+                                <MudTd DataLabel="Type">@context.CombinationType</MudTd>
+                                <MudTd DataLabel="Subjects">
+                                    @if (context.Subjects != null && context.Subjects.Any())
+                                    {
+                                        <MudText Typo="Typo.body2">
+                                            @string.Join(", ", context.Subjects.Select(s => s.Name))
+                                        </MudText>
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudTabPanel>
+
+                <!-- Archived Learners Tab -->
+                <MudTabPanel Text="Learner Records" Icon="@Icons.Material.Filled.School">
+                    @if (_loadingRecords)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                    }
+                    else if (!_learnerRecords.Any())
+                    {
+                        <MudAlert Severity="Severity.Info">No learner records found for @_selectedYear.</MudAlert>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.h6" Class="mb-3">Learner Academic Records for @_selectedYear</MudText>
+                        <MudTable Items="@_learnerRecords" Hover="true" Striped="true" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Learner</MudTh>
+                                <MudTh>Grade</MudTh>
+                                <MudTh>Class</MudTh>
+                                <MudTh>Combination</MudTh>
+                                <MudTh>Outcome</MudTh>
+                                <MudTh>Processed</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Learner">@context.Learner?.Surname, @context.Learner?.Name</MudTd>
+                                <MudTd DataLabel="Grade">@context.SchoolGrade?.SystemGrade?.Name</MudTd>
+                                <MudTd DataLabel="Class">@context.RegisterClass?.Name</MudTd>
+                                <MudTd DataLabel="Combination">@context.Combination?.Name</MudTd>
+                                <MudTd DataLabel="Outcome">
+                                    <MudChip T="string" Size="Size.Small" Color="@GetOutcomeColor(context.Outcome)">
+                                        @context.Outcome
+                                    </MudChip>
+                                </MudTd>
+                                <MudTd DataLabel="Processed">@context.ProcessedAt?.ToString("dd MMM yyyy")</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudTabPanel>
+            </MudTabs>
+            }
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private School? _selectedSchool;
+    private bool _isLoading = true;
+    private bool _loadingResults = false;
+    private bool _loadingCombinations = false;
+    private bool _loadingRecords = false;
+
+    private List<int> _academicYears = new();
+    private int? _internalSelectedYear;
+    private int? _selectedYear
+    {
+        get => _internalSelectedYear;
+        set
+        {
+            if (_internalSelectedYear != value)
+            {
+                _internalSelectedYear = value;
+                if (value.HasValue)
+                {
+                    _ = LoadArchivedData();
+                }
+            }
+        }
+    }
+
+    private List<ResultSet> _archivedResultSets = new();
+    private List<Combination> _archivedCombinations = new();
+    private List<LearnerAcademicRecord> _learnerRecords = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+            SubscribeToEvent(UiEvents.SchoolSelected);
+
+            if (_selectedSchool != null)
+            {
+                await LoadAcademicYears();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing archives page");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected)
+        {
+            _selectedSchool = payload as School;
+            _selectedYear = null;
+            _archivedResultSets.Clear();
+            _archivedCombinations.Clear();
+            _learnerRecords.Clear();
+            
+            if (_selectedSchool != null)
+            {
+                await LoadAcademicYears();
+            }
+            else
+            {
+                _academicYears.Clear();
+            }
+            
+            StateHasChanged();
+        }
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadAcademicYears()
+    {
+        try
+        {
+            await using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Get distinct academic years from archived data
+            var resultYears = await context.ResultSets
+                .Where(rs => rs.SchoolGrade!.SchoolId == _selectedSchool!.Id && rs.IsArchived && rs.AcademicYear.HasValue)
+                .Select(rs => rs.AcademicYear!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            var combinationYears = await context.Combinations
+                .Where(c => c.SchoolGrade!.SchoolId == _selectedSchool!.Id && c.IsArchived && c.AcademicYear.HasValue)
+                .Select(c => c.AcademicYear!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            var recordYears = await context.LearnerAcademicRecords
+                .Include(r => r.SchoolGrade)
+                .Where(r => r.SchoolGrade!.SchoolId == _selectedSchool!.Id)
+                .Select(r => r.Year)
+                .Distinct()
+                .ToListAsync();
+
+            _academicYears = resultYears.Union(combinationYears).Union(recordYears).Distinct().ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading academic years");
+        }
+    }
+
+    private async Task LoadArchivedData()
+    {
+        if (_selectedYear == null || _selectedSchool == null) return;
+
+        try
+        {
+            _loadingResults = true;
+            _loadingCombinations = true;
+            _loadingRecords = true;
+            StateHasChanged();
+
+            await using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Load archived result sets
+            _archivedResultSets = await context.ResultSets
+                .Include(rs => rs.Subject)
+                .Include(rs => rs.SchoolGrade)
+                    .ThenInclude(sg => sg!.SystemGrade)
+                .Include(rs => rs.AssessmentType)
+                .Include(rs => rs.Results)
+                .Where(rs => rs.SchoolGrade!.SchoolId == _selectedSchool.Id && 
+                             rs.IsArchived && 
+                             rs.AcademicYear == _selectedYear)
+                .OrderByDescending(rs => rs.AssessmentDate)
+                .ToListAsync();
+
+            // Load archived combinations
+            _archivedCombinations = await context.Combinations
+                .IgnoreQueryFilters() // Include deleted combinations
+                .Include(c => c.SchoolGrade)
+                    .ThenInclude(sg => sg!.SystemGrade)
+                .Include(c => c.Subjects)
+                .Where(c => c.SchoolGrade!.SchoolId == _selectedSchool.Id && 
+                           c.IsArchived && 
+                           c.AcademicYear == _selectedYear)
+                .ToListAsync();
+
+            // Load learner academic records
+            _learnerRecords = await context.LearnerAcademicRecords
+                .Include(r => r.Learner)
+                .Include(r => r.SchoolGrade)
+                    .ThenInclude(sg => sg!.SystemGrade)
+                .Include(r => r.RegisterClass)
+                .Include(r => r.Combination)
+                .Where(r => r.SchoolGrade!.SchoolId == _selectedSchool.Id && 
+                           r.Year == _selectedYear)
+                .OrderBy(r => r.Learner!.Surname)
+                .ThenBy(r => r.Learner!.Name)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading archived data for year {Year}", _selectedYear);
+        }
+        finally
+        {
+            _loadingResults = false;
+            _loadingCombinations = false;
+            _loadingRecords = false;
+            StateHasChanged();
+        }
+    }
+
+    private Color GetOutcomeColor(PromotionStatus status)
+    {
+        return status switch
+        {
+            PromotionStatus.Promoted => Color.Success,
+            PromotionStatus.Retained => Color.Warning,
+            PromotionStatus.PromotionPending => Color.Info,
+            _ => Color.Default
+        };
+    }
+}

@@ -437,15 +437,13 @@ public class LearnerService
                 return false;
             }
 
-            if (learner.IsDisabled)
+            if (learner.Status == Lisa.Enums.LearnerStatus.Disabled)
             {
                 logger.LogWarning("Attempted to disable already disabled learner with ID: {LearnerId}", learnerId);
                 return false;
             }
 
-            learner.IsDisabled = true;
-            learner.DisabledAt = DateTime.UtcNow;
-            learner.DisabledReason = reason;
+            learner.Status = Lisa.Enums.LearnerStatus.Disabled;
             learner.UpdatedAt = DateTime.UtcNow;
 
             await context.SaveChangesAsync();
@@ -475,15 +473,13 @@ public class LearnerService
                 return false;
             }
 
-            if (!learner.IsDisabled)
+            if (learner.Status != Lisa.Enums.LearnerStatus.Disabled)
             {
                 logger.LogWarning("Attempted to enable already active learner with ID: {LearnerId}", learnerId);
                 return false;
             }
 
-            learner.IsDisabled = false;
-            learner.DisabledAt = null;
-            learner.DisabledReason = null;
+            learner.Status = Lisa.Enums.LearnerStatus.Active;
             learner.UpdatedAt = DateTime.UtcNow;
 
             await context.SaveChangesAsync();
@@ -503,7 +499,7 @@ public class LearnerService
         await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.Learners
             .IgnoreQueryFilters()
-            .Where(l => l.IsDisabled)
+            .Where(l => l.Status == Lisa.Enums.LearnerStatus.Disabled)
             .Include(l => l.RegisterClass)
             .ThenInclude(rc => rc!.SchoolGrade)
             .ThenInclude(sg => sg!.SystemGrade)

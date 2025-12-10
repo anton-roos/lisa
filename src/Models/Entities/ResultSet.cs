@@ -26,6 +26,10 @@ public class ResultSet
 
     // Navigation property
     public AssessmentType? AssessmentType { get; set; }
+    
+    // Year-end archiving
+    public int? AcademicYear { get; set; }  // Year this result set belongs to
+    public bool IsArchived { get; set; } = false;  // Archived during year-end
 }
 
 public enum ResultSetStatus

@@ -158,8 +158,6 @@ public class LisaDbContext
             .Property(l => l.Code)
             .HasMaxLength(20);
         modelBuilder.Entity<Learner>()
-            .HasQueryFilter(l => !l.IsDisabled); // Add query filter to exclude disabled learners
-        modelBuilder.Entity<Learner>()
             .HasOne(r => r.RegisterClass)
             .WithMany(l => l.Learners)
             .HasForeignKey(l => l.RegisterClassId)

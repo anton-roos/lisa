@@ -14,4 +14,7 @@ public class Result
     [MaxLength(64)]
     public string? AbsentReason { get; set; }
     public DateTime UpdatedAt { get; set; }
+    
+    // Year-end archiving - inherits from ResultSet but cached for easy filtering
+    public int? AcademicYear { get; set; }
 }

@@ -13,4 +13,6 @@ public class Combination
     public ICollection<Subject>? Subjects { get; set; }
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAt { get; set; }
+    public int? AcademicYear { get; set; }
+    public bool IsArchived { get; set; }
 }

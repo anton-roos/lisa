@@ -300,8 +300,7 @@ public class SchoolService(
                 context.LearnerAcademicRecords.Add(historyRecord);
 
                 // Archive the learner's state
-                learner.Status = Enums.LearnerStatus.YearEndArchived;
-                learner.PromotionStatus = Lisa.Enums.PromotionStatus.PromotionPending;
+                learner.Status = Enums.LearnerStatus.PendingPromotion;
                 
                 // Remove all subjects (now archived in academic record)
                 if (learner.LearnerSubjects != null && learner.LearnerSubjects.Any())
@@ -310,19 +309,45 @@ public class SchoolService(
                     context.Set<LearnerSubject>().RemoveRange(learner.LearnerSubjects);
                 }
                 
-                // Remove all results (archived in academic record)
+                // Archive all results (mark with academic year, don't delete)
                 if (learner.Results != null && learner.Results.Any())
                 {
                     resultsArchived += learner.Results.Count;
-                    context.Results.RemoveRange(learner.Results);
+                    foreach (var result in learner.Results)
+                    {
+                        result.AcademicYear = academicYear;
+                    }
                 }
+            }
+            
+            // Archive all combinations for this school
+            var combinations = await context.Combinations
+                .Where(c => c.SchoolGrade!.SchoolId == schoolId && !c.IsArchived)
+                .ToListAsync();
+                
+            foreach (var combination in combinations)
+            {
+                combination.IsArchived = true;
+                combination.AcademicYear = academicYear;
+            }
+            
+            // Archive all result sets for this school
+            var resultSets = await context.ResultSets
+                .Include(rs => rs.SchoolGrade)
+                .Where(rs => rs.SchoolGrade!.SchoolId == schoolId && !rs.IsArchived)
+                .ToListAsync();
+                
+            foreach (var resultSet in resultSets)
+            {
+                resultSet.IsArchived = true;
+                resultSet.AcademicYear = academicYear;
             }
 
             await context.SaveChangesAsync();
             await uiEventService.PublishAsync(UiEvents.SchoolsUpdated, _selectedSchool);
 
-            logger.LogInformation("Year-end mode activated for school {SchoolId}. {LearnerCount} learners archived. {SubjectsArchived} subjects and {ResultsArchived} results archived to academic records.", 
-                schoolId, learners.Count, subjectsArchived, resultsArchived);
+            logger.LogInformation("Year-end mode activated for school {SchoolId}. {LearnerCount} learners archived. {SubjectsArchived} subjects removed, {ResultsArchived} results archived, {CombinationCount} combinations archived, {ResultSetCount} result sets archived.", 
+                schoolId, learners.Count, subjectsArchived, resultsArchived, combinations.Count, resultSets.Count);
 
             return true;
         }
@@ -349,8 +374,7 @@ public class SchoolService(
             // Check for learners still pending promotion decisions
             var pendingLearners = await context.Learners
                 .Where(l => l.SchoolId == schoolId && 
-                           l.Status == Enums.LearnerStatus.YearEndArchived &&
-                           l.PromotionStatus == Lisa.Enums.PromotionStatus.PromotionPending)
+                           l.Status == Enums.LearnerStatus.PendingPromotion)
                 .ToListAsync();
 
             if (pendingLearners.Any())
@@ -363,20 +387,18 @@ public class SchoolService(
             school.IsYearEndMode = false;
             context.Schools.Update(school);
 
-            // Restore learners from YearEndArchived state
-            // Only restore learners who haven't been processed (still in PromotionPending)
+            // Restore learners from PendingPromotion state
+            // Only restore learners who haven't been processed (still pending)
             // Promoted/Retained learners should have already been moved to their new grades
             var archivedLearners = await context.Learners
                 .Where(l => l.SchoolId == schoolId && 
-                           l.Status == Enums.LearnerStatus.YearEndArchived &&
-                           l.PromotionStatus == Lisa.Enums.PromotionStatus.PromotionPending)
+                           l.Status == Enums.LearnerStatus.PendingPromotion)
                 .ToListAsync();
 
             foreach (var learner in archivedLearners)
             {
                 // Restore learners who weren't processed back to Active
                 learner.Status = Enums.LearnerStatus.Active;
-                learner.PromotionStatus = Lisa.Enums.PromotionStatus.None;
             }
 
             await context.SaveChangesAsync();

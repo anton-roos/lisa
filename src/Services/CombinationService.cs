@@ -25,7 +25,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
         await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.Combinations
             .AsNoTracking()
-            .Where(c => c.SchoolGrade!.SchoolId == schoolId)
+            .Where(c => c.SchoolGrade!.SchoolId == schoolId && !c.IsArchived)
             .Include(c => c.Subjects)
             .Include(sc => sc.SchoolGrade)
             .ThenInclude(g => g!.SystemGrade)
@@ -42,7 +42,7 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
             .ThenInclude(g => g!.School)
             .Include(sc => sc.SchoolGrade)
             .ThenInclude(g => g!.SystemGrade)
-            .Where(sc => sc.SchoolGrade!.SchoolId == school.Id)
+            .Where(sc => sc.SchoolGrade!.SchoolId == school.Id && !sc.IsArchived)
             .ToListAsync();
     }
 
@@ -112,6 +112,11 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
             .Include(c => c.Subjects)
             .FirstOrDefaultAsync(c => c.Id == model.Id)
         ?? throw new KeyNotFoundException($"Combination with ID {model.Id} not found.");
+        
+        if (existingCombination.IsArchived)
+        {
+            throw new InvalidOperationException("Cannot edit archived combinations.");
+        }
 
         existingCombination.Name = model.Name;
         existingCombination.SchoolGradeId = model.GradeId;

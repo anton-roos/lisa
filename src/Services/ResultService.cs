@@ -74,14 +74,16 @@ public class ResultService
     public async Task<int> GetCountAsync()
     {
         await using var context = await dbContextFactory.CreateDbContextAsync();
-        return await context.ResultSets.CountAsync();
+        return await context.ResultSets
+            .Where(rs => !rs.IsArchived)
+            .CountAsync();
     }
 
     public async Task<int> GetCountAsync(Guid schoolId)
     {
         await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.Results
-            .Where(x => x.ResultSet != null && x.ResultSet.SchoolGrade != null && x.ResultSet.SchoolGrade.SchoolId == schoolId)
+            .Where(x => x.ResultSet != null && x.ResultSet.SchoolGrade != null && x.ResultSet.SchoolGrade.SchoolId == schoolId && !x.ResultSet.IsArchived)
             .CountAsync();
     }
 
@@ -97,6 +99,12 @@ public class ResultService
             if (existingResultSet == null)
             {
                 logger.LogWarning("ResultSet with ID {ResultSetId} not found.", resultSetId);
+                return false;
+            }
+            
+            if (existingResultSet.IsArchived)
+            {
+                logger.LogWarning("Cannot update archived ResultSet {ResultSetId}.", resultSetId);
                 return false;
             }
 
@@ -273,7 +281,7 @@ public class ResultService
                 .Include(rs => rs.Subject)
                 .Include(rs => rs.SchoolGrade)
                 .Include(rs => rs.Teacher)
-                .Where(rs => rs.Results != null && rs.Results.Any(r =>
+                .Where(rs => !rs.IsArchived && rs.Results != null && rs.Results.Any(r =>
                     r.Learner != null &&
                     r.Learner.RegisterClass != null &&
                     r.Learner.RegisterClass.SchoolGrade != null &&

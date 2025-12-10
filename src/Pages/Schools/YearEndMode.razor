@@ -170,8 +170,7 @@
             
             // Count learners pending promotion decisions
             _pendingPromotionCount = _school.Learners?
-                .Count(l => l.Status == Lisa.Enums.LearnerStatus.YearEndArchived && 
-                           l.PromotionStatus == Lisa.Enums.PromotionStatus.PromotionPending) ?? 0;
+                .Count(l => l.Status == Lisa.Enums.LearnerStatus.PendingPromotion) ?? 0;
             
             await LoadPromotionSummary();
         }
@@ -179,12 +178,11 @@
 
     private async Task LoadPromotionSummary()
     {
-        // Get learners from the school and group by promotion status
+        // Get learners from the school and group by status
         if (_school?.Learners != null)
         {
             _promotionSummary = _school.Learners
-                .Where(l => l.Status == Lisa.Enums.LearnerStatus.Active)
-                .GroupBy(l => l.PromotionStatus)
+                .GroupBy(l => l.Status)
                 .Select(g => new PromotionStatusSummary
                 {
                     Status = g.Key.ToString(),

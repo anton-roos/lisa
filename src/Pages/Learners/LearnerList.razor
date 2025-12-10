@@ -22,7 +22,7 @@
                 @if (_selectedSchool?.IsYearEndMode == true)
                 {
                     <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Icon="@Icons.Material.Filled.School">
-                        <strong>Year-End Mode Active:</strong> Showing learners awaiting promotion decisions. Subjects and results have been archived.
+                        <strong>Year-End Mode Active:</strong> Showing learners in promotion workflow (pending, promoted, or retained). Subjects and results have been archived.
                     </MudAlert>
                 }
 
@@ -49,9 +49,9 @@
                                            Variant="Variant.Outlined"
                                            AnchorOrigin="Origin.BottomCenter"
                                            Disabled="@_isLoading">
+                                    <MudSelectItem T="string" Value="@("All")">All Learners</MudSelectItem>
                                     <MudSelectItem T="string" Value="@("Active")">Active Only</MudSelectItem>
                                     <MudSelectItem T="string" Value="@("Disabled")">Disabled Only</MudSelectItem>
-                                    <MudSelectItem T="string" Value="@("All")">All Learners</MudSelectItem>
                                 </MudSelect>
                             </MudItem>
                             <MudItem xs="12" sm="6" md="3">
@@ -156,7 +156,7 @@
                 else if (!SortedLearners.Any())
                 {
                     <MudAlert Severity="Severity.Info">
-                        No learners found for <strong>@_selectedSchool.ShortName</strong> with the current filters.
+                        No learners found for <strong>@_selectedSchool?.ShortName</strong> with the current filters.
                     </MudAlert>
                 }
                 else
@@ -175,10 +175,6 @@
                             @if (!_selectedSchool?.IsYearEndMode == true)
                             {
                                 <MudTh>Subjects</MudTh>
-                            }
-                            @if (_selectedSchool?.IsYearEndMode == true)
-                            {
-                                <MudTh>Promotion Status</MudTh>
                             }
                             <MudTh>Status</MudTh>
                             <MudTh>Actions</MudTh>
@@ -256,48 +252,54 @@
                                     }
                                 </MudTd>
                             }
-                            @if (_selectedSchool?.IsYearEndMode == true)
-                            {
-                                <MudTd DataLabel="Promotion Status">
-                                    @switch (learner.PromotionStatus)
-                                    {
-                                        case PromotionStatus.PromotionPending:
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.HourglassEmpty">
-                                                Pending
-                                            </MudChip>
-                                            break;
-                                        case PromotionStatus.Promoted:
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.TrendingUp">
-                                                Promoted
-                                            </MudChip>
-                                            break;
-                                        case PromotionStatus.Retained:
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Icon="@Icons.Material.Filled.TrendingFlat">
-                                                Retained
-                                            </MudChip>
-                                            break;
-                                        default:
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Default">
-                                                None
-                                            </MudChip>
-                                            break;
-                                    }
-                                </MudTd>
-                            }
                             <MudTd DataLabel="Status">
-                                @if (learner.IsDisabled)
+                                @switch (learner.Status)
                                 {
-                                    <MudTooltip Text="@learner.DisabledReason">
+                                    case Lisa.Enums.LearnerStatus.Active:
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">
+                                            Active
+                                        </MudChip>
+                                        break;
+                                    case Lisa.Enums.LearnerStatus.PendingPromotion:
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.HourglassEmpty">
+                                            Pending Promotion
+                                        </MudChip>
+                                        break;
+                                    case Lisa.Enums.LearnerStatus.Promoted:
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.TrendingUp">
+                                            Promoted
+                                        </MudChip>
+                                        break;
+                                    case Lisa.Enums.LearnerStatus.Retained:
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.TrendingFlat">
+                                            Retained
+                                        </MudChip>
+                                        break;
+                                    case Lisa.Enums.LearnerStatus.Disabled:
                                         <MudChip T="string" Size="Size.Small" Color="Color.Error" Icon="@Icons.Material.Filled.Block">
                                             Disabled
                                         </MudChip>
-                                    </MudTooltip>
-                                }
-                                else
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">
-                                        Active
-                                    </MudChip>
+                                        break;
+                                    case Lisa.Enums.LearnerStatus.Transferred:
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.SwapHoriz">
+                                            Transferred
+                                        </MudChip>
+                                        break;
+                                    case Lisa.Enums.LearnerStatus.Graduated:
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.School">
+                                            Graduated
+                                        </MudChip>
+                                        break;
+                                    case Lisa.Enums.LearnerStatus.Initial:
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.FiberNew">
+                                            Initial
+                                        </MudChip>
+                                        break;
+                                    default:
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Default">
+                                            @learner.Status
+                                        </MudChip>
+                                        break;
                                 }
                             </MudTd>
                             <MudTd DataLabel="Actions">
@@ -307,14 +309,14 @@
                                                    Size="Size.Small"
                                                    OnClick="@(() => ViewLearner(learner))"
                                                    title="View" />
-                                    @if (!learner.IsDisabled)
+                                    @if (learner.Status != Lisa.Enums.LearnerStatus.Disabled)
                                     {
                                         <MudIconButton Icon="@Icons.Material.Filled.Edit" 
                                                        Color="Color.Secondary" 
                                                        Size="Size.Small"
                                                        OnClick="@(() => EditLearner(learner))"
                                                        title="Edit" />
-                                        @if (learner.PromotionStatus == PromotionStatus.PromotionPending && _selectedSchool?.IsYearEndMode == true)
+                                        @if (learner.Status == Lisa.Enums.LearnerStatus.PendingPromotion && _selectedSchool?.IsYearEndMode == true)
                                         {
                                             <MudIconButton Icon="@Icons.Material.Filled.School" 
                                                            Color="Color.Warning" 
@@ -361,7 +363,7 @@
 
     private string? SelectedGradeId { get; set; }
     private string? SearchTerm { get; set; }
-    private string SelectedStatus { get; set; } = "Active";
+    private string SelectedStatus { get; set; } = "All";
     private List<SchoolGrade>? AvailableGrades { get; set; }
 
     protected override async Task OnInitializedAsync()
@@ -416,20 +418,22 @@
     {
         var query = _learners.AsEnumerable();
 
-        // When in year-end mode, show only YearEndArchived learners
+        // When in year-end mode, show learners in promotion workflow
         if (_selectedSchool?.IsYearEndMode == true)
         {
-            query = query.Where(l => l.Status == Lisa.Enums.LearnerStatus.YearEndArchived);
+            query = query.Where(l => l.Status == Lisa.Enums.LearnerStatus.PendingPromotion ||
+                                     l.Status == Lisa.Enums.LearnerStatus.Promoted ||
+                                     l.Status == Lisa.Enums.LearnerStatus.Retained);
         }
         else
         {
             // Apply status filter (normal mode)
             query = SelectedStatus switch
             {
-                "Active" => query.Where(l => !l.IsDisabled && l.Status == Lisa.Enums.LearnerStatus.Active),
-                "Disabled" => query.Where(l => l.IsDisabled),
+                "Active" => query.Where(l => l.Status == Lisa.Enums.LearnerStatus.Active),
+                "Disabled" => query.Where(l => l.Status == Lisa.Enums.LearnerStatus.Disabled),
                 "All" => query,
-                _ => query.Where(l => !l.IsDisabled && l.Status == Lisa.Enums.LearnerStatus.Active) // Default to active only
+                _ => query // Default to all learners
             };
         }
 

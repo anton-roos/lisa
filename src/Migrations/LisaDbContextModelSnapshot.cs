@@ -306,11 +306,17 @@ namespace Lisa.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("AcademicYear")
+                        .HasColumnType("integer");
+
                     b.Property<int>("CombinationType")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -522,13 +528,6 @@ namespace Lisa.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
 
-                    b.Property<DateTime?>("DisabledAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("DisabledReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -539,9 +538,6 @@ namespace Lisa.Migrations
                     b.Property<string>("IdNumber")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
-
-                    b.Property<bool>("IsDisabled")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("MedicalAidName")
                         .HasMaxLength(64)
@@ -569,9 +565,6 @@ namespace Lisa.Migrations
                     b.Property<string>("Name")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
-
-                    b.Property<int>("PromotionStatus")
-                        .HasColumnType("integer");
 
                     b.Property<Guid?>("RegisterClassId")
                         .HasColumnType("uuid");
@@ -886,6 +879,9 @@ namespace Lisa.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<int?>("AcademicYear")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("LearnerId")
                         .HasColumnType("uuid");
 
@@ -913,6 +909,9 @@ namespace Lisa.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("AcademicYear")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("AssessmentDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -934,6 +933,9 @@ namespace Lisa.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid?>("SchoolGradeId")
                         .HasColumnType("uuid");

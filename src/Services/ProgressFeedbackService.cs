@@ -73,7 +73,7 @@ public class ProgressFeedbackService
 
         var query = context.Learners
             .AsNoTracking()
-            .Where(l => l.Results!.Any() && l.SchoolId == schoolId && l.Active);
+            .Where(l => l.Results!.Any() && l.SchoolId == schoolId && l.Status == Lisa.Enums.LearnerStatus.Active);
 
         if (fromDate.HasValue || toDate.HasValue)
         {
@@ -132,7 +132,7 @@ public class ProgressFeedbackService
             .Include(l => l.Results!)
                 .ThenInclude(r => r.ResultSet)
                 .ThenInclude(rs => rs!.Subject)
-            .Where(l => learnerIds.Contains(l.Id) && l.Active)
+            .Where(l => learnerIds.Contains(l.Id) && l.Status == Lisa.Enums.LearnerStatus.Active)
             .ToListAsync();
 
         var textInfo = CultureInfo.CurrentCulture.TextInfo;

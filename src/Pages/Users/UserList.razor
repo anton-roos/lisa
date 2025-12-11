@@ -41,8 +41,6 @@
 
                     <!-- Role Filter Buttons -->
                     <MudChipSet T="string" @bind-SelectedValue="_selectedRole" 
-                               Filter="true" 
-                               Mandatory="false"
                                SelectionMode="SelectionMode.SingleSelection">
                         @foreach (var role in _availableRoles)
                         {
@@ -91,12 +89,12 @@
                                                Color="Color.Secondary" 
                                                Size="Size.Small"
                                                OnClick="@(() => EditUser(user.Id))"
-                                               Title="Edit" />
+                                               title="Edit" />
                                 <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                                Color="Color.Error" 
                                                Size="Size.Small"
                                                OnClick="@(() => DeleteUser(user))"
-                                               Title="Delete" />
+                                               title="Delete" />
                             </MudTd>
                         </RowTemplate>
                     </MudTable>

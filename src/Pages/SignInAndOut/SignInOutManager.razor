@@ -53,6 +53,13 @@
                                 <p>Please select a school from the dropdown at the top of the page before proceeding.</p>
                             </div>
                         }
+                        else if (_selectedSchool.IsYearEndMode)
+                        {
+                            <div class="alert alert-warning mb-3">
+                                <h4><i class="oi oi-warning"></i> Year-End Mode Active</h4>
+                                <p>Attendance cannot be recorded while the school is in year-end mode. Please complete the year-end process first.</p>
+                            </div>
+                        }
                         else
                         {
                             @* Show filters only on Sign In *@
@@ -138,7 +145,7 @@
                     <button type="button" class="btn-close" @onclick="CancelPhoneCollect"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Enter the name of the person collecting the phone from <b>@_pendingPhoneLearner.Name @_pendingPhoneLearner.Surname</b> and description of phone.</p>
+                    <p>Enter the name of the person collecting the phone from <b>@_pendingPhoneLearner.DisplayName</b> and description of phone.</p>
                     <input class="form-control" @bind-value="_pendingPhoneModel" @bind-value:event="oninput" placeholder="Staff Name..." />
                 </div>
                 <div class="modal-footer">
@@ -161,7 +168,7 @@
                     <button type="button" class="btn-close" @onclick="CancelPhoneReturn"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Did <b>@_pendingSignOutLearner.Name @_pendingSignOutLearner.Surname</b> collect their cellphone?</p>
+                    <p>Did <b>@_pendingSignOutLearner.DisplayName</b> collect their cellphone?</p>
                     @if (_learnerToAttendanceRecordMap.TryGetValue(_pendingSignOutLearner.Id, out var record) && !string.IsNullOrEmpty(record.CellPhoneModel))
                     {
                         <p class="text-muted small">Collection Notes: @record.CellPhoneModel</p>
@@ -469,7 +476,7 @@
         if (_currentSession == null) return;
 
         // Debug logging
-        Console.WriteLine($"ToggleAttendance called for {learner.Name} {learner.Surname}, IsSignOut: {_isSignOut}");
+        Console.WriteLine($"ToggleAttendance called for {learner.DisplayName}, IsSignOut: {_isSignOut}");
 
         // Handle sign-out separately
         if (_isSignOut)

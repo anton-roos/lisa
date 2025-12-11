@@ -2,10 +2,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Lisa.Models.Entities;
 
-public class AcademicDevelopmentClass
+public class AcademicDevelopmentClass : AcademicEntity
 {
-    public Guid Id { get; set; }
-
     [Required]
     public DateTime DateTime { get; set; }
 
@@ -23,9 +21,4 @@ public class AcademicDevelopmentClass
     [Required]
     public Guid SchoolId { get; set; }
     public School? School { get; set; }
-
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
-    public Guid? CreatedBy { get; set; }
-    public Guid? UpdatedBy { get; set; }
 }

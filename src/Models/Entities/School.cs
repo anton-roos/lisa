@@ -37,4 +37,5 @@ public class School
     public ICollection<Learner>? Learners { get; set; }
     public ICollection<CareGroup>? CareGroups { get; set; }
     public ICollection<Period>? Periods { get; set; }
+    public bool IsYearEndMode { get; set; }
 }

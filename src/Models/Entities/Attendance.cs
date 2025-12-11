@@ -1,8 +1,9 @@
 using Lisa.Enums;
+using Lisa.Models;
 
 namespace Lisa.Models.Entities;
 
-public class Attendance : Entity
+public class Attendance : AcademicEntity
 {
     public Guid SchoolId { get; set; }
     public School School { get; set; } = null!;

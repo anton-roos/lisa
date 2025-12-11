@@ -49,7 +49,25 @@ else
         <dd class="col-sm-10">@_school.FromEmail</dd>
     </dl>
 
-    <button class="btn btn-secondary" @onclick="GoBack">Back to List</button>
+    <h4>Year-End Processing</h4>
+    <dl class="row">
+        <dt class="col-sm-2">Year-End Mode</dt>
+        <dd class="col-sm-10">
+            @if (_school.IsYearEndMode)
+            {
+                <span class="badge bg-warning">Active</span>
+            }
+            else
+            {
+                <span class="badge bg-secondary">Inactive</span>
+            }
+        </dd>
+    </dl>
+
+    <div class="mt-3">
+        <button class="btn btn-primary me-2" @onclick="NavigateToYearEndMode">Manage Year-End Mode</button>
+        <button class="btn btn-secondary" @onclick="GoBack">Back to List</button>
+    </div>
 }
 
 @code {
@@ -66,5 +84,10 @@ else
     private void GoBack()
     {
         Navigation.NavigateTo("/schools");
+    }
+
+    private void NavigateToYearEndMode()
+    {
+        Navigation.NavigateTo($"/schools/yearend/{SchoolId}");
     }
 }

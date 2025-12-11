@@ -1,0 +1,182 @@
+@page "/configuration/academic-years"
+@using Lisa.Models.Entities
+@using Lisa.Data
+@inject SchoolService SchoolService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inherits EventAwareComponentBase
+
+<PageTitle>Academic Years</PageTitle>
+
+<AuthorizeView Context="_" Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
+    <Authorized>
+        @if (_selectedSchool == null)
+        {
+            <NoSchoolSelected Message="Please select a school to manage academic years." />
+        }
+        else if (_loading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+        }
+        else
+        {
+            <MudStack Spacing="4">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.h5">Academic Years - @_selectedSchool.LongName</MudText>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenAddDialog">
+                        Add Academic Year
+                    </MudButton>
+                </MudStack>
+
+                @if (_academicYears.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info">
+                        No academic years configured for this school. Click "Add Academic Year" to create one.
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudTable Items="@_academicYears" 
+                              Hover="true" 
+                              Striped="true"
+                              Elevation="2">
+                        <HeaderContent>
+                            <MudTh Style="width: 150px;">Year</MudTh>
+                            <MudTh Style="width: 150px;">Current</MudTh>
+                            <MudTh Style="width: 200px;">Created</MudTh>
+                            <MudTh Style="width: 150px;">Actions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate Context="academicYear">
+                            <MudTd DataLabel="Year">
+                                <MudText Typo="Typo.body1"><strong>@academicYear.Year</strong></MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Current">
+                                @if (academicYear.IsCurrent)
+                                {
+                                    <MudChip T="string" Color="Color.Success" Size="Size.Small">Current</MudChip>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="Created">
+                                @academicYear.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")
+                            </MudTd>
+                            <MudTd DataLabel="Actions">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                               Color="Color.Error" 
+                                               Size="Size.Small"
+                                               OnClick="@(() => DeleteAcademicYear(academicYear))"
+                                               Disabled="@academicYear.IsCurrent" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+            </MudStack>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Unauthorized />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private School? _selectedSchool;
+    private bool _loading = true;
+    private List<AcademicYear> _academicYears = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        SubscribeToEvent(UiEvents.SchoolSelected);
+        if (_selectedSchool != null)
+        {
+            await LoadAcademicYears();
+        }
+        _loading = false;
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected)
+        {
+            _selectedSchool = payload as School;
+            if (_selectedSchool != null)
+            {
+                _loading = true;
+                StateHasChanged();
+                await LoadAcademicYears();
+                _loading = false;
+            }
+            else
+            {
+                _academicYears = [];
+            }
+        }
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadAcademicYears()
+    {
+        if (_selectedSchool != null)
+        {
+            _academicYears = await SchoolService.GetAcademicYearsForSchoolAsync(_selectedSchool.Id);
+        }
+    }
+
+    private async Task OpenAddDialog()
+    {
+        var parameters = new DialogParameters<AcademicYearAddDialog>
+        {
+            { x => x.SchoolId, _selectedSchool!.Id },
+            { x => x.ExistingYears, _academicYears.Select(ay => ay.Year).ToList() }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AcademicYearAddDialog>("Add Academic Year", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            await LoadAcademicYears();
+            Snackbar.Add("Academic year added successfully.", Severity.Success);
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteAcademicYear(AcademicYear academicYear)
+    {
+        if (academicYear.IsCurrent)
+        {
+            Snackbar.Add("Cannot delete the current academic year. There must always be exactly one current academic year.", Severity.Warning);
+            return;
+        }
+
+        var confirmed = await DialogService.ShowMessageBox(
+            "Delete Academic Year",
+            $"Are you sure you want to delete the academic year {academicYear.Year}? This action cannot be undone.",
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            var success = await SchoolService.DeleteAcademicYearAsync(academicYear.Id);
+            if (success)
+            {
+                await LoadAcademicYears();
+                Snackbar.Add($"Academic year {academicYear.Year} deleted.", Severity.Success);
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add("Cannot delete this academic year. It may have linked records or is the current year.", Severity.Error);
+            }
+        }
+    }
+}

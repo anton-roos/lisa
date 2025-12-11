@@ -18,7 +18,7 @@ namespace Lisa.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.0-rc.1.25451.107")
+                .HasAnnotation("ProductVersion", "10.0.1")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -59,6 +59,9 @@ namespace Lisa.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AcademicYearId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -67,6 +70,15 @@ namespace Lisa.Migrations
 
                     b.Property<DateTime>("DateTime")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("SchoolGradeId")
                         .HasColumnType("uuid");
@@ -87,6 +99,8 @@ namespace Lisa.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
 
                     b.HasIndex("SchoolGradeId");
 
@@ -115,6 +129,32 @@ namespace Lisa.Migrations
                     b.ToTable("AcademicPlans");
                 });
 
+            modelBuilder.Entity("Lisa.Models.Entities.AcademicYear", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsCurrent")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId", "Year")
+                        .IsUnique();
+
+                    b.ToTable("AcademicYears");
+                });
+
             modelBuilder.Entity("Lisa.Models.Entities.AssessmentType", b =>
                 {
                     b.Property<int>("Id")
@@ -137,6 +177,9 @@ namespace Lisa.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AcademicYearId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
@@ -173,6 +216,8 @@ namespace Lisa.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
 
                     b.HasIndex("SchoolId", "Start");
 
@@ -306,11 +351,20 @@ namespace Lisa.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("CombinationType")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("AcademicYearId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -322,7 +376,18 @@ namespace Lisa.Migrations
                     b.Property<Guid>("SchoolGradeId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
 
                     b.HasIndex("SchoolGradeId");
 
@@ -497,9 +562,6 @@ namespace Lisa.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<bool>("Active")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Allergies")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -525,13 +587,6 @@ namespace Lisa.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
 
-                    b.Property<DateTime?>("DisabledAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("DisabledReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -542,9 +597,6 @@ namespace Lisa.Migrations
                     b.Property<string>("IdNumber")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
-
-                    b.Property<bool>("IsDisabled")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("MedicalAidName")
                         .HasMaxLength(64)
@@ -573,11 +625,20 @@ namespace Lisa.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<Guid?>("PreviousRegisterClassId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PreviousSchoolGradeId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("RegisterClassId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Surname")
                         .HasMaxLength(30)
@@ -594,6 +655,10 @@ namespace Lisa.Migrations
 
                     b.HasIndex("CombinationId");
 
+                    b.HasIndex("PreviousRegisterClassId");
+
+                    b.HasIndex("PreviousSchoolGradeId");
+
                     b.HasIndex("RegisterClassId");
 
                     b.HasIndex("SchoolId");
@@ -601,40 +666,161 @@ namespace Lisa.Migrations
                     b.ToTable("Learners");
                 });
 
-            modelBuilder.Entity("Lisa.Models.Entities.LearnerSubject", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.LearnerAcademicRecord", b =>
                 {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AcademicYearId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CombinationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("LearnerId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("SubjectId")
+                    b.Property<int>("Outcome")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RegisterClassId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SchoolGradeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SubjectSnapshot")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
+
+                    b.HasIndex("CombinationId");
+
+                    b.HasIndex("LearnerId");
+
+                    b.HasIndex("RegisterClassId");
+
+                    b.HasIndex("SchoolGradeId");
+
+                    b.ToTable("LearnerAcademicRecords");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.LearnerSubject", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AcademicYearId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("CombinationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("LearnerId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("LearnerSubjectType")
                         .HasColumnType("integer");
 
-                    b.HasKey("LearnerId", "SubjectId");
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
 
                     b.HasIndex("CombinationId");
 
                     b.HasIndex("SubjectId");
+
+                    b.HasIndex("LearnerId", "SubjectId")
+                        .IsUnique();
 
                     b.ToTable("LearnerSubjects");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.LeaveEarly", b =>
                 {
-                    b.Property<Guid>("LeaveEarlyId")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AcademicYearId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("AttendenceRecordId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid?>("LearnerId")
                         .HasColumnType("uuid");
@@ -675,7 +861,15 @@ namespace Lisa.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
 
-                    b.HasKey("LeaveEarlyId");
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
 
                     b.HasIndex("AttendenceRecordId");
 
@@ -794,6 +988,24 @@ namespace Lisa.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AcademicYearId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
@@ -804,10 +1016,18 @@ namespace Lisa.Migrations
                     b.Property<Guid?>("SchoolId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
 
                     b.HasIndex("Name");
 
@@ -833,6 +1053,21 @@ namespace Lisa.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("LearnerId")
                         .HasColumnType("uuid");
 
@@ -844,6 +1079,9 @@ namespace Lisa.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -858,6 +1096,9 @@ namespace Lisa.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AcademicYearId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("AssessmentDate")
@@ -882,6 +1123,18 @@ namespace Lisa.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid?>("SchoolGradeId")
                         .HasColumnType("uuid");
 
@@ -897,7 +1150,12 @@ namespace Lisa.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
 
                     b.HasIndex("AssessmentTypeId");
 
@@ -925,6 +1183,9 @@ namespace Lisa.Migrations
                     b.Property<string>("FromEmail")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("IsYearEndMode")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("LongName")
                         .HasMaxLength(64)
@@ -1392,6 +1653,10 @@ namespace Lisa.Migrations
 
             modelBuilder.Entity("Lisa.Models.Entities.AcademicDevelopmentClass", b =>
                 {
+                    b.HasOne("Lisa.Models.Entities.AcademicYear", "AcademicYear")
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId");
+
                     b.HasOne("Lisa.Models.Entities.SchoolGrade", "SchoolGrade")
                         .WithMany()
                         .HasForeignKey("SchoolGradeId")
@@ -1415,6 +1680,8 @@ namespace Lisa.Migrations
                         .HasForeignKey("TeacherId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.Navigation("AcademicYear");
+
                     b.Navigation("School");
 
                     b.Navigation("SchoolGrade");
@@ -1424,13 +1691,30 @@ namespace Lisa.Migrations
                     b.Navigation("Teacher");
                 });
 
-            modelBuilder.Entity("Lisa.Models.Entities.Attendance", b =>
+            modelBuilder.Entity("Lisa.Models.Entities.AcademicYear", b =>
                 {
                     b.HasOne("Lisa.Models.Entities.School", "School")
                         .WithMany()
                         .HasForeignKey("SchoolId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("School");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.Attendance", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.AcademicYear", "AcademicYear")
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId");
+
+                    b.HasOne("Lisa.Models.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AcademicYear");
 
                     b.Navigation("School");
                 });
@@ -1446,8 +1730,7 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.Learner", "Learner")
                         .WithMany()
                         .HasForeignKey("LearnerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Attendance");
 
@@ -1467,11 +1750,17 @@ namespace Lisa.Migrations
 
             modelBuilder.Entity("Lisa.Models.Entities.Combination", b =>
                 {
+                    b.HasOne("Lisa.Models.Entities.AcademicYear", "AcademicYear")
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId");
+
                     b.HasOne("Lisa.Models.Entities.SchoolGrade", "SchoolGrade")
                         .WithMany("Combinations")
                         .HasForeignKey("SchoolGradeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("AcademicYear");
 
                     b.Navigation("SchoolGrade");
                 });
@@ -1519,6 +1808,14 @@ namespace Lisa.Migrations
                         .HasForeignKey("CombinationId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Lisa.Models.Entities.RegisterClass", "PreviousRegisterClass")
+                        .WithMany()
+                        .HasForeignKey("PreviousRegisterClassId");
+
+                    b.HasOne("Lisa.Models.Entities.SchoolGrade", "PreviousSchoolGrade")
+                        .WithMany()
+                        .HasForeignKey("PreviousSchoolGradeId");
+
                     b.HasOne("Lisa.Models.Entities.RegisterClass", "RegisterClass")
                         .WithMany("Learners")
                         .HasForeignKey("RegisterClassId")
@@ -1534,13 +1831,59 @@ namespace Lisa.Migrations
 
                     b.Navigation("Combination");
 
+                    b.Navigation("PreviousRegisterClass");
+
+                    b.Navigation("PreviousSchoolGrade");
+
                     b.Navigation("RegisterClass");
 
                     b.Navigation("School");
                 });
 
+            modelBuilder.Entity("Lisa.Models.Entities.LearnerAcademicRecord", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.AcademicYear", "AcademicYear")
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId");
+
+                    b.HasOne("Lisa.Models.Entities.Combination", "Combination")
+                        .WithMany()
+                        .HasForeignKey("CombinationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Lisa.Models.Entities.Learner", "Learner")
+                        .WithMany()
+                        .HasForeignKey("LearnerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Lisa.Models.Entities.RegisterClass", "RegisterClass")
+                        .WithMany()
+                        .HasForeignKey("RegisterClassId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Lisa.Models.Entities.SchoolGrade", "SchoolGrade")
+                        .WithMany()
+                        .HasForeignKey("SchoolGradeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AcademicYear");
+
+                    b.Navigation("Combination");
+
+                    b.Navigation("Learner");
+
+                    b.Navigation("RegisterClass");
+
+                    b.Navigation("SchoolGrade");
+                });
+
             modelBuilder.Entity("Lisa.Models.Entities.LearnerSubject", b =>
                 {
+                    b.HasOne("Lisa.Models.Entities.AcademicYear", "AcademicYear")
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId");
+
                     b.HasOne("Lisa.Models.Entities.Combination", "Combination")
                         .WithMany()
                         .HasForeignKey("CombinationId")
@@ -1549,14 +1892,15 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.Learner", "Learner")
                         .WithMany("LearnerSubjects")
                         .HasForeignKey("LearnerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Lisa.Models.Entities.Subject", "Subject")
                         .WithMany()
                         .HasForeignKey("SubjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("AcademicYear");
 
                     b.Navigation("Combination");
 
@@ -1567,6 +1911,10 @@ namespace Lisa.Migrations
 
             modelBuilder.Entity("Lisa.Models.Entities.LeaveEarly", b =>
                 {
+                    b.HasOne("Lisa.Models.Entities.AcademicYear", "AcademicYear")
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId");
+
                     b.HasOne("Lisa.Models.Entities.AttendanceRecord", "AttendanceRecord")
                         .WithMany()
                         .HasForeignKey("AttendenceRecordId")
@@ -1582,6 +1930,8 @@ namespace Lisa.Migrations
                         .HasForeignKey("SchoolGradeId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.Navigation("AcademicYear");
+
                     b.Navigation("AttendanceRecord");
 
                     b.Navigation("Learner");
@@ -1594,8 +1944,7 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.Learner", "Learner")
                         .WithMany("Parents")
                         .HasForeignKey("LearnerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Learner");
                 });
@@ -1636,6 +1985,10 @@ namespace Lisa.Migrations
 
             modelBuilder.Entity("Lisa.Models.Entities.RegisterClass", b =>
                 {
+                    b.HasOne("Lisa.Models.Entities.AcademicYear", "AcademicYear")
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId");
+
                     b.HasOne("Lisa.Models.Entities.SchoolGrade", "SchoolGrade")
                         .WithMany("RegisterClasses")
                         .HasForeignKey("SchoolGradeId")
@@ -1652,6 +2005,8 @@ namespace Lisa.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("AcademicYear");
+
                     b.Navigation("SchoolGrade");
 
                     b.Navigation("User");
@@ -1662,8 +2017,7 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.Learner", "Learner")
                         .WithMany("Results")
                         .HasForeignKey("LearnerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Lisa.Models.Entities.ResultSet", "ResultSet")
                         .WithMany("Results")
@@ -1678,6 +2032,10 @@ namespace Lisa.Migrations
 
             modelBuilder.Entity("Lisa.Models.Entities.ResultSet", b =>
                 {
+                    b.HasOne("Lisa.Models.Entities.AcademicYear", "AcademicYear")
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId");
+
                     b.HasOne("Lisa.Models.Entities.AssessmentType", "AssessmentType")
                         .WithMany()
                         .HasForeignKey("AssessmentTypeId")
@@ -1704,6 +2062,8 @@ namespace Lisa.Migrations
                         .WithMany()
                         .HasForeignKey("TeacherId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AcademicYear");
 
                     b.Navigation("AssessmentType");
 

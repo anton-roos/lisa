@@ -8,6 +8,7 @@ namespace Lisa.Services;
 public class AttendanceService
 (
     IDbContextFactory<LisaDbContext> dbContextFactory,
+    SchoolService schoolService,
     ILogger<AttendanceService> logger
 )
 {
@@ -32,10 +33,15 @@ public class AttendanceService
     )
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        
+        // Get current academic year for the school
+        var currentAcademicYearId = await schoolService.GetCurrentAcademicYearIdAsync(schoolId);
+        
         var session = new Attendance
         {
             Id = Guid.NewGuid(),
             SchoolId = schoolId,
+            AcademicYearId = currentAcademicYearId,
             Start = start,
             End = end,
             CreatedAt = DateTime.UtcNow,

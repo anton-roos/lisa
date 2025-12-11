@@ -70,7 +70,7 @@
                                 <MudTh>Actions</MudTh>
                             </HeaderContent>
                             <RowTemplate Context="learner">
-                                <MudTd DataLabel="Full Name">@($"{learner.Surname} {learner.Name}")</MudTd>
+                                <MudTd DataLabel="Full Name">@learner.DisplayName</MudTd>
                                 <MudTd DataLabel="Actions">
                                     <MudButton Variant="Variant.Text" 
                                                Color="Color.Primary" 
@@ -93,7 +93,7 @@
 
 @code {
     [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; }
+    public required IMudDialogInstance MudDialog { get; set; }
     
     [Parameter] public Guid RegisterClassId { get; set; }
     

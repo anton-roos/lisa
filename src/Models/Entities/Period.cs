@@ -19,3 +19,10 @@ public class Period
     public int SubjectId { get; set; }
     public Subject? Subject { get; set; }
 }
+
+public enum PeriodStatus
+{
+    Scheduled = 0,
+    Completed = 1,
+    Cancelled = 2
+}

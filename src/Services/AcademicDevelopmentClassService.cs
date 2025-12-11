@@ -6,15 +6,20 @@ namespace Lisa.Services;
 
 public class AcademicDevelopmentClassService(
     IDbContextFactory<LisaDbContext> dbContextFactory,
+    SchoolService schoolService,
     ILogger<AcademicDevelopmentClassService> logger
 )
 {
+    /// <summary>
+    /// Get all academic development classes filtered by current academic year.
+    /// </summary>
     public async Task<List<AcademicDevelopmentClass>> GetAllAsync()
     {
         try
         {
             await using var context = await dbContextFactory.CreateDbContextAsync();
             return await context.AcademicDevelopmentClasses
+                .Where(adc => adc.AcademicYear != null && adc.AcademicYear.IsCurrent)
                 .Include(adc => adc.SchoolGrade)
                 .ThenInclude(sg => sg!.SystemGrade)
                 .Include(adc => adc.Subject)
@@ -36,8 +41,11 @@ public class AcademicDevelopmentClassService(
         try
         {
             await using var context = await dbContextFactory.CreateDbContextAsync();
+            
+            // Filter by current academic year
             return await context.AcademicDevelopmentClasses
-                .Where(adc => adc.SchoolId == schoolId)
+                .Where(adc => adc.SchoolId == schoolId && 
+                              adc.AcademicYear != null && adc.AcademicYear.IsCurrent)
                 .Include(adc => adc.SchoolGrade)
                 .ThenInclude(sg => sg!.SystemGrade)
                 .Include(adc => adc.Subject)
@@ -81,6 +89,9 @@ public class AcademicDevelopmentClassService(
         {
             await using var context = await dbContextFactory.CreateDbContextAsync();
             academicDevelopmentClass.Id = Guid.NewGuid();
+            
+            // Get current academic year for the school
+            academicDevelopmentClass.AcademicYearId = await schoolService.GetCurrentAcademicYearIdAsync(academicDevelopmentClass.SchoolId);
             
             // Ensure DateTime is in UTC
             if (academicDevelopmentClass.DateTime.Kind == DateTimeKind.Unspecified)

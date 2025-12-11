@@ -5,15 +5,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
-public class LeaveEarlyService(IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<LearnerService> logger)
+public class LeaveEarlyService(
+    IDbContextFactory<LisaDbContext> dbContextFactory, 
+    SchoolService schoolService,
+    ILogger<LearnerService> logger)
 {
-    public async Task<bool> SaveLeaveEarlyAsync(LeaveEarlyViewModel leaveEarly)
+    public async Task<bool> SaveLeaveEarlyAsync(LeaveEarlyViewModel leaveEarly, Guid schoolId)
     {
         try
         {
             await using var context = await dbContextFactory.CreateDbContextAsync();
 
+            // Get current academic year for the school
+            var currentAcademicYearId = await schoolService.GetCurrentAcademicYearIdAsync(schoolId);
+
             LeaveEarly newLeave = new LeaveEarly();
+            newLeave.AcademicYearId = currentAcademicYearId;
             newLeave.AttendenceRecordId = leaveEarly.AttendenceRecordId;
             newLeave.LearnerId = leaveEarly.LearnerId;
             newLeave.SchoolGradeId = leaveEarly.SchoolGradeId;

@@ -66,13 +66,13 @@
                                                Size="Size.Small"
                                                OnClick="@(() => MoveUp(subject))"
                                                Disabled="@IsFirst(subject)"
-                                               Title="Move Up" />
+                                               title="Move Up" />
                                 <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" 
                                                Color="Color.Default" 
                                                Size="Size.Small"
                                                OnClick="@(() => MoveDown(subject))"
                                                Disabled="@IsLast(subject)"
-                                               Title="Move Down" />
+                                               title="Move Down" />
                             </div>
                         </MudTd>
                     }
@@ -97,17 +97,17 @@
                                        Color="Color.Primary" 
                                        Size="Size.Small"
                                        OnClick="@(() => ViewSubject(subject))"
-                                       Title="View" />
+                                       title="View" />
                         <MudIconButton Icon="@Icons.Material.Filled.Edit" 
                                        Color="Color.Secondary" 
                                        Size="Size.Small"
                                        OnClick="@(() => EditSubject(subject))"
-                                       Title="Edit" />
+                                       title="Edit" />
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                        Color="Color.Error" 
                                        Size="Size.Small"
                                        OnClick="@(() => DeleteSubject(subject))"
-                                       Title="Delete" />
+                                       title="Delete" />
                     </MudTd>
                 </RowTemplate>
             </MudTable>

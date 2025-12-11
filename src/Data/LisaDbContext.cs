@@ -38,6 +38,8 @@ public class LisaDbContext
     public DbSet<LeaveEarly> LeaveEarlies { get; set; } = null!;
     public DbSet<AcademicDevelopmentClass> AcademicDevelopmentClasses { get; set; } = null!;
     public DbSet<AcademicPlan> AcademicPlans { get; set; } = null!;
+    public DbSet<LearnerAcademicRecord> LearnerAcademicRecords { get; set; } = null!;
+    public DbSet<AcademicYear> AcademicYears { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -80,6 +82,18 @@ public class LisaDbContext
             .WithOne(s => s.School)
             .HasForeignKey(l => l.SchoolId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Academic Years
+        modelBuilder.Entity<AcademicYear>()
+            .HasKey(ay => ay.Id);
+        modelBuilder.Entity<AcademicYear>()
+            .HasOne(ay => ay.School)
+            .WithMany()
+            .HasForeignKey(ay => ay.SchoolId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<AcademicYear>()
+            .HasIndex(ay => new { ay.SchoolId, ay.Year })
+            .IsUnique();
 
         modelBuilder.Entity<CareGroup>()
             .HasKey(cg => cg.Id);
@@ -157,8 +171,6 @@ public class LisaDbContext
             .Property(l => l.Code)
             .HasMaxLength(20);
         modelBuilder.Entity<Learner>()
-            .HasQueryFilter(l => !l.IsDisabled); // Add query filter to exclude disabled learners
-        modelBuilder.Entity<Learner>()
             .HasOne(r => r.RegisterClass)
             .WithMany(l => l.Learners)
             .HasForeignKey(l => l.RegisterClassId)
@@ -192,15 +204,20 @@ public class LisaDbContext
             .HasOne(lp => lp.Learner)
             .WithMany(l => l.Parents)
             .HasForeignKey(lp => lp.LearnerId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict); // Changed from Cascade to Restrict
 
         // Classes and Subjects
         modelBuilder.Entity<LearnerSubject>()
-            .HasKey(ls => new { ls.LearnerId, ls.SubjectId });
+            .HasKey(ls => ls.Id);
+        modelBuilder.Entity<LearnerSubject>()
+            .HasIndex(ls => new { ls.LearnerId, ls.SubjectId })
+            .IsUnique();
         modelBuilder.Entity<LearnerSubject>()
             .HasOne(ls => ls.Learner)
             .WithMany(l => l.LearnerSubjects)
             .HasForeignKey(ls => ls.LearnerId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict); // Changed from Cascade to Restrict
         modelBuilder.Entity<LearnerSubject>()
             .HasOne(ls => ls.Combination)
@@ -322,6 +339,7 @@ public class LisaDbContext
             entity.HasOne(r => r.Learner)
                   .WithMany(l => l.Results)
                   .HasForeignKey(r => r.LearnerId)
+                  .IsRequired(false)
                   .OnDelete(DeleteBehavior.Restrict); // Changed from Cascade to Restrict
             entity.HasOne(r => r.ResultSet)
                   .WithMany(rs => rs.Results)
@@ -452,6 +470,7 @@ public class LisaDbContext
             entity.HasOne(a => a.Learner)
                   .WithMany()
                   .HasForeignKey(a => a.LearnerId)
+                  .IsRequired(false)
                   .OnDelete(DeleteBehavior.Restrict); // Changed from Cascade to Restrict
 
             entity.HasOne(a => a.Attendance)
@@ -462,6 +481,8 @@ public class LisaDbContext
 
         modelBuilder.Entity<LeaveEarly>(entity =>
         {
+           entity.HasKey(le => le.Id);
+
            entity.HasOne(le => le.AttendanceRecord)
                  .WithMany()
                  .HasForeignKey(le => le.AttendenceRecordId)
@@ -523,6 +544,28 @@ public class LisaDbContext
                 .IsRequired();
 
             entity.HasIndex(adc => new { adc.SchoolId, adc.DateTime });
+        });
+
+        modelBuilder.Entity<LearnerAcademicRecord>(entity =>
+        {
+            entity.HasKey(r => r.Id);
+            entity.HasOne(r => r.Learner)
+                .WithMany()
+                .HasForeignKey(r => r.LearnerId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(r => r.SchoolGrade)
+                .WithMany()
+                .HasForeignKey(r => r.SchoolGradeId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(r => r.RegisterClass)
+                .WithMany()
+                .HasForeignKey(r => r.RegisterClassId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(r => r.Combination)
+                .WithMany()
+                .HasForeignKey(r => r.CombinationId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
         }
 

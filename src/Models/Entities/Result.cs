@@ -2,9 +2,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Lisa.Models.Entities;
 
-public class Result
+public class Result : Entity
 {
-    public Guid Id { get; set; }
     public Guid LearnerId { get; set; }
     public Learner? Learner { get; set; }
     public Guid ResultSetId { get; set; }
@@ -13,5 +12,4 @@ public class Result
     public bool Absent { get; set; }
     [MaxLength(64)]
     public string? AbsentReason { get; set; }
-    public DateTime UpdatedAt { get; set; }
 }

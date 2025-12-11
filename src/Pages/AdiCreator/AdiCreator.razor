@@ -9,6 +9,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject ILogger<AdiCreator> Logger
+@inject IDialogService DialogService
 @inherits EventAwareComponentBase
 
 <PageTitle>ADI Creator</PageTitle>
@@ -165,51 +166,6 @@ else
     }
 }
 
-<!-- Success/Error Modals -->
-@if (_showSuccessModal)
-{
-    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">
-                        <i class="bi bi-check-circle me-2"></i>
-                        Success
-                    </h5>
-                </div>
-                <div class="modal-body">
-                    <p>ADI has been created successfully!</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-success" @onclick="CloseSuccessModal">OK</button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
-@if (_showErrorModal)
-{
-    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        Error
-                    </h5>
-                </div>
-                <div class="modal-body">
-                    <p>@_errorMessage</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-danger" @onclick="CloseErrorModal">OK</button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
 @code {
     private School? _selectedSchool;
     private List<SchoolGrade> _schoolGrades = [];
@@ -219,9 +175,6 @@ else
     private AdiModel _adiModel = new();
     private Dictionary<string, string> _validationErrors = new();
     private bool _isLoading;
-    private bool _showSuccessModal;
-    private bool _showErrorModal;
-    private string _errorMessage = "";
     private Guid? _currentUserId;
 
     public class AdiModel
@@ -294,8 +247,7 @@ else
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading data for ADI Creator");
-            _errorMessage = "Failed to load data. Please try again.";
-            _showErrorModal = true;
+            await DialogService.ShowMessageBox("Error", "Failed to load data. Please try again.", yesText: "OK");
         }
         finally
         {
@@ -416,13 +368,18 @@ else
             // Reload recent ADIs
             await LoadData();
 
-            _showSuccessModal = true;
+            await DialogService.ShowMessageBox(
+                "Success",
+                "ADI has been created successfully!",
+                yesText: "OK");
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error creating ADI");
-            _errorMessage = "Failed to create ADI. Please try again.";
-            _showErrorModal = true;
+            await DialogService.ShowMessageBox(
+                "Error",
+                "Failed to create ADI. Please try again.",
+                yesText: "OK");
         }
         finally
         {
@@ -443,23 +400,15 @@ else
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error deleting ADI {AdiId}", adi.Id);
-            _errorMessage = "Failed to delete ADI. Please try again.";
-            _showErrorModal = true;
+            await DialogService.ShowMessageBox(
+                "Error",
+                "Failed to delete ADI. Please try again.",
+                yesText: "OK");
         }
     }
 
     private void Cancel()
     {
         Navigation.NavigateTo("/");
-    }
-
-    private void CloseSuccessModal()
-    {
-        _showSuccessModal = false;
-    }
-
-    private void CloseErrorModal()
-    {
-        _showErrorModal = false;
     }
 }

@@ -10,6 +10,7 @@
 @inject ILogger<UserManager> Logger
 @inject SubjectService SubjectService
 @inject SchoolGradeService SchoolGradeService
+@inject IDialogService DialogService
 
 <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal}")">
     <Authorized>
@@ -78,9 +79,9 @@
             @if (ShouldShowSubjects())
             {
                 <label>Subjects</label>
-                <button type="button" class="btn btn-primary me-2" @onclick="OpenSubjectSelectModal">Add / Edit
-                    Subjects
-                </button>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="me-2 mb-2" OnClick="OpenSubjectSelectDialog">
+                    Add / Edit Subjects
+                </MudButton>
                 @if (User.Subjects != null && User.Subjects.Any())
                 {
                     <div class="mb-3">
@@ -114,88 +115,6 @@
             <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
         </EditForm>
 
-        <div class="modal fade @(ShowErrorModal ? "show d-block" : "d-none")" tabindex="-1"
-             style="background-color: rgba(0,0,0,0.5);" role="dialog">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Error</h5>
-                        <button type="button" class="btn-close" aria-label="Close" @onclick="CloseErrorModal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>@ErrorMessage</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" @onclick="CloseErrorModal">OK</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="modal fade @(ShowSubjectSelectionModal ? "show d-block" : "d-none")" tabindex="-1"
-             style="background-color: rgba(0,0,0,0.5);" role="dialog">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Select Subjects</h5>
-                        <button type="button" class="btn-close" aria-label="Close"
-                                @onclick="CloseSubjectSelectModal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <InputText @bind-Value="SubjectSearchTerm" @oninput="FilterSubjects" class="form-control mb-3"
-                                   placeholder="Search subjects..."/>
-                        <div style="max-height: 300px; overflow-y: auto;">
-                            @foreach (var subject in FilteredSubjects)
-                            {
-                                <div class="mb-3 border-bottom pb-2">
-                                    <div class="d-flex align-items-center">
-                                        <input class="form-check-input me-1" type="checkbox"
-                                               id="@($"subject_{subject.Id}")"
-                                               checked="@IsSubjectSelected(subject.Id)"
-                                               @onchange="(e) => ToggleSubject(subject.Id, (bool)e.Value!)"/>
-                                        <label class="form-check-label fw-bold me-2" for="@($"subject_{subject.Id}")">
-                                            @subject.Name
-                                        </label>
-                                        <span
-                                            class="badge bg-primary">@(FormatGradeRange(subject.GradesApplicable))</span>
-                                    </div>
-                                    @if (IsSubjectSelected(subject.Id))
-                                    {
-                                        <div class="ms-4 mt-2">
-                                            @foreach (var grade in subject.GradesApplicable?.Where(g =>
-                                                              SchoolApplicableGrades.Contains(g)) ?? [])
-                                            {
-                                                <div class="d-flex align-items-center mb-1">
-                                                    <input class="form-check-input me-1" type="checkbox"
-                                                           id="@($"subject_{subject.Id}_grade_{grade}")"
-                                                           checked="@IsGradeSelected(subject.Id, grade)"
-                                                           @onchange="(e) => ToggleGrade(subject.Id, grade, (bool)e.Value!)"/>
-                                                    <label class="form-check-label me-2"
-                                                           for="@($"subject_{subject.Id}_grade_{grade}")">
-                                                        Grade @FormatGrade(grade)
-                                                    </label>
-                                                    <span
-                                                        class="badge @(IsGradeSelected(subject.Id, grade) ? "bg-primary" : "bg-secondary")">
-                                                        @(IsGradeSelected(subject.Id, grade) ? "Selected" : "Available")
-                                                    </span>
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                </div>
-                            }
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary"
-                                @onclick="CloseSubjectSelectModal">Cancel
-                        </button>
-                        <button type="button" class="btn btn-primary" @onclick="CloseSubjectSelectModal">Save</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </Authorized>
     <NotAuthorized>
         <h3>You are not authorized to access this page.</h3>
@@ -214,13 +133,6 @@
 
     [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
     private bool IsCurrentUserSystemAdmin { get; set; }
-
-    private string SubjectSearchTerm { get; set; } = "";
-    private List<Subject> FilteredSubjects { get; set; } = [];
-
-    private bool ShowSubjectSelectionModal { get; set; }
-    private bool ShowErrorModal { get; set; }
-    private string ErrorMessage { get; set; } = "";
 
     private bool IsEdit => UserId.HasValue;
 
@@ -272,8 +184,6 @@
                 }
             }
         }
-
-        FilteredSubjects = AvailableSubjects;
     }
 
     private void ToggleCareGroup(Guid careGroupId, bool isSelected)
@@ -289,70 +199,22 @@
         }
     }
 
-    private bool IsSubjectSelected(int subjectId)
+    private async Task OpenSubjectSelectDialog()
     {
-        return User.Subjects?.Any(ts => ts.SubjectId == subjectId) ?? false;
-    }
-
-    private bool IsGradeSelected(int subjectId, int grade)
-    {
-        return User.Subjects?.Any(ts => ts.SubjectId == subjectId && ts.Grade == grade) ?? false;
-    }
-
-    private void ToggleSubject(int subjectId, bool isSelected)
-    {
-        if (isSelected)
+        var parameters = new DialogParameters<SubjectSelectionDialog>
         {
-            if (!IsSubjectSelected(subjectId))
-            {
-                var subject = AvailableSubjects.FirstOrDefault(s => s.Id == subjectId);
-                if (subject != null && subject.GradesApplicable != null && subject.GradesApplicable.Any())
-                {
-                    User.Subjects?.Add(new TeacherSubject { SubjectId = subjectId, Grade = subject.GradesApplicable.First() });
-                }
-            }
-        }
-        else
-        {
-            User.Subjects?.RemoveAll(ts => ts.SubjectId == subjectId);
-        }
-    }
+            { x => x.AvailableSubjects, AvailableSubjects },
+            { x => x.SelectedSubjects, User.Subjects ?? [] },
+            { x => x.SchoolApplicableGrades, SchoolApplicableGrades }
+        };
 
-    private void ToggleGrade(int subjectId, int grade, bool isSelected)
-    {
-        if (isSelected)
-        {
-            if (!IsGradeSelected(subjectId, grade))
-            {
-                User.Subjects?.Add(new TeacherSubject { SubjectId = subjectId, Grade = grade });
-            }
-        }
-        else
-        {
-            User.Subjects?.RemoveAll(ts => ts.SubjectId == subjectId && ts.Grade == grade);
-        }
-    }
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<SubjectSelectionDialog>("Select Subjects", parameters, options);
+        var result = await dialog.Result;
 
-    private void OpenSubjectSelectModal()
-    {
-        ShowSubjectSelectionModal = true;
-    }
-
-    private void CloseSubjectSelectModal() => ShowSubjectSelectionModal = false;
-
-    private void FilterSubjects(ChangeEventArgs e)
-    {
-        SubjectSearchTerm = e.Value?.ToString() ?? "";
-
-        if (string.IsNullOrWhiteSpace(SubjectSearchTerm))
+        if (result is { Canceled: false, Data: List<TeacherSubject> selectedSubjects })
         {
-            FilteredSubjects = AvailableSubjects;
-        }
-        else
-        {
-            FilteredSubjects = AvailableSubjects
-                .Where(s => s.Name!.Contains(SubjectSearchTerm, StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            User.Subjects = selectedSubjects;
         }
     }
 
@@ -426,14 +288,15 @@
         catch (Exception ex)
         {
             Logger.LogError("Error: {Message}", ex.Message);
-            ErrorMessage = ex.Message;
-            ShowErrorModal = true;
+            await DialogService.ShowMessageBox(
+                "Error",
+                ex.Message,
+                yesText: "OK");
             return false;
         }
     }
 
     private void Cancel() => Navigation.NavigateTo("/users");
-    private void CloseErrorModal() => ShowErrorModal = false;
 
     private bool ShouldShowCareGroups() => !User.SelectedRoles.Contains(Roles.SystemAdministrator);
 

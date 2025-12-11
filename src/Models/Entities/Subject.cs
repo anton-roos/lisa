@@ -15,3 +15,11 @@ public class Subject
     public List<int>? GradesApplicable { get; set; }
     public SubjectType SubjectType { get; set; }
 }
+
+public enum SubjectType
+{
+    Compulsory,
+    Combination,
+    MathCombination,
+    AdditionalSubject
+}

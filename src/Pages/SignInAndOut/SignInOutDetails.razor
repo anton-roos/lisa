@@ -107,7 +107,7 @@
                                     @foreach (var record in _attendance.AttendanceRecords.OrderBy(r => r.Learner?.Surname).ThenBy(r => r.Learner?.Name))
                                     {
                                         <tr>
-                                            <td>@record.Learner?.Surname, @record.Learner?.Name</td>
+                                            <td>@(record.Learner?.DisplayName ?? "Unknown")</td>
                                             <td>
                                                 @if (record.Start.HasValue)
                                                 {

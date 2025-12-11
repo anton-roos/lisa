@@ -8,6 +8,7 @@ namespace Lisa.Services;
 public class LearnerService
 (
     IDbContextFactory<LisaDbContext> dbContextFactory,
+    SchoolService schoolService,
     ILogger<LearnerService> logger
 )
 {
@@ -31,6 +32,11 @@ public class LearnerService
             .Include(l => l.RegisterClass)
             .ThenInclude(rc => rc!.SchoolGrade)
             .ThenInclude(sg => sg!.SystemGrade)
+            .Include(l => l.PreviousSchoolGrade)
+            .ThenInclude(sg => sg!.SystemGrade)
+            .Include(l => l.PreviousRegisterClass)
+            .ThenInclude(rc => rc!.SchoolGrade)
+            .ThenInclude(sg => sg!.SystemGrade)
             .Include(l => l.Combination)
             .ThenInclude(c => c!.Subjects)
             .Include(l => l.LearnerSubjects!)
@@ -45,7 +51,7 @@ public class LearnerService
 
         if (activeOnly)
         {
-            query = query.Where(l => l.Active);
+            query = query.Where(l => l.Status == Lisa.Enums.LearnerStatus.Active);
         }
 
         return await query.FirstOrDefaultAsync(l => l.Id == id);
@@ -67,6 +73,9 @@ public class LearnerService
             await using var context = await dbContextFactory.CreateDbContextAsync();
 
             var newLearnerId = Guid.NewGuid();
+            
+            // Get current academic year for the school
+            var currentAcademicYearId = await schoolService.GetCurrentAcademicYearIdAsync(schoolId);
 
             var learnerSubjects = new List<LearnerSubject>();
 
@@ -79,6 +88,7 @@ public class LearnerService
                     LearnerId = newLearnerId,
                     SubjectId = sid,
                     CombinationId = combId,
+                    AcademicYearId = currentAcademicYearId,
                     LearnerSubjectType = LearnerSubjectType.Combination
                 });
             }
@@ -89,6 +99,7 @@ public class LearnerService
                 {
                     LearnerId = newLearnerId,
                     SubjectId = extraSubjectId,
+                    AcademicYearId = currentAcademicYearId,
                     LearnerSubjectType = LearnerSubjectType.Additional
                 });
             }
@@ -96,7 +107,7 @@ public class LearnerService
             var learner = new Learner
             {
                 Id = newLearnerId,
-                Active = model.Active,
+                Status = model.Status,
                 CareGroupId = model.CareGroupId,
                 CellNumber = model.CellNumber,
                 Code = model.Code,
@@ -228,9 +239,12 @@ public class LearnerService
                 return false;
             }
 
+            // Get current academic year for the school
+            var currentAcademicYearId = await schoolService.GetCurrentAcademicYearIdAsync(learner.SchoolId);
+
             UpdateLearnerProperties(learner, model);
             await UpdateParentsAsync(context, learner, parents);
-            UpdateLearnerSubjects(context, learner, model);
+            UpdateLearnerSubjects(context, learner, model, currentAcademicYearId);
 
             await context.SaveChangesAsync();
             logger.LogInformation("Updated learner {LearnerId} successfully.", model.Id);
@@ -271,7 +285,7 @@ public class LearnerService
 
     private static void UpdateLearnerProperties(Learner learner, LearnerViewModel model)
     {
-        learner.Active = model.Active;
+        learner.Status = model.Status;
         learner.CareGroupId = model.CareGroupId;
         learner.CellNumber = model.CellNumber;
         learner.Code = model.Code;
@@ -348,7 +362,7 @@ public class LearnerService
         };
     }
 
-    private static void UpdateLearnerSubjects(LisaDbContext context, Learner learner, LearnerViewModel model)
+    private static void UpdateLearnerSubjects(LisaDbContext context, Learner learner, LearnerViewModel model, Guid? academicYearId)
     {
         if (learner.LearnerSubjects is not null && learner.LearnerSubjects.Count > 0)
         {
@@ -363,6 +377,7 @@ public class LearnerService
                 LearnerId = learner.Id,
                 SubjectId = sid,
                 CombinationId = combinationId,
+                AcademicYearId = academicYearId,
                 LearnerSubjectType = LearnerSubjectType.Combination
             };
         }).ToList();
@@ -371,6 +386,7 @@ public class LearnerService
         {
             LearnerId = learner.Id,
             SubjectId = extraSid,
+            AcademicYearId = academicYearId,
             LearnerSubjectType = LearnerSubjectType.Additional
         }).ToList();
 
@@ -388,6 +404,11 @@ public class LearnerService
         return await context.Learners
             .AsSplitQuery()
             .Include(l => l.RegisterClass!)
+            .ThenInclude(rc => rc.SchoolGrade!)
+            .ThenInclude(sg => sg.SystemGrade)
+            .Include(l => l.PreviousSchoolGrade!)
+            .ThenInclude(sg => sg.SystemGrade)
+            .Include(l => l.PreviousRegisterClass!)
             .ThenInclude(rc => rc.SchoolGrade!)
             .ThenInclude(sg => sg.SystemGrade)
             .Include(l => l.LearnerSubjects!)
@@ -437,15 +458,13 @@ public class LearnerService
                 return false;
             }
 
-            if (learner.IsDisabled)
+            if (learner.Status == Lisa.Enums.LearnerStatus.Disabled)
             {
                 logger.LogWarning("Attempted to disable already disabled learner with ID: {LearnerId}", learnerId);
                 return false;
             }
 
-            learner.IsDisabled = true;
-            learner.DisabledAt = DateTime.UtcNow;
-            learner.DisabledReason = reason;
+            learner.Status = Lisa.Enums.LearnerStatus.Disabled;
             learner.UpdatedAt = DateTime.UtcNow;
 
             await context.SaveChangesAsync();
@@ -475,15 +494,13 @@ public class LearnerService
                 return false;
             }
 
-            if (!learner.IsDisabled)
+            if (learner.Status != Lisa.Enums.LearnerStatus.Disabled)
             {
                 logger.LogWarning("Attempted to enable already active learner with ID: {LearnerId}", learnerId);
                 return false;
             }
 
-            learner.IsDisabled = false;
-            learner.DisabledAt = null;
-            learner.DisabledReason = null;
+            learner.Status = Lisa.Enums.LearnerStatus.Active;
             learner.UpdatedAt = DateTime.UtcNow;
 
             await context.SaveChangesAsync();
@@ -503,7 +520,7 @@ public class LearnerService
         await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.Learners
             .IgnoreQueryFilters()
-            .Where(l => l.IsDisabled)
+            .Where(l => l.Status == Lisa.Enums.LearnerStatus.Disabled)
             .Include(l => l.RegisterClass)
             .ThenInclude(rc => rc!.SchoolGrade)
             .ThenInclude(sg => sg!.SystemGrade)

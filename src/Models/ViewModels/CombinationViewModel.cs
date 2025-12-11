@@ -12,4 +12,6 @@ public class CombinationViewModel
     public List<int> SubjectIds { get; set; } = [];
     [Required(ErrorMessage = "Combination Type is required")]
     public CombinationType CombinationType { get; set; }
+    [Required(ErrorMessage = "Academic Year is required")]
+    public Guid? AcademicYearId { get; set; }
 }

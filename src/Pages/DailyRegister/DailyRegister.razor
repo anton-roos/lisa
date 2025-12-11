@@ -406,7 +406,7 @@
 
             _dailyAttendanceData[learner.Id] = dailyAttendanceRecord;
 
-            Snackbar.Add($"{learner.Name} {learner.Surname} marked as {(newAttendanceStatus ? "Present" : "Absent")}", 
+            Snackbar.Add($"{learner.DisplayName} marked as {(newAttendanceStatus ? "Present" : "Absent")}", 
                 newAttendanceStatus ? Severity.Success : Severity.Warning);
 
             Logger.LogInformation("Daily register attendance for learner {LearnerId} updated to {Status}",
@@ -475,7 +475,7 @@
             await AttendanceRecordService.CreateAsync(dailyAttendanceRecord);
             _dailyAttendanceData[learner.Id] = dailyAttendanceRecord;
 
-            Snackbar.Add($"{learner.Name} {learner.Surname} checked in successfully", Severity.Success);
+            Snackbar.Add($"{learner.DisplayName} checked in successfully", Severity.Success);
             Logger.LogInformation("Learner {LearnerId} checked in via register class", learner.Id);
         }
         catch (Exception ex)

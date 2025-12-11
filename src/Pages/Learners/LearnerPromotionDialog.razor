@@ -1,0 +1,183 @@
+@using Lisa.Models.Entities
+@using Lisa.Enums
+@inject LearnerPromotionService LearnerPromotionService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        @if (_learner == null)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            <MudText>Loading learner information...</MudText>
+        }
+        else
+        {
+            <MudStack Spacing="3">
+                <!-- Learner Information -->
+                <MudPaper Elevation="0" Class="pa-3">
+                    <MudText Typo="Typo.h6" Class="mb-2">Learner Information</MudText>
+                    <MudGrid>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Name</MudText>
+                            <MudText Typo="Typo.body1"><strong>@_learner.Name @_learner.Surname</strong></MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Code</MudText>
+                            <MudText Typo="Typo.body1"><strong>@_learner.Code</strong></MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Current Status</MudText>
+                            <MudChip T="string" Color="Color.Warning" Size="Size.Small">@_learner.Status</MudChip>
+                        </MudItem>
+                        @if (_currentGrade != null)
+                        {
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Current Grade</MudText>
+                                <MudText Typo="Typo.body1"><strong>@_currentGrade</strong></MudText>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudPaper>
+
+                <!-- Promotion Decision -->
+                <MudPaper Elevation="0" Class="pa-3">
+                    <MudText Typo="Typo.h6" Class="mb-3">Promotion Decision</MudText>
+                    
+                    @if (_nextGrade != null)
+                    {
+                        <MudAlert Severity="Severity.Info" Class="mb-3">
+                            <MudText>Next Grade: <strong>@_nextGrade.SystemGrade?.Name</strong></MudText>
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Warning" Class="mb-3">
+                            No next grade found. This may be the final grade.
+                        </MudAlert>
+                    }
+
+                    <MudRadioGroup @bind-Value="_promotionDecision">
+                        <MudRadio Value="@(true)" Color="Color.Success">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.body1"><strong>Promote</strong></MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        Move learner to @(_nextGrade?.SystemGrade?.Name ?? "next grade")
+                                    </MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudRadio>
+                        <MudRadio Value="@(false)" Color="Color.Error">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" />
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.body1"><strong>Retain</strong></MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        Keep learner in current grade
+                                    </MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudRadio>
+                    </MudRadioGroup>
+                </MudPaper>
+
+                <!-- Comments -->
+                <MudPaper Elevation="0" Class="pa-3">
+                    <MudTextField T="string" 
+                                  Label="Comments (Optional)" 
+                                  @bind-Value="_comment"
+                                  Lines="3"
+                                  Variant="Variant.Outlined"
+                                  Placeholder="Add any notes about this promotion decision..." />
+                </MudPaper>
+
+                <!-- Warning -->
+                <MudAlert Severity="Severity.Warning">
+                    <MudText><strong>Note:</strong> This action will remove all current subject assignments. The learner will need to be reassigned to a class and subjects.</MudText>
+                </MudAlert>
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Outlined" Color="Color.Default">Cancel</MudButton>
+        <MudButton OnClick="ProcessPromotion" 
+                   Variant="Variant.Filled" 
+                   Color="@(_promotionDecision ? Color.Success : Color.Error)"
+                   Disabled="@(_isProcessing || _learner == null)">
+            @if (_isProcessing)
+            {
+                <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+            }
+            @(_promotionDecision ? "Promote Learner" : "Retain Learner")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public Guid LearnerId { get; set; }
+
+    private Learner? _learner;
+    private SchoolGrade? _nextGrade;
+    private string? _currentGrade;
+    private bool _promotionDecision = true; // Default to promote
+    private string? _comment;
+    private bool _isProcessing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLearnerData();
+    }
+
+    private async Task LoadLearnerData()
+    {
+        _learner = await LearnerPromotionService.GetLearnerByIdAsync(LearnerId);
+        
+        if (_learner != null)
+        {
+            // Use current grade if available, otherwise fall back to previous grade
+            var currentSchoolGrade = _learner.RegisterClass?.SchoolGrade ?? _learner.PreviousSchoolGrade;
+            _currentGrade = currentSchoolGrade?.SystemGrade?.Name;
+            _nextGrade = await LearnerPromotionService.GetNextGradeForLearnerAsync(LearnerId);
+        }
+    }
+
+    private async Task ProcessPromotion()
+    {
+        _isProcessing = true;
+        try
+        {
+            var success = await LearnerPromotionService.ProcessLearnerPromotionAsync(
+                LearnerId, 
+                _promotionDecision, 
+                _nextGrade?.Id, 
+                _comment
+            );
+
+            if (success)
+            {
+                var message = _promotionDecision ? "Learner promoted successfully." : "Learner retained successfully.";
+                var severity = _promotionDecision ? Severity.Success : Severity.Info;
+                Snackbar.Add(message, severity);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("Failed to process learner promotion. Please try again.", Severity.Error);
+            }
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

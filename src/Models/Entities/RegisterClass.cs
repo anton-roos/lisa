@@ -2,14 +2,13 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Lisa.Models.Entities;
 
-public class RegisterClass
+public class RegisterClass : AcademicEntity
 {
     public RegisterClass()
     {
         Id = Guid.NewGuid();
     }
 
-    public Guid Id { get; set; }
     [MaxLength(32)]
     public string? Name { get; set; }
     public Guid SchoolGradeId { get; set; }

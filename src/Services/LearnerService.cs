@@ -8,6 +8,7 @@ namespace Lisa.Services;
 public class LearnerService
 (
     IDbContextFactory<LisaDbContext> dbContextFactory,
+    SchoolService schoolService,
     ILogger<LearnerService> logger
 )
 {
@@ -29,6 +30,11 @@ public class LearnerService
         var query = context.Learners
             .AsNoTracking()
             .Include(l => l.RegisterClass)
+            .ThenInclude(rc => rc!.SchoolGrade)
+            .ThenInclude(sg => sg!.SystemGrade)
+            .Include(l => l.PreviousSchoolGrade)
+            .ThenInclude(sg => sg!.SystemGrade)
+            .Include(l => l.PreviousRegisterClass)
             .ThenInclude(rc => rc!.SchoolGrade)
             .ThenInclude(sg => sg!.SystemGrade)
             .Include(l => l.Combination)
@@ -67,6 +73,9 @@ public class LearnerService
             await using var context = await dbContextFactory.CreateDbContextAsync();
 
             var newLearnerId = Guid.NewGuid();
+            
+            // Get current academic year for the school
+            var currentAcademicYearId = await schoolService.GetCurrentAcademicYearIdAsync(schoolId);
 
             var learnerSubjects = new List<LearnerSubject>();
 
@@ -79,6 +88,7 @@ public class LearnerService
                     LearnerId = newLearnerId,
                     SubjectId = sid,
                     CombinationId = combId,
+                    AcademicYearId = currentAcademicYearId,
                     LearnerSubjectType = LearnerSubjectType.Combination
                 });
             }
@@ -89,6 +99,7 @@ public class LearnerService
                 {
                     LearnerId = newLearnerId,
                     SubjectId = extraSubjectId,
+                    AcademicYearId = currentAcademicYearId,
                     LearnerSubjectType = LearnerSubjectType.Additional
                 });
             }
@@ -228,9 +239,12 @@ public class LearnerService
                 return false;
             }
 
+            // Get current academic year for the school
+            var currentAcademicYearId = await schoolService.GetCurrentAcademicYearIdAsync(learner.SchoolId);
+
             UpdateLearnerProperties(learner, model);
             await UpdateParentsAsync(context, learner, parents);
-            UpdateLearnerSubjects(context, learner, model);
+            UpdateLearnerSubjects(context, learner, model, currentAcademicYearId);
 
             await context.SaveChangesAsync();
             logger.LogInformation("Updated learner {LearnerId} successfully.", model.Id);
@@ -348,7 +362,7 @@ public class LearnerService
         };
     }
 
-    private static void UpdateLearnerSubjects(LisaDbContext context, Learner learner, LearnerViewModel model)
+    private static void UpdateLearnerSubjects(LisaDbContext context, Learner learner, LearnerViewModel model, Guid? academicYearId)
     {
         if (learner.LearnerSubjects is not null && learner.LearnerSubjects.Count > 0)
         {
@@ -363,6 +377,7 @@ public class LearnerService
                 LearnerId = learner.Id,
                 SubjectId = sid,
                 CombinationId = combinationId,
+                AcademicYearId = academicYearId,
                 LearnerSubjectType = LearnerSubjectType.Combination
             };
         }).ToList();
@@ -371,6 +386,7 @@ public class LearnerService
         {
             LearnerId = learner.Id,
             SubjectId = extraSid,
+            AcademicYearId = academicYearId,
             LearnerSubjectType = LearnerSubjectType.Additional
         }).ToList();
 
@@ -388,6 +404,11 @@ public class LearnerService
         return await context.Learners
             .AsSplitQuery()
             .Include(l => l.RegisterClass!)
+            .ThenInclude(rc => rc.SchoolGrade!)
+            .ThenInclude(sg => sg.SystemGrade)
+            .Include(l => l.PreviousSchoolGrade!)
+            .ThenInclude(sg => sg.SystemGrade)
+            .Include(l => l.PreviousRegisterClass!)
             .ThenInclude(rc => rc.SchoolGrade!)
             .ThenInclude(sg => sg.SystemGrade)
             .Include(l => l.LearnerSubjects!)

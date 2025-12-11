@@ -1,0 +1,95 @@
+@using Lisa.Models.Entities
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.School" Class="mr-2" />
+            School Details
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Short Name</MudText>
+                <MudText Typo="Typo.body1">@School.ShortName</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Long Name</MudText>
+                <MudText Typo="Typo.body1">@School.LongName</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Color</MudText>
+                <div class="d-flex align-center gap-2">
+                    <div style="width: 24px; height: 24px; background-color: @School.Color; border-radius: 4px;"></div>
+                    <MudText Typo="Typo.body1">@School.Color</MudText>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">School Type</MudText>
+                <MudText Typo="Typo.body1">@(School.SchoolType?.Name ?? "N/A")</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Curriculum</MudText>
+                <MudText Typo="Typo.body1">@(School.Curriculum?.Name ?? "N/A")</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Year-End Mode</MudText>
+                @if (School.IsYearEndMode)
+                {
+                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">Active</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Color="Color.Default" Size="Size.Small">Inactive</MudChip>
+                }
+            </MudItem>
+        </MudGrid>
+
+        <MudDivider Class="my-4" />
+        <MudText Typo="Typo.subtitle1" Class="mb-2">SMTP Configuration</MudText>
+
+        <MudGrid>
+            <MudItem xs="12" sm="8">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">SMTP Host</MudText>
+                <MudText Typo="Typo.body1">@(School.SmtpHost ?? "Not configured")</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">SMTP Port</MudText>
+                <MudText Typo="Typo.body1">@School.SmtpPort</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">SMTP Username</MudText>
+                <MudText Typo="Typo.body1">@(School.SmtpUsername ?? "Not configured")</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">SMTP Email</MudText>
+                <MudText Typo="Typo.body1">@(School.SmtpEmail ?? "Not configured")</MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">From Email (Display)</MudText>
+                <MudText Typo="Typo.body1">@(School.FromEmail ?? "Not configured")</MudText>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="ManageYearEnd">
+            Manage Year-End Mode
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public School School { get; set; } = new();
+
+    private void Close() => MudDialog.Close();
+
+    private void ManageYearEnd()
+    {
+        MudDialog.Close(DialogResult.Ok("yearend"));
+    }
+}

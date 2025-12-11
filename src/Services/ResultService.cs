@@ -7,14 +7,19 @@ namespace Lisa.Services;
 
 public class ResultService
 (
-    IDbContextFactory<LisaDbContext> dbContextFactory, ILogger<ResultService> logger
+    IDbContextFactory<LisaDbContext> dbContextFactory, 
+    SchoolService schoolService,
+    ILogger<ResultService> logger
 )
 {
-    public async Task<ResultSet> CreateAsync(ResultsCaptureViewModel viewModel, Guid capturedById)
+    public async Task<ResultSet> CreateAsync(ResultsCaptureViewModel viewModel, Guid capturedById, Guid schoolId)
     {
         try
         {
             await using var context = await dbContextFactory.CreateDbContextAsync();
+
+            // Get current academic year for the school
+            var currentAcademicYearId = await schoolService.GetCurrentAcademicYearIdAsync(schoolId);
 
             DateTime? assessmentDate = null;
             if (viewModel.AssessmentDate is not null)
@@ -27,6 +32,7 @@ public class ResultService
             var resultSet = new ResultSet
             {
                 Id = Guid.NewGuid(),
+                AcademicYearId = currentAcademicYearId,
                 AssessmentDate = assessmentDate,
                 AssessmentTypeId = viewModel.AssessmentType?.Id ?? 0,
                 AssessmentTopic = viewModel.AssessmentTopic,
@@ -74,16 +80,21 @@ public class ResultService
     public async Task<int> GetCountAsync()
     {
         await using var context = await dbContextFactory.CreateDbContextAsync();
+        
         return await context.ResultSets
-            .Where(rs => !rs.IsArchived)
+            .Where(rs => rs.AcademicYear != null && rs.AcademicYear.IsCurrent)
             .CountAsync();
     }
 
     public async Task<int> GetCountAsync(Guid schoolId)
     {
         await using var context = await dbContextFactory.CreateDbContextAsync();
+        
         return await context.Results
-            .Where(x => x.ResultSet != null && x.ResultSet.SchoolGrade != null && x.ResultSet.SchoolGrade.SchoolId == schoolId && !x.ResultSet.IsArchived)
+            .Where(x => x.ResultSet != null && 
+                        x.ResultSet.SchoolGrade != null && 
+                        x.ResultSet.SchoolGrade.SchoolId == schoolId &&
+                        x.ResultSet.AcademicYear != null && x.ResultSet.AcademicYear.IsCurrent)
             .CountAsync();
     }
 
@@ -94,6 +105,7 @@ public class ResultService
             await using var context = await dbContextFactory.CreateDbContextAsync();
             var existingResultSet = await context.ResultSets
                 .Include(rs => rs.Results)
+                .Include(rs => rs.AcademicYear)
                 .FirstOrDefaultAsync(rs => rs.Id == resultSetId);
 
             if (existingResultSet == null)
@@ -102,9 +114,10 @@ public class ResultService
                 return false;
             }
             
-            if (existingResultSet.IsArchived)
+            // Check if this result set belongs to a non-current academic year
+            if (existingResultSet.AcademicYear != null && !existingResultSet.AcademicYear.IsCurrent)
             {
-                logger.LogWarning("Cannot update archived ResultSet {ResultSetId}.", resultSetId);
+                logger.LogWarning("Cannot update ResultSet {ResultSetId} from a previous academic year.", resultSetId);
                 return false;
             }
 
@@ -269,6 +282,10 @@ public class ResultService
         try
         {
             await using var context = await dbContextFactory.CreateDbContextAsync();
+            
+            // Get the current academic year for this school
+            var currentAcademicYear = await context.AcademicYears
+                .FirstOrDefaultAsync(ay => ay.SchoolId == schoolId && ay.IsCurrent);
 
             var query = context.ResultSets
                 .AsNoTracking()
@@ -281,11 +298,17 @@ public class ResultService
                 .Include(rs => rs.Subject)
                 .Include(rs => rs.SchoolGrade)
                 .Include(rs => rs.Teacher)
-                .Where(rs => !rs.IsArchived && rs.Results != null && rs.Results.Any(r =>
+                .Where(rs => rs.Results != null && rs.Results.Any(r =>
                     r.Learner != null &&
                     r.Learner.RegisterClass != null &&
                     r.Learner.RegisterClass.SchoolGrade != null &&
                     r.Learner.RegisterClass.SchoolGrade.SchoolId == schoolId));
+            
+            // Filter by current academic year if one exists
+            if (currentAcademicYear != null)
+            {
+                query = query.Where(rs => rs.AcademicYearId == currentAcademicYear.Id);
+            }
 
             if (gradeId.HasValue)
             {

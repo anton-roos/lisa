@@ -1,5 +1,6 @@
 using Lisa.Enums;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Lisa.Models.Entities;
 
@@ -28,6 +29,13 @@ public class Learner
     public DateTime UpdatedAt { get; set; }
     public Guid? RegisterClassId { get; set; }
     public RegisterClass? RegisterClass { get; set; }
+    
+    // Previous grade/class tracking for year-end promotion workflow
+    public Guid? PreviousSchoolGradeId { get; set; }
+    public SchoolGrade? PreviousSchoolGrade { get; set; }
+    public Guid? PreviousRegisterClassId { get; set; }
+    public RegisterClass? PreviousRegisterClass { get; set; }
+    
     public ICollection<Parent>? Parents { get; set; }
     public ICollection<Result>? Results { get; set; }
     public Guid? CareGroupId { get; set; }
@@ -54,6 +62,36 @@ public class Learner
     public string? DietaryRequirements { get; set; }
     public MedicalTransport MedicalTransport { get; set; }
     public Gender Gender { get; set; }
+
+    /// <summary>
+    /// Gets the learner's display name in format: "Surname, Name (Grade)"
+    /// Safely handles null RegisterClass by falling back to PreviousSchoolGrade or showing "No Grade"
+    /// </summary>
+    [NotMapped]
+    public string DisplayName
+    {
+        get
+        {
+            var gradeName = RegisterClass?.SchoolGrade?.SystemGrade?.Name 
+                         ?? PreviousSchoolGrade?.SystemGrade?.Name 
+                         ?? "No Grade";
+            return $"{Surname ?? ""}, {Name ?? ""} {gradeName}".Trim();
+        }
+    }
+
+    /// <summary>
+    /// Gets the learner's full name without grade: "Surname, Name"
+    /// </summary>
+    [NotMapped]
+    public string FullName => $"{Surname ?? ""}, {Name ?? ""}".Trim(' ', ',');
+
+    /// <summary>
+    /// Gets the current grade name, safely handling null navigation properties
+    /// Falls back to PreviousSchoolGrade if RegisterClass is null
+    /// </summary>
+    [NotMapped]
+    public string? GradeName => RegisterClass?.SchoolGrade?.SystemGrade?.Name 
+                             ?? PreviousSchoolGrade?.SystemGrade?.Name;
 }
 
 public enum MedicalTransport

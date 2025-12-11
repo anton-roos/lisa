@@ -116,7 +116,7 @@
                             <RowTemplate>
                                 <MudTd DataLabel="Name">@context.Name</MudTd>
                                 <MudTd DataLabel="Grade">@context.SchoolGrade?.SystemGrade?.Name</MudTd>
-                                <MudTd DataLabel="Type">@context.CombinationType</MudTd>
+                                <MudTd DataLabel="Type">@context.Type</MudTd>
                                 <MudTd DataLabel="Subjects">
                                     @if (context.Subjects != null && context.Subjects.Any())
                                     {
@@ -254,27 +254,13 @@
         {
             await using var context = await DbContextFactory.CreateDbContextAsync();
 
-            // Get distinct academic years from archived data
-            var resultYears = await context.ResultSets
-                .Where(rs => rs.SchoolGrade!.SchoolId == _selectedSchool!.Id && rs.IsArchived && rs.AcademicYear.HasValue)
-                .Select(rs => rs.AcademicYear!.Value)
+            // Get distinct academic years from the AcademicYears table for this school
+            _academicYears = await context.AcademicYears
+                .Where(ay => ay.SchoolId == _selectedSchool!.Id)
+                .Select(ay => ay.Year)
                 .Distinct()
+                .OrderByDescending(y => y)
                 .ToListAsync();
-
-            var combinationYears = await context.Combinations
-                .Where(c => c.SchoolGrade!.SchoolId == _selectedSchool!.Id && c.IsArchived && c.AcademicYear.HasValue)
-                .Select(c => c.AcademicYear!.Value)
-                .Distinct()
-                .ToListAsync();
-
-            var recordYears = await context.LearnerAcademicRecords
-                .Include(r => r.SchoolGrade)
-                .Where(r => r.SchoolGrade!.SchoolId == _selectedSchool!.Id)
-                .Select(r => r.Year)
-                .Distinct()
-                .ToListAsync();
-
-            _academicYears = resultYears.Union(combinationYears).Union(recordYears).Distinct().ToList();
         }
         catch (Exception ex)
         {
@@ -295,7 +281,19 @@
 
             await using var context = await DbContextFactory.CreateDbContextAsync();
 
-            // Load archived result sets
+            // Get the academic year record
+            var academicYear = await context.AcademicYears
+                .FirstOrDefaultAsync(ay => ay.SchoolId == _selectedSchool.Id && ay.Year == _selectedYear);
+
+            if (academicYear == null)
+            {
+                _archivedResultSets = new List<ResultSet>();
+                _archivedCombinations = new List<Combination>();
+                _learnerRecords = new List<LearnerAcademicRecord>();
+                return;
+            }
+
+            // Load result sets for selected academic year
             _archivedResultSets = await context.ResultSets
                 .Include(rs => rs.Subject)
                 .Include(rs => rs.SchoolGrade)
@@ -303,20 +301,18 @@
                 .Include(rs => rs.AssessmentType)
                 .Include(rs => rs.Results)
                 .Where(rs => rs.SchoolGrade!.SchoolId == _selectedSchool.Id && 
-                             rs.IsArchived && 
-                             rs.AcademicYear == _selectedYear)
+                             rs.AcademicYearId == academicYear.Id)
                 .OrderByDescending(rs => rs.AssessmentDate)
                 .ToListAsync();
 
-            // Load archived combinations
+            // Load combinations for selected academic year
             _archivedCombinations = await context.Combinations
                 .IgnoreQueryFilters() // Include deleted combinations
                 .Include(c => c.SchoolGrade)
                     .ThenInclude(sg => sg!.SystemGrade)
                 .Include(c => c.Subjects)
                 .Where(c => c.SchoolGrade!.SchoolId == _selectedSchool.Id && 
-                           c.IsArchived && 
-                           c.AcademicYear == _selectedYear)
+                           c.AcademicYearId == academicYear.Id)
                 .ToListAsync();
 
             // Load learner academic records
@@ -327,7 +323,7 @@
                 .Include(r => r.RegisterClass)
                 .Include(r => r.Combination)
                 .Where(r => r.SchoolGrade!.SchoolId == _selectedSchool.Id && 
-                           r.Year == _selectedYear)
+                           r.AcademicYearId == academicYear.Id)
                 .OrderBy(r => r.Learner!.Surname)
                 .ThenBy(r => r.Learner!.Name)
                 .ToListAsync();

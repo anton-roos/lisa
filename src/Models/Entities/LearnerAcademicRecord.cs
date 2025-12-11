@@ -3,12 +3,10 @@ using Lisa.Enums;
 
 namespace Lisa.Models.Entities;
 
-public class LearnerAcademicRecord
+public class LearnerAcademicRecord : AcademicEntity
 {
-    public Guid Id { get; set; }
     public Guid LearnerId { get; set; }
     public Learner? Learner { get; set; }
-    public int Year { get; set; }
     public Guid SchoolGradeId { get; set; }
     public SchoolGrade? SchoolGrade { get; set; }
     public Guid? RegisterClassId { get; set; }
@@ -21,6 +19,5 @@ public class LearnerAcademicRecord
     [MaxLength(512)]
     public string? Comment { get; set; }
     public PromotionStatus Outcome { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ProcessedAt { get; set; }
 }

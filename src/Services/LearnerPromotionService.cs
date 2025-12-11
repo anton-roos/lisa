@@ -12,80 +12,16 @@ public class LearnerPromotionService
     ILogger<LearnerPromotionService> logger
 )
 {
+    /// <summary>
+    /// DEPRECATED: Use SchoolService.ActivateYearEndModeAsync instead.
+    /// This method is kept for reference but should not be called.
+    /// </summary>
+    [Obsolete("Use SchoolService.ActivateYearEndModeAsync instead which properly handles academic year transitions.")]
     public async Task<bool> EnterYearEndModeAsync(Guid schoolId, int academicYear)
     {
-        try
-        {
-            await using var context = await dbContextFactory.CreateDbContextAsync();
-            var school = await context.Schools
-                .Include(s => s.Learners!)
-                    .ThenInclude(l => l.LearnerSubjects!)
-                        .ThenInclude(ls => ls.Subject)
-                .Include(s => s.Learners!)
-                    .ThenInclude(l => l.Combination)
-                .Include(s => s.Learners!)
-                    .ThenInclude(l => l.RegisterClass)
-                .FirstOrDefaultAsync(s => s.Id == schoolId);
-
-            if (school == null)
-            {
-                logger.LogWarning("School {SchoolId} not found.", schoolId);
-                return false;
-            }
-
-            if (school.IsYearEndMode)
-            {
-                logger.LogWarning("School {SchoolId} is already in Year End Mode.", schoolId);
-                return false;
-            }
-
-            var activeLearners = school.Learners?.Where(l => l.Status == Lisa.Enums.LearnerStatus.Active).ToList() ?? [];
-
-            foreach (var learner in activeLearners)
-            {
-                // Archive current state
-                var subjectSnapshot = learner.LearnerSubjects?
-                    .Select(ls => new { ls.SubjectId, ls.Subject?.Name, ls.Subject?.Code })
-                    .ToList();
-
-                var historyRecord = new LearnerAcademicRecord
-                {
-                    Id = Guid.NewGuid(),
-                    LearnerId = learner.Id,
-                    Year = academicYear,
-                    SchoolGradeId = learner.RegisterClass?.SchoolGradeId ?? learner.Combination?.SchoolGradeId ?? Guid.Empty,
-                    RegisterClassId = learner.RegisterClassId,
-                    CombinationId = learner.CombinationId,
-                    SubjectSnapshot = subjectSnapshot != null ? JsonSerializer.Serialize(subjectSnapshot) : "[]",
-                    Outcome = PromotionStatus.PromotionPending,
-                    CreatedAt = DateTime.UtcNow
-                };
-                
-                context.LearnerAcademicRecords.Add(historyRecord);
-
-                // Update Learner State
-                learner.Status = LearnerStatus.PendingPromotion;
-                learner.RegisterClassId = null;
-                learner.CombinationId = null;
-                
-                // Clear subjects
-                if (learner.LearnerSubjects != null)
-                {
-                    context.LearnerSubjects.RemoveRange(learner.LearnerSubjects);
-                }
-            }
-
-            school.IsYearEndMode = true;
-            await context.SaveChangesAsync();
-            
-            logger.LogInformation("School {SchoolId} entered Year End Mode for year {Year}.", schoolId, academicYear);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error entering Year End Mode for school {SchoolId}.", schoolId);
-            return false;
-        }
+        // This method is deprecated - use SchoolService.ActivateYearEndModeAsync
+        logger.LogWarning("EnterYearEndModeAsync is deprecated. Use SchoolService.ActivateYearEndModeAsync instead.");
+        return false;
     }
 
     public async Task<bool> PromoteLearnerAsync(Guid learnerId, PromotionStatus outcome, string? comment = null)
@@ -128,16 +64,27 @@ public class LearnerPromotionService
                 .Include(l => l.RegisterClass)
                     .ThenInclude(rc => rc!.SchoolGrade)
                         .ThenInclude(sg => sg!.SystemGrade)
+                .Include(l => l.PreviousSchoolGrade)
+                    .ThenInclude(sg => sg!.SystemGrade)
                 .Include(l => l.School)
                 .FirstOrDefaultAsync(l => l.Id == learnerId);
 
-            if (learner == null || learner.RegisterClass?.SchoolGrade == null)
+            if (learner == null)
             {
-                logger.LogWarning("Learner {LearnerId} not found or has no current grade.", learnerId);
+                logger.LogWarning("Learner {LearnerId} not found.", learnerId);
                 return null;
             }
 
-            var currentSystemGrade = learner.RegisterClass.SchoolGrade.SystemGrade!;
+            // Use PreviousSchoolGrade if available (year-end mode), otherwise use current RegisterClass grade
+            SchoolGrade? currentGrade = learner.PreviousSchoolGrade ?? learner.RegisterClass?.SchoolGrade;
+            
+            if (currentGrade?.SystemGrade == null)
+            {
+                logger.LogWarning("Learner {LearnerId} has no current or previous grade.", learnerId);
+                return null;
+            }
+
+            var currentSystemGrade = currentGrade.SystemGrade;
             var nextSequenceNumber = currentSystemGrade.SequenceNumber + 1;
 
             // Find the next grade in the same school
@@ -289,6 +236,11 @@ public class LearnerPromotionService
             
             return await context.Learners
                 .Include(l => l.RegisterClass)
+                    .ThenInclude(rc => rc!.SchoolGrade)
+                        .ThenInclude(sg => sg!.SystemGrade)
+                .Include(l => l.PreviousSchoolGrade)
+                    .ThenInclude(sg => sg!.SystemGrade)
+                .Include(l => l.PreviousRegisterClass)
                     .ThenInclude(rc => rc!.SchoolGrade)
                         .ThenInclude(sg => sg!.SystemGrade)
                 .Include(l => l.LearnerSubjects!)

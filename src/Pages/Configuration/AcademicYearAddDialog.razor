@@ -1,0 +1,59 @@
+@using Lisa.Models.Entities
+@using MudBlazor
+@inject SchoolService SchoolService
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudNumericField T="int" 
+                             Label="Year" 
+                             @bind-Value="_year"
+                             Min="2000" 
+                             Max="2100"
+                             Variant="Variant.Outlined"
+                             HelperText="Enter the academic year (e.g., 2025)" />
+            
+            @if (_yearExists)
+            {
+                <MudAlert Severity="Severity.Warning">
+                    This academic year already exists for this school.
+                </MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="Submit"
+                   Disabled="@(_yearExists || _saving)">
+            @(_saving ? "Adding..." : "Add")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public Guid SchoolId { get; set; }
+    [Parameter] public List<int> ExistingYears { get; set; } = [];
+
+    private int _year = DateTime.Now.Year;
+    private bool _saving;
+    private bool _yearExists => ExistingYears.Contains(_year);
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        if (_yearExists) return;
+
+        _saving = true;
+        StateHasChanged();
+
+        await SchoolService.AddAcademicYearAsync(SchoolId, _year);
+
+        _saving = false;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+}

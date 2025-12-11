@@ -7,6 +7,8 @@ using System.Security.Claims;
 
 namespace Lisa.Services;
 
+public record SchoolDeleteCounts(int StaffCount, int LearnerCount, int RegisterClassCount);
+
 public class SchoolService(
     IDbContextFactory<LisaDbContext> dbContextFactory,
     UiEventService uiEventService,
@@ -97,6 +99,130 @@ public class SchoolService(
     // Backward compatibility methods
     public async Task<School?> GetSelectedSchoolAsync() => await GetCurrentSchoolAsync();
     public async Task<List<School>> GetAllAsync() => await GetAllSchoolsAsync();
+
+    public async Task<List<AcademicYear>> GetAcademicYearsForSchoolAsync(Guid schoolId)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+        return await context.AcademicYears
+            .AsNoTracking()
+            .Where(ay => ay.SchoolId == schoolId)
+            .OrderByDescending(ay => ay.Year)
+            .ToListAsync();
+    }
+
+    public async Task<AcademicYear?> GetCurrentAcademicYearAsync(Guid schoolId)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+        return await context.AcademicYears
+            .AsNoTracking()
+            .FirstOrDefaultAsync(ay => ay.SchoolId == schoolId && ay.IsCurrent);
+    }
+
+    public async Task<Guid?> GetCurrentAcademicYearIdAsync(Guid schoolId)
+    {
+        var academicYear = await GetCurrentAcademicYearAsync(schoolId);
+        return academicYear?.Id;
+    }
+
+    public async Task<AcademicYear?> AddAcademicYearAsync(Guid schoolId, int year)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+        
+        // Check if academic year already exists for this school
+        var existing = await context.AcademicYears
+            .FirstOrDefaultAsync(ay => ay.SchoolId == schoolId && ay.Year == year);
+        
+        if (existing != null)
+        {
+            return null; // Already exists
+        }
+
+        // Check if this is the first academic year for the school - if so, set as current
+        var hasAnyAcademicYear = await context.AcademicYears
+            .AnyAsync(ay => ay.SchoolId == schoolId);
+
+        var academicYear = new AcademicYear
+        {
+            Id = Guid.NewGuid(),
+            SchoolId = schoolId,
+            Year = year,
+            IsCurrent = !hasAnyAcademicYear, // First year becomes current automatically
+            CreatedAt = DateTime.UtcNow
+        };
+
+        context.AcademicYears.Add(academicYear);
+        await context.SaveChangesAsync();
+        
+        if (!hasAnyAcademicYear)
+        {
+            logger.LogInformation("Created first academic year {Year} for school {SchoolId} - set as current", year, schoolId);
+        }
+        
+        return academicYear;
+    }
+
+    public async Task<bool> SetCurrentAcademicYearAsync(Guid schoolId, Guid academicYearId)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+        
+        // Verify the target academic year exists and belongs to this school
+        var targetYear = await context.AcademicYears
+            .FirstOrDefaultAsync(ay => ay.Id == academicYearId && ay.SchoolId == schoolId);
+        
+        if (targetYear == null)
+        {
+            logger.LogWarning("Academic year {AcademicYearId} not found for school {SchoolId}", academicYearId, schoolId);
+            return false;
+        }
+
+        // Set all academic years for this school: only the target becomes current
+        var allYears = await context.AcademicYears
+            .Where(ay => ay.SchoolId == schoolId)
+            .ToListAsync();
+        
+        foreach (var year in allYears)
+        {
+            year.IsCurrent = year.Id == academicYearId;
+        }
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Set academic year {Year} as current for school {SchoolId}", targetYear.Year, schoolId);
+        return true;
+    }
+
+    public async Task<bool> DeleteAcademicYearAsync(Guid academicYearId)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+        
+        var academicYear = await context.AcademicYears.FindAsync(academicYearId);
+        if (academicYear == null)
+        {
+            return false;
+        }
+
+        // Cannot delete the current academic year - there must always be exactly one current year
+        if (academicYear.IsCurrent)
+        {
+            logger.LogWarning("Cannot delete current academic year {AcademicYearId}. A school must always have exactly one current academic year.", academicYearId);
+            return false;
+        }
+
+        // Check if there are any records linked to this academic year
+        var hasLinkedRecords = 
+            await context.RegisterClasses.AnyAsync(rc => rc.AcademicYearId == academicYearId) ||
+            await context.Combinations.AnyAsync(c => c.AcademicYearId == academicYearId) ||
+            await context.ResultSets.AnyAsync(rs => rs.AcademicYearId == academicYearId) ||
+            await context.Attendances.AnyAsync(a => a.AcademicYearId == academicYearId);
+
+        if (hasLinkedRecords)
+        {
+            return false; // Cannot delete - has linked records
+        }
+
+        context.AcademicYears.Remove(academicYear);
+        await context.SaveChangesAsync();
+        return true;
+    }
 
     private async Task<IdentityUser<Guid>?> GetCurrentUserAsync()
     {
@@ -197,6 +323,32 @@ public class SchoolService(
         }
     }
 
+    public async Task<SchoolDeleteCounts?> GetSchoolWithCountsAsync(Guid schoolId)
+    {
+        try
+        {
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+            
+            var staffCount = await context.Users.CountAsync(u => u.SchoolId == schoolId);
+            var learnerCount = await context.Learners.CountAsync(l => l.SchoolId == schoolId);
+            
+            var schoolGradeIds = await context.SchoolGrades
+                .Where(sg => sg.SchoolId == schoolId)
+                .Select(sg => sg.Id)
+                .ToListAsync();
+            
+            var registerClassCount = await context.RegisterClasses
+                .CountAsync(rc => schoolGradeIds.Contains(rc.SchoolGradeId));
+            
+            return new SchoolDeleteCounts(staffCount, learnerCount, registerClassCount);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error fetching school counts for ID: {SchoolId}", schoolId);
+            return null;
+        }
+    }
+
     public async Task<List<SchoolCurriculum>> GetSchoolCurriculumsAsync()
     {
         await using var context = await dbContextFactory.CreateDbContextAsync();
@@ -205,10 +357,20 @@ public class SchoolService(
 
     public async Task<bool> AddSchoolAsync(School school)
     {
-        return await ModifySchoolAsync(async context =>
+        var success = await ModifySchoolAsync(async context =>
         {
             await context.Schools.AddAsync(school);
         });
+
+        if (success)
+        {
+            // Automatically create the first academic year for the new school
+            var currentYear = DateTime.UtcNow.Year;
+            await AddAcademicYearAsync(school.Id, currentYear);
+            logger.LogInformation("Created initial academic year {Year} for new school {SchoolId}", currentYear, school.Id);
+        }
+
+        return success;
     }
 
     public async Task<bool> UpdateAsync(School school)
@@ -222,11 +384,185 @@ public class SchoolService(
 
     public async Task<bool> DeleteSchoolAsync(School school)
     {
-        return await ModifySchoolAsync(context =>
+        try
         {
-            context.Schools.Remove(school);
-            return Task.CompletedTask;
-        });
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+            
+            var schoolId = school.Id;
+            
+            // Get AcademicYear IDs for this school (needed for AcademicEntity queries)
+            var academicYearIds = await context.AcademicYears
+                .Where(ay => ay.SchoolId == schoolId)
+                .Select(ay => ay.Id)
+                .ToListAsync();
+            
+            // Get SchoolGrade IDs for this school
+            var schoolGradeIds = await context.SchoolGrades
+                .Where(sg => sg.SchoolId == schoolId)
+                .Select(sg => sg.Id)
+                .ToListAsync();
+            
+            // Get learner IDs for this school
+            var learnerIds = await context.Learners
+                .Where(l => l.SchoolId == schoolId)
+                .Select(l => l.Id)
+                .ToListAsync();
+            
+            // Get user IDs for this school
+            var userIds = await context.Users
+                .Where(u => u.SchoolId == schoolId)
+                .Select(u => u.Id)
+                .ToListAsync();
+            
+            // Delete in order respecting foreign key constraints
+            // Use ExecuteDeleteAsync for direct SQL execution to ensure proper ordering
+            // Use IgnoreQueryFilters() to include soft-deleted records
+            
+            // BATCH 1: Delete all AcademicEntity types BEFORE AcademicYears
+            
+            // 1. Delete Results (references ResultSets and Learners)
+            await context.Results
+                .IgnoreQueryFilters()
+                .Where(r => learnerIds.Contains(r.LearnerId))
+                .ExecuteDeleteAsync();
+            
+            // 2. Delete ResultSets (AcademicEntity - references AcademicYears, Users via CapturedById/TeacherId)
+            await context.ResultSets
+                .IgnoreQueryFilters()
+                .Where(rs => 
+                    (rs.AcademicYearId.HasValue && academicYearIds.Contains(rs.AcademicYearId.Value)) ||
+                    userIds.Contains(rs.CapturedById) ||
+                    (rs.TeacherId.HasValue && userIds.Contains(rs.TeacherId.Value)) ||
+                    (rs.SchoolGradeId.HasValue && schoolGradeIds.Contains(rs.SchoolGradeId.Value)))
+                .ExecuteDeleteAsync();
+            
+            // 3. Delete AcademicDevelopmentClasses (AcademicEntity)
+            await context.AcademicDevelopmentClasses
+                .IgnoreQueryFilters()
+                .Where(adc => adc.SchoolId == schoolId)
+                .ExecuteDeleteAsync();
+            
+            // 4. Delete AttendanceRecords first (references Attendances)
+            await context.AttendanceRecords
+                .IgnoreQueryFilters()
+                .Where(ar => ar.Attendance != null && ar.Attendance.SchoolId == schoolId)
+                .ExecuteDeleteAsync();
+            
+            // 5. Delete Attendances (AcademicEntity)
+            await context.Attendances
+                .IgnoreQueryFilters()
+                .Where(a => a.SchoolId == schoolId)
+                .ExecuteDeleteAsync();
+            
+            // 6. Delete LearnerSubjects (AcademicEntity)
+            await context.LearnerSubjects
+                .IgnoreQueryFilters()
+                .Where(ls => learnerIds.Contains(ls.LearnerId))
+                .ExecuteDeleteAsync();
+            
+            // 7. Delete LearnerAcademicRecords (AcademicEntity)
+            await context.LearnerAcademicRecords
+                .IgnoreQueryFilters()
+                .Where(lar => learnerIds.Contains(lar.LearnerId))
+                .ExecuteDeleteAsync();
+            
+            // 8. Delete LeaveEarlies (AcademicEntity)
+            await context.LeaveEarlies
+                .IgnoreQueryFilters()
+                .Where(le => le.LearnerId.HasValue && learnerIds.Contains(le.LearnerId.Value))
+                .ExecuteDeleteAsync();
+            
+            // 9. Delete RegisterClasses (AcademicEntity - references SchoolGrades and AcademicYears)
+            // Use IgnoreQueryFilters to include soft-deleted records
+            await context.RegisterClasses
+                .IgnoreQueryFilters()
+                .Where(rc => schoolGradeIds.Contains(rc.SchoolGradeId) ||
+                            (rc.AcademicYearId.HasValue && academicYearIds.Contains(rc.AcademicYearId.Value)))
+                .ExecuteDeleteAsync();
+            
+            // 10. Delete Combinations (AcademicEntity - references SchoolGrades and AcademicYears)
+            // Delete by both SchoolGradeId AND AcademicYearId to catch all references
+            // Use IgnoreQueryFilters to include soft-deleted records
+            await context.Combinations
+                .IgnoreQueryFilters()
+                .Where(c => schoolGradeIds.Contains(c.SchoolGradeId) || 
+                           (c.AcademicYearId.HasValue && academicYearIds.Contains(c.AcademicYearId.Value)))
+                .ExecuteDeleteAsync();
+            
+            // BATCH 2: Now safe to delete AcademicYears
+            
+            // 11. Delete AcademicYears
+            await context.AcademicYears
+                .IgnoreQueryFilters()
+                .Where(ay => ay.SchoolId == schoolId)
+                .ExecuteDeleteAsync();
+            
+            // BATCH 3: Delete other school-related entities
+            
+            // 12. Delete EmailCampaigns
+            await context.EmailCampaigns
+                .IgnoreQueryFilters()
+                .Where(ec => ec.SchoolId == schoolId)
+                .ExecuteDeleteAsync();
+            
+            // 13. Delete Periods
+            await context.Periods
+                .IgnoreQueryFilters()
+                .Where(p => p.SchoolId == schoolId)
+                .ExecuteDeleteAsync();
+            
+            // 14. Delete CareGroups
+            await context.CareGroups
+                .IgnoreQueryFilters()
+                .Where(cg => cg.SchoolId == schoolId)
+                .ExecuteDeleteAsync();
+            
+            // 15. Delete EmailRecipients (references Parents, Learners, Users)
+            await context.EmailRecipients
+                .IgnoreQueryFilters()
+                .Where(er => 
+                    (er.LearnerId.HasValue && learnerIds.Contains(er.LearnerId.Value)) ||
+                    (er.UserId.HasValue && userIds.Contains(er.UserId.Value)))
+                .ExecuteDeleteAsync();
+            
+            // 16. Delete Parents (references Learners)
+            await context.Parents
+                .IgnoreQueryFilters()
+                .Where(p => learnerIds.Contains(p.LearnerId))
+                .ExecuteDeleteAsync();
+            
+            // 17. Delete Learners
+            await context.Learners
+                .IgnoreQueryFilters()
+                .Where(l => l.SchoolId == schoolId)
+                .ExecuteDeleteAsync();
+            
+            // 18. Delete Users (Staff)
+            await context.Users
+                .IgnoreQueryFilters()
+                .Where(u => u.SchoolId == schoolId)
+                .ExecuteDeleteAsync();
+            
+            // 19. Delete SchoolGrades
+            await context.SchoolGrades
+                .IgnoreQueryFilters()
+                .Where(sg => sg.SchoolId == schoolId)
+                .ExecuteDeleteAsync();
+            
+            // 20. Finally delete the School
+            await context.Schools
+                .IgnoreQueryFilters()
+                .Where(s => s.Id == schoolId)
+                .ExecuteDeleteAsync();
+            
+            await uiEventService.PublishAsync(UiEvents.SchoolsUpdated, _selectedSchool);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error deleting school.");
+            throw;
+        }
     }
 
     private async Task<bool> ModifySchoolAsync(Func<LisaDbContext, Task> action)
@@ -246,7 +582,7 @@ public class SchoolService(
         }
     }
 
-    public async Task<bool> ActivateYearEndModeAsync(Guid schoolId)
+    public async Task<bool> ActivateYearEndModeAsync(Guid schoolId, Guid newAcademicYearId)
     {
         try
         {
@@ -256,6 +592,32 @@ public class SchoolService(
             if (school == null)
             {
                 logger.LogWarning("School not found with ID: {SchoolId}", schoolId);
+                return false;
+            }
+
+            // Get the current academic year (the one being archived)
+            var currentAcademicYear = await context.AcademicYears
+                .FirstOrDefaultAsync(ay => ay.SchoolId == schoolId && ay.IsCurrent);
+            
+            if (currentAcademicYear == null)
+            {
+                logger.LogWarning("No current academic year found for school {SchoolId}", schoolId);
+                return false;
+            }
+
+            // Get the new academic year that will become current
+            var newAcademicYear = await context.AcademicYears
+                .FirstOrDefaultAsync(ay => ay.Id == newAcademicYearId && ay.SchoolId == schoolId);
+            
+            if (newAcademicYear == null)
+            {
+                logger.LogWarning("New academic year {AcademicYearId} not found for school {SchoolId}", newAcademicYearId, schoolId);
+                return false;
+            }
+
+            if (newAcademicYear.Id == currentAcademicYear.Id)
+            {
+                logger.LogWarning("Cannot transition to the same academic year");
                 return false;
             }
 
@@ -273,7 +635,6 @@ public class SchoolService(
                 .Where(l => l.SchoolId == schoolId && l.Status == Enums.LearnerStatus.Active)
                 .ToListAsync();
 
-            int academicYear = DateTime.UtcNow.Year;
             int subjectsArchived = 0;
             int resultsArchived = 0;
 
@@ -288,7 +649,7 @@ public class SchoolService(
                 {
                     Id = Guid.NewGuid(),
                     LearnerId = learner.Id,
-                    Year = academicYear,
+                    AcademicYearId = currentAcademicYear.Id,
                     SchoolGradeId = learner.RegisterClass?.SchoolGradeId ?? learner.Combination?.SchoolGradeId ?? Guid.Empty,
                     RegisterClassId = learner.RegisterClassId,
                     CombinationId = learner.CombinationId,
@@ -309,45 +670,43 @@ public class SchoolService(
                     context.Set<LearnerSubject>().RemoveRange(learner.LearnerSubjects);
                 }
                 
-                // Archive all results (mark with academic year, don't delete)
+                // Results are archived via their ResultSet's AcademicYearId
                 if (learner.Results != null && learner.Results.Any())
                 {
                     resultsArchived += learner.Results.Count;
-                    foreach (var result in learner.Results)
-                    {
-                        result.AcademicYear = academicYear;
-                    }
                 }
             }
             
-            // Archive all combinations for this school
+            // Mark all combinations with the current academic year (archiving them)
             var combinations = await context.Combinations
-                .Where(c => c.SchoolGrade!.SchoolId == schoolId && !c.IsArchived)
+                .Where(c => c.SchoolGrade!.SchoolId == schoolId && c.AcademicYearId == null)
                 .ToListAsync();
                 
             foreach (var combination in combinations)
             {
-                combination.IsArchived = true;
-                combination.AcademicYear = academicYear;
+                combination.AcademicYearId = currentAcademicYear.Id;
             }
             
-            // Archive all result sets for this school
+            // Mark all result sets with the current academic year (archiving them)
             var resultSets = await context.ResultSets
                 .Include(rs => rs.SchoolGrade)
-                .Where(rs => rs.SchoolGrade!.SchoolId == schoolId && !rs.IsArchived)
+                .Where(rs => rs.SchoolGrade!.SchoolId == schoolId && rs.AcademicYearId == null)
                 .ToListAsync();
                 
             foreach (var resultSet in resultSets)
             {
-                resultSet.IsArchived = true;
-                resultSet.AcademicYear = academicYear;
+                resultSet.AcademicYearId = currentAcademicYear.Id;
             }
+
+            // Transition academic years: deactivate old, activate new
+            currentAcademicYear.IsCurrent = false;
+            newAcademicYear.IsCurrent = true;
 
             await context.SaveChangesAsync();
             await uiEventService.PublishAsync(UiEvents.SchoolsUpdated, _selectedSchool);
 
-            logger.LogInformation("Year-end mode activated for school {SchoolId}. {LearnerCount} learners archived. {SubjectsArchived} subjects removed, {ResultsArchived} results archived, {CombinationCount} combinations archived, {ResultSetCount} result sets archived.", 
-                schoolId, learners.Count, subjectsArchived, resultsArchived, combinations.Count, resultSets.Count);
+            logger.LogInformation("Year-end mode activated for school {SchoolId}. Transitioned from academic year {OldYear} to {NewYear}. {LearnerCount} learners archived. {SubjectsArchived} subjects removed, {ResultsArchived} results archived, {CombinationCount} combinations archived, {ResultSetCount} result sets archived.", 
+                schoolId, currentAcademicYear.Year, newAcademicYear.Year, learners.Count, subjectsArchived, resultsArchived, combinations.Count, resultSets.Count);
 
             return true;
         }

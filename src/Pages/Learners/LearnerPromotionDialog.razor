@@ -137,9 +137,11 @@
     {
         _learner = await LearnerPromotionService.GetLearnerByIdAsync(LearnerId);
         
-        if (_learner?.RegisterClass?.SchoolGrade != null)
+        if (_learner != null)
         {
-            _currentGrade = _learner.RegisterClass.SchoolGrade.SystemGrade?.Name;
+            // Use current grade if available, otherwise fall back to previous grade
+            var currentSchoolGrade = _learner.RegisterClass?.SchoolGrade ?? _learner.PreviousSchoolGrade;
+            _currentGrade = currentSchoolGrade?.SystemGrade?.Name;
             _nextGrade = await LearnerPromotionService.GetNextGradeForLearnerAsync(LearnerId);
         }
     }

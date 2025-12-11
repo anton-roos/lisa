@@ -10,6 +10,8 @@
 @inject RegisterClassService RegisterClassService
 @inject SubjectService SubjectService
 @inject CareGroupService CareGroupService
+@inject LearnerPromotionService LearnerPromotionService
+@inject SchoolGradeService SchoolGradeService
 
 @inherits EventAwareComponentBase
 
@@ -89,12 +91,32 @@
 
             <div class="mb-3">
                 <label for="RegisterClassId">Register Class</label>
+                @if (_previousRegisterClass != null)
+                {
+                    <div class="alert alert-info mb-2">
+                        <strong>Previous Register Class (Last Year):</strong> @_previousRegisterClass.Name 
+                        (@_previousRegisterClass.SchoolGrade?.SystemGrade?.Name)
+                    </div>
+                }
+                @if (_learnerModel.Status == LearnerStatus.Promoted || _learnerModel.Status == LearnerStatus.Retained)
+                {
+                    <div class="alert alert-warning mb-2">
+                        @if (_learnerModel.Status == LearnerStatus.Promoted)
+                        {
+                            <strong>Promoted:</strong> <text>Showing register classes for the next grade.</text>
+                        }
+                        else
+                        {
+                            <strong>Retained:</strong> <text>Showing register classes for the same grade as last year.</text>
+                        }
+                    </div>
+                }
                 <InputSelect id="RegisterClassId" class="form-control" @bind-Value="_learnerModel.RegisterClassId"
                              TValue="Guid?" @oninput="RegisterClassSelected">
                     <option value="">Select Register Class</option>
                     @foreach (var registerClass in _registerClasses)
                     {
-                        <option value="@registerClass.Id.ToString()">@registerClass.Name</option>
+                        <option value="@registerClass.Id.ToString()">@registerClass.Name (@registerClass.SchoolGrade?.SystemGrade?.Name)</option>
                     }
                 </InputSelect>
             </div>
@@ -328,11 +350,13 @@
     private List<Subject>? _mathSubjects;
     private List<Subject>? _extraSubjects;
     private RegisterClass? _currentRegisterClass;
+    private RegisterClass? _previousRegisterClass;
     private School? _selectedSchool;
     private IEnumerable<Combination>? _combinationsToChoseFrom;
     private string? _alertMessage;
     private string _alertType = "success";
     private EditContext? _parentEditContext;
+    private Learner? _existingLearner;
 
     private int MathSelection
     {
@@ -380,7 +404,17 @@
     {
         if (_selectedSchool != null)
         {
-            _registerClasses = await RegisterClassService.GetBySchoolIdAsync(_selectedSchool.Id);
+            // For promoted/retained learners, filter register classes appropriately
+            if (_existingLearner != null && (_learnerModel.Status == LearnerStatus.Promoted || _learnerModel.Status == LearnerStatus.Retained))
+            {
+                await LoadRegisterClassesForPromotedOrRetainedLearner();
+            }
+            else
+            {
+                // Normal case - show active (non-archived) register classes
+                _registerClasses = await RegisterClassService.GetActiveBySchoolIdAsync(_selectedSchool.Id);
+            }
+            
             _allCombinations = await CombinationService.GetCombinationsBySchoolId(_selectedSchool.Id);
             _careGroups = await CareGroupService.GetBySchoolAsync(_selectedSchool.Id);
             _mathSubjects = await SubjectService.GetMathSubjectsAsync();
@@ -388,11 +422,11 @@
                                 .Where(s => s.SubjectType == SubjectType.Combination)
                                 .ToList();
         }
-        else if (_learnerModel.RegisterClassId.HasValue)
+        else if (_existingLearner != null)
         {
-            _registerClasses = await RegisterClassService.GetBySchoolIdAsync(_learnerModel.SchoolId);
-            _allCombinations = await CombinationService.GetCombinationsBySchoolId(_learnerModel.SchoolId);
-            _careGroups = await CareGroupService.GetBySchoolAsync(_learnerModel.SchoolId);
+            _registerClasses = await RegisterClassService.GetActiveBySchoolIdAsync(_existingLearner.SchoolId);
+            _allCombinations = await CombinationService.GetCombinationsBySchoolId(_existingLearner.SchoolId);
+            _careGroups = await CareGroupService.GetBySchoolAsync(_existingLearner.SchoolId);
             _mathSubjects = await SubjectService.GetMathSubjectsAsync();
             _extraSubjects = (await SubjectService.GetAllAsync())
                                 .Where(s => s.SubjectType == SubjectType.Combination)
@@ -407,52 +441,52 @@
 
     private async Task LoadExistingLearner(Guid learnerId)
     {
-        var existingLearner = await LearnerService.GetByIdAsync(learnerId);
+        _existingLearner = await LearnerService.GetByIdAsync(learnerId);
 
-        if (existingLearner is null)
+        if (_existingLearner is null)
         {
             SetAlert("danger", "Learner not found.");
             NavigationManager.NavigateTo("/learners");
             return;
         }
 
-        if (existingLearner.LearnerSubjects != null)
+        if (_existingLearner.LearnerSubjects != null)
         {
             _learnerModel = new LearnerViewModel
             {
-                Id = existingLearner.Id,
-                Status = existingLearner.Status,
-                CareGroupId = existingLearner.CareGroupId,
-                CellNumber = existingLearner.CellNumber,
-                Code = existingLearner.Code,
-                Email = existingLearner.Email,
-                Surname = existingLearner.Surname,
-                IdNumber = existingLearner.IdNumber,
-                Name = existingLearner.Name,
-                RegisterClassId = existingLearner.RegisterClassId,
-                SubjectIds = existingLearner.LearnerSubjects
+                Id = _existingLearner.Id,
+                Status = _existingLearner.Status,
+                CareGroupId = _existingLearner.CareGroupId,
+                CellNumber = _existingLearner.CellNumber,
+                Code = _existingLearner.Code,
+                Email = _existingLearner.Email,
+                Surname = _existingLearner.Surname,
+                IdNumber = _existingLearner.IdNumber,
+                Name = _existingLearner.Name,
+                RegisterClassId = _existingLearner.RegisterClassId,
+                SubjectIds = _existingLearner.LearnerSubjects
                                 .Where(ls => ls.LearnerSubjectType != LearnerSubjectType.Additional)
                                 .Select(ls => ls.SubjectId)
                                 .ToList(),
-                ExtraSubjectIds = existingLearner.LearnerSubjects
+                ExtraSubjectIds = _existingLearner.LearnerSubjects
                                 .Where(ls => ls.LearnerSubjectType == LearnerSubjectType.Additional)
                                 .Select(ls => ls.SubjectId)
                                 .ToList(),
                 MathSelection = 0,
-                Allergies = existingLearner.Allergies,
-                MedicalAidName = existingLearner.MedicalAidName,
-                MedicalAidNumber = existingLearner.MedicalAidNumber,
-                MedicalAidPlan = existingLearner.MedicalAidPlan,
-                MedicalAilments = existingLearner.MedicalAilments,
-                MedicalInstructions = existingLearner.MedicalInstructions,
-                DietaryRequirements = existingLearner.DietaryRequirements,
-                MedicalTransport = existingLearner.MedicalTransport,
-                Gender = existingLearner.Gender
+                Allergies = _existingLearner.Allergies,
+                MedicalAidName = _existingLearner.MedicalAidName,
+                MedicalAidNumber = _existingLearner.MedicalAidNumber,
+                MedicalAidPlan = _existingLearner.MedicalAidPlan,
+                MedicalAilments = _existingLearner.MedicalAilments,
+                MedicalInstructions = _existingLearner.MedicalInstructions,
+                DietaryRequirements = _existingLearner.DietaryRequirements,
+                MedicalTransport = _existingLearner.MedicalTransport,
+                Gender = _existingLearner.Gender
             };
 
-            if (existingLearner.Parents != null)
+            if (_existingLearner.Parents != null)
             {
-                _parents = existingLearner.Parents.Select(p => new ParentViewModel
+                _parents = _existingLearner.Parents.Select(p => new ParentViewModel
                 {
                     Id = p.Id,
                     Surname = p.Surname,
@@ -465,6 +499,9 @@
                     WhatsAppNumber = p.WhatsAppNumber
                 }).ToList();
             }
+
+            // Reload dropdowns now that we know the learner status
+            await LoadDropdowns();
 
             if (_mathSubjects != null)
             {
@@ -484,7 +521,7 @@
                 {
                     foreach (var combo in _combinationsToChoseFrom)
                     {
-                        var chosenSubject = existingLearner.LearnerSubjects
+                        var chosenSubject = _existingLearner.LearnerSubjects
                             .Where(ls => ls.CombinationId == combo.Id)
                             .Select(ls => ls.SubjectId)
                             .FirstOrDefault();
@@ -671,5 +708,47 @@
     {
         _alertMessage = null;
         StateHasChanged();
+    }
+
+    private async Task LoadRegisterClassesForPromotedOrRetainedLearner()
+    {
+        if (_existingLearner == null || _selectedSchool == null) return;
+
+        // Load previous register class info for display
+        if (_existingLearner.PreviousRegisterClassId.HasValue)
+        {
+            _previousRegisterClass = await RegisterClassService.GetArchivedByIdAsync(_existingLearner.PreviousRegisterClassId.Value);
+            
+            // If archived class not found, try getting it normally (might not be archived yet)
+            _previousRegisterClass ??= await RegisterClassService.GetByIdAsync(_existingLearner.PreviousRegisterClassId.Value);
+        }
+
+        if (_learnerModel.Status == LearnerStatus.Promoted)
+        {
+            // Promoted learners: Show register classes for the NEXT grade
+            var nextGrade = await LearnerPromotionService.GetNextGradeForLearnerAsync(_existingLearner.Id);
+            if (nextGrade != null)
+            {
+                _registerClasses = await RegisterClassService.GetActiveByGradeIdAsync(nextGrade.Id);
+            }
+            else
+            {
+                // Fallback - show all active register classes
+                _registerClasses = await RegisterClassService.GetActiveBySchoolIdAsync(_selectedSchool.Id);
+            }
+        }
+        else if (_learnerModel.Status == LearnerStatus.Retained)
+        {
+            // Retained learners: Show register classes for the SAME grade (previous grade)
+            if (_existingLearner.PreviousSchoolGradeId.HasValue)
+            {
+                _registerClasses = await RegisterClassService.GetActiveByGradeIdAsync(_existingLearner.PreviousSchoolGradeId.Value);
+            }
+            else
+            {
+                // Fallback - show all active register classes
+                _registerClasses = await RegisterClassService.GetActiveBySchoolIdAsync(_selectedSchool.Id);
+            }
+        }
     }
 }

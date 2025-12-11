@@ -1,0 +1,210 @@
+@using Lisa.Models.Entities
+@inject SchoolService SchoolService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.School" Class="mr-2" />
+            @(IsEdit ? "Edit School" : "Add School")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="School.ShortName"
+                                  Label="Short Name"
+                                  Required="true"
+                                  RequiredError="Short name is required"
+                                  MaxLength="8"
+                                  Counter="8"
+                                  Immediate="true"
+                                  Validation="@((string? v) => v?.Length > 8 ? "Max 8 characters" : null)"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="School.LongName"
+                                  Label="Long Name"
+                                  Required="true"
+                                  RequiredError="Long name is required"
+                                  MaxLength="64"
+                                  Counter="64"
+                                  Immediate="true"
+                                  Validation="@((string? v) => v?.Length > 64 ? "Max 64 characters" : null)"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="School.Color"
+                                  Label="School Color (Hex)"
+                                  Placeholder="#FFFFFF"
+                                  MaxLength="7"
+                                  Counter="7"
+                                  Immediate="true"
+                                  Validation="@((string? v) => ValidateColor(v))"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.ColorLens" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Guid"
+                               @bind-Value="School.SchoolTypeId"
+                               Label="School Type"
+                               Required="true"
+                               RequiredError="School type is required"
+                               Validation="@((Guid value) => value == Guid.Empty ? "School type is required" : null)"
+                               Placeholder="-- Select School Type --"
+                               Variant="Variant.Outlined">
+                        <MudSelectItem T="Guid" Value="Guid.Empty" Disabled="true">-- Select School Type --</MudSelectItem>
+                        @foreach (var type in SchoolTypes)
+                        {
+                            <MudSelectItem T="Guid" Value="@type.Id">@type.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Guid"
+                               @bind-Value="School.SchoolCurriculumId"
+                               Label="Curriculum"
+                               Required="true"
+                               RequiredError="Curriculum is required"
+                               Validation="@((Guid value) => value == Guid.Empty ? "Curriculum is required" : null)"
+                               Placeholder="-- Select Curriculum --"
+                               Variant="Variant.Outlined">
+                        <MudSelectItem T="Guid" Value="Guid.Empty" Disabled="true">-- Select Curriculum --</MudSelectItem>
+                        @foreach (var curriculum in Curriculums)
+                        {
+                            <MudSelectItem T="Guid" Value="@curriculum.Id">@curriculum.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.subtitle1" Class="mb-2">SMTP Configuration</MudText>
+
+            <MudGrid>
+                <MudItem xs="12" sm="8">
+                    <MudTextField @bind-Value="School.SmtpHost"
+                                  Label="SMTP Host"
+                                  MaxLength="32"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="School.SmtpPort"
+                                     Label="SMTP Port"
+                                     Min="1"
+                                     Max="65535"
+                                     Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="School.SmtpUsername"
+                                  Label="SMTP Username"
+                                  MaxLength="256"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="School.SmtpPassword"
+                                  Label="SMTP Password"
+                                  InputType="InputType.Password"
+                                  MaxLength="256"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="School.SmtpEmail"
+                                  Label="SMTP Email"
+                                  MaxLength="256"
+                                  InputType="InputType.Email"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="School.FromEmail"
+                                  Label="From Email (Display)"
+                                  MaxLength="256"
+                                  InputType="InputType.Email"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   Disabled="@(!_isValid || _isSaving)"
+                   OnClick="Submit">
+            @if (_isSaving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Save
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public School School { get; set; } = new();
+    [Parameter] public List<SchoolType> SchoolTypes { get; set; } = [];
+    [Parameter] public List<SchoolCurriculum> Curriculums { get; set; } = [];
+    [Parameter] public bool IsEdit { get; set; }
+
+    private MudForm _form = null!;
+    private bool _isValid;
+    private bool _isSaving;
+
+    private static string? ValidateColor(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        if (value.Length > 7) return "Color must be max 7 characters (e.g., #FF5733)";
+        if (!value.StartsWith("#")) return "Color must start with #";
+        if (!System.Text.RegularExpressions.Regex.IsMatch(value, "^#[0-9A-Fa-f]{6}$"))
+            return "Invalid hex color format (use #RRGGBB)";
+        return null;
+    }
+
+    protected override void OnInitialized()
+    {
+        if (!IsEdit)
+        {
+            School.SmtpPort = 587;
+            School.SmtpHost = "smtp.office365.com";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (!_isValid) return;
+
+        // Additional validation for dropdown selections
+        if (School.SchoolTypeId == Guid.Empty || School.SchoolCurriculumId == Guid.Empty)
+        {
+            return;
+        }
+
+        _isSaving = true;
+        try
+        {
+            if (IsEdit)
+            {
+                await SchoolService.UpdateAsync(School);
+            }
+            else
+            {
+                await SchoolService.AddSchoolAsync(School);
+            }
+            MudDialog.Close(DialogResult.Ok(School));
+        }
+        catch (Exception)
+        {
+            MudDialog.Close(DialogResult.Cancel());
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

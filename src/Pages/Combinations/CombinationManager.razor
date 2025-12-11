@@ -15,7 +15,14 @@
         <h3>@(IsEdit ? "Edit Subject Combination" : "Add Subject Combination")</h3>
 
 
-        @if (!_schoolGrades.Any())
+        @if (_school?.IsYearEndMode == true && !IsEdit)
+        {
+            <div class="alert alert-warning">
+                <strong>Year-End Mode Active</strong><br />
+                New combinations cannot be created while the school is in year-end mode. Please complete the year-end process first.
+            </div>
+        }
+        else if (!_schoolGrades.Any())
         {
             <div class="alert alert-warning">
                 No grades found that supports combinations. Please add a grade that supports combinations first before adding a combination.
@@ -30,6 +37,17 @@
                 <div class="mb-3">
                     <label class="form-label">Name</label>
                     <InputText class="form-control" @bind-Value="_combinationModel.Name" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Academic Year</label>
+                    <InputSelect class="form-select" @bind-Value="_combinationModel.AcademicYearId">
+                        <option value="">-- Select Academic Year --</option>
+                        @foreach (var year in _academicYears)
+                        {
+                            <option value="@year.Id">@year.Year</option>
+                        }
+                    </InputSelect>
                 </div>
 
                 <div class="mb-3">
@@ -101,7 +119,9 @@
     private List<SchoolGrade> _schoolGrades = [];
     private List<Subject> _combinationSubjects = [];
     private List<int> _selectedSubjectIds = [];
+    private List<AcademicYear> _academicYears = [];
     private string _searchText = string.Empty;
+    private School? _school;
 
     private bool IsFormValid =>
     _combinationModel.CombinationType != CombinationType.MathCombination || (_selectedSubjectIds.Count == 2);
@@ -112,18 +132,28 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var school = await SchoolService.GetSelectedSchoolAsync();
-        if (school == null)
+        _school = await SchoolService.GetSelectedSchoolAsync();
+        if (_school == null)
         {
             return;
         }
 
         _combinationSubjects = await SubjectService.GetAllCombinationSubjectsAsync();
-        _schoolGrades = await SchoolGradeService.GetCombinationGradesForSchool(school.Id);
+        _schoolGrades = await SchoolGradeService.GetCombinationGradesForSchool(_school.Id);
+        _academicYears = await SchoolService.GetAcademicYearsForSchoolAsync(_school.Id);
 
         if (IsEdit)
         {
             if (Id != null) await LoadCombination(Id.Value);
+        }
+        else
+        {
+            // Pre-select current academic year for new combinations
+            var currentYear = _academicYears.FirstOrDefault(ay => ay.IsCurrent);
+            if (currentYear != null)
+            {
+                _combinationModel.AcademicYearId = currentYear.Id;
+            }
         }
     }
 
@@ -142,7 +172,8 @@
                 Id = existing.Id,
                 Name = existing.Name,
                 GradeId = existing.SchoolGradeId,
-                CombinationType = existing.CombinationType,
+                CombinationType = existing.Type,
+                AcademicYearId = existing.AcademicYearId,
                 SubjectIds = existing.Subjects.Select(s => s.Id).ToList()
             };
 

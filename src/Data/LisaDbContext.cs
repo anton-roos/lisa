@@ -39,6 +39,7 @@ public class LisaDbContext
     public DbSet<AcademicDevelopmentClass> AcademicDevelopmentClasses { get; set; } = null!;
     public DbSet<AcademicPlan> AcademicPlans { get; set; } = null!;
     public DbSet<LearnerAcademicRecord> LearnerAcademicRecords { get; set; } = null!;
+    public DbSet<AcademicYear> AcademicYears { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -81,6 +82,18 @@ public class LisaDbContext
             .WithOne(s => s.School)
             .HasForeignKey(l => l.SchoolId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Academic Years
+        modelBuilder.Entity<AcademicYear>()
+            .HasKey(ay => ay.Id);
+        modelBuilder.Entity<AcademicYear>()
+            .HasOne(ay => ay.School)
+            .WithMany()
+            .HasForeignKey(ay => ay.SchoolId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<AcademicYear>()
+            .HasIndex(ay => new { ay.SchoolId, ay.Year })
+            .IsUnique();
 
         modelBuilder.Entity<CareGroup>()
             .HasKey(cg => cg.Id);
@@ -196,7 +209,10 @@ public class LisaDbContext
 
         // Classes and Subjects
         modelBuilder.Entity<LearnerSubject>()
-            .HasKey(ls => new { ls.LearnerId, ls.SubjectId });
+            .HasKey(ls => ls.Id);
+        modelBuilder.Entity<LearnerSubject>()
+            .HasIndex(ls => new { ls.LearnerId, ls.SubjectId })
+            .IsUnique();
         modelBuilder.Entity<LearnerSubject>()
             .HasOne(ls => ls.Learner)
             .WithMany(l => l.LearnerSubjects)
@@ -465,6 +481,8 @@ public class LisaDbContext
 
         modelBuilder.Entity<LeaveEarly>(entity =>
         {
+           entity.HasKey(le => le.Id);
+
            entity.HasOne(le => le.AttendanceRecord)
                  .WithMany()
                  .HasForeignKey(le => le.AttendenceRecordId)

@@ -1,0 +1,104 @@
+@using Lisa.Models.Entities
+@inject SchoolService SchoolService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6" Color="Color.Error">
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" />
+            Confirm Delete School
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            Are you sure you want to delete the school <strong>@School.ShortName</strong>?
+        </MudAlert>
+
+        <MudText Class="mb-3">
+            This will delete the record permanently. Once deleted, this cannot be rolled back.
+        </MudText>
+
+        <MudText Class="mb-2">
+            This will delete the <strong>Principal</strong> and all <strong>Staff</strong> along with all
+            <strong>Learners</strong> and <strong>Subject Combinations</strong> belonging to this School.
+        </MudText>
+
+        <MudText Typo="Typo.subtitle2" Class="mt-3 mb-2">This School has:</MudText>
+
+        <MudList T="string" Dense="true">
+            <MudListItem Icon="@Icons.Material.Filled.People">
+                @_staffCount Staff Members
+            </MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.School">
+                @_learnerCount Learners
+            </MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Class">
+                @_registerClassCount Register Classes
+            </MudListItem>
+        </MudList>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-4">
+                @_errorMessage
+            </MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_isDeleting">Cancel</MudButton>
+        <MudButton Color="Color.Error"
+                   Variant="Variant.Filled"
+                   Disabled="_isDeleting"
+                   OnClick="Delete">
+            @if (_isDeleting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Delete
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public School School { get; set; } = new();
+
+    private bool _isDeleting;
+    private string? _errorMessage;
+    private int _staffCount;
+    private int _learnerCount;
+    private int _registerClassCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var schoolWithCounts = await SchoolService.GetSchoolWithCountsAsync(School.Id);
+        if (schoolWithCounts != null)
+        {
+            _staffCount = schoolWithCounts.StaffCount;
+            _learnerCount = schoolWithCounts.LearnerCount;
+            _registerClassCount = schoolWithCounts.RegisterClassCount;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Delete()
+    {
+        _isDeleting = true;
+        _errorMessage = null;
+
+        try
+        {
+            await SchoolService.DeleteSchoolAsync(School);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Cannot delete this school: {ex.Message}";
+        }
+        finally
+        {
+            _isDeleting = false;
+        }
+    }
+}

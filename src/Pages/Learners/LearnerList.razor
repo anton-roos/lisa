@@ -181,10 +181,7 @@
                         </HeaderContent>
                         <RowTemplate Context="learner">
                             <MudTd DataLabel="Name">
-                                <MudText Typo="Typo.body1">@learner.Surname, @learner.Name, @if (learner.RegisterClass?.SchoolGrade != null)
-                                {
-                                        @learner.RegisterClass.SchoolGrade.SystemGrade.Name
-                                } </MudText>
+                                <MudText Typo="Typo.body1">@learner.DisplayName</MudText>
                             </MudTd>
                             <MudTd DataLabel="Code">
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">@learner.Code</MudText>
@@ -195,6 +192,14 @@
                                     <MudChip T="string" Size="Size.Small" Color="Color.Info" OnClick="Promote">
                                         @learner.RegisterClass.Name
                                     </MudChip>
+                                }
+                                else if (learner.PreviousRegisterClass != null)
+                                {
+                                    <MudTooltip Text="Previous year's register class">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">
+                                            @learner.PreviousRegisterClass.Name (prev)
+                                        </MudChip>
+                                    </MudTooltip>
                                 }
                                 else
                                 {
@@ -477,7 +482,7 @@
             CloseOnEscapeKey = true
         };
 
-        await DialogService.ShowAsync<LearnerViewDialog>($"Learner: {learner.Surname}, {learner.Name}", parameters, options);
+        await DialogService.ShowAsync<LearnerViewDialog>($"Learner: {learner.DisplayName}", parameters, options);
     }
 
     private void AddLearner()
@@ -496,7 +501,7 @@
 
         var dialog = await DialogService.ShowMessageBox(
             title: "Disable Learner",
-            message: $"Are you sure you want to disable {learner.Surname}, {learner.Name}? This will prevent them from appearing in most views.",
+            message: $"Are you sure you want to disable {learner.DisplayName}? This will prevent them from appearing in most views.",
             yesText: "Disable",
             cancelText: "Cancel",
             options: options);
@@ -556,7 +561,7 @@
 
         var dialog = await DialogService.ShowMessageBox(
             title: "Enable Learner",
-            message: $"Are you sure you want to enable {learner.Surname}, {learner.Name}?",
+            message: $"Are you sure you want to enable {learner.DisplayName}?",
             yesText: "Enable",
             cancelText: "Cancel",
             options: options);

@@ -501,7 +501,7 @@
                 LeaveEarlyFormModel.SignOutTime = TimeOnly.FromDateTime(DateTime.UtcNow);
 
             // Persist the Leave Early record
-            bool isSaved = await LeaveEarlyService.SaveLeaveEarlyAsync(LeaveEarlyFormModel);
+            bool isSaved = await LeaveEarlyService.SaveLeaveEarlyAsync(LeaveEarlyFormModel, _selectedSchool!.Id);
             if (isSaved)
             {
                 // Create a proper checkout attendance record instead of modifying the existing one

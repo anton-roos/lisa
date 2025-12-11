@@ -23,9 +23,11 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
     public async Task<List<Combination>> GetCombinationsBySchoolId(Guid schoolId)
     {
         await using var context = await dbContextFactory.CreateDbContextAsync();
+        
         return await context.Combinations
             .AsNoTracking()
-            .Where(c => c.SchoolGrade!.SchoolId == schoolId && !c.IsArchived)
+            .Where(c => c.SchoolGrade!.SchoolId == schoolId &&
+                        c.AcademicYear != null && c.AcademicYear.IsCurrent)
             .Include(c => c.Subjects)
             .Include(sc => sc.SchoolGrade)
             .ThenInclude(g => g!.SystemGrade)
@@ -35,14 +37,16 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
     public async Task<IEnumerable<Combination>> GetSubjectCombinationsForSchool(School school)
     {
         await using var context = await dbContextFactory.CreateDbContextAsync();
+        
         return await context.Combinations
             .AsNoTracking()
+            .Where(sc => sc.SchoolGrade!.SchoolId == school.Id &&
+                         sc.AcademicYear != null && sc.AcademicYear.IsCurrent)
             .Include(sc => sc.Subjects)
             .Include(sc => sc.SchoolGrade)
             .ThenInclude(g => g!.School)
             .Include(sc => sc.SchoolGrade)
             .ThenInclude(g => g!.SystemGrade)
-            .Where(sc => sc.SchoolGrade!.SchoolId == school.Id && !sc.IsArchived)
             .ToListAsync();
     }
 
@@ -86,7 +90,8 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
         {
             Name = model.Name,
             SchoolGradeId = model.GradeId,
-            CombinationType = model.CombinationType,
+            Type = model.CombinationType,
+            AcademicYearId = model.AcademicYearId,
             Subjects = []
         };
 
@@ -110,17 +115,20 @@ public class CombinationService(IDbContextFactory<LisaDbContext> dbContextFactor
 
         var existingCombination = await context.Combinations
             .Include(c => c.Subjects)
+            .Include(c => c.AcademicYear)
             .FirstOrDefaultAsync(c => c.Id == model.Id)
         ?? throw new KeyNotFoundException($"Combination with ID {model.Id} not found.");
         
-        if (existingCombination.IsArchived)
+        // Check if this combination belongs to a non-current academic year
+        if (existingCombination.AcademicYear != null && !existingCombination.AcademicYear.IsCurrent)
         {
-            throw new InvalidOperationException("Cannot edit archived combinations.");
+            throw new InvalidOperationException("Cannot edit combinations from previous academic years.");
         }
 
         existingCombination.Name = model.Name;
         existingCombination.SchoolGradeId = model.GradeId;
-        existingCombination.CombinationType = model.CombinationType;
+        existingCombination.Type = model.CombinationType;
+        existingCombination.AcademicYearId = model.AcademicYearId;
 
         var currentSubjectIds = existingCombination.Subjects?
             .Select(s => s.Id)

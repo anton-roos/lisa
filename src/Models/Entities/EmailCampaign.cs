@@ -19,3 +19,14 @@ public class EmailCampaign
     public DateTime? FromDate { get; set; }
     public DateTime? ToDate { get; set; }
 }
+
+public enum EmailCampaignStatus
+{
+    Draft,
+    Paused,
+    Scheduled,
+    Sending,
+    Sent,
+    Cancelled,
+    Failed
+}

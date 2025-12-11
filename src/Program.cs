@@ -85,7 +85,6 @@ builder.Services.AddScoped<ResultService>();
 builder.Services.AddScoped<UiEventService>();
 builder.Services.AddScoped<SchoolService>();
 builder.Services.AddScoped<AttendanceService>();
-builder.Services.AddScoped<DailyRegisterService>();
 builder.Services.AddScoped<ProtectedSessionStorage>();
 builder.Services.AddScoped<SystemGradeService>();
 builder.Services.AddScoped<EmailService>();

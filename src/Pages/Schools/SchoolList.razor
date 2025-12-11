@@ -74,29 +74,87 @@
 
 @code {
     private List<School>? _schools;
+    private List<SchoolType> _schoolTypes = [];
+    private List<SchoolCurriculum> _curriculums = [];
 
     protected override async Task OnInitializedAsync()
     {
         _schools = await SchoolService.GetAllAsync();
+        _schoolTypes = await SchoolService.GetSchoolTypesAsync();
+        _curriculums = await SchoolService.GetSchoolCurriculumsAsync();
     }
 
-    private void EditSchool(School school)
+    private async Task EditSchool(School school)
     {
-        NavigationManager.NavigateTo($"schools/edit/{school.Id}");
+        var parameters = new DialogParameters<SchoolFormDialog>
+        {
+            { x => x.School, school },
+            { x => x.SchoolTypes, _schoolTypes },
+            { x => x.Curriculums, _curriculums },
+            { x => x.IsEdit, true }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<SchoolFormDialog>("Edit School", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            _schools = await SchoolService.GetAllAsync();
+        }
     }
 
-    private void ViewSchool(School school)
+    private async Task ViewSchool(School school)
     {
-        NavigationManager.NavigateTo($"schools/details/{school.Id}");
+        var parameters = new DialogParameters<SchoolDetailsDialog>
+        {
+            { x => x.School, school }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<SchoolDetailsDialog>("School Details", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: "yearend" })
+        {
+            NavigationManager.NavigateTo($"/schools/yearend/{school.Id}");
+        }
     }
 
-    private void DeleteSchool(School school)
+    private async Task DeleteSchool(School school)
     {
-        NavigationManager.NavigateTo($"schools/delete/{school.Id}");
+        var parameters = new DialogParameters<SchoolDeleteDialog>
+        {
+            { x => x.School, school }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<SchoolDeleteDialog>("Delete School", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            _schools = await SchoolService.GetAllAsync();
+        }
     }
 
-    private void AddSchool()
+    private async Task AddSchool()
     {
-        NavigationManager.NavigateTo("schools/add");
+        var parameters = new DialogParameters<SchoolFormDialog>
+        {
+            { x => x.School, new School() },
+            { x => x.SchoolTypes, _schoolTypes },
+            { x => x.Curriculums, _curriculums },
+            { x => x.IsEdit, false }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<SchoolFormDialog>("Add School", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            _schools = await SchoolService.GetAllAsync();
+        }
     }
 }

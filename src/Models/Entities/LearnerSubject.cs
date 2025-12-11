@@ -1,6 +1,6 @@
 namespace Lisa.Models.Entities;
 
-public class LearnerSubject
+public class LearnerSubject : AcademicEntity
 {
     public Guid LearnerId { get; set; }
     public Learner Learner { get; set; } = null!;
@@ -9,4 +9,12 @@ public class LearnerSubject
     public LearnerSubjectType LearnerSubjectType { get; set; }
     public Guid? CombinationId { get; set; }
     public Combination? Combination { get; set; }
+}
+
+public enum LearnerSubjectType
+{
+    Compulsory,
+    Combination,
+    MathCombination,
+    Additional
 }

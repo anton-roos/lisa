@@ -1,18 +1,21 @@
 using System.ComponentModel.DataAnnotations;
+using Lisa.Models;
 
 namespace Lisa.Models.Entities;
 
-public class Combination
+public class Combination : AcademicEntity
 {
-    public Guid Id { get; set; }
     [MaxLength(30)]
     public string? Name { get; set; }
     public Guid SchoolGradeId { get; set; }
     public SchoolGrade? SchoolGrade { get; set; }
-    public CombinationType CombinationType { get; set; }
+    public CombinationType Type { get; set; }
     public ICollection<Subject>? Subjects { get; set; }
-    public bool IsDeleted { get; set; }
-    public DateTime? DeletedAt { get; set; }
-    public int? AcademicYear { get; set; }
-    public bool IsArchived { get; set; }
+}
+
+public enum CombinationType
+{
+    None,
+    SubjectCombination,
+    MathCombination
 }

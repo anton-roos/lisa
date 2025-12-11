@@ -1,0 +1,162 @@
+@using Lisa.Models.Entities
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Select Subjects</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_searchTerm" 
+                      Placeholder="Search subjects..." 
+                      Adornment="Adornment.Start" 
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true"
+                      Class="mb-3" />
+        
+        <div style="max-height: 400px; overflow-y: auto;">
+            @foreach (var subject in FilteredSubjects)
+            {
+                <MudPaper Class="pa-2 mb-2" Elevation="1">
+                    <div class="d-flex align-items-center">
+                        <MudCheckBox T="bool" 
+                                     Value="@IsSubjectSelected(subject.Id)"
+                                     ValueChanged="@((bool val) => ToggleSubject(subject.Id, val))"
+                                     Color="Color.Primary" />
+                        <MudText Typo="Typo.body1" Class="fw-bold me-2">@subject.Name</MudText>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">
+                            @FormatGradeRange(subject.GradesApplicable)
+                        </MudChip>
+                    </div>
+                    
+                    @if (IsSubjectSelected(subject.Id))
+                    {
+                        <div class="ms-10 mt-2">
+                            @foreach (var grade in subject.GradesApplicable?.Where(g => SchoolApplicableGrades.Contains(g)) ?? [])
+                            {
+                                <div class="d-flex align-items-center mb-1">
+                                    <MudCheckBox T="bool"
+                                                 Value="@IsGradeSelected(subject.Id, grade)"
+                                                 ValueChanged="@((bool val) => ToggleGrade(subject.Id, grade, val))"
+                                                 Size="Size.Small"
+                                                 Color="Color.Secondary" />
+                                    <MudText Typo="Typo.body2" Class="me-2">Grade @FormatGrade(grade)</MudText>
+                                    <MudChip T="string" Size="Size.Small" 
+                                             Color="@(IsGradeSelected(subject.Id, grade) ? Color.Primary : Color.Default)">
+                                        @(IsGradeSelected(subject.Id, grade) ? "Selected" : "Available")
+                                    </MudChip>
+                                </div>
+                            }
+                        </div>
+                    }
+                </MudPaper>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public List<Subject> AvailableSubjects { get; set; } = [];
+
+    [Parameter]
+    public List<TeacherSubject> SelectedSubjects { get; set; } = [];
+
+    [Parameter]
+    public List<int> SchoolApplicableGrades { get; set; } = [];
+
+    private string _searchTerm = "";
+    private List<TeacherSubject> _workingSubjects = [];
+
+    protected override void OnInitialized()
+    {
+        // Create a working copy of the selected subjects
+        _workingSubjects = SelectedSubjects.Select(s => new TeacherSubject 
+        { 
+            SubjectId = s.SubjectId, 
+            Grade = s.Grade 
+        }).ToList();
+    }
+
+    private IEnumerable<Subject> FilteredSubjects =>
+        string.IsNullOrWhiteSpace(_searchTerm)
+            ? AvailableSubjects
+            : AvailableSubjects.Where(s => s.Name!.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase));
+
+    private bool IsSubjectSelected(int subjectId) =>
+        _workingSubjects.Any(ts => ts.SubjectId == subjectId);
+
+    private bool IsGradeSelected(int subjectId, int grade) =>
+        _workingSubjects.Any(ts => ts.SubjectId == subjectId && ts.Grade == grade);
+
+    private void ToggleSubject(int subjectId, bool isSelected)
+    {
+        if (isSelected)
+        {
+            if (!IsSubjectSelected(subjectId))
+            {
+                var subject = AvailableSubjects.FirstOrDefault(s => s.Id == subjectId);
+                if (subject?.GradesApplicable?.Any() == true)
+                {
+                    var firstApplicableGrade = subject.GradesApplicable
+                        .FirstOrDefault(g => SchoolApplicableGrades.Contains(g));
+                    if (firstApplicableGrade != 0 || subject.GradesApplicable.Contains(0))
+                    {
+                        _workingSubjects.Add(new TeacherSubject { SubjectId = subjectId, Grade = firstApplicableGrade });
+                    }
+                }
+            }
+        }
+        else
+        {
+            _workingSubjects.RemoveAll(ts => ts.SubjectId == subjectId);
+        }
+    }
+
+    private void ToggleGrade(int subjectId, int grade, bool isSelected)
+    {
+        if (isSelected)
+        {
+            if (!IsGradeSelected(subjectId, grade))
+            {
+                _workingSubjects.Add(new TeacherSubject { SubjectId = subjectId, Grade = grade });
+            }
+        }
+        else
+        {
+            _workingSubjects.RemoveAll(ts => ts.SubjectId == subjectId && ts.Grade == grade);
+        }
+    }
+
+    private string FormatGrade(int grade) =>
+        grade switch
+        {
+            -2 => "RRR",
+            -1 => "RR",
+            0 => "R",
+            _ => grade.ToString()
+        };
+
+    private string FormatGradeRange(List<int>? grades)
+    {
+        if (grades == null || !grades.Any())
+            return "No Grades";
+
+        var applicableGrades = grades.Where(g => SchoolApplicableGrades.Contains(g)).ToList();
+        if (!applicableGrades.Any())
+            return "No Grades";
+
+        var minGrade = applicableGrades.Min();
+        var maxGrade = applicableGrades.Max();
+        return $"Gr {FormatGrade(minGrade)} - {FormatGrade(maxGrade)}";
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(_workingSubjects));
+}

@@ -101,7 +101,7 @@
                                     <MudTh>Attendance</MudTh>
                                 </HeaderContent>
                                 <RowTemplate>
-                                    <MudTd DataLabel="Name">@context.Surname @context.Name</MudTd>
+                                    <MudTd DataLabel="Name">@context.DisplayName</MudTd>
                                     <MudTd DataLabel="Attendance">
                                         @{
                                             var isDailyRegisterPresent = _dailyAttendanceData.TryGetValue(context.Id, out var dailyAttendance) && 
@@ -142,7 +142,7 @@
                                         <MudTh>Attendance</MudTh>
                                     </HeaderContent>
                                     <RowTemplate>
-                                        <MudTd DataLabel="Name">@context.Surname @context.Name</MudTd>
+                                        <MudTd DataLabel="Name">@context.DisplayName</MudTd>
                                         <MudTd DataLabel="Attendance">
                                             @{
                                                 var isProcessing = _processingLearnerIds.Contains(context.Id);
@@ -211,14 +211,14 @@
     private IEnumerable<Learner> FilteredSignedInLearners => _learners
         .Where(l => _attendanceData.ContainsKey(l.Id))
         .Where(l => string.IsNullOrEmpty(_searchTerm) ||
-            $"{l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+            $"{l.DisplayName} {l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
         .OrderBy(l => l.Surname)
         .ThenBy(l => l.Name);
 
     private IEnumerable<Learner> FilteredNotSignedInLearners => _learners
         .Where(l => !_attendanceData.ContainsKey(l.Id))
         .Where(l => string.IsNullOrEmpty(_searchTerm) ||
-            $"{l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+            $"{l.DisplayName} {l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
         .OrderBy(l => l.Surname)
         .ThenBy(l => l.Name);
 

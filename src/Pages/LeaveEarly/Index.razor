@@ -80,7 +80,7 @@
                                         <div class="d-flex align-items-center justify-content-between">
                                             <div class="d-flex align-items-center gap-3">
                                                 <strong
-                                                    class="mb-0">@leave.Learner?.Name @leave.Learner?.Surname</strong>
+                                                    class="mb-0">@(leave.Learner?.DisplayName ?? "Unknown")</strong>
                                             </div>
                                             <div class="d-flex flex-column flex-md-row gap-2 align-items-center">
                                                 <button type="button" class="btn btn-outline-secondary btn-sm"
@@ -548,7 +548,7 @@
                         if (!string.IsNullOrEmpty(contact.PrimaryEmail) && _selectedSchool is not null)
                         {
                             var emailBody = GenerateLeaveEarlyEmailBody(LeaveEarlyFormModel, learner, _selectedSchool);
-                            var subject = $"Leave Early Notification for {learner.Name} {learner.Surname}";
+                            var subject = $"Leave Early Notification for {learner.DisplayName}";
                             await EmailService.SendEmailAsync(contact.PrimaryEmail, subject, emailBody, _selectedSchool.Id);
                         }
                     }
@@ -576,7 +576,7 @@
 
     private string GenerateLeaveEarlyEmailBody(LeaveEarlyViewModel leave, Learner learner, School school)
     {
-        var fullName = $"{learner.Name} {learner.Surname}";
+        var fullName = learner.DisplayName;
         var date = leave.Date.ToString("dddd, dd MMMM yyyy");
         var time = leave.SignOutTime?.ToString("hh\\:mm") ?? "N/A";
         var permissionText = leave.PermissionType == PermissionType.TelephonicConfirmation

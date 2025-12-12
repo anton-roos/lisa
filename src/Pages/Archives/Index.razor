@@ -153,10 +153,10 @@
                                 <MudTh>Processed</MudTh>
                             </HeaderContent>
                             <RowTemplate>
-                                <MudTd DataLabel="Learner">@context.Learner?.Surname, @context.Learner?.Name</MudTd>
+                                <MudTd DataLabel="Learner">@(context.Learner?.DisplayName ?? "Unknown")</MudTd>
                                 <MudTd DataLabel="Grade">@context.SchoolGrade?.SystemGrade?.Name</MudTd>
                                 <MudTd DataLabel="Class">@context.RegisterClass?.Name</MudTd>
-                                <MudTd DataLabel="Combination">@context.Combination?.Name</MudTd>
+                                <MudTd DataLabel="Combination">@context.Combination?.DisplayName</MudTd>
                                 <MudTd DataLabel="Outcome">
                                     <MudChip T="string" Size="Size.Small" Color="@GetOutcomeColor(context.Outcome)">
                                         @context.Outcome

@@ -87,7 +87,7 @@
                                             <h4>Gr @registerClass</h4>
                                             <div class="d-flex flex-column">
                                                 @foreach (var learner in _registerClassLearners[registerClass]
-                                                    .Where(l => string.IsNullOrEmpty(_searchText) || $"{l.Name} {l.Surname}".ToLower().Contains(_searchText.ToLower()))
+                                                    .Where(l => string.IsNullOrEmpty(_searchText) || $"{l.DisplayName} {l.Name} {l.Surname}".Contains(_searchText.Trim(), StringComparison.OrdinalIgnoreCase))
                                                     .Where(l => _isSignOut ? 
                                                         (_attendanceData.TryGetValue(l.Id, out var d) && d.IsPresent) || 
                                                         _signOutTimeMap.ContainsKey(l.Id)

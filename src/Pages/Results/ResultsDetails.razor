@@ -68,7 +68,7 @@
                             foreach (var result in _resultSet.Results)
                             {
                                 <tr>
-                                    <td>@result.Learner?.Surname, @result.Learner?.Name</td>
+                                    <td>@(result.Learner?.DisplayName ?? "Unknown")</td>
                                     <td>@(result.Absent ? "-" : result.Score?.ToString())</td>
                                     <td>@(result.Absent ? "Yes" : "No")</td>
                                     <td>@result.AbsentReason</td>

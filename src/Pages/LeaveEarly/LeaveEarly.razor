@@ -181,7 +181,7 @@ else
         {
             <div class="card mb-4">
                 <div class="card-body">
-                    <h5>@SelectedLearner?.Name @SelectedLearner?.Surname</h5>
+                    <h5>@SelectedLearner?.DisplayName</h5>
                     <div class="mb-3">
                         @{
                             var status = GetAttendanceStatus(SelectedLearner);
@@ -449,7 +449,7 @@ else
         .Where(l => (SelectedGrade == "All" ||
                      (l.RegisterClass?.SchoolGrade?.SystemGrade.Name == SelectedGrade)) &&
                     (string.IsNullOrEmpty(SearchTerm) ||
-                     $"{l.Name} {l.Surname}".ToLower().Contains(SearchTerm.ToLower())))
+                     $"{l.DisplayName} {l.Name} {l.Surname}".Contains(SearchTerm.Trim(), StringComparison.OrdinalIgnoreCase)))
         .OrderBy(l => l.Surname)
         .ThenBy(l => l.Name)
         .ToList();

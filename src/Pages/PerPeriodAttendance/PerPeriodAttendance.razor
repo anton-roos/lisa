@@ -351,14 +351,14 @@ else
     private IEnumerable<Learner> FilteredSignedInLearners => _learners
         .Where(l => _attendanceData.ContainsKey(l.Id)) // Only learners who signed in
         .Where(l => string.IsNullOrEmpty(_searchTerm) ||
-            $"{l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+            $"{l.DisplayName} {l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
         .OrderBy(l => l.Surname)
         .ThenBy(l => l.Name);
 
     private IEnumerable<Learner> FilteredNotSignedInLearners => _learners
         .Where(l => !_attendanceData.ContainsKey(l.Id)) // Only learners who didn't sign in
         .Where(l => string.IsNullOrEmpty(_searchTerm) ||
-            $"{l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+            $"{l.DisplayName} {l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
         .OrderBy(l => l.Surname)
         .ThenBy(l => l.Name);
 

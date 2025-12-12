@@ -740,9 +740,13 @@
         else if (_learnerModel.Status == LearnerStatus.Retained)
         {
             // Retained learners: Show register classes for the SAME grade (previous grade)
-            if (_existingLearner.PreviousSchoolGradeId.HasValue)
+            var retainedGradeId = _existingLearner.PreviousSchoolGradeId
+                                 ?? _previousRegisterClass?.SchoolGradeId
+                                 ?? _existingLearner.RegisterClass?.SchoolGradeId;
+
+            if (retainedGradeId.HasValue)
             {
-                _registerClasses = await RegisterClassService.GetActiveByGradeIdAsync(_existingLearner.PreviousSchoolGradeId.Value);
+                _registerClasses = await RegisterClassService.GetActiveByGradeIdAsync(retainedGradeId.Value);
             }
             else
             {

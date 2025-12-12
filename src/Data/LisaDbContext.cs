@@ -37,6 +37,7 @@ public class LisaDbContext
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
     public DbSet<LeaveEarly> LeaveEarlies { get; set; } = null!;
     public DbSet<AcademicDevelopmentClass> AcademicDevelopmentClasses { get; set; } = null!;
+    public DbSet<AdiLearner> AdiLearners { get; set; } = null!;
     public DbSet<AcademicPlan> AcademicPlans { get; set; } = null!;
     public DbSet<LearnerAcademicRecord> LearnerAcademicRecords { get; set; } = null!;
     public DbSet<AcademicYear> AcademicYears { get; set; } = null!;
@@ -550,6 +551,30 @@ public class LisaDbContext
                 .IsRequired();
 
             entity.HasIndex(adc => new { adc.SchoolId, adc.DateTime });
+
+            entity.HasMany(adc => adc.AdiLearners)
+                .WithOne(al => al.AcademicDevelopmentClass)
+                .HasForeignKey(al => al.AcademicDevelopmentClassId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ADI Learners (join table for learners assigned to ADI classes)
+        modelBuilder.Entity<AdiLearner>(entity =>
+        {
+            entity.HasKey(al => al.Id);
+
+            entity.HasOne(al => al.AcademicDevelopmentClass)
+                .WithMany(adc => adc.AdiLearners)
+                .HasForeignKey(al => al.AcademicDevelopmentClassId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(al => al.Learner)
+                .WithMany()
+                .HasForeignKey(al => al.LearnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(al => new { al.AcademicDevelopmentClassId, al.LearnerId })
+                .IsUnique();
         });
 
         modelBuilder.Entity<LearnerAcademicRecord>(entity =>

@@ -1,11 +1,16 @@
 @page "/adi-creator"
+@using Lisa.Data
+@using Lisa.Enums
 @using Lisa.Models.Entities
 @using System.Security.Claims
+@using MudBlazor
 @inject SchoolService SchoolService
 @inject SchoolGradeService SchoolGradeService
 @inject SubjectService SubjectService
 @inject UserService UserService
+@inject LearnerService LearnerService
 @inject AcademicDevelopmentClassService AdiService
+@inject AdiAttendanceService AdiAttendanceService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject ILogger<AdiCreator> Logger
@@ -14,157 +19,201 @@
 
 <PageTitle>ADI Creator</PageTitle>
 
-<h3>ADI Creator</h3>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-3">ADI Creator</MudText>
 
-@if (_selectedSchool == null)
-{
-    <NoSchoolSelected Message="Please select a school from the dropdown at the top of the page before proceeding." />
-}
-else
-{
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0">Create Academic Development Intervention (ADI)</h5>
-        </div>
-        <div class="card-body">
-            <EditForm Model="_adiModel" OnValidSubmit="HandleValidSubmit">
-                <DataAnnotationsValidator />
-                <ValidationSummary class="text-danger" />
-
-                <div class="row">
-                    <!-- Grade Selection -->
-                    <div class="col-md-6 mb-3">
-                        <label for="gradeSelect" class="form-label">Grade <span class="text-danger">*</span></label>
-                        <select id="gradeSelect" class="form-select @(_validationErrors.ContainsKey("Grade") ? "is-invalid" : "")" 
-                                value="@(_adiModel.SchoolGradeId?.ToString() ?? "")"
-                                @onchange="@((e) => GradeSelectionChanged(e))">
-                            <option value="">-- Select Grade --</option>
-                            @foreach (var grade in _schoolGrades.OrderBy(g => g.SystemGrade.SequenceNumber))
-                            {
-                                <option value="@grade.Id">@grade.SystemGrade.Name</option>
-                            }
-                        </select>
-                        @if (_validationErrors.ContainsKey("Grade"))
-                        {
-                            <div class="invalid-feedback">@_validationErrors["Grade"]</div>
-                        }
-                    </div>
-
-                    <!-- Subject Selection -->
-                    <div class="col-md-6 mb-3">
-                        <label for="subjectSelect" class="form-label">Subject <span class="text-danger">*</span></label>
-                        <select id="subjectSelect" class="form-select @(_validationErrors.ContainsKey("Subject") ? "is-invalid" : "")" 
-                                value="@(_adiModel.SubjectId?.ToString() ?? "")"
-                                @onchange="@((e) => SubjectSelectionChanged(e))">
-                            <option value="">-- Select Subject --</option>
-                            @foreach (var subject in _availableSubjects.OrderBy(s => s.Name))
-                            {
-                                <option value="@subject.Id">@subject.Name</option>
-                            }
-                        </select>
-                        @if (_validationErrors.ContainsKey("Subject"))
-                        {
-                            <div class="invalid-feedback">@_validationErrors["Subject"]</div>
-                        }
-                    </div>
-                </div>
-
-                <div class="row">
-                    <!-- Date and Time Selection -->
-                    <div class="col-md-6 mb-3">
-                        <label for="dateTimeSelect" class="form-label">Date and Time <span class="text-danger">*</span></label>
-                        <input type="datetime-local" 
-                               id="dateTimeSelect" 
-                               class="form-control @(_validationErrors.ContainsKey("DateTime") ? "is-invalid" : "")" 
-                               value="@_adiModel.DateTime.ToString("yyyy-MM-ddTHH:mm")"
-                               @onchange="@((e) => DateTimeChanged(e))" />
-                        @if (_validationErrors.ContainsKey("DateTime"))
-                        {
-                            <div class="invalid-feedback">@_validationErrors["DateTime"]</div>
-                        }
-                    </div>
-
-                    <!-- Teacher Selection (Optional) -->
-                    <div class="col-md-6 mb-3">
-                        <label for="teacherSelect" class="form-label">Teacher <span class="text-muted">(Optional)</span></label>
-                        <select id="teacherSelect" class="form-select" 
-                                value="@(_adiModel.TeacherId?.ToString() ?? "")"
-                                @onchange="@((e) => TeacherSelectionChanged(e))">
-                            <option value="">-- Select Teacher --</option>
-                            @foreach (var teacher in _availableTeachers.OrderBy(t => t.Surname).ThenBy(t => t.Name))
-                            {
-                                <option value="@teacher.Id">@teacher.Surname, @teacher.Name</option>
-                            }
-                        </select>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-12">
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary" disabled="@_isLoading">
-                                @if (_isLoading)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    <span>Saving...</span>
-                                }
-                                else
-                                {
-                                    <i class="bi bi-check-circle me-2"></i>
-                                    <span>Save ADI</span>
-                                }
-                            </button>
-                            <button type="button" class="btn btn-secondary" @onclick="Cancel">
-                                <i class="bi bi-x-circle me-2"></i>
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </EditForm>
-        </div>
-    </div>
-
-    @if (_recentAdis.Any())
+    @if (_selectedSchool == null)
     {
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5 class="mb-0">Recent ADIs</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Date & Time</th>
-                                <th>Grade</th>
-                                <th>Subject</th>
-                                <th>Teacher</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var adi in _recentAdis.Take(10))
-                            {
-                                <tr>
-                                    <td>@adi.DateTime.ToString("dd MMM yyyy HH:mm")</td>
-                                    <td>@adi.SchoolGrade?.SystemGrade.Name</td>
-                                    <td>@adi.Subject?.Name</td>
-                                    <td>@(adi.Teacher != null ? $"{adi.Teacher.Surname}, {adi.Teacher.Name}" : "Not assigned")</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAdi(adi)">
-                                            <i class="bi bi-trash"></i> Delete
-                                        </button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+        <NoSchoolSelected Message="Please select a school from the dropdown at the top of the page before proceeding." />
     }
-}
+    else
+    {
+        <MudPaper Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">Create Academic Development Intervention (ADI)</MudText>
+
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="Guid?" Label="Grade" Variant="Variant.Outlined" Required="true"
+                               Value="_adiModel.SchoolGradeId" ValueChanged="OnGradeChanged"
+                               Error="@_validationErrors.ContainsKey("Grade")" ErrorText="@(_validationErrors.GetValueOrDefault("Grade"))">
+                        <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select Grade --</MudSelectItem>
+                        @foreach (var grade in _schoolGrades.OrderBy(g => g.SystemGrade.SequenceNumber))
+                        {
+                            <MudSelectItem T="Guid?" Value="@grade.Id">@grade.SystemGrade.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="int?" Label="Subject" Variant="Variant.Outlined" Required="true"
+                               Value="_adiModel.SubjectId" ValueChanged="OnSubjectChanged"
+                               Error="@_validationErrors.ContainsKey("Subject")" ErrorText="@(_validationErrors.GetValueOrDefault("Subject"))">
+                        <MudSelectItem T="int?" Value="@((int?)null)">-- Select Subject --</MudSelectItem>
+                        @foreach (var subject in _availableSubjects.OrderBy(s => s.Name))
+                        {
+                            <MudSelectItem T="int?" Value="@subject.Id">@subject.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudDatePicker Label="Date" Variant="Variant.Outlined" Required="true"
+                                   @bind-Date="_selectedDate"
+                                   Error="@_validationErrors.ContainsKey("DateTime")" ErrorText="@(_validationErrors.GetValueOrDefault("DateTime"))" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudTimePicker Label="Time" Variant="Variant.Outlined" Required="true"
+                                   @bind-Time="_selectedTime" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Guid?" Label="Teacher" Variant="Variant.Outlined"
+                               Value="_adiModel.TeacherId" ValueChanged="OnTeacherChanged">
+                        <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select Teacher --</MudSelectItem>
+                        @foreach (var teacher in _availableTeachers.OrderBy(t => t.Surname).ThenBy(t => t.Name))
+                        {
+                            <MudSelectItem T="Guid?" Value="@teacher.Id">@teacher.Surname, @teacher.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        @* Learner Selection Section *@
+        @if (_adiModel.SchoolGradeId != null && _adiModel.SubjectId != null)
+        {
+            <MudPaper Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-3">Select Learners</MudText>
+
+                @* Auto-selected learners from grade/subject *@
+                @if (_gradeSubjectLearners.Any())
+                {
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="mb-2">
+                        Learners in @(_schoolGrades.FirstOrDefault(g => g.Id == _adiModel.SchoolGradeId)?.SystemGrade?.Name) 
+                        taking @(_availableSubjects.FirstOrDefault(s => s.Id == _adiModel.SubjectId)?.Name)
+                    </MudText>
+
+                    <MudChipSet T="string" Class="mb-3">
+                        @foreach (var learner in _gradeSubjectLearners.Take(20))
+                        {
+                            var isSelected = _selectedLearnerIds.Contains(learner.Id);
+                            <MudChip T="string" 
+                                     Color="@(isSelected ? Color.Primary : Color.Default)"
+                                     Variant="@(isSelected ? MudBlazor.Variant.Filled : MudBlazor.Variant.Outlined)"
+                                     OnClick="@(() => ToggleLearner(learner.Id))">
+                                @learner.DisplayName
+                            </MudChip>
+                        }
+                        @if (_gradeSubjectLearners.Count > 20)
+                        {
+                            <MudChip T="string" Color="Color.Info" Variant="MudBlazor.Variant.Text">
+                                +@(_gradeSubjectLearners.Count - 20) more
+                            </MudChip>
+                        }
+                    </MudChipSet>
+
+                    <MudButton Variant="MudBlazor.Variant.Text" Color="Color.Primary" Size="Size.Small"
+                               OnClick="SelectAllGradeSubjectLearners" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.SelectAll" Class="me-1" Size="Size.Small" />
+                        Select All (@_gradeSubjectLearners.Count)
+                    </MudButton>
+                    <MudButton Variant="MudBlazor.Variant.Text" Color="Color.Secondary" Size="Size.Small"
+                               OnClick="DeselectAllGradeSubjectLearners" Class="mb-2 ms-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Deselect" Class="me-1" Size="Size.Small" />
+                        Deselect All
+                    </MudButton>
+                }
+
+                <MudDivider Class="my-3" />
+
+                @* Search for additional learners *@
+                <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="mb-2">Add Additional Learners from School</MudText>
+                <MudAutocomplete T="Learner" Label="Search learners..." Variant="Variant.Outlined"
+                                 SearchFunc="SearchLearnersAsync" ToStringFunc="@(l => l?.DisplayName ?? "")"
+                                 ValueChanged="OnAdditionalLearnerSelected" ResetValueOnEmptyText="true"
+                                 Class="mb-2" />
+
+                @* Display selected learners *@
+                @if (_selectedLearnerIds.Any())
+                {
+                    <MudText Typo="Typo.subtitle2" Class="mt-3 mb-2">
+                        Selected Learners (@_selectedLearnerIds.Count)
+                    </MudText>
+                    <MudChipSet T="string">
+                        @foreach (var learnerId in _selectedLearnerIds)
+                        {
+                            var learner = _allSelectedLearners.FirstOrDefault(l => l.Id == learnerId);
+                            if (learner != null)
+                            {
+                                var isFromGradeSubject = _gradeSubjectLearners.Any(l => l.Id == learnerId);
+                                <MudChip T="string" Color="@(isFromGradeSubject ? Color.Primary : Color.Warning)"
+                                         OnClose="@(() => RemoveLearner(learnerId))" Variant="MudBlazor.Variant.Filled">
+                                    @learner.DisplayName
+                                    @if (!isFromGradeSubject)
+                                    {
+                                        <MudText Typo="Typo.caption" Class="ms-1">(Additional)</MudText>
+                                    }
+                                </MudChip>
+                            }
+                        }
+                    </MudChipSet>
+                }
+            </MudPaper>
+        }
+
+        @* Action Buttons *@
+        <MudPaper Class="pa-4 mb-4">
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="MudBlazor.Variant.Filled" Color="Color.Primary" 
+                           OnClick="HandleValidSubmit" Disabled="@_isLoading">
+                    @if (_isLoading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="me-2" />
+                        <span>Saving...</span>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Check" Class="me-1" />
+                        <span>Create ADI</span>
+                    }
+                </MudButton>
+                <MudButton Variant="MudBlazor.Variant.Outlined" Color="Color.Default" OnClick="Cancel">
+                    Cancel
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+
+        @* Recent ADIs *@
+        @if (_recentAdis.Any())
+        {
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h6" Class="mb-3">Recent ADIs</MudText>
+                <MudTable Items="@_recentAdis.Take(10)" Dense="true" Hover="true" Striped="true">
+                    <HeaderContent>
+                        <MudTh>Date & Time</MudTh>
+                        <MudTh>Grade</MudTh>
+                        <MudTh>Subject</MudTh>
+                        <MudTh>Teacher</MudTh>
+                        <MudTh>Learners</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="adi">
+                        <MudTd DataLabel="Date & Time">@adi.DateTime.ToLocalTime().ToString("dd MMM yyyy HH:mm")</MudTd>
+                        <MudTd DataLabel="Grade">@adi.SchoolGrade?.SystemGrade?.Name</MudTd>
+                        <MudTd DataLabel="Subject">@adi.Subject?.Name</MudTd>
+                        <MudTd DataLabel="Teacher">@(adi.Teacher != null ? $"{adi.Teacher.Surname}, {adi.Teacher.Name}" : "Not assigned")</MudTd>
+                        <MudTd DataLabel="Learners">@(adi.AdiLearners?.Count ?? 0)</MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                           OnClick="@(() => DeleteAdi(adi))" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        }
+    }
+</MudContainer>
 
 @code {
     private School? _selectedSchool;
@@ -172,16 +221,20 @@ else
     private List<Subject> _availableSubjects = [];
     private List<User> _availableTeachers = [];
     private List<AcademicDevelopmentClass> _recentAdis = [];
+    private List<Learner> _gradeSubjectLearners = [];
+    private List<Learner> _allSelectedLearners = [];
+    private HashSet<Guid> _selectedLearnerIds = [];
     private AdiModel _adiModel = new();
     private Dictionary<string, string> _validationErrors = new();
     private bool _isLoading;
     private Guid? _currentUserId;
+    private DateTime? _selectedDate = DateTime.Today;
+    private TimeSpan? _selectedTime = new TimeSpan(8, 0, 0);
 
     public class AdiModel
     {
         public Guid? SchoolGradeId { get; set; }
         public int? SubjectId { get; set; }
-        public DateTime DateTime { get; set; } = DateTime.Now.Date.AddHours(8); // Default to 8 AM today
         public Guid? TeacherId { get; set; }
     }
 
@@ -190,7 +243,6 @@ else
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         SubscribeToEvent(UiEvents.SchoolSelected);
 
-        // Get the current user ID
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         if (user.Identity?.IsAuthenticated ?? false)
@@ -199,6 +251,8 @@ else
             if (!string.IsNullOrEmpty(userId))
             {
                 _currentUserId = Guid.Parse(userId);
+                // Default teacher to current user
+                _adiModel.TeacherId = _currentUserId;
             }
         }
 
@@ -214,13 +268,7 @@ else
         {
             _selectedSchool = school;
             await LoadData();
-            
-            // Reset form
-            _adiModel = new AdiModel
-            {
-                DateTime = DateTime.Now.Date.AddHours(8)
-            };
-            _validationErrors.Clear();
+            ResetForm();
         }
 
         await base.HandleEventAsync(eventName, payload);
@@ -232,17 +280,11 @@ else
 
         try
         {
-            // Load school grades
             _schoolGrades = await SchoolGradeService.GetGradesForSchool(_selectedSchool.Id);
-            
-            // Load all subjects
             _availableSubjects = await SubjectService.GetAllAsync();
-            
-            // Load teachers for this school
             _availableTeachers = await UserService.GetBySchoolAsync(_selectedSchool.Id);
-            
-            // Load recent ADIs
             _recentAdis = await AdiService.GetBySchoolIdAsync(_selectedSchool.Id);
+            _recentAdis = _recentAdis.OrderByDescending(a => a.DateTime).ToList();
         }
         catch (Exception ex)
         {
@@ -255,53 +297,135 @@ else
         }
     }
 
-    private void GradeSelectionChanged(ChangeEventArgs e)
+    private async Task OnGradeChanged(Guid? value)
     {
-        if (Guid.TryParse(e.Value?.ToString(), out var gradeId))
-        {
-            _adiModel.SchoolGradeId = gradeId;
-        }
-        else
-        {
-            _adiModel.SchoolGradeId = null;
-        }
-        
+        _adiModel.SchoolGradeId = value;
         _validationErrors.Remove("Grade");
+        await LoadGradeSubjectLearners();
     }
 
-    private void SubjectSelectionChanged(ChangeEventArgs e)
+    private async Task OnSubjectChanged(int? value)
     {
-        if (int.TryParse(e.Value?.ToString(), out var subjectId))
-        {
-            _adiModel.SubjectId = subjectId;
-        }
-        else
-        {
-            _adiModel.SubjectId = null;
-        }
-        
+        _adiModel.SubjectId = value;
         _validationErrors.Remove("Subject");
+        await LoadGradeSubjectLearners();
     }
 
-    private void DateTimeChanged(ChangeEventArgs e)
+    private void OnTeacherChanged(Guid? value)
     {
-        if (DateTime.TryParse(e.Value?.ToString(), out var dateTime))
+        _adiModel.TeacherId = value;
+    }
+
+    private async Task LoadGradeSubjectLearners()
+    {
+        if (_adiModel.SchoolGradeId == null || _adiModel.SubjectId == null)
         {
-            _adiModel.DateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+            _gradeSubjectLearners = [];
+            return;
         }
-        
-        _validationErrors.Remove("DateTime");
+
+        try
+        {
+            _gradeSubjectLearners = await LearnerService.GetByGradeAndSubjectAsync(
+                _adiModel.SchoolGradeId.Value, 
+                _adiModel.SubjectId.Value);
+
+            // Filter to current school
+            _gradeSubjectLearners = _gradeSubjectLearners
+                .Where(l => l.SchoolId == _selectedSchool?.Id && l.Status == LearnerStatus.Active)
+                .OrderBy(l => l.Surname)
+                .ThenBy(l => l.Name)
+                .ToList();
+
+            // Auto-select all grade/subject learners
+            foreach (var learner in _gradeSubjectLearners)
+            {
+                if (!_selectedLearnerIds.Contains(learner.Id))
+                {
+                    _selectedLearnerIds.Add(learner.Id);
+                    _allSelectedLearners.Add(learner);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading grade/subject learners");
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
-    private void TeacherSelectionChanged(ChangeEventArgs e)
+    private void ToggleLearner(Guid learnerId)
     {
-        if (Guid.TryParse(e.Value?.ToString(), out var teacherId))
+        if (_selectedLearnerIds.Contains(learnerId))
         {
-            _adiModel.TeacherId = teacherId;
+            _selectedLearnerIds.Remove(learnerId);
         }
         else
         {
-            _adiModel.TeacherId = null;
+            _selectedLearnerIds.Add(learnerId);
+            var learner = _gradeSubjectLearners.FirstOrDefault(l => l.Id == learnerId);
+            if (learner != null && !_allSelectedLearners.Any(l => l.Id == learnerId))
+            {
+                _allSelectedLearners.Add(learner);
+            }
+        }
+    }
+
+    private void RemoveLearner(Guid learnerId)
+    {
+        _selectedLearnerIds.Remove(learnerId);
+    }
+
+    private void SelectAllGradeSubjectLearners()
+    {
+        foreach (var learner in _gradeSubjectLearners)
+        {
+            if (!_selectedLearnerIds.Contains(learner.Id))
+            {
+                _selectedLearnerIds.Add(learner.Id);
+                if (!_allSelectedLearners.Any(l => l.Id == learner.Id))
+                {
+                    _allSelectedLearners.Add(learner);
+                }
+            }
+        }
+    }
+
+    private void DeselectAllGradeSubjectLearners()
+    {
+        foreach (var learner in _gradeSubjectLearners)
+        {
+            _selectedLearnerIds.Remove(learner.Id);
+        }
+    }
+
+    private async Task<IEnumerable<Learner>> SearchLearnersAsync(string searchText, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(searchText) || _selectedSchool == null)
+            return [];
+
+        try
+        {
+            var results = await LearnerService.SearchLearnersAsync(_selectedSchool.Id, searchText);
+            return results
+                .Where(l => l.Status == LearnerStatus.Active && !_selectedLearnerIds.Contains(l.Id))
+                .Take(20);
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private void OnAdditionalLearnerSelected(Learner? learner)
+    {
+        if (learner == null) return;
+
+        if (!_selectedLearnerIds.Contains(learner.Id))
+        {
+            _selectedLearnerIds.Add(learner.Id);
+            _allSelectedLearners.Add(learner);
         }
     }
 
@@ -310,23 +434,16 @@ else
         _validationErrors.Clear();
 
         if (_adiModel.SchoolGradeId == null)
-        {
             _validationErrors["Grade"] = "Please select a grade.";
-        }
 
         if (_adiModel.SubjectId == null)
-        {
             _validationErrors["Subject"] = "Please select a subject.";
-        }
 
-        if (_adiModel.DateTime == default)
-        {
-            _validationErrors["DateTime"] = "Please select a date and time.";
-        }
-        else if (_adiModel.DateTime < DateTime.Now.AddMinutes(-30)) // Allow 30 minutes in the past
-        {
-            _validationErrors["DateTime"] = "Date and time cannot be in the past.";
-        }
+        if (_selectedDate == null)
+            _validationErrors["DateTime"] = "Please select a date.";
+
+        if (!_selectedLearnerIds.Any())
+            _validationErrors["Learners"] = "Please select at least one learner.";
 
         return !_validationErrors.Any();
     }
@@ -335,6 +452,10 @@ else
     {
         if (!ValidateForm())
         {
+            if (_validationErrors.ContainsKey("Learners"))
+            {
+                await DialogService.ShowMessageBox("Validation Error", _validationErrors["Learners"], yesText: "OK");
+            }
             return;
         }
 
@@ -343,9 +464,16 @@ else
 
         try
         {
+            var dateTime = _selectedDate!.Value.Date;
+            if (_selectedTime.HasValue)
+            {
+                dateTime = dateTime.Add(_selectedTime.Value);
+            }
+            dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+
             var adi = new AcademicDevelopmentClass
             {
-                DateTime = _adiModel.DateTime,
+                DateTime = dateTime,
                 SchoolGradeId = _adiModel.SchoolGradeId!.Value,
                 SubjectId = _adiModel.SubjectId!.Value,
                 TeacherId = _adiModel.TeacherId,
@@ -353,33 +481,35 @@ else
                 CreatedBy = _currentUserId
             };
 
-            await AdiService.CreateAsync(adi);
+            var createdAdi = await AdiService.CreateAsync(adi);
+
+            // Add selected learners to the ADI, marking which are additional
+            var gradeSubjectLearnerIds = _gradeSubjectLearners.Select(l => l.Id).ToHashSet();
             
-            Logger.LogInformation("Created ADI for Grade {GradeId}, Subject {SubjectId} at {DateTime}", 
-                adi.SchoolGradeId, adi.SubjectId, adi.DateTime);
+            // Add non-additional learners first
+            var regularLearnerIds = _selectedLearnerIds.Where(id => gradeSubjectLearnerIds.Contains(id)).ToList();
+            await AdiAttendanceService.AddLearnersToAdiAsync(createdAdi.Id, regularLearnerIds, _currentUserId);
 
-            // Reset form
-            _adiModel = new AdiModel
+            // Add additional learners (those not from grade/subject)
+            foreach (var learnerId in _selectedLearnerIds.Where(id => !gradeSubjectLearnerIds.Contains(id)))
             {
-                DateTime = DateTime.Now.Date.AddHours(8)
-            };
-            _validationErrors.Clear();
+                await AdiAttendanceService.AddAdditionalLearnerAsync(createdAdi.Id, learnerId, _currentUserId);
+            }
 
-            // Reload recent ADIs
+            Logger.LogInformation("Created ADI {AdiId} with {LearnerCount} learners", createdAdi.Id, _selectedLearnerIds.Count);
+
+            ResetForm();
             await LoadData();
 
             await DialogService.ShowMessageBox(
                 "Success",
-                "ADI has been created successfully!",
+                $"ADI has been created successfully with {_selectedLearnerIds.Count} learners!",
                 yesText: "OK");
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error creating ADI");
-            await DialogService.ShowMessageBox(
-                "Error",
-                "Failed to create ADI. Please try again.",
-                yesText: "OK");
+            await DialogService.ShowMessageBox("Error", "Failed to create ADI. Please try again.", yesText: "OK");
         }
         finally
         {
@@ -388,22 +518,38 @@ else
         }
     }
 
+    private void ResetForm()
+    {
+        _adiModel = new AdiModel { TeacherId = _currentUserId };
+        _selectedDate = DateTime.Today;
+        _selectedTime = new TimeSpan(8, 0, 0);
+        _selectedLearnerIds.Clear();
+        _allSelectedLearners.Clear();
+        _gradeSubjectLearners.Clear();
+        _validationErrors.Clear();
+    }
+
     private async Task DeleteAdi(AcademicDevelopmentClass adi)
     {
-        try
+        var result = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            $"Are you sure you want to delete this ADI scheduled for {adi.DateTime.ToLocalTime():dd MMM yyyy HH:mm}?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (result == true)
         {
-            await AdiService.DeleteAsync(adi.Id);
-            await LoadData(); // Reload the list
-            
-            Logger.LogInformation("Deleted ADI {AdiId}", adi.Id);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error deleting ADI {AdiId}", adi.Id);
-            await DialogService.ShowMessageBox(
-                "Error",
-                "Failed to delete ADI. Please try again.",
-                yesText: "OK");
+            try
+            {
+                await AdiService.DeleteAsync(adi.Id);
+                await LoadData();
+                Logger.LogInformation("Deleted ADI {AdiId}", adi.Id);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error deleting ADI {AdiId}", adi.Id);
+                await DialogService.ShowMessageBox("Error", "Failed to delete ADI. Please try again.", yesText: "OK");
+            }
         }
     }
 

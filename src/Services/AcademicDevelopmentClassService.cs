@@ -62,6 +62,36 @@ public class AcademicDevelopmentClassService(
         }
     }
 
+    /// <summary>
+    /// Get ADI classes by school, filtered by teacher ID.
+    /// For regular teachers, returns only their own ADI classes.
+    /// </summary>
+    public async Task<List<AcademicDevelopmentClass>> GetBySchoolAndTeacherAsync(Guid schoolId, Guid teacherId)
+    {
+        try
+        {
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+            
+            return await context.AcademicDevelopmentClasses
+                .Where(adc => adc.SchoolId == schoolId && 
+                              adc.TeacherId == teacherId &&
+                              adc.AcademicYear != null && adc.AcademicYear.IsCurrent)
+                .Include(adc => adc.SchoolGrade)
+                .ThenInclude(sg => sg!.SystemGrade)
+                .Include(adc => adc.Subject)
+                .Include(adc => adc.Teacher)
+                .Include(adc => adc.School)
+                .AsNoTracking()
+                .OrderByDescending(adc => adc.DateTime)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error fetching academic development classes for school {SchoolId} and teacher {TeacherId}.", schoolId, teacherId);
+            return [];
+        }
+    }
+
     public async Task<AcademicDevelopmentClass?> GetByIdAsync(Guid id)
     {
         try
@@ -73,6 +103,8 @@ public class AcademicDevelopmentClassService(
                 .Include(adc => adc.Subject)
                 .Include(adc => adc.Teacher)
                 .Include(adc => adc.School)
+                .Include(adc => adc.AdiLearners)
+                .ThenInclude(al => al.Learner)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(adc => adc.Id == id);
         }
@@ -179,6 +211,104 @@ public class AcademicDevelopmentClassService(
         {
             logger.LogError(ex, "Error deleting academic development class: {Id}", id);
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Start attendance tracking for an ADI class.
+    /// Sets IsAttendanceOpen to true and records the start time.
+    /// </summary>
+    public async Task<bool> StartAttendanceAsync(Guid id, Guid? userId)
+    {
+        try
+        {
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+            var adi = await context.AcademicDevelopmentClasses.FindAsync(id);
+
+            if (adi == null)
+            {
+                logger.LogWarning("Attempted to start attendance for non-existent ADI class {Id}.", id);
+                return false;
+            }
+
+            adi.IsAttendanceOpen = true;
+            adi.AttendanceStartedAt = DateTime.UtcNow;
+            adi.AttendanceStoppedAt = null; // Clear any previous stop time
+            adi.UpdatedAt = DateTime.UtcNow;
+            adi.UpdatedBy = userId;
+
+            context.Entry(adi).State = EntityState.Modified;
+            await context.SaveChangesAsync();
+
+            logger.LogInformation("Started attendance for ADI class {Id} at {Time}", id, adi.AttendanceStartedAt);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error starting attendance for ADI class {Id}", id);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Stop attendance tracking for an ADI class.
+    /// Sets IsAttendanceOpen to false and records the stop time.
+    /// Learners arriving after this time will be marked as late.
+    /// </summary>
+    public async Task<bool> StopAttendanceAsync(Guid id, Guid? userId)
+    {
+        try
+        {
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+            var adi = await context.AcademicDevelopmentClasses.FindAsync(id);
+
+            if (adi == null)
+            {
+                logger.LogWarning("Attempted to stop attendance for non-existent ADI class {Id}.", id);
+                return false;
+            }
+
+            adi.IsAttendanceOpen = false;
+            adi.AttendanceStoppedAt = DateTime.UtcNow;
+            adi.UpdatedAt = DateTime.UtcNow;
+            adi.UpdatedBy = userId;
+
+            context.Entry(adi).State = EntityState.Modified;
+            await context.SaveChangesAsync();
+
+            logger.LogInformation("Stopped attendance for ADI class {Id} at {Time}", id, adi.AttendanceStoppedAt);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error stopping attendance for ADI class {Id}", id);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Get the current attendance status of an ADI class.
+    /// </summary>
+    public async Task<(bool IsOpen, DateTime? StartedAt, DateTime? StoppedAt)> GetAttendanceStatusAsync(Guid id)
+    {
+        try
+        {
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+            var adi = await context.AcademicDevelopmentClasses
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (adi == null)
+            {
+                return (false, null, null);
+            }
+
+            return (adi.IsAttendanceOpen, adi.AttendanceStartedAt, adi.AttendanceStoppedAt);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting attendance status for ADI class {Id}", id);
+            return (false, null, null);
         }
     }
 }

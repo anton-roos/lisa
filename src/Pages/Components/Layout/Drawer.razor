@@ -41,9 +41,11 @@
 
         <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")" Context="adiAuth">
             <Authorized>
-                <MudNavLink Href="/adi-creator" Icon="@Icons.Material.Filled.AddCircle">ADI Creator</MudNavLink>
-                <MudNavLink Href="/adi-attendance" Icon="@Icons.Material.Filled.HowToReg">ADI Attendance</MudNavLink>
-                <MudNavLink Href="/adi-summary" Icon="@Icons.Material.Filled.Summarize">ADI Summary</MudNavLink>
+                <MudNavGroup Title="ADI" Icon="@Icons.Material.Filled.School" Expanded="false">
+                    <MudNavLink Href="/adi-creator" Icon="@Icons.Material.Filled.AddCircle">Create ADI</MudNavLink>
+                    <MudNavLink Href="/adi-attendance" Icon="@Icons.Material.Filled.HowToReg">Attendance</MudNavLink>
+                    <MudNavLink Href="/adi-summary" Icon="@Icons.Material.Filled.Summarize">Summary</MudNavLink>
+                </MudNavGroup>
             </Authorized>
         </AuthorizeView>
         

@@ -1,10 +1,13 @@
 @page "/adi-summary"
+@using Lisa.Data
 @using Lisa.Enums
 @using Lisa.Models.Entities
+@using System.Security.Claims
 @using MudBlazor
 @inject SchoolService SchoolService
 @inject AcademicDevelopmentClassService AdiService
 @inject AdiAttendanceService AdiAttendanceService
+@inject AuthenticationStateProvider AuthStateProvider
 @inject IDialogService DialogService
 @inject ILogger<AdiSummary> Logger
 @inherits EventAwareComponentBase
@@ -21,12 +24,12 @@
     else
     {
         <MudPaper Class="pa-4 mb-4">
-            <MudSelect T="Guid" Label="Select ADI Event" Variant="Variant.Outlined" @bind-Value="_selectedAdiId" ValueChanged="OnAdiChanged">
+            <MudSelect T="Guid" Label="Select ADI Event" Variant="Variant.Outlined" Value="_selectedAdiId" ValueChanged="OnAdiChanged">
                 <MudSelectItem T="Guid" Value="Guid.Empty">-- Select ADI Event --</MudSelectItem>
                 @foreach (var adi in _adiEvents)
                 {
                     <MudSelectItem T="Guid" Value="adi.Id">
-                        @adi.DateTime.ToString("dd MMM yyyy HH:mm") - @adi.SchoolGrade?.SystemGrade?.Name - @adi.Subject?.Name
+                        @adi.DateTime.ToLocalTime().ToString("dd MMM yyyy HH:mm") - @adi.SchoolGrade?.SystemGrade?.Name - @adi.Subject?.Name
                     </MudSelectItem>
                 }
             </MudSelect>
@@ -43,28 +46,40 @@
         else
         {
             <MudGrid Class="mb-4">
-                <MudItem xs="12" sm="6" md="3">
+                <MudItem xs="12" sm="6" md="2">
                     <MudPaper Class="pa-3">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Total Learners</MudText>
                         <MudText Typo="Typo.h6">@_totalCount</MudText>
                     </MudPaper>
                 </MudItem>
-                <MudItem xs="12" sm="6" md="3">
+                <MudItem xs="12" sm="6" md="2">
                     <MudPaper Class="pa-3">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Present</MudText>
-                        <MudText Typo="Typo.h6">@_presentCount</MudText>
+                        <MudText Typo="Typo.h6" Color="Color.Success">@_presentCount</MudText>
                     </MudPaper>
                 </MudItem>
-                <MudItem xs="12" sm="6" md="3">
+                <MudItem xs="12" sm="6" md="2">
                     <MudPaper Class="pa-3">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Absent / Not Marked</MudText>
-                        <MudText Typo="Typo.h6">@(_totalCount - _presentCount)</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Late</MudText>
+                        <MudText Typo="Typo.h6" Color="Color.Warning">@_lateCount</MudText>
                     </MudPaper>
                 </MudItem>
-                <MudItem xs="12" sm="6" md="3">
+                <MudItem xs="12" sm="6" md="2">
                     <MudPaper Class="pa-3">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">% Present</MudText>
-                        <MudText Typo="Typo.h6">@(_totalCount == 0 ? "0%" : $"{(int)Math.Round((_presentCount * 100.0) / _totalCount)}%")</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Absent</MudText>
+                        <MudText Typo="Typo.h6" Color="Color.Error">@_absentCount</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="2">
+                    <MudPaper Class="pa-3">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Additional</MudText>
+                        <MudText Typo="Typo.h6" Color="Color.Info">@_additionalCount</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="2">
+                    <MudPaper Class="pa-3">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Attendance %</MudText>
+                        <MudText Typo="Typo.h6">@(_totalCount == 0 ? "0%" : $"{(int)Math.Round(((_presentCount + _lateCount) * 100.0) / _totalCount)}%")</MudText>
                     </MudPaper>
                 </MudItem>
             </MudGrid>
@@ -73,15 +88,17 @@
             <MudTable Items="_byRegisterClass" Dense="true" Striped="true" Hover="true" Elevation="2">
                 <HeaderContent>
                     <MudTh>Register Class</MudTh>
-                    <MudTh align="right">Total</MudTh>
-                    <MudTh align="right">Present</MudTh>
-                    <MudTh align="right">Absent</MudTh>
+                    <MudTh>Total</MudTh>
+                    <MudTh>Present</MudTh>
+                    <MudTh>Late</MudTh>
+                    <MudTh>Absent</MudTh>
                 </HeaderContent>
                 <RowTemplate Context="row">
                     <MudTd DataLabel="Register Class">@row.RegisterClassName</MudTd>
-                    <MudTd DataLabel="Total" Align="Align.Right">@row.Total</MudTd>
-                    <MudTd DataLabel="Present" Align="Align.Right">@row.Present</MudTd>
-                    <MudTd DataLabel="Absent" Align="Align.Right">@(row.Total - row.Present)</MudTd>
+                    <MudTd DataLabel="Total">@row.Total</MudTd>
+                    <MudTd DataLabel="Present">@row.Present</MudTd>
+                    <MudTd DataLabel="Late">@row.Late</MudTd>
+                    <MudTd DataLabel="Absent">@(row.Total - row.Present - row.Late)</MudTd>
                 </RowTemplate>
             </MudTable>
         }
@@ -89,7 +106,7 @@
 </MudContainer>
 
 @code {
-    private sealed record RegisterClassSummaryRow(string RegisterClassName, int Total, int Present);
+    private sealed record RegisterClassSummaryRow(string RegisterClassName, int Total, int Present, int Late);
 
     private School? _selectedSchool;
     private List<AcademicDevelopmentClass> _adiEvents = [];
@@ -98,12 +115,17 @@
     private AcademicDevelopmentClass? _selectedAdi;
 
     private Attendance? _adiAttendance;
-    private List<Learner> _roster = [];
+    private List<(Learner Learner, bool IsAdditional)> _roster = [];
     private Dictionary<Guid, AttendanceRecord> _existingRecords = new();
 
     private bool _isLoading;
+    private Guid? _currentUserId;
+    private bool _isSystemAdmin;
 
     private int _presentCount;
+    private int _lateCount;
+    private int _absentCount;
+    private int _additionalCount;
     private int _totalCount;
 
     private List<RegisterClassSummaryRow> _byRegisterClass = [];
@@ -112,6 +134,18 @@
     {
         _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
         SubscribeToEvent(UiEvents.SchoolSelected);
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrWhiteSpace(userId) && Guid.TryParse(userId, out var parsed))
+            {
+                _currentUserId = parsed;
+            }
+            _isSystemAdmin = user.IsInRole(Roles.SystemAdministrator);
+        }
 
         if (_selectedSchool != null)
         {
@@ -146,7 +180,16 @@
             _isLoading = true;
             await InvokeAsync(StateHasChanged);
 
-            _adiEvents = await AdiService.GetBySchoolIdAsync(_selectedSchool.Id);
+            // Filter by teacher unless system admin
+            if (_isSystemAdmin || _currentUserId == null)
+            {
+                _adiEvents = await AdiService.GetBySchoolIdAsync(_selectedSchool.Id);
+            }
+            else
+            {
+                _adiEvents = await AdiService.GetBySchoolAndTeacherAsync(_selectedSchool.Id, _currentUserId.Value);
+            }
+            
             _adiEvents = _adiEvents
                 .OrderByDescending(a => a.DateTime)
                 .ToList();
@@ -188,10 +231,12 @@
             _isLoading = true;
             await InvokeAsync(StateHasChanged);
 
-            _selectedAdi = _adiEvents.FirstOrDefault(a => a.Id == adiId) ?? await AdiService.GetByIdAsync(adiId);
+            _selectedAdi = await AdiService.GetByIdAsync(adiId);
+
+            if (_selectedAdi == null) return;
 
             _adiAttendance = await AdiAttendanceService.GetOrCreateAdiAttendanceAsync(adiId);
-            _roster = await AdiAttendanceService.GetAdiRosterAsync(adiId);
+            _roster = await AdiAttendanceService.GetAdiRosterWithAdditionalFlagAsync(adiId);
             _existingRecords = await AdiAttendanceService.GetExistingAdiAttendanceRecordsAsync(_adiAttendance.Id);
 
             RecalcSummary();
@@ -208,23 +253,30 @@
         }
     }
 
-    private bool IsPresent(Guid learnerId)
+    private string GetStatus(Guid learnerId)
     {
-        return _existingRecords.TryGetValue(learnerId, out var record)
-               && record.Notes?.Contains("Present", StringComparison.OrdinalIgnoreCase) == true;
+        if (_existingRecords.TryGetValue(learnerId, out var record))
+        {
+            return record.Notes ?? "Absent";
+        }
+        return "Absent";
     }
 
     private void RecalcSummary()
     {
         _totalCount = _roster.Count;
-        _presentCount = _roster.Count(l => IsPresent(l.Id));
+        _presentCount = _roster.Count(r => GetStatus(r.Learner.Id) == "Present");
+        _lateCount = _roster.Count(r => GetStatus(r.Learner.Id) == "Late");
+        _absentCount = _roster.Count(r => GetStatus(r.Learner.Id) == "Absent");
+        _additionalCount = _roster.Count(r => r.IsAdditional);
 
         _byRegisterClass = _roster
-            .GroupBy(l => l.RegisterClass?.DisplayName ?? "Unassigned")
+            .GroupBy(r => r.Learner.RegisterClass?.DisplayName ?? "Unassigned")
             .Select(g => new RegisterClassSummaryRow(
                 RegisterClassName: g.Key,
                 Total: g.Count(),
-                Present: g.Count(l => IsPresent(l.Id))))
+                Present: g.Count(r => GetStatus(r.Learner.Id) == "Present"),
+                Late: g.Count(r => GetStatus(r.Learner.Id) == "Late")))
             .OrderBy(r => r.RegisterClassName)
             .ToList();
     }

@@ -53,12 +53,53 @@ public class AdiAttendanceService(
                    .FirstAsync(a => a.Id == created.Id);
     }
 
+    /// <summary>
+    /// Get the roster of learners for an ADI class from the AdiLearners table.
+    /// This returns learners explicitly assigned to the ADI, with their IsAdditional flag.
+    /// </summary>
+    public async Task<List<(Learner Learner, bool IsAdditional)>> GetAdiRosterWithAdditionalFlagAsync(Guid academicDevelopmentClassId)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+
+        var adiLearners = await context.AdiLearners
+            .Where(al => al.AcademicDevelopmentClassId == academicDevelopmentClassId)
+            .Include(al => al.Learner!)
+            .ThenInclude(l => l.RegisterClass!)
+            .ThenInclude(rc => rc.SchoolGrade!)
+            .ThenInclude(sg => sg.SystemGrade)
+            .AsNoTracking()
+            .ToListAsync();
+
+        return adiLearners
+            .Where(al => al.Learner != null)
+            .Select(al => (al.Learner!, al.IsAdditional))
+            .OrderBy(x => x.Item1.RegisterClass?.DisplayName)
+            .ThenBy(x => x.Item1.Surname)
+            .ThenBy(x => x.Item1.Name)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Legacy method - returns just learners based on grade/subject combination.
+    /// Used for backward compatibility. Consider using GetAdiRosterWithAdditionalFlagAsync instead.
+    /// </summary>
     public async Task<List<Learner>> GetAdiRosterAsync(Guid academicDevelopmentClassId)
     {
+        // First try to get from AdiLearners
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+        var adiLearnerCount = await context.AdiLearners
+            .CountAsync(al => al.AcademicDevelopmentClassId == academicDevelopmentClassId);
+
+        if (adiLearnerCount > 0)
+        {
+            var roster = await GetAdiRosterWithAdditionalFlagAsync(academicDevelopmentClassId);
+            return roster.Select(r => r.Learner).ToList();
+        }
+
+        // Fallback to grade/subject based roster for older ADI classes without explicit learners
         var adi = await academicDevelopmentClassService.GetByIdAsync(academicDevelopmentClassId)
                   ?? throw new KeyNotFoundException($"ADI event {academicDevelopmentClassId} not found.");
 
-        // Roster is learners in grade who take the subject.
         var learners = await learnerService.GetByGradeAndSubjectAsync(adi.SchoolGradeId, adi.SubjectId);
 
         return learners
@@ -83,6 +124,74 @@ public class AdiAttendanceService(
             .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.UpdatedAt).First());
     }
 
+    /// <summary>
+    /// Record a learner's attendance arrival during active attendance.
+    /// Marks with the current timestamp.
+    /// </summary>
+    public async Task MarkLearnerArrivedAsync(
+        Guid attendanceId,
+        Guid learnerId,
+        Guid? userId)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+        
+        // Get the ADI to check attendance status
+        var attendance = await context.Attendances
+            .FirstOrDefaultAsync(a => a.Id == attendanceId);
+        
+        if (attendance?.AcademicDevelopmentClassId == null)
+        {
+            throw new InvalidOperationException("Attendance not associated with an ADI class.");
+        }
+
+        var adi = await context.AcademicDevelopmentClasses
+            .FirstOrDefaultAsync(a => a.Id == attendance.AcademicDevelopmentClassId);
+
+        if (adi == null)
+        {
+            throw new KeyNotFoundException("ADI class not found.");
+        }
+
+        var arrivalTime = DateTime.UtcNow;
+        var isLate = adi.AttendanceStoppedAt != null && arrivalTime > adi.AttendanceStoppedAt;
+        var status = isLate ? "Late" : "Present";
+
+        var existing = await context.AttendanceRecords
+            .FirstOrDefaultAsync(r => r.AttendanceId == attendanceId
+                                      && r.LearnerId == learnerId
+                                      && r.AttendanceType == AttendanceType.Adi);
+
+        var record = new AttendanceRecord
+        {
+            Id = existing?.Id ?? Guid.NewGuid(),
+            AttendanceId = attendanceId,
+            LearnerId = learnerId,
+            AttendanceType = AttendanceType.Adi,
+            Start = arrivalTime,
+            Notes = status,
+            CreatedAt = existing?.CreatedAt ?? DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            CreatedBy = existing?.CreatedBy ?? userId,
+            UpdatedBy = userId
+        };
+
+        if (existing == null)
+        {
+            await attendanceRecordService.CreateAsync(record);
+            logger.LogInformation("Marked learner {LearnerId} as {Status} at {Time} for ADI attendance {AttendanceId}",
+                learnerId, status, arrivalTime, attendanceId);
+        }
+        else
+        {
+            await attendanceRecordService.UpdateAsync(record);
+            logger.LogInformation("Updated learner {LearnerId} to {Status} at {Time} for ADI attendance {AttendanceId}",
+                learnerId, status, arrivalTime, attendanceId);
+        }
+    }
+
+    /// <summary>
+    /// Legacy method for backward compatibility.
+    /// </summary>
     public async Task SetLearnerAdiAttendanceAsync(
         Guid attendanceId,
         Guid learnerId,
@@ -121,6 +230,92 @@ public class AdiAttendanceService(
             await attendanceRecordService.UpdateAsync(record);
             logger.LogInformation("Updated ADI attendance record for learner {LearnerId} in attendance {AttendanceId} as {Status}",
                 learnerId, attendanceId, record.Notes);
+        }
+    }
+
+    /// <summary>
+    /// Add an additional learner to an ADI class during attendance.
+    /// </summary>
+    public async Task<AdiLearner> AddAdditionalLearnerAsync(Guid academicDevelopmentClassId, Guid learnerId, Guid? userId)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+
+        // Check if already exists
+        var existing = await context.AdiLearners
+            .FirstOrDefaultAsync(al => al.AcademicDevelopmentClassId == academicDevelopmentClassId
+                                       && al.LearnerId == learnerId);
+
+        if (existing != null)
+        {
+            return existing;
+        }
+
+        var adiLearner = new AdiLearner
+        {
+            Id = Guid.NewGuid(),
+            AcademicDevelopmentClassId = academicDevelopmentClassId,
+            LearnerId = learnerId,
+            IsAdditional = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = userId
+        };
+
+        context.AdiLearners.Add(adiLearner);
+        await context.SaveChangesAsync();
+
+        logger.LogInformation("Added additional learner {LearnerId} to ADI {AdiId}", learnerId, academicDevelopmentClassId);
+
+        return adiLearner;
+    }
+
+    /// <summary>
+    /// Add learners to an ADI class (non-additional, assigned during creation).
+    /// </summary>
+    public async Task AddLearnersToAdiAsync(Guid academicDevelopmentClassId, IEnumerable<Guid> learnerIds, Guid? userId)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+
+        var existingIds = await context.AdiLearners
+            .Where(al => al.AcademicDevelopmentClassId == academicDevelopmentClassId)
+            .Select(al => al.LearnerId)
+            .ToListAsync();
+
+        var newLearnerIds = learnerIds.Except(existingIds).ToList();
+
+        var adiLearners = newLearnerIds.Select(lid => new AdiLearner
+        {
+            Id = Guid.NewGuid(),
+            AcademicDevelopmentClassId = academicDevelopmentClassId,
+            LearnerId = lid,
+            IsAdditional = false,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = userId
+        }).ToList();
+
+        if (adiLearners.Count != 0)
+        {
+            context.AdiLearners.AddRange(adiLearners);
+            await context.SaveChangesAsync();
+            logger.LogInformation("Added {Count} learners to ADI {AdiId}", adiLearners.Count, academicDevelopmentClassId);
+        }
+    }
+
+    /// <summary>
+    /// Remove a learner from an ADI class.
+    /// </summary>
+    public async Task RemoveLearnerFromAdiAsync(Guid academicDevelopmentClassId, Guid learnerId)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+
+        var adiLearner = await context.AdiLearners
+            .FirstOrDefaultAsync(al => al.AcademicDevelopmentClassId == academicDevelopmentClassId
+                                       && al.LearnerId == learnerId);
+
+        if (adiLearner != null)
+        {
+            context.AdiLearners.Remove(adiLearner);
+            await context.SaveChangesAsync();
+            logger.LogInformation("Removed learner {LearnerId} from ADI {AdiId}", learnerId, academicDevelopmentClassId);
         }
     }
 }

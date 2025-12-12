@@ -584,7 +584,11 @@ public class LearnerService
         return await context.Learners
             .Where(l => l.RegisterClass != null
                         && l.RegisterClass.SchoolGradeId == gradeId
-                        && l.LearnerSubjects!.Any(ls => ls.SubjectId == subjectId))
+                        && l.RegisterClass.AcademicYear != null
+                        && l.RegisterClass.AcademicYear.IsCurrent
+                        && l.LearnerSubjects!.Any(ls => ls.SubjectId == subjectId
+                            && ls.AcademicYear != null
+                            && ls.AcademicYear.IsCurrent))
             .Include(l => l.RegisterClass!)
             .ThenInclude(rc => rc.SchoolGrade!)
             .ThenInclude(sg => sg.SystemGrade)

@@ -496,14 +496,15 @@
                 await AdiAttendanceService.AddAdditionalLearnerAsync(createdAdi.Id, learnerId, _currentUserId);
             }
 
-            Logger.LogInformation("Created ADI {AdiId} with {LearnerCount} learners", createdAdi.Id, _selectedLearnerIds.Count);
+            var learnerCount = _selectedLearnerIds.Count;
+            Logger.LogInformation("Created ADI {AdiId} with {LearnerCount} learners", createdAdi.Id, learnerCount);
 
             ResetForm();
             await LoadData();
 
             await DialogService.ShowMessageBox(
                 "Success",
-                $"ADI has been created successfully with {_selectedLearnerIds.Count} learners!",
+                $"ADI has been created successfully with {learnerCount} learners!",
                 yesText: "OK");
         }
         catch (Exception ex)

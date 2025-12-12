@@ -136,36 +136,35 @@
                             <tr @onclick="@(() => OnLearnerClick(item.Learner))" 
                                 style="@(canClick ? "cursor: pointer;" : "")"
                                 class="@(canClick ? "learner-row-clickable" : "")">
-                                <td>
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                        <MudText>@item.Learner.DisplayName</MudText>
-                                        @if (item.IsAdditional)
-                                        {
-                                            <MudChip T="string" Color="Color.Secondary" Size="Size.Small" 
-                                                     Variant="MudBlazor.Variant.Outlined" Class="adi-pill-additional">
-                                                Additional
-                                            </MudChip>
-                                        }
-                                    </MudStack>
-                                </td>
+                                <td>@item.Learner.DisplayName</td>
                                 <td>@item.Learner.RegisterClass?.DisplayName</td>
                                 <td>
-                                    @{ var pillInfo = GetStatusPill(item.Learner.Id); }
-                                    <MudChip T="string" 
-                                             Color="@pillInfo.Color" 
-                                             Size="Size.Small"
-                                             Variant="MudBlazor.Variant.Filled"
-                                             Class="@pillInfo.CssClass"
-                                             Disabled="@_processingLearnerIds.Contains(item.Learner.Id)">
-                                        @if (_processingLearnerIds.Contains(item.Learner.Id))
-                                        {
-                                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-                                        }
-                                        else
-                                        {
-                                            @pillInfo.Text
-                                        }
-                                    </MudChip>
+                                    @if (item.IsAdditional)
+                                    {
+                                        <MudChip T="string" Color="Color.Secondary" Size="Size.Small" 
+                                                 Variant="MudBlazor.Variant.Outlined" Class="adi-pill-additional">
+                                            Additional
+                                        </MudChip>
+                                    }
+                                    else
+                                    {
+                                        var pillInfo = GetStatusPill(item.Learner.Id);
+                                        <MudChip T="string" 
+                                                 Color="@pillInfo.Color" 
+                                                 Size="Size.Small"
+                                                 Variant="MudBlazor.Variant.Filled"
+                                                 Class="@pillInfo.CssClass"
+                                                 Disabled="@_processingLearnerIds.Contains(item.Learner.Id)">
+                                            @if (_processingLearnerIds.Contains(item.Learner.Id))
+                                            {
+                                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                            }
+                                            else
+                                            {
+                                                @pillInfo.Text
+                                            }
+                                        </MudChip>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -189,8 +188,9 @@
         color: white !important;
     }
     .adi-pill-late {
-        background-color: #f44336 !important;
-        color: white !important;
+        background-color: white !important;
+        color: #f44336 !important;
+        border: 2px solid #f44336 !important;
     }
     .adi-pill-additional {
         border-color: #9c27b0 !important;

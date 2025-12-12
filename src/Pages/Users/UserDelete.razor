@@ -53,13 +53,13 @@
                 {
                     <p>
                         This teacher is referenced as the capturer of one or more Result Sets.
-                        For audit history, this user cannot be deleted.
+                        They will be archived (disabled) instead of deleted.
                     </p>
                 }
 
                 <button class="btn btn-danger" @onclick="ConfirmDelete"
                         disabled="@IsDeleteDisabled">
-                    Delete User
+                    @DeleteButtonText
                 </button>
                 <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
             </div>
@@ -83,9 +83,13 @@
     private string _selectedTeacherId = string.Empty;
 
     private bool IsDeleteDisabled =>
-        (_user?.Roles.Contains(Roles.Teacher) == true && _hasCapturedResultSets)
-        || (_user?.Roles.Contains(Roles.Teacher) == true && _hasPeriods)
+        (_user?.Roles.Contains(Roles.Teacher) == true && _hasPeriods)
         || (_user?.Roles.Contains(Roles.Teacher) == true && _hasRegisterClasses && string.IsNullOrEmpty(_selectedTeacherId));
+
+    private string DeleteButtonText =>
+        (_user?.Roles.Contains(Roles.Teacher) == true && _hasCapturedResultSets)
+            ? "Archive User"
+            : "Delete User";
 
     protected override async Task OnInitializedAsync()
     {
@@ -127,14 +131,19 @@
                 // Transfer register classes from this teacher to the selected replacement
                 await UserService.TransferRegisterClassesAsync(UserId, Guid.Parse(_selectedTeacherId));
             }
-            var deleted = await UserService.DeleteAsync(UserId);
-            if (deleted)
+            var outcome = await UserService.RemoveAsync(UserId);
+            if (outcome == UserRemovalOutcome.Deleted)
             {
+                Navigation.NavigateTo("/users");
+            }
+            else if (outcome == UserRemovalOutcome.Archived)
+            {
+                await JsRuntime.InvokeVoidAsync("alert", "User archived (cannot be deleted because they have results).");
                 Navigation.NavigateTo("/users");
             }
             else
             {
-                await JsRuntime.InvokeVoidAsync("alert", "Failed to delete user.");
+                await JsRuntime.InvokeVoidAsync("alert", "Failed to remove user.");
             }
         }
         catch (Exception ex)

@@ -11,6 +11,9 @@ public class User : IdentityUser<Guid>
         Id = Guid.NewGuid();
     }
 
+    public bool IsArchived { get; set; }
+    public DateTime? ArchivedAt { get; set; }
+
     public string? Surname { get; set; }
     public string? Abbreviation { get; set; }
     [MaxLength(64)]

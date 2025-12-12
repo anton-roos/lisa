@@ -1401,6 +1401,9 @@ namespace Lisa.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
@@ -1410,6 +1413,9 @@ namespace Lisa.Migrations
                         .HasColumnType("character varying(256)");
 
                     b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsArchived")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("LockoutEnabled")

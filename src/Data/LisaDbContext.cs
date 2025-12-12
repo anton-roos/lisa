@@ -451,11 +451,17 @@ public class LisaDbContext
         {
             entity.HasKey(s => s.Id);
             entity.HasIndex(s => new { s.SchoolId, s.Start });
+            entity.HasIndex(s => s.AcademicDevelopmentClassId);
 
             entity.HasOne(s => s.School)
                   .WithMany()
                   .HasForeignKey(s => s.SchoolId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(s => s.AcademicDevelopmentClass)
+                .WithMany()
+                .HasForeignKey(s => s.AcademicDevelopmentClassId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             entity.Property(s => s.Start)
                 .IsRequired();

@@ -45,7 +45,7 @@
                         <MudTh>Actions</MudTh>
                     </HeaderContent>
                     <RowTemplate Context="registerClass">
-                        <MudTd DataLabel="Name">@registerClass.Name</MudTd>
+                        <MudTd DataLabel="Name">@registerClass.DisplayName</MudTd>
                         <MudTd DataLabel="Grade">
                             @if (registerClass.SchoolGrade != null)
                             {
@@ -174,7 +174,7 @@
             CloseOnEscapeKey = true
         };
 
-        await DialogService.ShowAsync<RegisterClassViewDialog>($"Register Class: {registerClass.Name}", parameters, options);
+        await DialogService.ShowAsync<RegisterClassViewDialog>($"Register Class: {registerClass.DisplayName}", parameters, options);
     }
 
     private async Task ShowConfirmationAsync(RegisterClass? registerClass)

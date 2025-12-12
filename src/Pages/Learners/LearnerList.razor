@@ -190,14 +190,14 @@
                                 @if (learner.RegisterClass?.SchoolGrade != null)
                                 {
                                     <MudChip T="string" Size="Size.Small" Color="Color.Info" OnClick="Promote">
-                                        @learner.RegisterClass.Name
+                                        @learner.RegisterClass.DisplayName
                                     </MudChip>
                                 }
                                 else if (learner.PreviousRegisterClass != null)
                                 {
                                     <MudTooltip Text="Previous year's register class">
                                         <MudChip T="string" Size="Size.Small" Color="Color.Warning">
-                                            @learner.PreviousRegisterClass.Name (prev)
+                                            @learner.PreviousRegisterClass.DisplayName (prev)
                                         </MudChip>
                                     </MudTooltip>
                                 }

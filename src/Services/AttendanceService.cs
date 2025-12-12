@@ -29,7 +29,9 @@ public class AttendanceService
     public async Task<Attendance> CreateAttendanceAsync(
         Guid schoolId,
         DateTime start,
-        DateTime? end = null
+        DateTime? end = null,
+        AttendanceType type = AttendanceType.CheckIn,
+        Guid? academicDevelopmentClassId = null
     )
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -42,8 +44,10 @@ public class AttendanceService
             Id = Guid.NewGuid(),
             SchoolId = schoolId,
             AcademicYearId = currentAcademicYearId,
+            AcademicDevelopmentClassId = academicDevelopmentClassId,
             Start = start,
             End = end,
+            Type = type,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };

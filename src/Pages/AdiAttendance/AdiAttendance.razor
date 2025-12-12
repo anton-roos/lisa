@@ -1,0 +1,284 @@
+@page "/adi-attendance"
+@using Lisa.Enums
+@using Lisa.Models.Entities
+@using System.Security.Claims
+@using MudBlazor
+@inject SchoolService SchoolService
+@inject AcademicDevelopmentClassService AdiService
+@inject AdiAttendanceService AdiAttendanceService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDialogService DialogService
+@inject ILogger<AdiAttendance> Logger
+@inherits EventAwareComponentBase
+
+<PageTitle>ADI Attendance</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-3">ADI Attendance</MudText>
+
+    @if (_selectedSchool == null)
+    {
+        <NoSchoolSelected Message="Please select a school from the dropdown at the top of the page before proceeding." />
+    }
+    else
+    {
+        <MudPaper Class="pa-4 mb-4">
+            <MudStack Spacing="2">
+                <MudSelect T="Guid" Label="Select ADI Event" Variant="Variant.Outlined" @bind-Value="_selectedAdiId" ValueChanged="OnAdiChanged">
+                    <MudSelectItem T="Guid" Value="Guid.Empty">-- Select ADI Event --</MudSelectItem>
+                    @foreach (var adi in _adiEvents)
+                    {
+                        <MudSelectItem T="Guid" Value="adi.Id">
+                            @adi.DateTime.ToString("dd MMM yyyy HH:mm") - @adi.SchoolGrade?.SystemGrade?.Name - @adi.Subject?.Name
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+
+                @if (_selectedAdi != null)
+                {
+                    <MudGrid>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Grade</MudText>
+                            <MudText Typo="Typo.body1">@(_selectedAdi.SchoolGrade?.SystemGrade?.Name ?? "-")</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Subject</MudText>
+                            <MudText Typo="Typo.body1">@(_selectedAdi.Subject?.Name ?? "-")</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Teacher</MudText>
+                            <MudText Typo="Typo.body1">@(_selectedAdi.Teacher != null ? $"{_selectedAdi.Teacher.Surname}, {_selectedAdi.Teacher.Name}" : "Not assigned")</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Marked Present</MudText>
+                            <MudText Typo="Typo.body1">@_presentCount / @_totalCount</MudText>
+                        </MudItem>
+                    </MudGrid>
+
+                    <MudTextField @bind-Value="_search" Label="Search learner" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
+                }
+            </MudStack>
+        </MudPaper>
+
+        @if (_isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-2" />
+        }
+        else if (_selectedAdi == null)
+        {
+            <MudAlert Severity="Severity.Info">Select an ADI event to capture attendance.</MudAlert>
+        }
+        else
+        {
+            <MudTable Items="FilteredLearners" Hover="true" Dense="true" Striped="true" Elevation="2" Breakpoint="Breakpoint.Sm">
+                <HeaderContent>
+                    <MudTh>Register Class</MudTh>
+                    <MudTh>Learner</MudTh>
+                    <MudTh align="right">Present</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="learner">
+                    <MudTd DataLabel="Register Class">@learner.RegisterClass?.DisplayName</MudTd>
+                    <MudTd DataLabel="Learner">@learner.DisplayName</MudTd>
+                    <MudTd DataLabel="Present" Align="Align.Right">
+                        <MudSwitch T="bool"
+                                   Color="Color.Success"
+                                   Checked="IsPresent(learner.Id)"
+                                   Disabled="@_processingLearnerIds.Contains(learner.Id)"
+                                   CheckedChanged="@(async (bool value) => await SetPresentAsync(learner.Id, value))" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    }
+</MudContainer>
+
+@code {
+    private School? _selectedSchool;
+    private List<AcademicDevelopmentClass> _adiEvents = [];
+
+    private Guid _selectedAdiId = Guid.Empty;
+    private AcademicDevelopmentClass? _selectedAdi;
+
+    private Attendance? _adiAttendance;
+    private List<Learner> _roster = [];
+    private Dictionary<Guid, AttendanceRecord> _existingRecords = new();
+
+    private bool _isLoading;
+    private string? _search;
+
+    private int _presentCount;
+    private int _totalCount;
+
+    private Guid? _currentUserId;
+    private readonly HashSet<Guid> _processingLearnerIds = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        SubscribeToEvent(UiEvents.SchoolSelected);
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrWhiteSpace(userId) && Guid.TryParse(userId, out var parsed))
+            {
+                _currentUserId = parsed;
+            }
+        }
+
+        if (_selectedSchool != null)
+        {
+            await LoadAdiEventsAsync();
+        }
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected && payload is School school)
+        {
+            _selectedSchool = school;
+            _selectedAdiId = Guid.Empty;
+            _selectedAdi = null;
+            _adiAttendance = null;
+            _roster = [];
+            _existingRecords = new();
+            _search = null;
+            await LoadAdiEventsAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadAdiEventsAsync()
+    {
+        if (_selectedSchool == null) return;
+
+        try
+        {
+            _isLoading = true;
+            await InvokeAsync(StateHasChanged);
+
+            _adiEvents = await AdiService.GetBySchoolIdAsync(_selectedSchool.Id);
+            _adiEvents = _adiEvents
+                .OrderByDescending(a => a.DateTime)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading ADI events");
+            await DialogService.ShowMessageBox("Error", "Failed to load ADI events.", yesText: "OK");
+        }
+        finally
+        {
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task OnAdiChanged(Guid value)
+    {
+        _selectedAdiId = value;
+
+        if (_selectedAdiId == Guid.Empty)
+        {
+            _selectedAdi = null;
+            _adiAttendance = null;
+            _roster = [];
+            _existingRecords = new();
+            RecalcCounts();
+            return;
+        }
+
+        await LoadAdiAttendanceAsync(_selectedAdiId);
+    }
+
+    private async Task LoadAdiAttendanceAsync(Guid adiId)
+    {
+        try
+        {
+            _isLoading = true;
+            await InvokeAsync(StateHasChanged);
+
+            _selectedAdi = _adiEvents.FirstOrDefault(a => a.Id == adiId) ?? await AdiService.GetByIdAsync(adiId);
+
+            _adiAttendance = await AdiAttendanceService.GetOrCreateAdiAttendanceAsync(adiId);
+            _roster = await AdiAttendanceService.GetAdiRosterAsync(adiId);
+            _existingRecords = await AdiAttendanceService.GetExistingAdiAttendanceRecordsAsync(_adiAttendance.Id);
+
+            RecalcCounts();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading ADI attendance");
+            await DialogService.ShowMessageBox("Error", "Failed to load ADI attendance.", yesText: "OK");
+        }
+        finally
+        {
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private IEnumerable<Learner> FilteredLearners =>
+        string.IsNullOrWhiteSpace(_search)
+            ? _roster
+            : _roster.Where(l =>
+                ($"{l.DisplayName} {l.FullName}").Contains(_search, StringComparison.OrdinalIgnoreCase)
+                || (l.RegisterClass?.DisplayName?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    private bool IsPresent(Guid learnerId)
+    {
+        return _existingRecords.TryGetValue(learnerId, out var record)
+               && record.Notes?.Contains("Present", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    private async Task SetPresentAsync(Guid learnerId, bool isPresent)
+    {
+        if (_adiAttendance == null) return;
+        if (_processingLearnerIds.Contains(learnerId)) return;
+
+        try
+        {
+            _processingLearnerIds.Add(learnerId);
+            await InvokeAsync(StateHasChanged);
+
+            await AdiAttendanceService.SetLearnerAdiAttendanceAsync(
+                attendanceId: _adiAttendance.Id,
+                learnerId: learnerId,
+                isPresent: isPresent,
+                userId: _currentUserId);
+
+            // Refresh in-memory record for accurate counts/UI.
+            _existingRecords[learnerId] = new AttendanceRecord
+            {
+                AttendanceId = _adiAttendance.Id,
+                LearnerId = learnerId,
+                AttendanceType = AttendanceType.Adi,
+                Notes = isPresent ? "Present" : "Absent",
+                Start = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            RecalcCounts();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating ADI attendance for learner {LearnerId}", learnerId);
+            await DialogService.ShowMessageBox("Error", "Failed to update attendance.", yesText: "OK");
+        }
+        finally
+        {
+            _processingLearnerIds.Remove(learnerId);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void RecalcCounts()
+    {
+        _totalCount = _roster.Count;
+        _presentCount = _roster.Count(l => IsPresent(l.Id));
+    }
+}

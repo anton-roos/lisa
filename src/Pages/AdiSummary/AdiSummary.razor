@@ -1,0 +1,231 @@
+@page "/adi-summary"
+@using Lisa.Enums
+@using Lisa.Models.Entities
+@using MudBlazor
+@inject SchoolService SchoolService
+@inject AcademicDevelopmentClassService AdiService
+@inject AdiAttendanceService AdiAttendanceService
+@inject IDialogService DialogService
+@inject ILogger<AdiSummary> Logger
+@inherits EventAwareComponentBase
+
+<PageTitle>ADI Summary</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-3">ADI Summary</MudText>
+
+    @if (_selectedSchool == null)
+    {
+        <NoSchoolSelected Message="Please select a school from the dropdown at the top of the page before proceeding." />
+    }
+    else
+    {
+        <MudPaper Class="pa-4 mb-4">
+            <MudSelect T="Guid" Label="Select ADI Event" Variant="Variant.Outlined" @bind-Value="_selectedAdiId" ValueChanged="OnAdiChanged">
+                <MudSelectItem T="Guid" Value="Guid.Empty">-- Select ADI Event --</MudSelectItem>
+                @foreach (var adi in _adiEvents)
+                {
+                    <MudSelectItem T="Guid" Value="adi.Id">
+                        @adi.DateTime.ToString("dd MMM yyyy HH:mm") - @adi.SchoolGrade?.SystemGrade?.Name - @adi.Subject?.Name
+                    </MudSelectItem>
+                }
+            </MudSelect>
+        </MudPaper>
+
+        @if (_isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-2" />
+        }
+        else if (_selectedAdi == null)
+        {
+            <MudAlert Severity="Severity.Info">Select an ADI event to view the summary.</MudAlert>
+        }
+        else
+        {
+            <MudGrid Class="mb-4">
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-3">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Total Learners</MudText>
+                        <MudText Typo="Typo.h6">@_totalCount</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-3">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Present</MudText>
+                        <MudText Typo="Typo.h6">@_presentCount</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-3">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Absent / Not Marked</MudText>
+                        <MudText Typo="Typo.h6">@(_totalCount - _presentCount)</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-3">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">% Present</MudText>
+                        <MudText Typo="Typo.h6">@(_totalCount == 0 ? "0%" : $"{(int)Math.Round((_presentCount * 100.0) / _totalCount)}%")</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            <MudText Typo="Typo.h6" Class="mb-2">By Register Class</MudText>
+            <MudTable Items="_byRegisterClass" Dense="true" Striped="true" Hover="true" Elevation="2">
+                <HeaderContent>
+                    <MudTh>Register Class</MudTh>
+                    <MudTh align="right">Total</MudTh>
+                    <MudTh align="right">Present</MudTh>
+                    <MudTh align="right">Absent</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="row">
+                    <MudTd DataLabel="Register Class">@row.RegisterClassName</MudTd>
+                    <MudTd DataLabel="Total" Align="Align.Right">@row.Total</MudTd>
+                    <MudTd DataLabel="Present" Align="Align.Right">@row.Present</MudTd>
+                    <MudTd DataLabel="Absent" Align="Align.Right">@(row.Total - row.Present)</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    }
+</MudContainer>
+
+@code {
+    private sealed record RegisterClassSummaryRow(string RegisterClassName, int Total, int Present);
+
+    private School? _selectedSchool;
+    private List<AcademicDevelopmentClass> _adiEvents = [];
+
+    private Guid _selectedAdiId = Guid.Empty;
+    private AcademicDevelopmentClass? _selectedAdi;
+
+    private Attendance? _adiAttendance;
+    private List<Learner> _roster = [];
+    private Dictionary<Guid, AttendanceRecord> _existingRecords = new();
+
+    private bool _isLoading;
+
+    private int _presentCount;
+    private int _totalCount;
+
+    private List<RegisterClassSummaryRow> _byRegisterClass = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        SubscribeToEvent(UiEvents.SchoolSelected);
+
+        if (_selectedSchool != null)
+        {
+            await LoadAdiEventsAsync();
+        }
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected && payload is School school)
+        {
+            _selectedSchool = school;
+            _selectedAdiId = Guid.Empty;
+            _selectedAdi = null;
+            _adiAttendance = null;
+            _roster = [];
+            _existingRecords = new();
+            _byRegisterClass = [];
+            await LoadAdiEventsAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadAdiEventsAsync()
+    {
+        if (_selectedSchool == null) return;
+
+        try
+        {
+            _isLoading = true;
+            await InvokeAsync(StateHasChanged);
+
+            _adiEvents = await AdiService.GetBySchoolIdAsync(_selectedSchool.Id);
+            _adiEvents = _adiEvents
+                .OrderByDescending(a => a.DateTime)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading ADI events");
+            await DialogService.ShowMessageBox("Error", "Failed to load ADI events.", yesText: "OK");
+        }
+        finally
+        {
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task OnAdiChanged(Guid value)
+    {
+        _selectedAdiId = value;
+
+        if (_selectedAdiId == Guid.Empty)
+        {
+            _selectedAdi = null;
+            _adiAttendance = null;
+            _roster = [];
+            _existingRecords = new();
+            _byRegisterClass = [];
+            RecalcSummary();
+            return;
+        }
+
+        await LoadSummaryAsync(_selectedAdiId);
+    }
+
+    private async Task LoadSummaryAsync(Guid adiId)
+    {
+        try
+        {
+            _isLoading = true;
+            await InvokeAsync(StateHasChanged);
+
+            _selectedAdi = _adiEvents.FirstOrDefault(a => a.Id == adiId) ?? await AdiService.GetByIdAsync(adiId);
+
+            _adiAttendance = await AdiAttendanceService.GetOrCreateAdiAttendanceAsync(adiId);
+            _roster = await AdiAttendanceService.GetAdiRosterAsync(adiId);
+            _existingRecords = await AdiAttendanceService.GetExistingAdiAttendanceRecordsAsync(_adiAttendance.Id);
+
+            RecalcSummary();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading ADI summary");
+            await DialogService.ShowMessageBox("Error", "Failed to load ADI summary.", yesText: "OK");
+        }
+        finally
+        {
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private bool IsPresent(Guid learnerId)
+    {
+        return _existingRecords.TryGetValue(learnerId, out var record)
+               && record.Notes?.Contains("Present", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    private void RecalcSummary()
+    {
+        _totalCount = _roster.Count;
+        _presentCount = _roster.Count(l => IsPresent(l.Id));
+
+        _byRegisterClass = _roster
+            .GroupBy(l => l.RegisterClass?.DisplayName ?? "Unassigned")
+            .Select(g => new RegisterClassSummaryRow(
+                RegisterClassName: g.Key,
+                Total: g.Count(),
+                Present: g.Count(l => IsPresent(l.Id))))
+            .OrderBy(r => r.RegisterClassName)
+            .ToList();
+    }
+}

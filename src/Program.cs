@@ -70,6 +70,7 @@ builder.Services.AddSingleton<IConverter>(new SynchronizedConverter(new PdfTools
 builder.Services.AddAuthorizationBuilder();
 
 builder.Services.AddScoped<AcademicDevelopmentClassService>();
+builder.Services.AddScoped<AdiAttendanceService>();
 builder.Services.AddScoped<AcademicPlanningService>();
 builder.Services.AddScoped<AttendanceRecordService>();
 builder.Services.AddScoped<CareGroupService>();

@@ -69,7 +69,7 @@
                                            AdornmentIcon="@Icons.Material.Filled.Category">
                                     @foreach (var combination in _filteredCombinations)
                                     {
-                                        <MudSelectItem T="string" Value="@combination.Id.ToString()">@combination.Name</MudSelectItem>
+                                        <MudSelectItem T="string" Value="@combination.Id.ToString()">@combination.DisplayName</MudSelectItem>
                                     }
                                     <MudSelectItem T="string" Value="@("Math")">Math</MudSelectItem>
                                     <MudSelectItem T="string" Value="@("MathLit")">Math Literacy</MudSelectItem>

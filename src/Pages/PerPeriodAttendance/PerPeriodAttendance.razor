@@ -74,7 +74,7 @@ else
                             <option value="">-- Select Combination --</option>
                             @foreach (var combination in _combinations)
                             {
-                                <option value="@combination.Id">@combination.Name</option>
+                                <option value="@combination.Id">@combination.DisplayName</option>
                             }
                         </select>
                     </div>
@@ -134,7 +134,7 @@ else
                         }
                         @if (_selectedCombination != null)
                         {
-                            <span class="badge bg-info ms-1">@_selectedCombination.Name</span>
+                            <span class="badge bg-info ms-1">@_selectedCombination.DisplayName</span>
                         }
                     </h5>
                     <div>

@@ -249,6 +249,38 @@ public class UserService(
         try
         {
             await using var context = await dbContextFactory.CreateDbContextAsync();
+
+            // Avoid FK violations by ensuring dependent entities are handled first.
+            // RegisterClass.UserId is required and uses DeleteBehavior.Restrict.
+            var hasRegisterClasses = await context.RegisterClasses.AnyAsync(rc => rc.UserId == id);
+            if (hasRegisterClasses)
+            {
+                logger.LogWarning("Cannot delete user {UserId} because they are assigned to one or more Register Classes.", id);
+                return false;
+            }
+
+            // Period.TeacherId is required and uses DeleteBehavior.Restrict.
+            var hasPeriods = await context.Periods.AnyAsync(p => p.TeacherId == id);
+            if (hasPeriods)
+            {
+                logger.LogWarning("Cannot delete user {UserId} because they are assigned to one or more Periods.", id);
+                return false;
+            }
+
+            // ResultSet.CapturedById is required and uses DeleteBehavior.Restrict.
+            // If the user captured result sets, we currently block deletion to preserve audit history.
+            var hasCapturedResultSets = await context.ResultSets.AnyAsync(rs => rs.CapturedById == id);
+            if (hasCapturedResultSets)
+            {
+                logger.LogWarning("Cannot delete user {UserId} because they are referenced as CapturedBy on one or more Result Sets.", id);
+                return false;
+            }
+
+            // ResultSet.TeacherId is optional but uses DeleteBehavior.Restrict; clear it to allow deletion.
+            await context.ResultSets
+                .Where(rs => rs.TeacherId == id)
+                .ExecuteUpdateAsync(s => s.SetProperty(rs => rs.TeacherId, (Guid?)null));
+
             var existing = await context.Users.FindAsync(id);
             if (existing == null)
             {
@@ -289,6 +321,18 @@ public class UserService(
     {
         await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.RegisterClasses.AnyAsync(rc => rc.UserId == userId);
+    }
+
+    public async Task<bool> HasPeriodsAsync(Guid userId)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+        return await context.Periods.AnyAsync(p => p.TeacherId == userId);
+    }
+
+    public async Task<bool> HasCapturedResultSetsAsync(Guid userId)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+        return await context.ResultSets.AnyAsync(rs => rs.CapturedById == userId);
     }
 
     public async Task<List<User>> GetAvailableTeachersAsync(Guid userId)

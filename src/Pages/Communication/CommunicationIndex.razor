@@ -202,7 +202,7 @@
                                         @foreach (var learner in FilteredLearners)
                                         {
                                             <tr>
-                                                <td>@learner.Surname @learner.Name</td>
+                                                <td>@learner.DisplayName</td>
                                                 <td>@learner.RegisterClass?.SchoolGrade?.SystemGrade.Name</td>
                                                 <td>
                                                     <button class="btn btn-primary btn-sm"

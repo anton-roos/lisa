@@ -41,8 +41,24 @@
                     </div>
                 }
 
+                @if (_user.Roles.Contains(Roles.Teacher) && _hasPeriods)
+                {
+                    <p>
+                        This teacher is assigned to one or more Periods.
+                        Remove or reassign these periods before deletion.
+                    </p>
+                }
+
+                @if (_user.Roles.Contains(Roles.Teacher) && _hasCapturedResultSets)
+                {
+                    <p>
+                        This teacher is referenced as the capturer of one or more Result Sets.
+                        For audit history, this user cannot be deleted.
+                    </p>
+                }
+
                 <button class="btn btn-danger" @onclick="ConfirmDelete"
-                        disabled="@(_user.Roles.Contains(Roles.Teacher) && _hasRegisterClasses && string.IsNullOrEmpty(_selectedTeacherId))">
+                        disabled="@IsDeleteDisabled">
                     Delete User
                 </button>
                 <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
@@ -61,8 +77,15 @@
     private User? _user;
     private bool _isLoading = true;
     private bool _hasRegisterClasses;
+    private bool _hasPeriods;
+    private bool _hasCapturedResultSets;
     private List<User> _availableTeachers = [];
     private string _selectedTeacherId = string.Empty;
+
+    private bool IsDeleteDisabled =>
+        (_user?.Roles.Contains(Roles.Teacher) == true && _hasCapturedResultSets)
+        || (_user?.Roles.Contains(Roles.Teacher) == true && _hasPeriods)
+        || (_user?.Roles.Contains(Roles.Teacher) == true && _hasRegisterClasses && string.IsNullOrEmpty(_selectedTeacherId));
 
     protected override async Task OnInitializedAsync()
     {
@@ -80,6 +103,9 @@
                     // Get available teachers (other than this one) to transfer classes
                     _availableTeachers = await UserService.GetAvailableTeachersAsync(UserId);
                 }
+
+                _hasPeriods = await UserService.HasPeriodsAsync(UserId);
+                _hasCapturedResultSets = await UserService.HasCapturedResultSetsAsync(UserId);
             }
         }
         catch (Exception ex)

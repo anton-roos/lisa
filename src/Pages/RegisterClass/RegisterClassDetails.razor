@@ -59,7 +59,7 @@
                         @foreach (var learner in _registerClass.Learners)
                         {
                             <tr>
-                                <td>@($"{learner.Surname} {learner.Name}")</td>
+                                <td>@learner.DisplayName</td>
                                 <td>
                                     <button class="btn btn-primary" @onclick="() => ViewLearner(learner.Id)">
                                         View Learner

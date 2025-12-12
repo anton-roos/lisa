@@ -190,7 +190,7 @@ else
                                 @foreach (var learner in FilteredSignedInLearners)
                                 {
                                     <tr>
-                                        <td>@learner.Surname @learner.Name</td>
+                                        <td>@learner.DisplayName</td>
                                         <td>
                                             @{
                                                 var periodAttendance = _periodAttendanceData.TryGetValue(learner.Id, out var attendance) ? attendance : null;
@@ -238,7 +238,7 @@ else
                                     @foreach (var learner in FilteredNotSignedInLearners)
                                     {
                                         <tr class="opacity-75">
-                                            <td>@learner.Surname @learner.Name</td>
+                                            <td>@learner.DisplayName</td>
                                             <td>
                                                 @{
                                                     var isProcessing = _processingLearnerIds.Contains(learner.Id);

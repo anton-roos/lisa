@@ -207,8 +207,8 @@
 
     private async Task DeleteUser(User user)
     {
-        await UserService.DeleteAsync(user.Id);
-        await LoadUsers();
-        await InvokeAsync(StateHasChanged);
+        // Deleting can require dependency handling (e.g., transferring register classes)
+        Navigation.NavigateTo($"/users/delete/{user.Id}");
+        await Task.CompletedTask;
     }
 }

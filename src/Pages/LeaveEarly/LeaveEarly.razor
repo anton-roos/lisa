@@ -107,7 +107,7 @@ else
                         @foreach (var learner in FilteredLearners)
                         {
                             <tr>
-                                <td>@learner.Name @learner.Surname</td>
+                                <td>@learner.DisplayName</td>
                                 <td>@(learner.RegisterClass?.SchoolGrade?.SystemGrade.Name ?? "Unknown")</td>
                                 <td>
                                     @{

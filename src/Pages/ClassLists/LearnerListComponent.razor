@@ -15,8 +15,7 @@
             <h3>Learner List</h3>
         }
         <tr>
-            <th>Name</th>
-            <th>Surname</th>
+            <th>Full Name</th>
             <th>Register Class</th>
         </tr>
     </thead>
@@ -24,7 +23,7 @@
         @if (!Learners.Any())
         {
             <tr>
-                <td colspan="3">No learners available.</td>
+                <td colspan="2">No learners available.</td>
             </tr>
         }
         else
@@ -32,8 +31,7 @@
             @foreach (var learner in Learners)
             {
                 <tr>
-                    <td>@learner.Name</td>
-                    <td>@learner.Surname</td>
+                    <td>@learner.DisplayName</td>
                     <td>@learner.RegisterClass?.Name</td>
                 </tr>
             }

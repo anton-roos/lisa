@@ -100,7 +100,7 @@ namespace Lisa.Migrations
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("SubjectId")
+                    b.Property<int?>("SubjectId")
                         .HasColumnType("integer");
 
                     b.Property<Guid?>("TeacherId")
@@ -217,6 +217,36 @@ namespace Lisa.Migrations
                         .IsUnique();
 
                     b.ToTable("AdiLearners");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.AdiSubject", b =>
+                {
+                    b.Property<Guid>("AcademicDevelopmentClassId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("AcademicDevelopmentClassId", "SubjectId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.ToTable("AdiSubjects");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.AdiTeacher", b =>
+                {
+                    b.Property<Guid>("AcademicDevelopmentClassId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("AcademicDevelopmentClassId", "TeacherId");
+
+                    b.HasIndex("TeacherId");
+
+                    b.ToTable("AdiTeachers");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.AssessmentType", b =>
@@ -1746,8 +1776,7 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.Subject", "Subject")
                         .WithMany()
                         .HasForeignKey("SubjectId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Lisa.Models.Entities.User", "Teacher")
                         .WithMany()
@@ -1793,6 +1822,44 @@ namespace Lisa.Migrations
                     b.Navigation("AcademicDevelopmentClass");
 
                     b.Navigation("Learner");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.AdiSubject", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.AcademicDevelopmentClass", "AcademicDevelopmentClass")
+                        .WithMany("AdiSubjects")
+                        .HasForeignKey("AcademicDevelopmentClassId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AcademicDevelopmentClass");
+
+                    b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.AdiTeacher", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.AcademicDevelopmentClass", "AcademicDevelopmentClass")
+                        .WithMany("AdiTeachers")
+                        .HasForeignKey("AcademicDevelopmentClassId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.User", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AcademicDevelopmentClass");
+
+                    b.Navigation("Teacher");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.Attendance", b =>
@@ -2312,6 +2379,10 @@ namespace Lisa.Migrations
             modelBuilder.Entity("Lisa.Models.Entities.AcademicDevelopmentClass", b =>
                 {
                     b.Navigation("AdiLearners");
+
+                    b.Navigation("AdiSubjects");
+
+                    b.Navigation("AdiTeachers");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.Attendance", b =>

@@ -25,6 +25,10 @@ public class AcademicDevelopmentClassService(
                 .Include(adc => adc.Subject)
                 .Include(adc => adc.Teacher)
                 .Include(adc => adc.School)
+                .Include(adc => adc.AdiSubjects)
+                .ThenInclude(asub => asub.Subject)
+                .Include(adc => adc.AdiTeachers)
+                .ThenInclude(at => at.Teacher)
                 .AsNoTracking()
                 .OrderBy(adc => adc.DateTime)
                 .ToListAsync();
@@ -51,6 +55,10 @@ public class AcademicDevelopmentClassService(
                 .Include(adc => adc.Subject)
                 .Include(adc => adc.Teacher)
                 .Include(adc => adc.School)
+                .Include(adc => adc.AdiSubjects)
+                .ThenInclude(asub => asub.Subject)
+                .Include(adc => adc.AdiTeachers)
+                .ThenInclude(at => at.Teacher)
                 .AsNoTracking()
                 .OrderBy(adc => adc.DateTime)
                 .ToListAsync();
@@ -65,6 +73,7 @@ public class AcademicDevelopmentClassService(
     /// <summary>
     /// Get ADI classes by school, filtered by teacher ID.
     /// For regular teachers, returns only their own ADI classes.
+    /// Includes both Support ADIs where TeacherId matches, and Break ADIs where teacher is in AdiTeachers.
     /// </summary>
     public async Task<List<AcademicDevelopmentClass>> GetBySchoolAndTeacherAsync(Guid schoolId, Guid teacherId)
     {
@@ -74,13 +83,17 @@ public class AcademicDevelopmentClassService(
             
             return await context.AcademicDevelopmentClasses
                 .Where(adc => adc.SchoolId == schoolId && 
-                              adc.TeacherId == teacherId &&
-                              adc.AcademicYear != null && adc.AcademicYear.IsCurrent)
+                              adc.AcademicYear != null && adc.AcademicYear.IsCurrent &&
+                              (adc.TeacherId == teacherId || adc.AdiTeachers.Any(at => at.TeacherId == teacherId)))
                 .Include(adc => adc.SchoolGrade)
                 .ThenInclude(sg => sg!.SystemGrade)
                 .Include(adc => adc.Subject)
                 .Include(adc => adc.Teacher)
                 .Include(adc => adc.School)
+                .Include(adc => adc.AdiSubjects)
+                .ThenInclude(asub => asub.Subject)
+                .Include(adc => adc.AdiTeachers)
+                .ThenInclude(at => at.Teacher)
                 .AsNoTracking()
                 .OrderByDescending(adc => adc.DateTime)
                 .ToListAsync();
@@ -105,6 +118,10 @@ public class AcademicDevelopmentClassService(
                 .Include(adc => adc.School)
                 .Include(adc => adc.AdiLearners)
                 .ThenInclude(al => al.Learner)
+                .Include(adc => adc.AdiSubjects)
+                .ThenInclude(asub => asub.Subject)
+                .Include(adc => adc.AdiTeachers)
+                .ThenInclude(at => at.Teacher)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(adc => adc.Id == id);
         }

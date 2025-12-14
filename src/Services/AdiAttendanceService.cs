@@ -105,13 +105,13 @@ public class AdiAttendanceService(
         var adi = await academicDevelopmentClassService.GetByIdAsync(academicDevelopmentClassId)
                   ?? throw new KeyNotFoundException($"ADI event {academicDevelopmentClassId} not found.");
 
-        // If it's a Break ADI (no grade), return empty list - Break ADIs must use AdiLearners
-        if (adi.SchoolGradeId == null)
+        // If it's a Break ADI (no grade) or has no subject, return empty list - Break ADIs must use AdiLearners
+        if (adi.SchoolGradeId == null || adi.SubjectId == null)
         {
             return [];
         }
 
-        var learners = await learnerService.GetByGradeAndSubjectAsync(adi.SchoolGradeId.Value, adi.SubjectId);
+        var learners = await learnerService.GetByGradeAndSubjectAsync(adi.SchoolGradeId.Value, adi.SubjectId.Value);
 
         return learners
             .Where(l => l.SchoolId == adi.SchoolId)

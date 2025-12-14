@@ -38,6 +38,8 @@ public class LisaDbContext
     public DbSet<LeaveEarly> LeaveEarlies { get; set; } = null!;
     public DbSet<AcademicDevelopmentClass> AcademicDevelopmentClasses { get; set; } = null!;
     public DbSet<AdiLearner> AdiLearners { get; set; } = null!;
+    public DbSet<AdiSubject> AdiSubjects { get; set; } = null!;
+    public DbSet<AdiTeacher> AdiTeachers { get; set; } = null!;
     public DbSet<AcademicPlan> AcademicPlans { get; set; } = null!;
     public DbSet<LearnerAcademicRecord> LearnerAcademicRecords { get; set; } = null!;
     public DbSet<AcademicYear> AcademicYears { get; set; } = null!;
@@ -541,7 +543,7 @@ public class LisaDbContext
                 .WithMany()
                 .HasForeignKey(adc => adc.SubjectId)
                 .OnDelete(DeleteBehavior.Restrict)
-                .IsRequired();
+                .IsRequired(false);
 
             entity.HasOne(adc => adc.Teacher)
                 .WithMany()
@@ -559,6 +561,48 @@ public class LisaDbContext
             entity.HasMany(adc => adc.AdiLearners)
                 .WithOne(al => al.AcademicDevelopmentClass)
                 .HasForeignKey(al => al.AcademicDevelopmentClassId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(adc => adc.AdiSubjects)
+                .WithOne(asub => asub.AcademicDevelopmentClass)
+                .HasForeignKey(asub => asub.AcademicDevelopmentClassId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(adc => adc.AdiTeachers)
+                .WithOne(at => at.AcademicDevelopmentClass)
+                .HasForeignKey(at => at.AcademicDevelopmentClassId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ADI Subjects (join table for Break ADIs with multiple subjects)
+        modelBuilder.Entity<AdiSubject>(entity =>
+        {
+            entity.HasKey(asub => new { asub.AcademicDevelopmentClassId, asub.SubjectId });
+
+            entity.HasOne(asub => asub.AcademicDevelopmentClass)
+                .WithMany(adc => adc.AdiSubjects)
+                .HasForeignKey(asub => asub.AcademicDevelopmentClassId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(asub => asub.Subject)
+                .WithMany()
+                .HasForeignKey(asub => asub.SubjectId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ADI Teachers (join table for Break ADIs with multiple teachers)
+        modelBuilder.Entity<AdiTeacher>(entity =>
+        {
+            entity.HasKey(at => new { at.AcademicDevelopmentClassId, at.TeacherId });
+
+            entity.HasOne(at => at.AcademicDevelopmentClass)
+                .WithMany(adc => adc.AdiTeachers)
+                .HasForeignKey(at => at.AcademicDevelopmentClassId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(at => at.Teacher)
+                .WithMany()
+                .HasForeignKey(at => at.TeacherId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

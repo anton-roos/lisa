@@ -53,19 +53,50 @@
                             }
                         </MudSelect>
                     </MudItem>
+
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudSelect T="int?" Label="Subject" Variant="Variant.Outlined" Required="true"
+                                   Value="_adiModel.SubjectId" ValueChanged="OnSubjectChanged"
+                                   Error="@_validationErrors.ContainsKey("Subject")" ErrorText="@(_validationErrors.GetValueOrDefault("Subject"))">
+                            <MudSelectItem T="int?" Value="@((int?)null)">-- Select Subject --</MudSelectItem>
+                            @foreach (var subject in _availableSubjects.OrderBy(s => s.Name))
+                            {
+                                <MudSelectItem T="int?" Value="@subject.Id">@subject.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
                 }
 
-                <MudItem xs="12" sm="6" md="3">
-                    <MudSelect T="int?" Label="Subject" Variant="Variant.Outlined" Required="true"
-                               Value="_adiModel.SubjectId" ValueChanged="OnSubjectChanged"
-                               Error="@_validationErrors.ContainsKey("Subject")" ErrorText="@(_validationErrors.GetValueOrDefault("Subject"))">
-                        <MudSelectItem T="int?" Value="@((int?)null)">-- Select Subject --</MudSelectItem>
-                        @foreach (var subject in _availableSubjects.OrderBy(s => s.Name))
+                @* Break ADI - Multi-select subjects *@
+                @if (_adiModel.AdiType == AdiType.Break)
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="mb-2">
+                            Select Subjects (Multi-select)
+                        </MudText>
+                        <MudChipSet T="string" Class="mb-2" SelectionMode="SelectionMode.MultiSelection">
+                            @foreach (var subject in _availableSubjects.OrderBy(s => s.Name))
+                            {
+                                var isSelected = _selectedBreakSubjectIds.Contains(subject.Id);
+                                <MudChip T="string"
+                                         Color="@(isSelected ? Color.Primary : Color.Default)"
+                                         Variant="@(isSelected ? MudBlazor.Variant.Filled : MudBlazor.Variant.Outlined)"
+                                         Style="@(isSelected ? "font-weight: bold;" : "")"
+                                         OnClick="@(() => ToggleBreakSubject(subject.Id))">
+                                    @if (isSelected)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="me-1" />
+                                    }
+                                    @subject.Name
+                                </MudChip>
+                            }
+                        </MudChipSet>
+                        @if (_validationErrors.ContainsKey("Subjects"))
                         {
-                            <MudSelectItem T="int?" Value="@subject.Id">@subject.Name</MudSelectItem>
+                            <MudText Typo="Typo.caption" Color="Color.Error">@_validationErrors["Subjects"]</MudText>
                         }
-                    </MudSelect>
-                </MudItem>
+                    </MudItem>
+                }
 
                 <MudItem xs="12" sm="6" md="3">
                     <MudDatePicker Label="Date" Variant="Variant.Outlined" Required="true"
@@ -78,22 +109,57 @@
                                    @bind-Time="_selectedTime" />
                 </MudItem>
 
-                <MudItem xs="12" sm="6">
-                    <MudSelect T="Guid?" Label="Teacher" Variant="Variant.Outlined"
-                               Value="_adiModel.TeacherId" ValueChanged="OnTeacherChanged">
-                        <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select Teacher --</MudSelectItem>
-                        @foreach (var teacher in _availableTeachers.OrderBy(t => t.Surname).ThenBy(t => t.Name))
+                @* Support ADI - Single teacher selection *@
+                @if (_adiModel.AdiType == AdiType.Support)
+                {
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="Guid?" Label="Teacher" Variant="Variant.Outlined"
+                                   Value="_adiModel.TeacherId" ValueChanged="OnTeacherChanged">
+                            <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select Teacher --</MudSelectItem>
+                            @foreach (var teacher in _availableTeachers.OrderBy(t => t.Surname).ThenBy(t => t.Name))
+                            {
+                                <MudSelectItem T="Guid?" Value="@teacher.Id">@teacher.Surname, @teacher.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                }
+
+                @* Break ADI - Multi-select teachers *@
+                @if (_adiModel.AdiType == AdiType.Break)
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="mb-2">
+                            Select Teachers (Multi-select)
+                        </MudText>
+                        <MudChipSet T="string" Class="mb-2" SelectionMode="SelectionMode.MultiSelection">
+                            @foreach (var teacher in _availableTeachers.OrderBy(t => t.Surname).ThenBy(t => t.Name))
+                            {
+                                var isSelected = _selectedBreakTeacherIds.Contains(teacher.Id);
+                                <MudChip T="string"
+                                         Color="@(isSelected ? Color.Tertiary : Color.Default)"
+                                         Variant="@(isSelected ? MudBlazor.Variant.Filled : MudBlazor.Variant.Outlined)"
+                                         Style="@(isSelected ? "font-weight: bold;" : "")"
+                                         OnClick="@(() => ToggleBreakTeacher(teacher.Id))">
+                                    @if (isSelected)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="me-1" />
+                                    }
+                                    @teacher.Surname, @teacher.Name
+                                </MudChip>
+                            }
+                        </MudChipSet>
+                        @if (_validationErrors.ContainsKey("Teachers"))
                         {
-                            <MudSelectItem T="Guid?" Value="@teacher.Id">@teacher.Surname, @teacher.Name</MudSelectItem>
+                            <MudText Typo="Typo.caption" Color="Color.Error">@_validationErrors["Teachers"]</MudText>
                         }
-                    </MudSelect>
-                </MudItem>
+                    </MudItem>
+                }
             </MudGrid>
         </MudPaper>
 
-        @* Learner Selection Section - Show for Support ADI with grade+subject OR Break ADI with subject *@
+        @* Learner Selection Section - Show for Support ADI with grade+subject OR Break ADI with at least one subject *@
         @if ((_adiModel.AdiType == AdiType.Support && _adiModel.SchoolGradeId != null && _adiModel.SubjectId != null) ||
-             (_adiModel.AdiType == AdiType.Break && _adiModel.SubjectId != null))
+             (_adiModel.AdiType == AdiType.Break && _selectedBreakSubjectIds.Count > 0))
         {
             <MudPaper Class="pa-4 mb-4">
                 <MudText Typo="Typo.h6" Class="mb-3">Select Learners</MudText>
@@ -322,8 +388,8 @@
                         <MudTh>Date & Time</MudTh>
                         <MudTh>Type</MudTh>
                         <MudTh>Grade</MudTh>
-                        <MudTh>Subject</MudTh>
-                        <MudTh>Teacher</MudTh>
+                        <MudTh>Subjects</MudTh>
+                        <MudTh>Teachers</MudTh>
                         <MudTh>Learners</MudTh>
                         <MudTh>Actions</MudTh>
                     </HeaderContent>
@@ -335,8 +401,34 @@
                             </MudChip>
                         </MudTd>
                         <MudTd DataLabel="Grade">@(adi.SchoolGrade?.SystemGrade?.Name ?? "Multi-grade")</MudTd>
-                        <MudTd DataLabel="Subject">@adi.Subject?.Name</MudTd>
-                        <MudTd DataLabel="Teacher">@(adi.Teacher != null ? $"{adi.Teacher.Surname}, {adi.Teacher.Name}" : "Not assigned")</MudTd>
+                        <MudTd DataLabel="Subjects">
+                            @if (adi.AdiType == AdiType.Support)
+                            {
+                                @(adi.Subject?.Name ?? "N/A")
+                            }
+                            else if (adi.AdiSubjects?.Any() == true)
+                            {
+                                @string.Join(", ", adi.AdiSubjects.Select(s => s.Subject?.Name ?? "").Where(n => !string.IsNullOrEmpty(n)))
+                            }
+                            else
+                            {
+                                <span>None</span>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Teachers">
+                            @if (adi.AdiType == AdiType.Support)
+                            {
+                                @(adi.Teacher != null ? $"{adi.Teacher.Surname}, {adi.Teacher.Name}" : "Not assigned")
+                            }
+                            else if (adi.AdiTeachers?.Any() == true)
+                            {
+                                @string.Join(", ", adi.AdiTeachers.Select(t => t.Teacher != null ? $"{t.Teacher.Surname}" : "").Where(n => !string.IsNullOrEmpty(n)))
+                            }
+                            else
+                            {
+                                <span>Not assigned</span>
+                            }
+                        </MudTd>
                         <MudTd DataLabel="Learners">@(adi.AdiLearners?.Count ?? 0)</MudTd>
                         <MudTd DataLabel="Actions">
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
@@ -374,6 +466,8 @@
     private string _breakFilterRegisterClassId = string.Empty;
     private string _breakSearchTerm = string.Empty;
     private bool _isLoadingBreakLearners;
+    private HashSet<int> _selectedBreakSubjectIds = [];
+    private HashSet<Guid> _selectedBreakTeacherIds = [];
 
     private IEnumerable<RegisterClass> FilteredRegisterClasses => _allRegisterClasses
         .Where(rc => string.IsNullOrEmpty(_breakFilterGradeId) || rc.SchoolGradeId.ToString() == _breakFilterGradeId)
@@ -479,6 +573,8 @@
         if (value == AdiType.Break)
         {
             _adiModel.SchoolGradeId = null;
+            _adiModel.SubjectId = null;
+            _adiModel.TeacherId = null;
             _gradeSubjectLearners.Clear();
             _selectedLearnerIds.Clear();
             _allSelectedLearners.Clear();
@@ -486,6 +582,8 @@
             _breakFilterGradeId = string.Empty;
             _breakFilterRegisterClassId = string.Empty;
             _breakSearchTerm = string.Empty;
+            _selectedBreakSubjectIds.Clear();
+            _selectedBreakTeacherIds.Clear();
             
             // Load all learners for Break ADI
             await LoadBreakAdiLearners();
@@ -495,6 +593,8 @@
             // Clear Break ADI data when switching to Support
             _allSchoolLearners.Clear();
             _allRegisterClasses.Clear();
+            _selectedBreakSubjectIds.Clear();
+            _selectedBreakTeacherIds.Clear();
         }
         
         await InvokeAsync(StateHasChanged);
@@ -570,6 +670,32 @@
     private void OnTeacherChanged(Guid? value)
     {
         _adiModel.TeacherId = value;
+    }
+
+    private void ToggleBreakSubject(int subjectId)
+    {
+        if (_selectedBreakSubjectIds.Contains(subjectId))
+        {
+            _selectedBreakSubjectIds.Remove(subjectId);
+        }
+        else
+        {
+            _selectedBreakSubjectIds.Add(subjectId);
+        }
+        _validationErrors.Remove("Subjects");
+    }
+
+    private void ToggleBreakTeacher(Guid teacherId)
+    {
+        if (_selectedBreakTeacherIds.Contains(teacherId))
+        {
+            _selectedBreakTeacherIds.Remove(teacherId);
+        }
+        else
+        {
+            _selectedBreakTeacherIds.Add(teacherId);
+        }
+        _validationErrors.Remove("Teachers");
     }
 
     private async Task LoadGradeSubjectLearners()
@@ -739,8 +865,12 @@
         if (_adiModel.AdiType == AdiType.Support && _adiModel.SchoolGradeId == null)
             _validationErrors["Grade"] = "Please select a grade.";
 
-        if (_adiModel.SubjectId == null)
+        // Subject validation differs by ADI type
+        if (_adiModel.AdiType == AdiType.Support && _adiModel.SubjectId == null)
             _validationErrors["Subject"] = "Please select a subject.";
+        
+        if (_adiModel.AdiType == AdiType.Break && !_selectedBreakSubjectIds.Any())
+            _validationErrors["Subjects"] = "Please select at least one subject.";
 
         if (_selectedDate == null)
             _validationErrors["DateTime"] = "Please select a date.";
@@ -779,11 +909,24 @@
                 DateTime = dateTime,
                 AdiType = _adiModel.AdiType,
                 SchoolGradeId = _adiModel.AdiType == AdiType.Support ? _adiModel.SchoolGradeId : null,
-                SubjectId = _adiModel.SubjectId!.Value,
-                TeacherId = _adiModel.TeacherId,
+                SubjectId = _adiModel.AdiType == AdiType.Support ? _adiModel.SubjectId : null,
+                TeacherId = _adiModel.AdiType == AdiType.Support ? _adiModel.TeacherId : null,
                 SchoolId = _selectedSchool!.Id,
                 CreatedBy = _currentUserId
             };
+
+            // For Break ADI, populate the multi-select collections
+            if (_adiModel.AdiType == AdiType.Break)
+            {
+                foreach (var subjectId in _selectedBreakSubjectIds)
+                {
+                    adi.AdiSubjects.Add(new AdiSubject { SubjectId = subjectId });
+                }
+                foreach (var teacherId in _selectedBreakTeacherIds)
+                {
+                    adi.AdiTeachers.Add(new AdiTeacher { TeacherId = teacherId });
+                }
+            }
 
             var createdAdi = await AdiService.CreateAsync(adi);
 
@@ -844,6 +987,8 @@
         _breakFilterGradeId = string.Empty;
         _breakFilterRegisterClassId = string.Empty;
         _breakSearchTerm = string.Empty;
+        _selectedBreakSubjectIds.Clear();
+        _selectedBreakTeacherIds.Clear();
     }
 
     private async Task DeleteAdi(AcademicDevelopmentClass adi)

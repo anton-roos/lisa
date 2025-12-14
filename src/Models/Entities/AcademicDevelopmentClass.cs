@@ -19,10 +19,15 @@ public class AcademicDevelopmentClass : AcademicEntity
     public Guid? SchoolGradeId { get; set; }
     public SchoolGrade? SchoolGrade { get; set; }
 
-    [Required]
-    public int SubjectId { get; set; }
+    /// <summary>
+    /// Single subject for Support ADIs. Nullable for Break ADIs which use AdiSubjects collection.
+    /// </summary>
+    public int? SubjectId { get; set; }
     public Subject? Subject { get; set; }
 
+    /// <summary>
+    /// Single teacher for Support ADIs. Nullable for Break ADIs which use AdiTeachers collection.
+    /// </summary>
     public Guid? TeacherId { get; set; }
     public User? Teacher { get; set; }
 
@@ -50,4 +55,14 @@ public class AcademicDevelopmentClass : AcademicEntity
     /// Collection of learners assigned to this ADI class.
     /// </summary>
     public ICollection<AdiLearner> AdiLearners { get; set; } = [];
+
+    /// <summary>
+    /// Collection of subjects for Break ADIs (multi-subject).
+    /// </summary>
+    public ICollection<AdiSubject> AdiSubjects { get; set; } = [];
+
+    /// <summary>
+    /// Collection of teachers for Break ADIs (multi-teacher).
+    /// </summary>
+    public ICollection<AdiTeacher> AdiTeachers { get; set; } = [];
 }

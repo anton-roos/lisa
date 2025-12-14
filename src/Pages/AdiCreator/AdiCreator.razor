@@ -140,30 +140,123 @@
                         <MudIcon Icon="@Icons.Material.Filled.Deselect" Class="me-1" Size="Size.Small" />
                         Deselect All
                     </MudButton>
+
+                    <MudDivider Class="my-3" />
+
+                    @* Search for additional learners (Support ADI) *@
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="mb-2">Add Additional Learners from School</MudText>
+                    <MudAutocomplete T="Learner" Label="Search learners..." Variant="Variant.Outlined"
+                                     SearchFunc="SearchLearnersAsync" ToStringFunc="@(l => l?.DisplayName ?? "")"
+                                     ValueChanged="OnAdditionalLearnerSelected" ResetValueOnEmptyText="true"
+                                     @ref="_learnerAutocomplete"
+                                     Class="mb-2" />
                 }
 
-                <MudDivider Class="my-3" />
+                @* Break ADI - Full learner list with filters *@
+                @if (_adiModel.AdiType == AdiType.Break)
+                {
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="mb-2">
+                        Add Learners from any grade - A reason is required for each learner
+                    </MudText>
 
-                @* Search for additional learners *@
-                <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="mb-2">
-                    @if (_adiModel.AdiType == AdiType.Break)
+                    @* Filters *@
+                    <MudGrid Class="mb-3">
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudSelect T="string" Label="Filter by Grade" @bind-Value="_breakFilterGradeId"
+                                       Variant="Variant.Outlined" Clearable="true" AnchorOrigin="Origin.BottomCenter">
+                                <MudSelectItem T="string" Value="@string.Empty">All Grades</MudSelectItem>
+                                @foreach (var grade in _schoolGrades.OrderBy(g => g.SystemGrade.SequenceNumber))
+                                {
+                                    <MudSelectItem T="string" Value="@grade.Id.ToString()">@grade.SystemGrade.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudSelect T="string" Label="Filter by Register Class" @bind-Value="_breakFilterRegisterClassId"
+                                       Variant="Variant.Outlined" Clearable="true" AnchorOrigin="Origin.BottomCenter">
+                                <MudSelectItem T="string" Value="@string.Empty">All Classes</MudSelectItem>
+                                @foreach (var rc in FilteredRegisterClasses)
+                                {
+                                    <MudSelectItem T="string" Value="@rc.Id.ToString()">@rc.DisplayName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudTextField T="string" Label="Search by Name" @bind-Value="_breakSearchTerm"
+                                          Variant="Variant.Outlined" Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true"
+                                          Placeholder="Type name..." />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="2">
+                            <MudButton Variant="MudBlazor.Variant.Outlined" Color="Color.Secondary"
+                                       FullWidth="true" Style="height: 56px;" OnClick="ClearBreakFilters">
+                                Clear Filters
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+
+                    @* Learner Table *@
+                    @if (_isLoadingBreakLearners)
                     {
-                        <text>Add Learners (from any grade)</text>
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-2" />
+                    }
+                    else if (!FilteredBreakLearners.Any())
+                    {
+                        <MudAlert Severity="Severity.Info">No learners found with the current filters.</MudAlert>
                     }
                     else
                     {
-                        <text>Add Additional Learners from School</text>
+                        <MudTable Items="@FilteredBreakLearners.Take(50)" Dense="true" Hover="true" Striped="true"
+                                  FixedHeader="true" Height="400px">
+                            <HeaderContent>
+                                <MudTh Style="width: 50px;">Select</MudTh>
+                                <MudTh>Name</MudTh>
+                                <MudTh>Grade</MudTh>
+                                <MudTh>Register Class</MudTh>
+                                <MudTh>Reason</MudTh>
+                            </HeaderContent>
+                            <RowTemplate Context="learner">
+                                @{
+                                    var isSelected = _selectedLearnerIds.Contains(learner.Id);
+                                    var breakReason = _learnerBreakReasons.GetValueOrDefault(learner.Id);
+                                }
+                                <MudTd>
+                                    <MudCheckBox T="bool" Value="@isSelected" 
+                                                 ValueChanged="@((bool val) => OnBreakLearnerToggle(learner, val))"
+                                                 Color="Color.Success" />
+                                </MudTd>
+                                <MudTd DataLabel="Name">
+                                    <MudText Typo="Typo.body2" Style="@(isSelected ? "font-weight: bold; color: var(--mud-palette-success);" : "")">
+                                        @learner.DisplayName
+                                    </MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Grade">@learner.RegisterClass?.SchoolGrade?.SystemGrade?.Name</MudTd>
+                                <MudTd DataLabel="Register Class">@learner.RegisterClass?.DisplayName</MudTd>
+                                <MudTd DataLabel="Reason">
+                                    @if (isSelected && !string.IsNullOrEmpty(breakReason))
+                                    {
+                                        <MudTooltip Text="@breakReason">
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="MudBlazor.Variant.Text">
+                                                @(breakReason.Length > 30 ? breakReason[..30] + "..." : breakReason)
+                                            </MudChip>
+                                        </MudTooltip>
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                        @if (FilteredBreakLearners.Count() > 50)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+                                Showing 50 of @FilteredBreakLearners.Count() learners. Use filters to narrow results.
+                            </MudText>
+                        }
                     }
-                </MudText>
-                <MudAutocomplete T="Learner" Label="Search learners..." Variant="Variant.Outlined"
-                                 SearchFunc="SearchLearnersAsync" ToStringFunc="@(l => l?.DisplayName ?? "")"
-                                 ValueChanged="OnAdditionalLearnerSelected" ResetValueOnEmptyText="true"
-                                 @ref="_learnerAutocomplete"
-                                 Class="mb-2" />
+                }
 
                 @* Display selected learners *@
                 @if (_selectedLearnerIds.Any())
                 {
+                    <MudDivider Class="my-3" />
                     <MudText Typo="Typo.subtitle2" Class="mt-3 mb-2">
                         Selected Learners (@_selectedLearnerIds.Count)
                     </MudText>
@@ -179,7 +272,7 @@
                                          OnClose="@(() => RemoveLearner(learnerId))" Variant="MudBlazor.Variant.Filled"
                                          Style="@(isFromGradeSubject ? "font-weight: bold;" : "")">
                                     @learner.DisplayName
-                                    @if (!isFromGradeSubject)
+                                    @if (!isFromGradeSubject && _adiModel.AdiType == AdiType.Support)
                                     {
                                         <MudText Typo="Typo.caption" Class="ms-1">(Additional)</MudText>
                                     }
@@ -274,6 +367,29 @@
     private TimeSpan? _selectedTime = new TimeSpan(8, 0, 0);
     private MudAutocomplete<Learner>? _learnerAutocomplete;
 
+    // Break ADI specific fields
+    private List<Learner> _allSchoolLearners = [];
+    private List<RegisterClass> _allRegisterClasses = [];
+    private string _breakFilterGradeId = string.Empty;
+    private string _breakFilterRegisterClassId = string.Empty;
+    private string _breakSearchTerm = string.Empty;
+    private bool _isLoadingBreakLearners;
+
+    private IEnumerable<RegisterClass> FilteredRegisterClasses => _allRegisterClasses
+        .Where(rc => string.IsNullOrEmpty(_breakFilterGradeId) || rc.SchoolGradeId.ToString() == _breakFilterGradeId)
+        .OrderBy(rc => rc.SchoolGrade?.SystemGrade?.SequenceNumber)
+        .ThenBy(rc => rc.DisplayName);
+
+    private IEnumerable<Learner> FilteredBreakLearners => _allSchoolLearners
+        .Where(l => l.Status == LearnerStatus.Active)
+        .Where(l => string.IsNullOrEmpty(_breakFilterGradeId) || l.RegisterClass?.SchoolGradeId.ToString() == _breakFilterGradeId)
+        .Where(l => string.IsNullOrEmpty(_breakFilterRegisterClassId) || l.RegisterClassId.ToString() == _breakFilterRegisterClassId)
+        .Where(l => string.IsNullOrEmpty(_breakSearchTerm) ||
+                    $"{l.DisplayName} {l.Name} {l.Surname}".Contains(_breakSearchTerm.Trim(), StringComparison.OrdinalIgnoreCase))
+        .OrderBy(l => l.RegisterClass?.SchoolGrade?.SystemGrade?.SequenceNumber)
+        .ThenBy(l => l.Surname)
+        .ThenBy(l => l.Name);
+
     public class AdiModel
     {
         public AdiType AdiType { get; set; } = AdiType.Support;
@@ -367,6 +483,85 @@
             _selectedLearnerIds.Clear();
             _allSelectedLearners.Clear();
             _learnerBreakReasons.Clear();
+            _breakFilterGradeId = string.Empty;
+            _breakFilterRegisterClassId = string.Empty;
+            _breakSearchTerm = string.Empty;
+            
+            // Load all learners for Break ADI
+            await LoadBreakAdiLearners();
+        }
+        else
+        {
+            // Clear Break ADI data when switching to Support
+            _allSchoolLearners.Clear();
+            _allRegisterClasses.Clear();
+        }
+        
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadBreakAdiLearners()
+    {
+        if (_selectedSchool == null) return;
+
+        try
+        {
+            _isLoadingBreakLearners = true;
+            await InvokeAsync(StateHasChanged);
+
+            _allSchoolLearners = await LearnerService.GetBySchoolAsync(_selectedSchool.Id);
+            _allSchoolLearners = _allSchoolLearners
+                .Where(l => l.Status == LearnerStatus.Active)
+                .ToList();
+
+            _allRegisterClasses = _allSchoolLearners
+                .Where(l => l.RegisterClass != null)
+                .Select(l => l.RegisterClass!)
+                .DistinctBy(rc => rc.Id)
+                .OrderBy(rc => rc.SchoolGrade?.SystemGrade?.SequenceNumber)
+                .ThenBy(rc => rc.DisplayName)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading learners for Break ADI");
+        }
+        finally
+        {
+            _isLoadingBreakLearners = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void ClearBreakFilters()
+    {
+        _breakFilterGradeId = string.Empty;
+        _breakFilterRegisterClassId = string.Empty;
+        _breakSearchTerm = string.Empty;
+    }
+
+    private async Task OnBreakLearnerToggle(Learner learner, bool isSelected)
+    {
+        if (isSelected)
+        {
+            // Adding learner - prompt for reason
+            var reason = await ShowBreakReasonDialogAsync(learner);
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                // User cancelled
+                return;
+            }
+            
+            _learnerBreakReasons[learner.Id] = reason;
+            _selectedLearnerIds.Add(learner.Id);
+            _allSelectedLearners.Insert(0, learner);
+        }
+        else
+        {
+            // Removing learner
+            _selectedLearnerIds.Remove(learner.Id);
+            _learnerBreakReasons.Remove(learner.Id);
+            _allSelectedLearners.RemoveAll(l => l.Id == learner.Id);
         }
         
         await InvokeAsync(StateHasChanged);
@@ -643,6 +838,12 @@
         _gradeSubjectLearners.Clear();
         _learnerBreakReasons.Clear();
         _validationErrors.Clear();
+        // Clear Break ADI data
+        _allSchoolLearners.Clear();
+        _allRegisterClasses.Clear();
+        _breakFilterGradeId = string.Empty;
+        _breakFilterRegisterClassId = string.Empty;
+        _breakSearchTerm = string.Empty;
     }
 
     private async Task DeleteAdi(AcademicDevelopmentClass adi)

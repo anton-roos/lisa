@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Lisa.Enums;
 
 namespace Lisa.Models.Entities;
 
@@ -7,8 +8,15 @@ public class AcademicDevelopmentClass : AcademicEntity
     [Required]
     public DateTime DateTime { get; set; }
 
-    [Required]
-    public Guid SchoolGradeId { get; set; }
+    /// <summary>
+    /// The type of ADI: Support (grade-focused) or Break (multi-grade).
+    /// </summary>
+    public AdiType AdiType { get; set; } = AdiType.Support;
+
+    /// <summary>
+    /// The grade for Support ADIs. Null for Break ADIs which are multi-grade.
+    /// </summary>
+    public Guid? SchoolGradeId { get; set; }
     public SchoolGrade? SchoolGrade { get; set; }
 
     [Required]

@@ -33,16 +33,27 @@
 
             <MudGrid>
                 <MudItem xs="12" sm="6" md="3">
-                    <MudSelect T="Guid?" Label="Grade" Variant="Variant.Outlined" Required="true"
-                               Value="_adiModel.SchoolGradeId" ValueChanged="OnGradeChanged"
-                               Error="@_validationErrors.ContainsKey("Grade")" ErrorText="@(_validationErrors.GetValueOrDefault("Grade"))">
-                        <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select Grade --</MudSelectItem>
-                        @foreach (var grade in _schoolGrades.OrderBy(g => g.SystemGrade.SequenceNumber))
-                        {
-                            <MudSelectItem T="Guid?" Value="@grade.Id">@grade.SystemGrade.Name</MudSelectItem>
-                        }
+                    <MudSelect T="AdiType" Label="ADI Type" Variant="Variant.Outlined" Required="true"
+                               Value="_adiModel.AdiType" ValueChanged="OnAdiTypeChanged">
+                        <MudSelectItem T="AdiType" Value="AdiType.Support">Support (Grade-focused)</MudSelectItem>
+                        <MudSelectItem T="AdiType" Value="AdiType.Break">Break (Multi-grade)</MudSelectItem>
                     </MudSelect>
                 </MudItem>
+
+                @if (_adiModel.AdiType == AdiType.Support)
+                {
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudSelect T="Guid?" Label="Grade" Variant="Variant.Outlined" Required="true"
+                                   Value="_adiModel.SchoolGradeId" ValueChanged="OnGradeChanged"
+                                   Error="@_validationErrors.ContainsKey("Grade")" ErrorText="@(_validationErrors.GetValueOrDefault("Grade"))">
+                            <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select Grade --</MudSelectItem>
+                            @foreach (var grade in _schoolGrades.OrderBy(g => g.SystemGrade.SequenceNumber))
+                            {
+                                <MudSelectItem T="Guid?" Value="@grade.Id">@grade.SystemGrade.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                }
 
                 <MudItem xs="12" sm="6" md="3">
                     <MudSelect T="int?" Label="Subject" Variant="Variant.Outlined" Required="true"
@@ -80,14 +91,15 @@
             </MudGrid>
         </MudPaper>
 
-        @* Learner Selection Section *@
-        @if (_adiModel.SchoolGradeId != null && _adiModel.SubjectId != null)
+        @* Learner Selection Section - Show for Support ADI with grade+subject OR Break ADI with subject *@
+        @if ((_adiModel.AdiType == AdiType.Support && _adiModel.SchoolGradeId != null && _adiModel.SubjectId != null) ||
+             (_adiModel.AdiType == AdiType.Break && _adiModel.SubjectId != null))
         {
             <MudPaper Class="pa-4 mb-4">
                 <MudText Typo="Typo.h6" Class="mb-3">Select Learners</MudText>
 
-                @* Auto-selected learners from grade/subject *@
-                @if (_gradeSubjectLearners.Any())
+                @* Auto-selected learners from grade/subject (only for Support ADI) *@
+                @if (_adiModel.AdiType == AdiType.Support && _gradeSubjectLearners.Any())
                 {
                     <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="mb-2">
                         Learners in @(_schoolGrades.FirstOrDefault(g => g.Id == _adiModel.SchoolGradeId)?.SystemGrade?.Name) 
@@ -99,9 +111,14 @@
                         {
                             var isSelected = _selectedLearnerIds.Contains(learner.Id);
                             <MudChip T="string" 
-                                     Color="@(isSelected ? Color.Primary : Color.Default)"
+                                     Color="@(isSelected ? Color.Success : Color.Default)"
                                      Variant="@(isSelected ? MudBlazor.Variant.Filled : MudBlazor.Variant.Outlined)"
+                                     Style="@(isSelected ? "font-weight: bold; box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);" : "")"
                                      OnClick="@(() => ToggleLearner(learner.Id))">
+                                @if (isSelected)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="me-1" />
+                                }
                                 @learner.DisplayName
                             </MudChip>
                         }
@@ -128,10 +145,20 @@
                 <MudDivider Class="my-3" />
 
                 @* Search for additional learners *@
-                <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="mb-2">Add Additional Learners from School</MudText>
+                <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="mb-2">
+                    @if (_adiModel.AdiType == AdiType.Break)
+                    {
+                        <text>Add Learners (from any grade)</text>
+                    }
+                    else
+                    {
+                        <text>Add Additional Learners from School</text>
+                    }
+                </MudText>
                 <MudAutocomplete T="Learner" Label="Search learners..." Variant="Variant.Outlined"
                                  SearchFunc="SearchLearnersAsync" ToStringFunc="@(l => l?.DisplayName ?? "")"
                                  ValueChanged="OnAdditionalLearnerSelected" ResetValueOnEmptyText="true"
+                                 @ref="_learnerAutocomplete"
                                  Class="mb-2" />
 
                 @* Display selected learners *@
@@ -147,12 +174,20 @@
                             if (learner != null)
                             {
                                 var isFromGradeSubject = _gradeSubjectLearners.Any(l => l.Id == learnerId);
-                                <MudChip T="string" Color="@(isFromGradeSubject ? Color.Primary : Color.Warning)"
-                                         OnClose="@(() => RemoveLearner(learnerId))" Variant="MudBlazor.Variant.Filled">
+                                var breakReason = _learnerBreakReasons.GetValueOrDefault(learnerId);
+                                <MudChip T="string" Color="@(isFromGradeSubject ? Color.Success : Color.Warning)"
+                                         OnClose="@(() => RemoveLearner(learnerId))" Variant="MudBlazor.Variant.Filled"
+                                         Style="@(isFromGradeSubject ? "font-weight: bold;" : "")">
                                     @learner.DisplayName
                                     @if (!isFromGradeSubject)
                                     {
                                         <MudText Typo="Typo.caption" Class="ms-1">(Additional)</MudText>
+                                    }
+                                    @if (!string.IsNullOrEmpty(breakReason))
+                                    {
+                                        <MudTooltip Text="@breakReason">
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="ms-1" />
+                                        </MudTooltip>
                                     }
                                 </MudChip>
                             }
@@ -192,6 +227,7 @@
                 <MudTable Items="@_recentAdis.Take(10)" Dense="true" Hover="true" Striped="true">
                     <HeaderContent>
                         <MudTh>Date & Time</MudTh>
+                        <MudTh>Type</MudTh>
                         <MudTh>Grade</MudTh>
                         <MudTh>Subject</MudTh>
                         <MudTh>Teacher</MudTh>
@@ -200,7 +236,12 @@
                     </HeaderContent>
                     <RowTemplate Context="adi">
                         <MudTd DataLabel="Date & Time">@adi.DateTime.ToLocalTime().ToString("dd MMM yyyy HH:mm")</MudTd>
-                        <MudTd DataLabel="Grade">@adi.SchoolGrade?.SystemGrade?.Name</MudTd>
+                        <MudTd DataLabel="Type">
+                            <MudChip T="string" Size="Size.Small" Color="@(adi.AdiType == AdiType.Break ? Color.Warning : Color.Info)">
+                                @adi.AdiType.ToString()
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Grade">@(adi.SchoolGrade?.SystemGrade?.Name ?? "Multi-grade")</MudTd>
                         <MudTd DataLabel="Subject">@adi.Subject?.Name</MudTd>
                         <MudTd DataLabel="Teacher">@(adi.Teacher != null ? $"{adi.Teacher.Surname}, {adi.Teacher.Name}" : "Not assigned")</MudTd>
                         <MudTd DataLabel="Learners">@(adi.AdiLearners?.Count ?? 0)</MudTd>
@@ -224,15 +265,18 @@
     private List<Learner> _gradeSubjectLearners = [];
     private List<Learner> _allSelectedLearners = [];
     private HashSet<Guid> _selectedLearnerIds = [];
+    private Dictionary<Guid, string> _learnerBreakReasons = new();
     private AdiModel _adiModel = new();
     private Dictionary<string, string> _validationErrors = new();
     private bool _isLoading;
     private Guid? _currentUserId;
     private DateTime? _selectedDate = DateTime.Today;
     private TimeSpan? _selectedTime = new TimeSpan(8, 0, 0);
+    private MudAutocomplete<Learner>? _learnerAutocomplete;
 
     public class AdiModel
     {
+        public AdiType AdiType { get; set; } = AdiType.Support;
         public Guid? SchoolGradeId { get; set; }
         public int? SubjectId { get; set; }
         public Guid? TeacherId { get; set; }
@@ -311,6 +355,23 @@
         await LoadGradeSubjectLearners();
     }
 
+    private async Task OnAdiTypeChanged(AdiType value)
+    {
+        _adiModel.AdiType = value;
+        
+        // Reset grade selection when switching to Break ADI
+        if (value == AdiType.Break)
+        {
+            _adiModel.SchoolGradeId = null;
+            _gradeSubjectLearners.Clear();
+            _selectedLearnerIds.Clear();
+            _allSelectedLearners.Clear();
+            _learnerBreakReasons.Clear();
+        }
+        
+        await InvokeAsync(StateHasChanged);
+    }
+
     private void OnTeacherChanged(Guid? value)
     {
         _adiModel.TeacherId = value;
@@ -318,6 +379,13 @@
 
     private async Task LoadGradeSubjectLearners()
     {
+        // For Break ADI, we don't auto-load learners based on grade/subject
+        if (_adiModel.AdiType == AdiType.Break)
+        {
+            _gradeSubjectLearners = [];
+            return;
+        }
+
         if (_adiModel.SchoolGradeId == null || _adiModel.SubjectId == null)
         {
             _gradeSubjectLearners = [];
@@ -418,22 +486,62 @@
         }
     }
 
-    private void OnAdditionalLearnerSelected(Learner? learner)
+    private async Task OnAdditionalLearnerSelected(Learner? learner)
     {
         if (learner == null) return;
 
-        if (!_selectedLearnerIds.Contains(learner.Id))
+        if (_selectedLearnerIds.Contains(learner.Id))
+            return;
+
+        // For Break ADI, require a reason
+        if (_adiModel.AdiType == AdiType.Break)
         {
-            _selectedLearnerIds.Add(learner.Id);
-            _allSelectedLearners.Add(learner);
+            var reason = await ShowBreakReasonDialogAsync(learner);
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                // User cancelled or didn't provide a reason
+                return;
+            }
+            _learnerBreakReasons[learner.Id] = reason;
         }
+
+        _selectedLearnerIds.Add(learner.Id);
+        // Add to the beginning of the list so new learners appear at the top
+        _allSelectedLearners.Insert(0, learner);
+        
+        // Clear the autocomplete selection
+        if (_learnerAutocomplete != null)
+        {
+            await _learnerAutocomplete.ClearAsync();
+        }
+        
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task<string?> ShowBreakReasonDialogAsync(Learner learner)
+    {
+        var parameters = new DialogParameters<BreakReasonDialog>
+        {
+            { x => x.LearnerName, learner.DisplayName }
+        };
+
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<BreakReasonDialog>("Break ADI Reason", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is string reason)
+        {
+            return reason;
+        }
+        return null;
     }
 
     private bool ValidateForm()
     {
         _validationErrors.Clear();
 
-        if (_adiModel.SchoolGradeId == null)
+        // Grade is only required for Support ADI
+        if (_adiModel.AdiType == AdiType.Support && _adiModel.SchoolGradeId == null)
             _validationErrors["Grade"] = "Please select a grade.";
 
         if (_adiModel.SubjectId == null)
@@ -474,7 +582,8 @@
             var adi = new AcademicDevelopmentClass
             {
                 DateTime = dateTime,
-                SchoolGradeId = _adiModel.SchoolGradeId!.Value,
+                AdiType = _adiModel.AdiType,
+                SchoolGradeId = _adiModel.AdiType == AdiType.Support ? _adiModel.SchoolGradeId : null,
                 SubjectId = _adiModel.SubjectId!.Value,
                 TeacherId = _adiModel.TeacherId,
                 SchoolId = _selectedSchool!.Id,
@@ -486,14 +595,19 @@
             // Add selected learners to the ADI, marking which are additional
             var gradeSubjectLearnerIds = _gradeSubjectLearners.Select(l => l.Id).ToHashSet();
             
-            // Add non-additional learners first
+            // Add non-additional learners first (Support ADI only)
             var regularLearnerIds = _selectedLearnerIds.Where(id => gradeSubjectLearnerIds.Contains(id)).ToList();
             await AdiAttendanceService.AddLearnersToAdiAsync(createdAdi.Id, regularLearnerIds, _currentUserId);
 
-            // Add additional learners (those not from grade/subject)
+            // Add additional learners (those not from grade/subject, or all learners for Break ADI)
             foreach (var learnerId in _selectedLearnerIds.Where(id => !gradeSubjectLearnerIds.Contains(id)))
             {
-                await AdiAttendanceService.AddAdditionalLearnerAsync(createdAdi.Id, learnerId, _currentUserId);
+                var breakReason = _learnerBreakReasons.GetValueOrDefault(learnerId);
+                await AdiAttendanceService.AddAdditionalLearnerAsync(
+                    createdAdi.Id, 
+                    learnerId, 
+                    _currentUserId,
+                    breakReason);
             }
 
             var learnerCount = _selectedLearnerIds.Count;
@@ -527,6 +641,7 @@
         _selectedLearnerIds.Clear();
         _allSelectedLearners.Clear();
         _gradeSubjectLearners.Clear();
+        _learnerBreakReasons.Clear();
         _validationErrors.Clear();
     }
 

@@ -99,7 +99,8 @@
                         <MudText Typo="Typo.subtitle2" Class="mb-2">Add Additional Learner</MudText>
                         <MudAutocomplete T="Learner" Label="Search for a learner to add..." Variant="Variant.Outlined"
                                          SearchFunc="SearchLearnersAsync" ToStringFunc="@(l => l?.DisplayName ?? "")"
-                                         ValueChanged="OnAddAdditionalLearner" ResetValueOnEmptyText="true" />
+                                         ValueChanged="OnAddAdditionalLearner" ResetValueOnEmptyText="true"
+                                         @ref="_learnerAutocomplete" />
                     }
 
                     <MudTextField @bind-Value="_search" Label="Search learner" Variant="Variant.Outlined" 
@@ -219,6 +220,7 @@
     private Guid? _currentUserId;
     private bool _isSystemAdmin;
     private readonly HashSet<Guid> _processingLearnerIds = [];
+    private MudAutocomplete<Learner>? _learnerAutocomplete;
 
     protected override async Task OnInitializedAsync()
     {
@@ -509,12 +511,18 @@
             // Mark them as arrived immediately
             await AdiAttendanceService.MarkLearnerArrivedAsync(_adiAttendance.Id, learner.Id, _currentUserId);
 
-            // Refresh roster
+            // Refresh roster - new learners will be at the top
             _roster = await AdiAttendanceService.GetAdiRosterWithAdditionalFlagAsync(_selectedAdi.Id);
             _existingRecords = await AdiAttendanceService.GetExistingAdiAttendanceRecordsAsync(_adiAttendance.Id);
             RecalcCounts();
 
             Logger.LogInformation("Added additional learner {LearnerId} to ADI {AdiId}", learner.Id, _selectedAdi.Id);
+
+            // Clear the autocomplete to allow adding another learner
+            if (_learnerAutocomplete != null)
+            {
+                await _learnerAutocomplete.ClearAsync();
+            }
         }
         catch (Exception ex)
         {

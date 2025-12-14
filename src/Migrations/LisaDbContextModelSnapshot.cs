@@ -62,6 +62,11 @@ namespace Lisa.Migrations
                     b.Property<Guid?>("AcademicYearId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("AdiType")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTime?>("AttendanceStartedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -89,7 +94,7 @@ namespace Lisa.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("SchoolGradeId")
+                    b.Property<Guid?>("SchoolGradeId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("SchoolId")
@@ -172,6 +177,10 @@ namespace Lisa.Migrations
 
                     b.Property<Guid>("AcademicDevelopmentClassId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("BreakReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1726,8 +1735,7 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.SchoolGrade", "SchoolGrade")
                         .WithMany()
                         .HasForeignKey("SchoolGradeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Lisa.Models.Entities.School", "School")
                         .WithMany()

@@ -56,6 +56,7 @@ public class AdiAttendanceService(
     /// <summary>
     /// Get the roster of learners for an ADI class from the AdiLearners table.
     /// This returns learners explicitly assigned to the ADI, with their IsAdditional flag.
+    /// Additional learners are shown at the top, ordered by when they were added (most recent first).
     /// </summary>
     public async Task<List<(Learner Learner, bool IsAdditional)>> GetAdiRosterWithAdditionalFlagAsync(Guid academicDevelopmentClassId)
     {
@@ -70,12 +71,16 @@ public class AdiAttendanceService(
             .AsNoTracking()
             .ToListAsync();
 
+        // Order: Additional learners first (most recently added at top), then regular learners
         return adiLearners
             .Where(al => al.Learner != null)
-            .Select(al => (al.Learner!, al.IsAdditional))
-            .OrderBy(x => x.Item1.RegisterClass?.DisplayName)
+            .Select(al => (al.Learner!, al.IsAdditional, al.CreatedAt))
+            .OrderByDescending(x => x.IsAdditional) // Additional learners first
+            .ThenByDescending(x => x.IsAdditional ? x.CreatedAt : DateTime.MinValue) // Most recent additional first
+            .ThenBy(x => x.Item1.RegisterClass?.DisplayName)
             .ThenBy(x => x.Item1.Surname)
             .ThenBy(x => x.Item1.Name)
+            .Select(x => (x.Item1, x.IsAdditional))
             .ToList();
     }
 
@@ -100,7 +105,13 @@ public class AdiAttendanceService(
         var adi = await academicDevelopmentClassService.GetByIdAsync(academicDevelopmentClassId)
                   ?? throw new KeyNotFoundException($"ADI event {academicDevelopmentClassId} not found.");
 
-        var learners = await learnerService.GetByGradeAndSubjectAsync(adi.SchoolGradeId, adi.SubjectId);
+        // If it's a Break ADI (no grade), return empty list - Break ADIs must use AdiLearners
+        if (adi.SchoolGradeId == null)
+        {
+            return [];
+        }
+
+        var learners = await learnerService.GetByGradeAndSubjectAsync(adi.SchoolGradeId.Value, adi.SubjectId);
 
         return learners
             .Where(l => l.SchoolId == adi.SchoolId)
@@ -236,7 +247,11 @@ public class AdiAttendanceService(
     /// <summary>
     /// Add an additional learner to an ADI class during attendance.
     /// </summary>
-    public async Task<AdiLearner> AddAdditionalLearnerAsync(Guid academicDevelopmentClassId, Guid learnerId, Guid? userId)
+    public async Task<AdiLearner> AddAdditionalLearnerAsync(
+        Guid academicDevelopmentClassId, 
+        Guid learnerId, 
+        Guid? userId,
+        string? breakReason = null)
     {
         await using var context = await dbContextFactory.CreateDbContextAsync();
 
@@ -256,6 +271,7 @@ public class AdiAttendanceService(
             AcademicDevelopmentClassId = academicDevelopmentClassId,
             LearnerId = learnerId,
             IsAdditional = true,
+            BreakReason = breakReason,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = userId
         };
@@ -263,7 +279,8 @@ public class AdiAttendanceService(
         context.AdiLearners.Add(adiLearner);
         await context.SaveChangesAsync();
 
-        logger.LogInformation("Added additional learner {LearnerId} to ADI {AdiId}", learnerId, academicDevelopmentClassId);
+        logger.LogInformation("Added additional learner {LearnerId} to ADI {AdiId} with reason: {Reason}", 
+            learnerId, academicDevelopmentClassId, breakReason ?? "(none)");
 
         return adiLearner;
     }

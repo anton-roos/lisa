@@ -527,11 +527,15 @@ public class LisaDbContext
                     v => v.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(v, DateTimeKind.Utc) : v.ToUniversalTime(),
                     v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
 
+            entity.Property(adc => adc.AdiType)
+                .HasConversion<int>()
+                .HasDefaultValue(Enums.AdiType.Support);
+
             entity.HasOne(adc => adc.SchoolGrade)
                 .WithMany()
                 .HasForeignKey(adc => adc.SchoolGradeId)
                 .OnDelete(DeleteBehavior.Restrict)
-                .IsRequired();
+                .IsRequired(false);
 
             entity.HasOne(adc => adc.Subject)
                 .WithMany()
@@ -562,6 +566,9 @@ public class LisaDbContext
         modelBuilder.Entity<AdiLearner>(entity =>
         {
             entity.HasKey(al => al.Id);
+
+            entity.Property(al => al.BreakReason)
+                .HasMaxLength(500);
 
             entity.HasOne(al => al.AcademicDevelopmentClass)
                 .WithMany(adc => adc.AdiLearners)

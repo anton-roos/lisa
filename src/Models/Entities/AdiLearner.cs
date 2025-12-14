@@ -21,4 +21,11 @@ public class AdiLearner : Entity
     /// Additional learners show with the "Additional" pill.
     /// </summary>
     public bool IsAdditional { get; set; }
+
+    /// <summary>
+    /// The reason why this learner is in a Break ADI class.
+    /// Required when adding learners to Break ADI type.
+    /// </summary>
+    [MaxLength(500)]
+    public string? BreakReason { get; set; }
 }

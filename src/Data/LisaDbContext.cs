@@ -1,8 +1,10 @@
 using Lisa.Interfaces;
 using Lisa.Models.Entities;
+using Lisa.Models.AcademicPlanning; 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Lisa.Enums;
 
 namespace Lisa.Data;
 
@@ -38,8 +40,14 @@ public class LisaDbContext
     public DbSet<LeaveEarly> LeaveEarlies { get; set; } = null!;
     public DbSet<AcademicDevelopmentClass> AcademicDevelopmentClasses { get; set; } = null!;
     public DbSet<AcademicPlan> AcademicPlans { get; set; } = null!;
-    public DbSet<LearnerAcademicRecord> LearnerAcademicRecords { get; set; } = null!;
+    public DbSet<AcademicPlanWeek> AcademicPlanWeeks {get; set; } = null!;
+    public DbSet<AcademicPlanPeriod> AcademicPlanPeriods { get; set; } = null!;
+    public DbSet<TeachingPlan> TeachingPlans { get; set; } = null!;
     public DbSet<AcademicYear> AcademicYears { get; set; } = null!;
+    public DbSet<LearnerAcademicRecord> LearnerAcademicRecords { get; set; } = null!;
+    public DbSet<AcademicPlanHistory> AcademicPlanHistories { get; set; }
+
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -82,18 +90,6 @@ public class LisaDbContext
             .WithOne(s => s.School)
             .HasForeignKey(l => l.SchoolId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        // Academic Years
-        modelBuilder.Entity<AcademicYear>()
-            .HasKey(ay => ay.Id);
-        modelBuilder.Entity<AcademicYear>()
-            .HasOne(ay => ay.School)
-            .WithMany()
-            .HasForeignKey(ay => ay.SchoolId)
-            .OnDelete(DeleteBehavior.Cascade);
-        modelBuilder.Entity<AcademicYear>()
-            .HasIndex(ay => new { ay.SchoolId, ay.Year })
-            .IsUnique();
 
         modelBuilder.Entity<CareGroup>()
             .HasKey(cg => cg.Id);
@@ -171,6 +167,8 @@ public class LisaDbContext
             .Property(l => l.Code)
             .HasMaxLength(20);
         modelBuilder.Entity<Learner>()
+            .HasQueryFilter(l => !l.IsDisabled); // Add query filter to exclude disabled learners
+        modelBuilder.Entity<Learner>()
             .HasOne(r => r.RegisterClass)
             .WithMany(l => l.Learners)
             .HasForeignKey(l => l.RegisterClassId)
@@ -204,20 +202,15 @@ public class LisaDbContext
             .HasOne(lp => lp.Learner)
             .WithMany(l => l.Parents)
             .HasForeignKey(lp => lp.LearnerId)
-            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict); // Changed from Cascade to Restrict
 
         // Classes and Subjects
         modelBuilder.Entity<LearnerSubject>()
-            .HasKey(ls => ls.Id);
-        modelBuilder.Entity<LearnerSubject>()
-            .HasIndex(ls => new { ls.LearnerId, ls.SubjectId })
-            .IsUnique();
+            .HasKey(ls => new { ls.LearnerId, ls.SubjectId });
         modelBuilder.Entity<LearnerSubject>()
             .HasOne(ls => ls.Learner)
             .WithMany(l => l.LearnerSubjects)
             .HasForeignKey(ls => ls.LearnerId)
-            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict); // Changed from Cascade to Restrict
         modelBuilder.Entity<LearnerSubject>()
             .HasOne(ls => ls.Combination)
@@ -339,7 +332,6 @@ public class LisaDbContext
             entity.HasOne(r => r.Learner)
                   .WithMany(l => l.Results)
                   .HasForeignKey(r => r.LearnerId)
-                  .IsRequired(false)
                   .OnDelete(DeleteBehavior.Restrict); // Changed from Cascade to Restrict
             entity.HasOne(r => r.ResultSet)
                   .WithMany(rs => rs.Results)
@@ -470,7 +462,6 @@ public class LisaDbContext
             entity.HasOne(a => a.Learner)
                   .WithMany()
                   .HasForeignKey(a => a.LearnerId)
-                  .IsRequired(false)
                   .OnDelete(DeleteBehavior.Restrict); // Changed from Cascade to Restrict
 
             entity.HasOne(a => a.Attendance)
@@ -481,8 +472,6 @@ public class LisaDbContext
 
         modelBuilder.Entity<LeaveEarly>(entity =>
         {
-           entity.HasKey(le => le.Id);
-
            entity.HasOne(le => le.AttendanceRecord)
                  .WithMany()
                  .HasForeignKey(le => le.AttendenceRecordId)
@@ -546,26 +535,104 @@ public class LisaDbContext
             entity.HasIndex(adc => new { adc.SchoolId, adc.DateTime });
         });
 
+        // Configure the TeachingPlan entity to map to the "TeachingPlans" table
+        //Changed the entity name from "AcademicPlan" to "TeachingPlan" due to there's already another entity with the same name.
+        modelBuilder.Entity<TeachingPlan>(entity =>
+        {
+            entity.ToTable("TeachingPlans");
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => new { e.SchoolId, e.SchoolGradeId, e.SubjectId, e.TeacherId })
+                .IsUnique()
+                .HasDatabaseName("UQ_TeachingPlan_School_Grade_Subject_Teacher");
+
+            entity.HasMany(e => e.Weeks)
+                .WithOne(w => w.AcademicPlan)
+                .HasForeignKey(w => w.AcademicPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure the AcademicPlanWeek entity to map to the "AcademicPlanWeeks" table
+        modelBuilder.Entity<AcademicPlanWeek>(entity =>
+        {
+            entity.ToTable("AcademicPlanWeeks");
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => e.AcademicPlanId)
+                .HasDatabaseName("idx_apweeks_plan");
+
+            entity.HasMany(e => e.Periods)
+                .WithOne(p => p.AcademicPlanWeek)
+                .HasForeignKey(p => p.AcademicPlanWeekId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure the AcademicPlanPeriod entity to map to the "AcademicPlanPeriods" table
+        modelBuilder.Entity<AcademicPlanPeriod>(entity =>
+        {
+            entity.ToTable("AcademicPlanPeriods");
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => e.AcademicPlanWeekId)
+                .HasDatabaseName("idx_apperiods_week");
+        });
+        modelBuilder.Entity<AcademicYear>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+
+            entity.HasIndex(a => new { a.SchoolId, a.Year })
+                .IsUnique();
+
+            entity.HasIndex(a => new { a.SchoolId, a.IsCurrent });
+
+            entity.HasOne(a => a.School)
+                .WithMany()
+                .HasForeignKey(a => a.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
         modelBuilder.Entity<LearnerAcademicRecord>(entity =>
         {
-            entity.HasKey(r => r.Id);
-            entity.HasOne(r => r.Learner)
+            entity.HasKey(lr => lr.Id);
+
+            entity.HasOne(lr => lr.Learner)
                 .WithMany()
-                .HasForeignKey(r => r.LearnerId)
-                .IsRequired(false)
+                .HasForeignKey(lr => lr.LearnerId)
                 .OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne(r => r.SchoolGrade)
+
+            entity.HasOne(lr => lr.SchoolGrade)
                 .WithMany()
-                .HasForeignKey(r => r.SchoolGradeId)
+                .HasForeignKey(lr => lr.SchoolGradeId)
                 .OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne(r => r.RegisterClass)
+
+            entity.HasOne(lr => lr.RegisterClass)
                 .WithMany()
-                .HasForeignKey(r => r.RegisterClassId)
+                .HasForeignKey(lr => lr.RegisterClassId)
                 .OnDelete(DeleteBehavior.SetNull);
-            entity.HasOne(r => r.Combination)
-                .WithMany()
-                .HasForeignKey(r => r.CombinationId)
-                .OnDelete(DeleteBehavior.SetNull);
+        });
+        modelBuilder.Entity<TeachingPlan>(entity =>
+        {
+            entity.Property(e => e.Status)
+                .HasConversion<int>();
+
+            entity.Property(e => e.IsLocked)
+                .HasDefaultValue(false);
+
+            entity.Property(e => e.CurrentVersion)
+                .HasDefaultValue(1);
+        });
+
+        modelBuilder.Entity<AcademicPlanHistory>(entity =>
+        {
+            entity.ToTable("AcademicPlanHistories");
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.SnapshotJson).IsRequired();
+            entity.Property(e => e.ChangedAt)
+                .HasDefaultValueSql("NOW()");
+
+            entity.HasIndex(e => e.AcademicPlanId)
+                .HasDatabaseName("idx_academicplanhistory_plan");
         });
         }
 

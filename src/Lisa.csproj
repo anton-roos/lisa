@@ -63,5 +63,5 @@
     <EmbeddedResource Include="Templates\_TestEmail.cshtml" />
     <EmbeddedResource Include="Templates\_ProgressFeedbackTemplate.cshtml" />
   </ItemGroup>
-
+  
 </Project>

@@ -29,6 +29,7 @@ public class Learner
     public DateTime UpdatedAt { get; set; }
     public Guid? RegisterClassId { get; set; }
     public RegisterClass? RegisterClass { get; set; }
+    public bool IsDisabled { get; set; } = false; //Added missing property
     
     // Previous grade/class tracking for year-end promotion workflow
     public Guid? PreviousSchoolGradeId { get; set; }

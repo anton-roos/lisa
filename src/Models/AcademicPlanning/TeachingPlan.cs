@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using Lisa.Enums;
 
-namespace LISA.Models.AcademicPlanning
+namespace Lisa.Models.AcademicPlanning
 {
     public class TeachingPlan
     {
@@ -18,7 +19,23 @@ namespace LISA.Models.AcademicPlanning
         public Guid? CreatedBy { get; set; }
         public Guid? UpdatedBy { get; set; }
 
+        // Lifecycle
+#pragma warning disable CS8601 // Possible null reference assignment.
+        public AcademicPlanStatus Status { get; set; } = AcademicPlanStatus.Draft;
+#pragma warning restore CS8601 // Possible null reference assignment.
+
+        public DateTime? SubmittedAt { get; set; }
+        public DateTime? ApprovedAt { get; set; }
+        public Guid? ApprovedByUserId { get; set; }
+
+        // Versioning & locking
+        public int CurrentVersion { get; set; } = 1;
+        public bool IsLocked { get; set; } = false;
+
         // Navigation
-        public List<AcademicPlanWeek> Weeks { get; set; } = new();
+        public ICollection<AcademicPlanWeek> Weeks { get; set; } = new List<AcademicPlanWeek>();
+
+        //public List<AcademicPlanWeek> Weeks { get; set; } = new();
     }
-}
+} 
+

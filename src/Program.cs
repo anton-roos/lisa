@@ -2,7 +2,9 @@ using DinkToPdf;
 using DinkToPdf.Contracts;
 using Lisa.Data;
 using Lisa.Models.Entities;
+using Lisa.Models.AcademicPlanning;
 using Lisa.Pages;
+using Lisa.Services.AcademicPlanning;
 using Lisa.Services;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.DataProtection;
@@ -70,7 +72,7 @@ builder.Services.AddSingleton<IConverter>(new SynchronizedConverter(new PdfTools
 builder.Services.AddAuthorizationBuilder();
 
 builder.Services.AddScoped<AcademicDevelopmentClassService>();
-builder.Services.AddScoped<AcademicPlanningService>();
+//builder.Services.AddScoped<AcademicPlanningService>();
 builder.Services.AddScoped<AttendanceRecordService>();
 builder.Services.AddScoped<CareGroupService>();
 builder.Services.AddScoped<CombinationService>();
@@ -94,6 +96,8 @@ builder.Services.AddScoped<AssessmentTypeService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<TemplateRenderService>();
 builder.Services.AddScoped<LeaveEarlyService>();
+builder.Services.AddScoped<IAcademicPlanningService, Lisa.Services.AcademicPlanning.AcademicPlanningService>();
+
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers();

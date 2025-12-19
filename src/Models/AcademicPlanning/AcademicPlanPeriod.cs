@@ -1,6 +1,6 @@
 using System;
 
-namespace LISA.Models.AcademicPlanning
+namespace Lisa.Models.AcademicPlanning
 {
     public class AcademicPlanPeriod
     {

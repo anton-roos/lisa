@@ -385,6 +385,72 @@ namespace Lisa.Services.AcademicPlanning
 
             await _db.Set<AcademicPlanHistory>().AddAsync(history);
         }
+
+        public async Task<TeachingPlan?> GetTeachingPlanByIdAsync(Guid planId, CancellationToken cancellationToken = default)
+        {
+            return await _db.Set<TeachingPlan>()
+                .Include(p => p.Weeks)
+                    .ThenInclude(w => w.Periods)
+                .FirstOrDefaultAsync(p => p.Id == planId, cancellationToken);
+        }
+        public async Task<List<AcademicPlanHistoryDto>> GetPlanHistoryAsync(Guid planId, CancellationToken cancellationToken = default)
+        {
+            var history = await _db.Set<AcademicPlanHistory>()
+                .Where(h => h.AcademicPlanId == planId)
+                .OrderBy(h => h.VersionNumber)
+                .ToListAsync(cancellationToken);
+
+            return history.Select(h => new AcademicPlanHistoryDto
+            {
+                Id = h.Id,
+                VersionNumber = h.VersionNumber,
+                Status = h.Status,
+                SnapshotJson = h.SnapshotJson,
+                ChangedByUserId = h.ChangedByUserId,
+                ChangedAt = h.ChangedAt
+            }).ToList();
+        }
+        public async Task<bool> SavePlanPeriodsAsync(Guid planId, List<AcademicPlanPeriod> periods, Guid userId, CancellationToken cancellationToken = default)
+        {
+            var plan = await _db.Set<TeachingPlan>()
+                .Include(p => p.Weeks)
+                    .ThenInclude(w => w.Periods)
+                .FirstOrDefaultAsync(p => p.Id == planId, cancellationToken);
+
+            if (plan == null) return false;
+
+            var week = plan.Weeks.FirstOrDefault();
+            if (week == null)
+            {
+                week = new AcademicPlanWeek
+                {
+                    Id = Guid.NewGuid(),
+                    AcademicPlanId = planId,
+                    WeekNumber = 1,
+                    StartDate = DateTime.UtcNow,
+                    EndDate = DateTime.UtcNow.AddDays(7),
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                plan.Weeks.Add(week);
+            }
+
+            week.Periods.Clear();
+            
+            foreach (var period in periods)
+            {
+                period.Id = period.Id == Guid.Empty ? Guid.NewGuid() : period.Id;
+                period.AcademicPlanWeekId = week.Id;
+                period.CreatedAt = DateTime.UtcNow;
+                period.UpdatedAt = DateTime.UtcNow;
+                week.Periods.Add(period);
+            }
+
+            plan.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(cancellationToken);
+            
+            return true;
+        }
         #endregion
     }
 }

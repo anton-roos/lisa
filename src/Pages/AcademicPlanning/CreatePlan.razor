@@ -1,0 +1,234 @@
+@page "/academic-planning/create"
+
+@using Lisa.Models.AcademicPlanning
+@using Lisa.Services.AcademicPlanning.DTOs
+@using Lisa.Enums
+@using Lisa.Pages.AcademicPlanning.Components
+@using Lisa.Services.AcademicPlanning
+@using Lisa.Infrastructure.AcademicPlanning
+
+@inject IAcademicPlanningService PlanningService
+@inject AcademicPlanExportService ExportService
+@inject IJSRuntime JS
+
+<h3 class="mb-3">Create Academic Plan</h3>
+
+@if (PlanId.HasValue)
+{
+    <PlanStatusBadge Status="@Status" />
+}
+
+<PlanSelector OnChanged="OnSelectionChanged" />
+
+@if (PlanId.HasValue)
+{
+    <AcademicPlanGrid AcademicPlanId="PlanId.Value"
+                      Status="Status"
+                      Periods="Periods"
+                      OnSave="SavePeriods" />
+}
+
+@if (!string.IsNullOrWhiteSpace(Message))
+{
+    <div class="alert alert-info mt-2">@Message</div>
+}
+
+<div class="mt-4 d-flex gap-2">
+    <button class="btn btn-secondary"
+            @onclick="SaveDraft">
+          Save Draft
+    </button>
+
+    <button class="btn btn-primary"
+            disabled="@(!CanSubmit)"
+            @onclick="SubmitForReview">
+          Submit for Review
+    </button>
+
+    <button class="btn btn-success"
+            disabled="@(!PlanId.HasValue)"
+            @onclick="ExportExcel">
+          Export Excel
+    </button>
+
+    <button class="btn btn-danger"
+            disabled="@(!PlanId.HasValue)"
+            @onclick="ExportPdf">
+          Export PDF
+    </button>
+</div>
+
+@code {
+    private Guid? PlanId;
+    private AcademicPlanStatus Status = AcademicPlanStatus.Draft;
+    private string? Message;
+    private List<AcademicPlanPeriod> Periods = new();  // Added periods state
+
+    private PlanSelector.SelectionResult? Selection;
+    // Replace with actual logged-in user
+    private Guid CurrentUserId => Guid.NewGuid();
+
+    private bool CanSubmit =>
+        PlanId.HasValue &&
+        Selection?.SchoolId != null &&
+        Selection?.SchoolGradeId != null &&
+        Selection?.SubjectId != null &&
+        Status == AcademicPlanStatus.Draft;
+
+    private void OnSelectionChanged(PlanSelector.SelectionResult result)
+    {
+        Selection = result;
+        StateHasChanged();
+    }
+
+    private async Task SaveDraft()
+    {
+        if (!IsSelectionValid())
+        {
+            Message = "Please select School, Grade, and Subject.";
+            return;
+        }
+
+        var dto = new AcademicPlanDto
+        {
+            SchoolId = Selection!.SchoolId!.Value,
+            SchoolGradeId = Selection.SchoolGradeId!.Value,
+            SubjectId = Selection.SubjectId!.Value,
+            TeacherId = CurrentUserId,  
+            Weeks = new List<AcademicPlanWeekDto>()  
+        };
+
+        PlanId = await PlanningService.CreatePlanAsync(dto);
+        Status = AcademicPlanStatus.Draft;
+
+        Periods = Enumerable.Range(1, 8)
+            .Select(p => new AcademicPlanPeriod
+            {
+                PeriodNumber = p,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            }).ToList();
+
+        Message = "Draft saved successfully.";
+    }
+
+    private async Task SubmitForReview()
+    {
+        if (!PlanId.HasValue)
+            return;
+
+        await PlanningService.SubmitForReviewAsync(PlanId.Value, CurrentUserId);
+
+        Status = AcademicPlanStatus.PendingReview;
+        Message = "Academic Plan submitted for review.";
+    }
+
+    private async Task SavePeriods(List<AcademicPlanPeriod> periods)
+    {
+        if (!PlanId.HasValue)
+            return;
+
+        var success = await PlanningService.SavePlanPeriodsAsync(
+            PlanId.Value,
+            periods,
+            CurrentUserId);
+
+        if (success)
+        {
+            Message = "Plan content saved successfully.";
+            Periods = periods; 
+        }
+        else
+        {
+            Message = "Failed to save plan content.";
+        } 
+        StateHasChanged();
+    }
+
+    private async Task ExportExcel()
+    {
+        if (!PlanId.HasValue || Selection == null)
+            return;
+
+        try
+        {
+            var planDto = await PlanningService.GetPlanAsync(
+                Selection.SchoolId!.Value,
+                Selection.SchoolGradeId!.Value,
+                Selection.SubjectId!.Value,
+                CurrentUserId
+            );
+
+            if (planDto == null)
+            {
+                Message = "Plan not found.";
+                return;
+            }
+
+            var plan = await PlanningService.GetTeachingPlanByIdAsync(planDto.Id);
+            if (plan == null)
+            {
+                Message = "Plan data not available for export.";
+                return;
+            }
+
+            var bytes = ExportService.ExportExcel(plan);
+
+            await JS.InvokeVoidAsync(
+                "downloadFile",
+                $"AcademicPlan_{DateTime.Now:yyyyMMdd}.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                Convert.ToBase64String(bytes)
+            );
+        }
+        catch (Exception ex)
+        {
+            Message = $"Error exporting: {ex.Message}";
+        }
+    }
+
+    private async Task ExportPdf()
+    {
+        if (!PlanId.HasValue || Selection == null)
+            return;
+
+        try
+        {
+            var planDto = await PlanningService.GetPlanAsync(
+                Selection.SchoolId!.Value,
+                Selection.SchoolGradeId!.Value,
+                Selection.SubjectId!.Value,
+                CurrentUserId
+            );
+
+            if (planDto == null)
+            {
+                Message = "Plan not found.";
+                return;
+            }
+            var plan = await PlanningService.GetTeachingPlanByIdAsync(planDto.Id);
+            if (plan == null)
+            {
+                Message = "Plan data not available for export.";
+                return;
+            }
+
+            var bytes = ExportService.ExportPdf(plan);
+
+            await JS.InvokeVoidAsync(
+                "downloadFile",
+                $"AcademicPlan_{DateTime.Now:yyyyMMdd}.pdf",
+                "application/pdf",
+                Convert.ToBase64String(bytes)
+            );
+        }
+        catch (Exception ex)
+        {
+            Message = $"Error exporting: {ex.Message}";
+        }
+    }
+    private bool IsSelectionValid() =>
+        Selection?.SchoolId != null &&
+        Selection.SchoolGradeId != null &&
+        Selection.SubjectId != null;
+}

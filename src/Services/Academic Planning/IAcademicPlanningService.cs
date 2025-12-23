@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Lisa.Services.AcademicPlanning.DTOs;
+using Lisa.Models.AcademicPlanning;
 
 namespace Lisa.Services.AcademicPlanning
 {
@@ -32,6 +33,10 @@ namespace Lisa.Services.AcademicPlanning
             CancellationToken cancellationToken = default);
         
         Task SubmitForReviewAsync(Guid planId, Guid userId, CancellationToken cancellationToken = default);
-
+        Task<TeachingPlan?> GetTeachingPlanByIdAsync(Guid planId, CancellationToken cancellationToken = default);
+        Task ApprovePlanAsync(Guid planId, Guid approverUserId, CancellationToken cancellationToken = default);
+        Task RejectPlanAsync(Guid planId, Guid approverUserId, string reason, CancellationToken cancellationToken = default);
+        Task<List<AcademicPlanHistoryDto>> GetPlanHistoryAsync(Guid planId, CancellationToken cancellationToken = default);
+        Task<bool> SavePlanPeriodsAsync(Guid planId, List<AcademicPlanPeriod> periods, Guid userId, CancellationToken cancellationToken = default);
     }
 }

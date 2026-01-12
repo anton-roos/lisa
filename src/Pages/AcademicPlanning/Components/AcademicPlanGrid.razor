@@ -1,0 +1,82 @@
+@using Lisa.Models.AcademicPlanning
+@using Lisa.Enums  
+
+@if (Periods == null || !Periods.Any())
+{
+    <div class="alert alert-warning">
+        No periods configured for this plan.
+    </div>
+}
+else
+{
+    <table class="table table-bordered table-sm mt-3">
+        <thead class="table-light">
+            <tr>
+                <th style="width:5%">Period</th>
+                <th style="width:20%">Topic</th>
+                <th style="width:25%">Resources</th>  
+                <th style="width:20%">Assessment</th>
+                <th style="width:15%">Homework</th>   
+                <th style="width:15%">Actions</th>    
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Periods.OrderBy(x => x.PeriodNumber))
+            {
+                <tr>
+                    <td>@p.PeriodNumber</td>
+
+                    <td>
+                        <input class="form-control"
+                               @bind="p.Topic"
+                               disabled="@IsReadOnly" />
+                    </td>
+
+                    <td>
+                        <textarea class="form-control"
+                                  rows="2"
+                                  @bind="p.Resources"
+                                  disabled="@IsReadOnly"></textarea>
+                    </td>
+
+                    <td>
+                        <textarea class="form-control"
+                                  rows="2"
+                                  @bind="p.Assessment"
+                                  disabled="@IsReadOnly"></textarea>
+                    </td>
+
+                    <td>
+                        <textarea class="form-control"
+                                  rows="2"
+                                  @bind="p.Homework"
+                                  disabled="@IsReadOnly"></textarea>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (!IsReadOnly)
+    {
+        <button class="btn btn-outline-primary"
+                @onclick="SavePeriods">
+               Save Plan Content
+        </button>
+    }
+}
+
+@code {
+    [Parameter] public Guid AcademicPlanId { get; set; }
+    [Parameter] public AcademicPlanStatus Status { get; set; }
+    [Parameter] public List<AcademicPlanPeriod> Periods { get; set; } = new();
+
+    [Parameter] public EventCallback<List<AcademicPlanPeriod>> OnSave { get; set; }
+
+    private bool IsReadOnly => Status != AcademicPlanStatus.Draft;
+
+    private async Task SavePeriods()
+    {
+        await OnSave.InvokeAsync(Periods);
+    }
+}

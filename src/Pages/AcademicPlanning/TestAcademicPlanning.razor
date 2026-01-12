@@ -1,0 +1,179 @@
+@page "/academic-planning/test"
+@using Lisa.Services.AcademicPlanning
+@using Lisa.Services.AcademicPlanning.DTOs
+@inject IAcademicPlanningService PlanningService
+
+
+<h3>Academic Planning Smoke Test</h3>
+
+<div class="card p-3 mb-3">
+    <h5>Create Test Academic Plan</h5>
+
+    <div class="row">
+        <div class="col-md-3">
+            <label>School ID:</label>
+            <input class="form-control" @bind="Model.SchoolId" />
+        </div>
+
+        <div class="col-md-3">
+            <label>Grade ID:</label>
+            <input class="form-control" @bind="Model.SchoolGradeId" />
+        </div>
+
+        <div class="col-md-3">
+            <label>Subject ID (int):</label>
+            <input type="number" class="form-control" @bind="Model.SubjectId" />
+        </div>
+
+        <div class="col-md-3">
+            <label>Teacher ID:</label>
+            <input class="form-control" @bind="Model.TeacherId" />
+        </div>
+    </div>
+
+    <hr />
+
+    <h5>Week 1</h5>
+
+    <div class="row">
+        <div class="col-md-4">
+            <label>Start Date:</label>
+            <input type="date" class="form-control" @bind="Week1.StartDate" />
+        </div>
+        <div class="col-md-4">
+            <label>End Date:</label>
+            <input type="date" class="form-control" @bind="Week1.EndDate" />
+        </div>
+        <div class="col-md-4">
+            <label>Notes:</label>
+            <input class="form-control" @bind="Week1.Notes" />
+        </div>
+    </div>
+
+    <h6 class="mt-3">Period 1</h6>
+
+    <div class="row">
+        <div class="col-md-3">
+            <label>Topic:</label>
+            <input class="form-control" @bind="Period1.Topic" />
+        </div>
+
+        <div class="col-md-3">
+            <label>Resources:</label>
+            <input class="form-control" @bind="Period1.Resources" />
+        </div>
+
+        <div class="col-md-3">
+            <label>Assessment:</label>
+            <input class="form-control" @bind="Period1.Assessment" />
+        </div>
+
+        <div class="col-md-3">
+            <label>Homework:</label>
+            <input class="form-control" @bind="Period1.Homework" />
+        </div>
+    </div>
+
+    <button class="btn btn-primary mt-3" @onclick="CreatePlan">Save Test Plan</button>
+
+    @if (ResponseMessage != null)
+    {
+        <div class="alert alert-info mt-2">@ResponseMessage</div>
+    }
+</div>
+
+<hr />
+
+<div>
+    <h4>Academic Plans in Database</h4>
+    <button class="btn btn-secondary mb-3" @onclick="LoadPlans">Refresh</button>
+
+    @if (Plans == null)
+    {
+        <p><em>No data loaded yet.</em></p>
+    }
+    else if (Plans.Count == 0)
+    {
+        <p><strong>No plans found.</strong></p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Plan ID</th>
+                    <th>School</th>
+                    <th>Grade</th>
+                    <th>Subject</th>
+                    <th>Teacher</th>
+                    <th>Weeks</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Plans)
+                {
+                    <tr>
+                        <td>@p.Id</td>
+                        <td>@p.SchoolId</td>
+                        <td>@p.SchoolGradeId</td>
+                        <td>@p.SubjectId</td>
+                        <td>@p.TeacherId</td>
+                        <td>@p.Weeks.Count</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    // form model
+    private AcademicPlanDto Model = new AcademicPlanDto
+    {
+        SchoolId = Guid.NewGuid(),
+        SchoolGradeId = Guid.NewGuid(),
+        SubjectId = 1,
+        TeacherId = Guid.NewGuid(),
+        Weeks = new List<AcademicPlanWeekDto>()
+    };
+
+    private AcademicPlanWeekDto Week1 = new AcademicPlanWeekDto
+    {
+        WeekNumber = 1,
+        StartDate = DateTime.UtcNow.Date,
+        EndDate = DateTime.UtcNow.Date.AddDays(5)
+    };
+
+    private AcademicPlanPeriodDto Period1 = new AcademicPlanPeriodDto
+    {
+        PeriodNumber = 1
+    };
+
+    private string? ResponseMessage;
+
+    private List<AcademicPlanDto>? Plans;
+
+    private async Task CreatePlan()
+    {
+        try
+        {
+            // attach week and period
+            Week1.Periods = new List<AcademicPlanPeriodDto> { Period1 };
+            Model.Weeks = new List<AcademicPlanWeekDto> { Week1 };
+
+            var id = await PlanningService.CreatePlanAsync(Model);
+            ResponseMessage = $"Plan created successfully. ID: {id}";
+
+            await LoadPlans();
+        }
+        catch (Exception ex)
+        {
+            ResponseMessage = "Error: " + ex.Message;
+        }
+    }
+
+    private async Task LoadPlans()
+    {
+        Plans = await PlanningService.GetPlansBySchoolAsync(Model.SchoolId);
+    }
+}

@@ -36,6 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>    
+    <PackageReference Include="ClosedXML" Version="0.105.0" />    
     <PackageReference Include="DinkToPdf" Version="1.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.1" />
@@ -50,6 +51,7 @@
     </PackageReference>
     <PackageReference Include="MudBlazor" Version="8.15.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    <PackageReference Include="QuestPDF" Version="2025.12.0" />
     <PackageReference Include="RazorLight" Version="2.3.1" />
     <PackageReference Include="Seq.Extensions.Logging" Version="9.0.0" />
     
@@ -63,5 +65,5 @@
     <EmbeddedResource Include="Templates\_TestEmail.cshtml" />
     <EmbeddedResource Include="Templates\_ProgressFeedbackTemplate.cshtml" />
   </ItemGroup>
-
+  
 </Project>

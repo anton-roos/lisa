@@ -1,0 +1,25 @@
+@using Lisa.Enums
+
+<div class="@CssClass" style="padding: 5px 10px; border-radius: 5px; color:white; font-weight:bold; display:inline-block;">
+    @StatusText
+</div>
+
+@code {
+    [Parameter] public AcademicPlanStatus Status { get; set; }
+
+    private string StatusText => Status switch
+    {
+        AcademicPlanStatus.Draft => "Draft",
+        AcademicPlanStatus.PendingReview => "Pending Review",
+        AcademicPlanStatus.Published => "Published",
+        _ => "Unknown"
+    };
+
+    private string CssClass => Status switch
+    {
+        AcademicPlanStatus.Draft => "bg-secondary",        // Grey
+        AcademicPlanStatus.PendingReview => "bg-warning", // Orange
+        AcademicPlanStatus.Published => "bg-success",    // Green
+        _ => "bg-dark"
+    };
+}

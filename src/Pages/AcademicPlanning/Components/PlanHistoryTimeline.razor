@@ -1,0 +1,49 @@
+@using Lisa.Models.AcademicPlanning
+@using Lisa.Enums
+
+@if (History == null || !History.Any())
+{
+    <div class="alert alert-secondary">
+        No history available.
+    </div>
+}
+else
+{
+    <ul class="list-group mt-3">
+        @foreach (var h in History.OrderByDescending(x => x.VersionNumber))
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>Version @h.VersionNumber</strong><br />
+                    <small class="text-muted">
+                        @h.ChangedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")
+                    </small>
+                </div>
+
+                <span class="badge @GetStatusClass(h.Status)">
+                    @GetStatusText(h.Status)
+                </span>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter] public List<AcademicPlanHistory> History { get; set; } = new();
+
+    private string GetStatusText(int status)
+    {
+        if (status == (int)AcademicPlanStatus.Draft) return "Draft";
+        if (status == (int)AcademicPlanStatus.PendingReview) return "Pending Review";
+        if (status == (int)AcademicPlanStatus.Published) return "Published";
+        return "Unknown";
+    }
+
+    private string GetStatusClass(int status)
+    {
+        if (status == (int)AcademicPlanStatus.Draft) return "bg-secondary";
+        if (status == (int)AcademicPlanStatus.PendingReview) return "bg-warning text-dark";
+        if (status == (int)AcademicPlanStatus.Published) return "bg-success";
+        return "bg-dark";
+    }
+}

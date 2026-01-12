@@ -1,0 +1,175 @@
+@using Lisa.Models.Entities
+@using Lisa.Services
+@inject SchoolService SchoolService
+@inject SchoolGradeService SchoolGradeService
+@inject SubjectService SubjectService
+
+<div class="card p-3 mb-3">
+    <h5 class="mb-3">Plan Context</h5>
+
+    <div class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label">School</label>
+            <select class="form-select" @bind="selectedSchoolId">
+                <option value="">-- Select School --</option>
+                @foreach (var school in Schools)
+                {
+                    <option value="@school.Id">@school.LongName</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Grade</label>
+            <select class="form-select" @bind="selectedSchoolGradeId" disabled="@(!selectedSchoolId.HasValue)">
+                <option value="">-- Select Grade --</option>
+                @foreach (var grade in SchoolGrades)
+                {
+                    <option value="@grade.Id">@grade.SystemGrade?.Name</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Subject</label>
+            <select class="form-select" @bind="selectedSubjectId" disabled="@(!selectedSchoolGradeId.HasValue)">
+                <option value="">-- Select Subject --</option>
+                @foreach (var subject in Subjects)
+                {
+                    <option value="@subject.Id">@subject.Name</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Term</label>
+            <select class="form-select" @bind="selectedTerm" disabled="@(!selectedSubjectId.HasValue)">
+                <option value="">-- Select Term --</option>
+                <option value="1">Term 1</option>
+                <option value="2">Term 2</option>
+                <option value="3">Term 3</option>
+                <option value="4">Term 4</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<SelectionResult> OnChanged { get; set; }
+
+    private List<School> Schools = new();
+    private List<SchoolGrade> SchoolGrades = new();
+    private ICollection<Subject> Subjects = new List<Subject>();
+
+    private Guid? selectedSchoolId;
+    private Guid? selectedSchoolGradeId;
+    private int? selectedSubjectId;
+    private int? selectedTerm;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Schools = await SchoolService.GetAllSchoolsAsync();
+    }
+
+    // Use property setters to trigger updates
+    private Guid? SelectedSchoolId
+    {
+        get => selectedSchoolId;
+        set
+        {
+            if (selectedSchoolId != value)
+            {
+                selectedSchoolId = value;
+                selectedSchoolGradeId = null;
+                selectedSubjectId = null;
+                selectedTerm = null;
+                
+                _ = LoadGradesAsync();
+            }
+        }
+    }
+
+    private Guid? SelectedSchoolGradeId
+    {
+        get => selectedSchoolGradeId;
+        set
+        {
+            if (selectedSchoolGradeId != value)
+            {
+                selectedSchoolGradeId = value;
+                selectedSubjectId = null;
+                selectedTerm = null;
+                
+                _ = LoadSubjectsAsync();
+            }
+        }
+    }
+
+    private int? SelectedSubjectId
+    {
+        get => selectedSubjectId;
+        set
+        {
+            selectedSubjectId = value;
+            _ = NotifyParentAsync();
+        }
+    }
+
+    private int? SelectedTerm
+    {
+        get => selectedTerm;
+        set
+        {
+            selectedTerm = value;
+            _ = NotifyParentAsync();
+        }
+    }
+
+    private async Task LoadGradesAsync()
+    {
+        if (selectedSchoolId.HasValue)
+        {
+            SchoolGrades = await SchoolGradeService.GetGradesForSchool(selectedSchoolId.Value);
+        }
+        else
+        {
+            SchoolGrades = new();
+        }
+
+        Subjects.Clear();
+        await NotifyParentAsync();
+    }
+
+    private async Task LoadSubjectsAsync()
+    {
+        if (selectedSchoolGradeId.HasValue)
+        {
+            Subjects = await SubjectService.GetSubjectsForGradeAsync(selectedSchoolGradeId.Value);
+        }
+        else
+        {
+            Subjects = new List<Subject>();
+        }
+
+        await NotifyParentAsync();
+    }
+
+    private async Task NotifyParentAsync()
+    {
+        await OnChanged.InvokeAsync(new SelectionResult
+        {
+            SchoolId = selectedSchoolId,
+            SchoolGradeId = selectedSchoolGradeId,
+            SubjectId = selectedSubjectId,
+            Term = selectedTerm
+        });
+    }
+
+    public class SelectionResult
+    {
+        public Guid? SchoolId { get; set; }
+        public Guid? SchoolGradeId { get; set; }
+        public int? SubjectId { get; set; }
+        public int? Term { get; set; }
+    }
+}

@@ -94,7 +94,7 @@
                 @if (_previousRegisterClass != null)
                 {
                     <div class="alert alert-info mb-2">
-                        <strong>Previous Register Class (Last Year):</strong> @_previousRegisterClass.Name 
+                        <strong>Previous Register Class (Last Year):</strong> @_previousRegisterClass.DisplayName 
                         (@_previousRegisterClass.SchoolGrade?.SystemGrade?.Name)
                     </div>
                 }
@@ -116,7 +116,7 @@
                     <option value="">Select Register Class</option>
                     @foreach (var registerClass in _registerClasses)
                     {
-                        <option value="@registerClass.Id.ToString()">@registerClass.Name (@registerClass.SchoolGrade?.SystemGrade?.Name)</option>
+                        <option value="@registerClass.Id.ToString()">@registerClass.DisplayName (@registerClass.SchoolGrade?.SystemGrade?.Name)</option>
                     }
                 </InputSelect>
             </div>
@@ -129,7 +129,7 @@
                 }
                 else
                 {
-                    <div>Selected Register Class: @_currentRegisterClass.Name</div>
+                    <div>Selected Register Class: @_currentRegisterClass.DisplayName</div>
 
                     <h3>Compulsory Subjects</h3>
                     @if (_currentRegisterClass?.CompulsorySubjects != null)
@@ -174,7 +174,7 @@
                             @foreach (var combination in _combinationsToChoseFrom!)
                             {
                                 <div class="col">
-                                    <h5>@combination.Name</h5>
+                                    <h5>@combination.DisplayName</h5>
                                     @if (combination.Subjects != null)
                                     {
                                         foreach (var subject in combination.Subjects)
@@ -740,9 +740,13 @@
         else if (_learnerModel.Status == LearnerStatus.Retained)
         {
             // Retained learners: Show register classes for the SAME grade (previous grade)
-            if (_existingLearner.PreviousSchoolGradeId.HasValue)
+            var retainedGradeId = _existingLearner.PreviousSchoolGradeId
+                                 ?? _previousRegisterClass?.SchoolGradeId
+                                 ?? _existingLearner.RegisterClass?.SchoolGradeId;
+
+            if (retainedGradeId.HasValue)
             {
-                _registerClasses = await RegisterClassService.GetActiveByGradeIdAsync(_existingLearner.PreviousSchoolGradeId.Value);
+                _registerClasses = await RegisterClassService.GetActiveByGradeIdAsync(retainedGradeId.Value);
             }
             else
             {

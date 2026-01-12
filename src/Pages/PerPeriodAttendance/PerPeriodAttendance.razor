@@ -74,7 +74,7 @@ else
                             <option value="">-- Select Combination --</option>
                             @foreach (var combination in _combinations)
                             {
-                                <option value="@combination.Id">@combination.Name</option>
+                                <option value="@combination.Id">@combination.DisplayName</option>
                             }
                         </select>
                     </div>
@@ -134,7 +134,7 @@ else
                         }
                         @if (_selectedCombination != null)
                         {
-                            <span class="badge bg-info ms-1">@_selectedCombination.Name</span>
+                            <span class="badge bg-info ms-1">@_selectedCombination.DisplayName</span>
                         }
                     </h5>
                     <div>
@@ -190,7 +190,7 @@ else
                                 @foreach (var learner in FilteredSignedInLearners)
                                 {
                                     <tr>
-                                        <td>@learner.Surname @learner.Name</td>
+                                        <td>@learner.DisplayName</td>
                                         <td>
                                             @{
                                                 var periodAttendance = _periodAttendanceData.TryGetValue(learner.Id, out var attendance) ? attendance : null;
@@ -238,7 +238,7 @@ else
                                     @foreach (var learner in FilteredNotSignedInLearners)
                                     {
                                         <tr class="opacity-75">
-                                            <td>@learner.Surname @learner.Name</td>
+                                            <td>@learner.DisplayName</td>
                                             <td>
                                                 @{
                                                     var isProcessing = _processingLearnerIds.Contains(learner.Id);
@@ -351,14 +351,14 @@ else
     private IEnumerable<Learner> FilteredSignedInLearners => _learners
         .Where(l => _attendanceData.ContainsKey(l.Id)) // Only learners who signed in
         .Where(l => string.IsNullOrEmpty(_searchTerm) ||
-            $"{l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+            $"{l.DisplayName} {l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
         .OrderBy(l => l.Surname)
         .ThenBy(l => l.Name);
 
     private IEnumerable<Learner> FilteredNotSignedInLearners => _learners
         .Where(l => !_attendanceData.ContainsKey(l.Id)) // Only learners who didn't sign in
         .Where(l => string.IsNullOrEmpty(_searchTerm) ||
-            $"{l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+            $"{l.DisplayName} {l.Name} {l.Surname}".Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
         .OrderBy(l => l.Surname)
         .ThenBy(l => l.Name);
 

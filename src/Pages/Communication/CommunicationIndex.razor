@@ -202,7 +202,7 @@
                                         @foreach (var learner in FilteredLearners)
                                         {
                                             <tr>
-                                                <td>@learner.Surname @learner.Name</td>
+                                                <td>@learner.DisplayName</td>
                                                 <td>@learner.RegisterClass?.SchoolGrade?.SystemGrade.Name</td>
                                                 <td>
                                                     <button class="btn btn-primary btn-sm"
@@ -315,8 +315,8 @@
 
         if (!string.IsNullOrEmpty(SearchTerm))
         {
-            var term = SearchTerm.Trim().ToLower();
-            query = query.Where(l => $"{l.Surname} {l.Name}".ToLower().Contains(term));
+            var term = SearchTerm.Trim();
+            query = query.Where(l => $"{l.DisplayName} {l.Name} {l.Surname}".Contains(term, StringComparison.OrdinalIgnoreCase));
         }
 
         return query;

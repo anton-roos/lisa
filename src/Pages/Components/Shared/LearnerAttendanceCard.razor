@@ -6,7 +6,7 @@
      @onclick="@(IsAlreadySignedOut ? () => InvokeAsync(StateHasChanged) : () => OnToggleAttendance.InvokeAsync(null))">
     <div class="card-body @(IsAlreadySignedOut ? "opacity-75" : "")">
         <div class="d-flex align-items-center justify-content-between mb-2">
-            <div style="min-width: 150px;">@Learner.Name @Learner.Surname</div>
+            <div style="min-width: 150px;">@Learner.DisplayName</div>
             <div class="pill-container">
                 <div class="pill @PillColor @(IsSignOut ? "signout" : "")">
                     @if (IsSignOut)

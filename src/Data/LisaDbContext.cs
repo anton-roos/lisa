@@ -39,6 +39,9 @@ public class LisaDbContext
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
     public DbSet<LeaveEarly> LeaveEarlies { get; set; } = null!;
     public DbSet<AcademicDevelopmentClass> AcademicDevelopmentClasses { get; set; } = null!;
+    public DbSet<AdiLearner> AdiLearners { get; set; } = null!;
+    public DbSet<AdiSubject> AdiSubjects { get; set; } = null!;
+    public DbSet<AdiTeacher> AdiTeachers { get; set; } = null!;
     public DbSet<AcademicPlan> AcademicPlans { get; set; } = null!;
     public DbSet<AcademicPlanWeek> AcademicPlanWeeks {get; set; } = null!;
     public DbSet<AcademicPlanPeriod> AcademicPlanPeriods { get; set; } = null!;
@@ -443,11 +446,17 @@ public class LisaDbContext
         {
             entity.HasKey(s => s.Id);
             entity.HasIndex(s => new { s.SchoolId, s.Start });
+            entity.HasIndex(s => s.AcademicDevelopmentClassId);
 
             entity.HasOne(s => s.School)
                   .WithMany()
                   .HasForeignKey(s => s.SchoolId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(s => s.AcademicDevelopmentClass)
+                .WithMany()
+                .HasForeignKey(s => s.AcademicDevelopmentClassId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             entity.Property(s => s.Start)
                 .IsRequired();
@@ -509,17 +518,21 @@ public class LisaDbContext
                     v => v.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(v, DateTimeKind.Utc) : v.ToUniversalTime(),
                     v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
 
+            entity.Property(adc => adc.AdiType)
+                .HasConversion<int>()
+                .HasDefaultValue(Enums.AdiType.Support);
+
             entity.HasOne(adc => adc.SchoolGrade)
                 .WithMany()
                 .HasForeignKey(adc => adc.SchoolGradeId)
                 .OnDelete(DeleteBehavior.Restrict)
-                .IsRequired();
+                .IsRequired(false);
 
             entity.HasOne(adc => adc.Subject)
                 .WithMany()
                 .HasForeignKey(adc => adc.SubjectId)
                 .OnDelete(DeleteBehavior.Restrict)
-                .IsRequired();
+                .IsRequired(false);
 
             entity.HasOne(adc => adc.Teacher)
                 .WithMany()
@@ -533,6 +546,75 @@ public class LisaDbContext
                 .IsRequired();
 
             entity.HasIndex(adc => new { adc.SchoolId, adc.DateTime });
+
+            entity.HasMany(adc => adc.AdiLearners)
+                .WithOne(al => al.AcademicDevelopmentClass)
+                .HasForeignKey(al => al.AcademicDevelopmentClassId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(adc => adc.AdiSubjects)
+                .WithOne(asub => asub.AcademicDevelopmentClass)
+                .HasForeignKey(asub => asub.AcademicDevelopmentClassId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(adc => adc.AdiTeachers)
+                .WithOne(at => at.AcademicDevelopmentClass)
+                .HasForeignKey(at => at.AcademicDevelopmentClassId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ADI Subjects (join table for Break ADIs with multiple subjects)
+        modelBuilder.Entity<AdiSubject>(entity =>
+        {
+            entity.HasKey(asub => new { asub.AcademicDevelopmentClassId, asub.SubjectId });
+
+            entity.HasOne(asub => asub.AcademicDevelopmentClass)
+                .WithMany(adc => adc.AdiSubjects)
+                .HasForeignKey(asub => asub.AcademicDevelopmentClassId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(asub => asub.Subject)
+                .WithMany()
+                .HasForeignKey(asub => asub.SubjectId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ADI Teachers (join table for Break ADIs with multiple teachers)
+        modelBuilder.Entity<AdiTeacher>(entity =>
+        {
+            entity.HasKey(at => new { at.AcademicDevelopmentClassId, at.TeacherId });
+
+            entity.HasOne(at => at.AcademicDevelopmentClass)
+                .WithMany(adc => adc.AdiTeachers)
+                .HasForeignKey(at => at.AcademicDevelopmentClassId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(at => at.Teacher)
+                .WithMany()
+                .HasForeignKey(at => at.TeacherId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ADI Learners (join table for learners assigned to ADI classes)
+        modelBuilder.Entity<AdiLearner>(entity =>
+        {
+            entity.HasKey(al => al.Id);
+
+            entity.Property(al => al.BreakReason)
+                .HasMaxLength(500);
+
+            entity.HasOne(al => al.AcademicDevelopmentClass)
+                .WithMany(adc => adc.AdiLearners)
+                .HasForeignKey(al => al.AcademicDevelopmentClassId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(al => al.Learner)
+                .WithMany()
+                .HasForeignKey(al => al.LearnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(al => new { al.AcademicDevelopmentClassId, al.LearnerId })
+                .IsUnique();
         });
 
         // Configure the TeachingPlan entity to map to the "TeachingPlans" table

@@ -231,6 +231,17 @@ namespace Lisa.Migrations
                     b.Property<Guid?>("AcademicYearId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("AdiType")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime?>("AttendanceStartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("AttendanceStoppedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -246,16 +257,19 @@ namespace Lisa.Migrations
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsAttendanceOpen")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("SchoolGradeId")
+                    b.Property<Guid?>("SchoolGradeId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("SubjectId")
+                    b.Property<int?>("SubjectId")
                         .HasColumnType("integer");
 
                     b.Property<Guid?>("TeacherId")
@@ -326,6 +340,86 @@ namespace Lisa.Migrations
                     b.ToTable("AcademicYears");
                 });
 
+            modelBuilder.Entity("Lisa.Models.Entities.AdiLearner", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicDevelopmentClassId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BreakReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsAdditional")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("LearnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LearnerId");
+
+                    b.HasIndex("AcademicDevelopmentClassId", "LearnerId")
+                        .IsUnique();
+
+                    b.ToTable("AdiLearners");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.AdiSubject", b =>
+                {
+                    b.Property<Guid>("AcademicDevelopmentClassId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("AcademicDevelopmentClassId", "SubjectId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.ToTable("AdiSubjects");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.AdiTeacher", b =>
+                {
+                    b.Property<Guid>("AcademicDevelopmentClassId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("AcademicDevelopmentClassId", "TeacherId");
+
+                    b.HasIndex("TeacherId");
+
+                    b.ToTable("AdiTeachers");
+                });
+
             modelBuilder.Entity("Lisa.Models.Entities.AssessmentType", b =>
                 {
                     b.Property<int>("Id")
@@ -348,6 +442,9 @@ namespace Lisa.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AcademicDevelopmentClassId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("AcademicYearId")
@@ -387,6 +484,8 @@ namespace Lisa.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AcademicDevelopmentClassId");
 
                     b.HasIndex("AcademicYearId");
 
@@ -1571,6 +1670,9 @@ namespace Lisa.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
@@ -1580,6 +1682,9 @@ namespace Lisa.Migrations
                         .HasColumnType("character varying(256)");
 
                     b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsArchived")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("LockoutEnabled")
@@ -1852,8 +1957,7 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.SchoolGrade", "SchoolGrade")
                         .WithMany()
                         .HasForeignKey("SchoolGradeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Lisa.Models.Entities.School", "School")
                         .WithMany()
@@ -1864,8 +1968,7 @@ namespace Lisa.Migrations
                     b.HasOne("Lisa.Models.Entities.Subject", "Subject")
                         .WithMany()
                         .HasForeignKey("SubjectId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Lisa.Models.Entities.User", "Teacher")
                         .WithMany()
@@ -1894,8 +1997,70 @@ namespace Lisa.Migrations
                     b.Navigation("School");
                 });
 
+            modelBuilder.Entity("Lisa.Models.Entities.AdiLearner", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.AcademicDevelopmentClass", "AcademicDevelopmentClass")
+                        .WithMany("AdiLearners")
+                        .HasForeignKey("AcademicDevelopmentClassId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.Learner", "Learner")
+                        .WithMany()
+                        .HasForeignKey("LearnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AcademicDevelopmentClass");
+
+                    b.Navigation("Learner");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.AdiSubject", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.AcademicDevelopmentClass", "AcademicDevelopmentClass")
+                        .WithMany("AdiSubjects")
+                        .HasForeignKey("AcademicDevelopmentClassId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AcademicDevelopmentClass");
+
+                    b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.AdiTeacher", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.AcademicDevelopmentClass", "AcademicDevelopmentClass")
+                        .WithMany("AdiTeachers")
+                        .HasForeignKey("AcademicDevelopmentClassId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.User", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AcademicDevelopmentClass");
+
+                    b.Navigation("Teacher");
+                });
+
             modelBuilder.Entity("Lisa.Models.Entities.Attendance", b =>
                 {
+                    b.HasOne("Lisa.Models.Entities.AcademicDevelopmentClass", "AcademicDevelopmentClass")
+                        .WithMany()
+                        .HasForeignKey("AcademicDevelopmentClassId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Lisa.Models.Entities.AcademicYear", "AcademicYear")
                         .WithMany()
                         .HasForeignKey("AcademicYearId");
@@ -1905,6 +2070,8 @@ namespace Lisa.Migrations
                         .HasForeignKey("SchoolId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("AcademicDevelopmentClass");
 
                     b.Navigation("AcademicYear");
 

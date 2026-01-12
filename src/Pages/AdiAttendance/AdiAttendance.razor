@@ -1,0 +1,551 @@
+@page "/adi-attendance"
+@using Lisa.Data
+@using Lisa.Enums
+@using Lisa.Models.Entities
+@using System.Security.Claims
+@using MudBlazor
+@inject SchoolService SchoolService
+@inject AcademicDevelopmentClassService AdiService
+@inject AdiAttendanceService AdiAttendanceService
+@inject LearnerService LearnerService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDialogService DialogService
+@inject ILogger<AdiAttendance> Logger
+@inherits EventAwareComponentBase
+
+<PageTitle>ADI Attendance</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-3">ADI Attendance</MudText>
+
+    @if (_selectedSchool == null)
+    {
+        <NoSchoolSelected Message="Please select a school from the dropdown at the top of the page before proceeding." />
+    }
+    else
+    {
+        <MudPaper Class="pa-4 mb-4">
+            <MudStack Spacing="2">
+                <MudSelect T="Guid" Label="Select ADI Event" Variant="Variant.Outlined" Value="_selectedAdiId" ValueChanged="OnAdiChanged">
+                    <MudSelectItem T="Guid" Value="Guid.Empty">-- Select ADI Event --</MudSelectItem>
+                    @foreach (var adi in _adiEvents)
+                    {
+                        <MudSelectItem T="Guid" Value="adi.Id">
+                            @adi.DateTime.ToLocalTime().ToString("dd MMM yyyy HH:mm") - @adi.SchoolGrade?.SystemGrade?.Name - @adi.Subject?.Name
+                            @if (adi.IsAttendanceOpen)
+                            {
+                                <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="ms-2">Live</MudChip>
+                            }
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+
+                @if (_selectedAdi != null)
+                {
+                    <MudGrid>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Grade</MudText>
+                            <MudText Typo="Typo.body1">@(_selectedAdi.SchoolGrade?.SystemGrade?.Name ?? "-")</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Subject</MudText>
+                            <MudText Typo="Typo.body1">@(_selectedAdi.Subject?.Name ?? "-")</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Teacher</MudText>
+                            <MudText Typo="Typo.body1">@(_selectedAdi.Teacher != null ? $"{_selectedAdi.Teacher.Surname}, {_selectedAdi.Teacher.Name}" : "Not assigned")</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Attendance</MudText>
+                            <MudText Typo="Typo.body1">@_presentCount / @_totalCount present</MudText>
+                        </MudItem>
+                    </MudGrid>
+
+                    @* Attendance Control Buttons *@
+                    <MudStack Row="true" Spacing="2" Class="mt-3">
+                        @if (!_selectedAdi.IsAttendanceOpen && _selectedAdi.AttendanceStoppedAt == null)
+                        {
+                            <MudButton Variant="MudBlazor.Variant.Filled" Color="Color.Success" 
+                                       OnClick="StartAttendance" Disabled="@_isProcessing">
+                                <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Class="me-1" />
+                                Start Attendance
+                            </MudButton>
+                        }
+                        else if (_selectedAdi.IsAttendanceOpen)
+                        {
+                            <MudButton Variant="MudBlazor.Variant.Filled" Color="Color.Error" 
+                                       OnClick="StopAttendance" Disabled="@_isProcessing">
+                                <MudIcon Icon="@Icons.Material.Filled.Stop" Class="me-1" />
+                                Stop Attendance
+                            </MudButton>
+                            <MudChip T="string" Color="Color.Success" Size="Size.Medium">
+                                <MudIcon Icon="@Icons.Material.Filled.RadioButtonChecked" Class="me-1" Size="Size.Small" />
+                                Attendance Open - Click learners as they arrive
+                            </MudChip>
+                        }
+                        else if (_selectedAdi.AttendanceStoppedAt != null)
+                        {
+                            <MudChip T="string" Color="Color.Warning" Size="Size.Medium">
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Class="me-1" Size="Size.Small" />
+                                Attendance Closed at @_selectedAdi.AttendanceStoppedAt.Value.ToLocalTime().ToString("HH:mm") - Late arrivals will be marked
+                            </MudChip>
+                        }
+                    </MudStack>
+
+                    @* Add Additional Learner (only when attendance is open or stopped) *@
+                    @if (_selectedAdi.AttendanceStartedAt != null)
+                    {
+                        <MudDivider Class="my-3" />
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Add Additional Learner</MudText>
+                        <MudAutocomplete T="Learner" Label="Search for a learner to add..." Variant="Variant.Outlined"
+                                         SearchFunc="SearchLearnersAsync" ToStringFunc="@(l => l?.DisplayName ?? "")"
+                                         ValueChanged="OnAddAdditionalLearner" ResetValueOnEmptyText="true"
+                                         @ref="_learnerAutocomplete" />
+                    }
+
+                    <MudTextField @bind-Value="_search" Label="Search learner" Variant="Variant.Outlined" 
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Class="mt-3" />
+                }
+            </MudStack>
+        </MudPaper>
+
+        @if (_isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-2" />
+        }
+        else if (_selectedAdi == null)
+        {
+            <MudAlert Severity="Severity.Info">Select an ADI event to capture attendance.</MudAlert>
+        }
+        else
+        {
+            <MudPaper Class="pa-4">
+                @* Learner List with Pills *@
+                <MudSimpleTable Dense="true" Hover="true" Striped="true">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Learner</th>
+                            <th style="width: 150px;">Register Class</th>
+                            <th style="width: 150px;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in FilteredRoster)
+                        {
+                            var record = GetAttendanceRecord(item.Learner.Id);
+                            var canClick = _selectedAdi.AttendanceStartedAt != null && record?.Notes != "Present" && record?.Notes != "Late";
+                            <tr @onclick="@(() => OnLearnerClick(item.Learner))" 
+                                style="@(canClick ? "cursor: pointer;" : "")"
+                                class="@(canClick ? "learner-row-clickable" : "")">
+                                <td>@item.Learner.DisplayName</td>
+                                <td>@item.Learner.RegisterClass?.DisplayName</td>
+                                <td>
+                                    @if (item.IsAdditional)
+                                    {
+                                        <MudChip T="string" Color="Color.Secondary" Size="Size.Small" 
+                                                 Variant="MudBlazor.Variant.Outlined" Class="adi-pill-additional">
+                                            Additional
+                                        </MudChip>
+                                    }
+                                    else
+                                    {
+                                        var pillInfo = GetStatusPill(item.Learner.Id);
+                                        <MudChip T="string" 
+                                                 Color="@pillInfo.Color" 
+                                                 Size="Size.Small"
+                                                 Variant="MudBlazor.Variant.Filled"
+                                                 Class="@pillInfo.CssClass"
+                                                 Disabled="@_processingLearnerIds.Contains(item.Learner.Id)">
+                                            @if (_processingLearnerIds.Contains(item.Learner.Id))
+                                            {
+                                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                            }
+                                            else
+                                            {
+                                                @pillInfo.Text
+                                            }
+                                        </MudChip>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudPaper>
+        }
+    }
+</MudContainer>
+
+<style>
+    .learner-row-clickable:hover {
+        background-color: rgba(0, 0, 0, 0.04);
+    }
+    .adi-pill-absent {
+        background-color: #f44336 !important;
+        color: white !important;
+    }
+    .adi-pill-present {
+        background-color: #4caf50 !important;
+        color: white !important;
+    }
+    .adi-pill-late {
+        background-color: white !important;
+        color: #f44336 !important;
+        border: 2px solid #f44336 !important;
+    }
+    .adi-pill-additional {
+        border-color: #9c27b0 !important;
+        color: #9c27b0 !important;
+    }
+</style>
+
+@code {
+    private School? _selectedSchool;
+    private List<AcademicDevelopmentClass> _adiEvents = [];
+
+    private Guid _selectedAdiId = Guid.Empty;
+    private AcademicDevelopmentClass? _selectedAdi;
+
+    private Attendance? _adiAttendance;
+    private List<(Learner Learner, bool IsAdditional)> _roster = [];
+    private Dictionary<Guid, AttendanceRecord> _existingRecords = new();
+
+    private bool _isLoading;
+    private bool _isProcessing;
+    private string? _search;
+
+    private int _presentCount;
+    private int _totalCount;
+
+    private Guid? _currentUserId;
+    private bool _isSystemAdmin;
+    private readonly HashSet<Guid> _processingLearnerIds = [];
+    private MudAutocomplete<Learner>? _learnerAutocomplete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selectedSchool = await SchoolService.GetSelectedSchoolAsync();
+        SubscribeToEvent(UiEvents.SchoolSelected);
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrWhiteSpace(userId) && Guid.TryParse(userId, out var parsed))
+            {
+                _currentUserId = parsed;
+            }
+            _isSystemAdmin = user.IsInRole(Roles.SystemAdministrator);
+        }
+
+        if (_selectedSchool != null)
+        {
+            await LoadAdiEventsAsync();
+        }
+    }
+
+    protected override async Task HandleEventAsync(string eventName, object? payload)
+    {
+        if (eventName == UiEvents.SchoolSelected && payload is School school)
+        {
+            _selectedSchool = school;
+            _selectedAdiId = Guid.Empty;
+            _selectedAdi = null;
+            _adiAttendance = null;
+            _roster = [];
+            _existingRecords = new();
+            _search = null;
+            await LoadAdiEventsAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+
+        await base.HandleEventAsync(eventName, payload);
+    }
+
+    private async Task LoadAdiEventsAsync()
+    {
+        if (_selectedSchool == null) return;
+
+        try
+        {
+            _isLoading = true;
+            await InvokeAsync(StateHasChanged);
+
+            // Filter by teacher unless system admin
+            if (_isSystemAdmin || _currentUserId == null)
+            {
+                _adiEvents = await AdiService.GetBySchoolIdAsync(_selectedSchool.Id);
+            }
+            else
+            {
+                _adiEvents = await AdiService.GetBySchoolAndTeacherAsync(_selectedSchool.Id, _currentUserId.Value);
+            }
+            
+            _adiEvents = _adiEvents
+                .OrderByDescending(a => a.DateTime)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading ADI events");
+            await DialogService.ShowMessageBox("Error", "Failed to load ADI events.", yesText: "OK");
+        }
+        finally
+        {
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task OnAdiChanged(Guid value)
+    {
+        _selectedAdiId = value;
+
+        if (_selectedAdiId == Guid.Empty)
+        {
+            _selectedAdi = null;
+            _adiAttendance = null;
+            _roster = [];
+            _existingRecords = new();
+            RecalcCounts();
+            return;
+        }
+
+        await LoadAdiAttendanceAsync(_selectedAdiId);
+    }
+
+    private async Task LoadAdiAttendanceAsync(Guid adiId)
+    {
+        try
+        {
+            _isLoading = true;
+            await InvokeAsync(StateHasChanged);
+
+            _selectedAdi = await AdiService.GetByIdAsync(adiId);
+            
+            if (_selectedAdi == null) return;
+
+            _adiAttendance = await AdiAttendanceService.GetOrCreateAdiAttendanceAsync(adiId);
+            _roster = await AdiAttendanceService.GetAdiRosterWithAdditionalFlagAsync(adiId);
+            _existingRecords = await AdiAttendanceService.GetExistingAdiAttendanceRecordsAsync(_adiAttendance.Id);
+
+            RecalcCounts();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading ADI attendance");
+            await DialogService.ShowMessageBox("Error", "Failed to load ADI attendance.", yesText: "OK");
+        }
+        finally
+        {
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private IEnumerable<(Learner Learner, bool IsAdditional)> FilteredRoster =>
+        string.IsNullOrWhiteSpace(_search)
+            ? _roster
+            : _roster.Where(r =>
+                ($"{r.Learner.DisplayName} {r.Learner.FullName}").Contains(_search, StringComparison.OrdinalIgnoreCase)
+                || (r.Learner.RegisterClass?.DisplayName?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    private AttendanceRecord? GetAttendanceRecord(Guid learnerId)
+    {
+        _existingRecords.TryGetValue(learnerId, out var record);
+        return record;
+    }
+
+    private (Color Color, string Text, string CssClass) GetStatusPill(Guid learnerId)
+    {
+        if (!_existingRecords.TryGetValue(learnerId, out var record))
+        {
+            return (Color.Error, "Absent", "adi-pill-absent");
+        }
+
+        return record.Notes switch
+        {
+            "Present" when record.Start.HasValue => (Color.Success, record.Start.Value.ToLocalTime().ToString("HH:mm"), "adi-pill-present"),
+            "Late" when record.Start.HasValue => (Color.Error, record.Start.Value.ToLocalTime().ToString("HH:mm"), "adi-pill-late"),
+            _ => (Color.Error, "Absent", "adi-pill-absent")
+        };
+    }
+
+    private async Task OnLearnerClick(Learner learner)
+    {
+        if (_selectedAdi == null || _adiAttendance == null) return;
+        if (_selectedAdi.AttendanceStartedAt == null) return; // Attendance not started
+        if (_processingLearnerIds.Contains(learner.Id)) return;
+
+        // Check if already marked
+        var existingRecord = GetAttendanceRecord(learner.Id);
+        if (existingRecord?.Notes == "Present" || existingRecord?.Notes == "Late")
+        {
+            return; // Already marked
+        }
+
+        try
+        {
+            _processingLearnerIds.Add(learner.Id);
+            await InvokeAsync(StateHasChanged);
+
+            await AdiAttendanceService.MarkLearnerArrivedAsync(
+                _adiAttendance.Id,
+                learner.Id,
+                _currentUserId);
+
+            // Refresh records
+            _existingRecords = await AdiAttendanceService.GetExistingAdiAttendanceRecordsAsync(_adiAttendance.Id);
+            RecalcCounts();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error marking learner {LearnerId} arrived", learner.Id);
+            await DialogService.ShowMessageBox("Error", "Failed to mark attendance.", yesText: "OK");
+        }
+        finally
+        {
+            _processingLearnerIds.Remove(learner.Id);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task StartAttendance()
+    {
+        if (_selectedAdi == null) return;
+
+        var adiId = _selectedAdi.Id;
+        try
+        {
+            _isProcessing = true;
+            await InvokeAsync(StateHasChanged);
+
+            var success = await AdiService.StartAttendanceAsync(adiId, _currentUserId);
+            if (success)
+            {
+                _selectedAdi = await AdiService.GetByIdAsync(adiId);
+                await LoadAdiEventsAsync(); // Refresh the list
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error starting attendance for ADI {AdiId}", adiId);
+            await DialogService.ShowMessageBox("Error", "Failed to start attendance.", yesText: "OK");
+        }
+        finally
+        {
+            _isProcessing = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task StopAttendance()
+    {
+        if (_selectedAdi == null) return;
+
+        var adiId = _selectedAdi.Id;
+        var result = await DialogService.ShowMessageBox(
+            "Stop Attendance",
+            "Are you sure you want to stop attendance? Any learners arriving after this will be marked as late.",
+            yesText: "Stop",
+            cancelText: "Cancel");
+
+        if (result != true) return;
+
+        try
+        {
+            _isProcessing = true;
+            await InvokeAsync(StateHasChanged);
+
+            var success = await AdiService.StopAttendanceAsync(adiId, _currentUserId);
+            if (success)
+            {
+                _selectedAdi = await AdiService.GetByIdAsync(adiId);
+                await LoadAdiEventsAsync(); // Refresh the list
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error stopping attendance for ADI {AdiId}", adiId);
+            await DialogService.ShowMessageBox("Error", "Failed to stop attendance.", yesText: "OK");
+        }
+        finally
+        {
+            _isProcessing = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task<IEnumerable<Learner>> SearchLearnersAsync(string searchText, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(searchText) || _selectedSchool == null)
+            return [];
+
+        try
+        {
+            var results = await LearnerService.SearchLearnersAsync(_selectedSchool.Id, searchText);
+            var existingIds = _roster.Select(r => r.Learner.Id).ToHashSet();
+            return results
+                .Where(l => l.Status == LearnerStatus.Active && !existingIds.Contains(l.Id))
+                .Take(20);
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private async Task OnAddAdditionalLearner(Learner? learner)
+    {
+        if (learner == null || _selectedAdi == null || _adiAttendance == null) return;
+
+        try
+        {
+            _isProcessing = true;
+            await InvokeAsync(StateHasChanged);
+
+            // Add as additional learner
+            await AdiAttendanceService.AddAdditionalLearnerAsync(_selectedAdi.Id, learner.Id, _currentUserId);
+            
+            // Mark them as arrived immediately
+            await AdiAttendanceService.MarkLearnerArrivedAsync(_adiAttendance.Id, learner.Id, _currentUserId);
+
+            // Refresh roster - new learners will be at the top
+            _roster = await AdiAttendanceService.GetAdiRosterWithAdditionalFlagAsync(_selectedAdi.Id);
+            _existingRecords = await AdiAttendanceService.GetExistingAdiAttendanceRecordsAsync(_adiAttendance.Id);
+            RecalcCounts();
+
+            Logger.LogInformation("Added additional learner {LearnerId} to ADI {AdiId}", learner.Id, _selectedAdi.Id);
+
+            // Clear the autocomplete to allow adding another learner
+            if (_learnerAutocomplete != null)
+            {
+                await _learnerAutocomplete.ClearAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error adding additional learner");
+            await DialogService.ShowMessageBox("Error", "Failed to add learner.", yesText: "OK");
+        }
+        finally
+        {
+            _isProcessing = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void RecalcCounts()
+    {
+        _totalCount = _roster.Count;
+        _presentCount = _roster.Count(r => 
+        {
+            if (_existingRecords.TryGetValue(r.Learner.Id, out var record))
+            {
+                return record.Notes == "Present" || record.Notes == "Late";
+            }
+            return false;
+        });
+    }
+}

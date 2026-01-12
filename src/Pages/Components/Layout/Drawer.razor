@@ -35,15 +35,20 @@
                             <MudNavLink Href="/leave-early" Icon="@Icons.Material.Filled.ExitToApp">Leave Early</MudNavLink>
                         </Authorized>
                     </AuthorizeView>
-                    <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")" Context="adiAuth">
-                        <Authorized>
-                            <MudNavLink Href="/adi-creator" Icon="@Icons.Material.Filled.AddCircle">ADI Creator</MudNavLink>
-                        </Authorized>
-                    </AuthorizeView>
                 </MudNavGroup>
             </Authorized>
         </AuthorizeView>
 
+        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")" Context="adiAuth">
+            <Authorized>
+                <MudNavGroup Title="ADI" Icon="@Icons.Material.Filled.School" Expanded="false">
+                    <MudNavLink Href="/adi-creator" Icon="@Icons.Material.Filled.AddCircle">Create ADI</MudNavLink>
+                    <MudNavLink Href="/adi-attendance" Icon="@Icons.Material.Filled.HowToReg">Attendance</MudNavLink>
+                    <MudNavLink Href="/adi-summary" Icon="@Icons.Material.Filled.Summarize">Summary</MudNavLink>
+                </MudNavGroup>
+            </Authorized>
+        </AuthorizeView>
+        
         <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")">
             <Authorized>
                 <MudNavLink Href="/class-lists" Icon="@Icons.Material.Filled.ListAlt">Class Lists</MudNavLink>

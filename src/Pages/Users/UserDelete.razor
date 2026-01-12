@@ -41,9 +41,25 @@
                     </div>
                 }
 
+                @if (_user.Roles.Contains(Roles.Teacher) && _hasPeriods)
+                {
+                    <p>
+                        This teacher is assigned to one or more Periods.
+                        Remove or reassign these periods before deletion.
+                    </p>
+                }
+
+                @if (_user.Roles.Contains(Roles.Teacher) && _hasCapturedResultSets)
+                {
+                    <p>
+                        This teacher is referenced as the capturer of one or more Result Sets.
+                        They will be archived (disabled) instead of deleted.
+                    </p>
+                }
+
                 <button class="btn btn-danger" @onclick="ConfirmDelete"
-                        disabled="@(_user.Roles.Contains(Roles.Teacher) && _hasRegisterClasses && string.IsNullOrEmpty(_selectedTeacherId))">
-                    Delete User
+                        disabled="@IsDeleteDisabled">
+                    @DeleteButtonText
                 </button>
                 <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
             </div>
@@ -61,8 +77,19 @@
     private User? _user;
     private bool _isLoading = true;
     private bool _hasRegisterClasses;
+    private bool _hasPeriods;
+    private bool _hasCapturedResultSets;
     private List<User> _availableTeachers = [];
     private string _selectedTeacherId = string.Empty;
+
+    private bool IsDeleteDisabled =>
+        (_user?.Roles.Contains(Roles.Teacher) == true && _hasPeriods)
+        || (_user?.Roles.Contains(Roles.Teacher) == true && _hasRegisterClasses && string.IsNullOrEmpty(_selectedTeacherId));
+
+    private string DeleteButtonText =>
+        (_user?.Roles.Contains(Roles.Teacher) == true && _hasCapturedResultSets)
+            ? "Archive User"
+            : "Delete User";
 
     protected override async Task OnInitializedAsync()
     {
@@ -80,6 +107,9 @@
                     // Get available teachers (other than this one) to transfer classes
                     _availableTeachers = await UserService.GetAvailableTeachersAsync(UserId);
                 }
+
+                _hasPeriods = await UserService.HasPeriodsAsync(UserId);
+                _hasCapturedResultSets = await UserService.HasCapturedResultSetsAsync(UserId);
             }
         }
         catch (Exception ex)
@@ -101,14 +131,19 @@
                 // Transfer register classes from this teacher to the selected replacement
                 await UserService.TransferRegisterClassesAsync(UserId, Guid.Parse(_selectedTeacherId));
             }
-            var deleted = await UserService.DeleteAsync(UserId);
-            if (deleted)
+            var outcome = await UserService.RemoveAsync(UserId);
+            if (outcome == UserRemovalOutcome.Deleted)
             {
+                Navigation.NavigateTo("/users");
+            }
+            else if (outcome == UserRemovalOutcome.Archived)
+            {
+                await JsRuntime.InvokeVoidAsync("alert", "User archived (cannot be deleted because they have results).");
                 Navigation.NavigateTo("/users");
             }
             else
             {
-                await JsRuntime.InvokeVoidAsync("alert", "Failed to delete user.");
+                await JsRuntime.InvokeVoidAsync("alert", "Failed to remove user.");
             }
         }
         catch (Exception ex)

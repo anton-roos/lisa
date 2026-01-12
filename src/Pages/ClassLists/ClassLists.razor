@@ -69,7 +69,7 @@
                                            AdornmentIcon="@Icons.Material.Filled.Category">
                                     @foreach (var combination in _filteredCombinations)
                                     {
-                                        <MudSelectItem T="string" Value="@combination.Id.ToString()">@combination.Name</MudSelectItem>
+                                        <MudSelectItem T="string" Value="@combination.Id.ToString()">@combination.DisplayName</MudSelectItem>
                                     }
                                     <MudSelectItem T="string" Value="@("Math")">Math</MudSelectItem>
                                     <MudSelectItem T="string" Value="@("MathLit")">Math Literacy</MudSelectItem>
@@ -389,7 +389,7 @@
                 _learners = _learners.OrderBy(l => l.Surname).ThenBy(l => l.Name).ToList();
                 
                 var registerClass = _registerClasses.FirstOrDefault(c => c.Id == _registerClassId);
-                _currentTitle = registerClass?.Name ?? "";
+                _currentTitle = registerClass?.DisplayName ?? "";
             }
         }
         else if (_viewMode == "CareGroup")

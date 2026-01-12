@@ -6,6 +6,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lisa.Services;
 
+public enum UserRemovalOutcome
+{
+    Deleted,
+    Archived,
+    Blocked,
+    NotFound,
+    Failed
+}
+
 public class UserService(
     UserManager<User> userManager,
     IDbContextFactory<LisaDbContext> dbContextFactory,
@@ -20,7 +29,9 @@ public class UserService(
         {
             var context = await dbContextFactory.CreateDbContextAsync();
 
-            var usersQuery = context.Users.AsNoTracking();
+            var usersQuery = context.Users
+                .AsNoTracking()
+                .Where(u => !u.IsArchived);
 
             if (schoolId != null)
             {
@@ -246,26 +257,79 @@ public class UserService(
 
     public async Task<bool> DeleteAsync(Guid id)
     {
+        var outcome = await RemoveAsync(id);
+        return outcome is UserRemovalOutcome.Deleted or UserRemovalOutcome.Archived;
+    }
+
+    public async Task<UserRemovalOutcome> RemoveAsync(Guid id)
+    {
         try
         {
             await using var context = await dbContextFactory.CreateDbContextAsync();
-            var existing = await context.Users.FindAsync(id);
+
+            var existing = await context.Users.FirstOrDefaultAsync(u => u.Id == id);
             if (existing == null)
             {
-                logger.LogWarning("Attempted to delete non-existent teacher. TeacherId: {TeacherId}", id);
-                return false;
+                logger.LogWarning("Attempted to remove non-existent user. UserId: {UserId}", id);
+                return UserRemovalOutcome.NotFound;
+            }
+
+            // Avoid FK violations by ensuring dependent entities are handled first.
+            // RegisterClass.UserId is required and uses DeleteBehavior.Restrict.
+            var hasRegisterClasses = await context.RegisterClasses.AnyAsync(rc => rc.UserId == id);
+            if (hasRegisterClasses)
+            {
+                logger.LogWarning("Cannot remove user {UserId} because they are assigned to one or more Register Classes.", id);
+                return UserRemovalOutcome.Blocked;
+            }
+
+            // Period.TeacherId is required and uses DeleteBehavior.Restrict.
+            var hasPeriods = await context.Periods.AnyAsync(p => p.TeacherId == id);
+            if (hasPeriods)
+            {
+                logger.LogWarning("Cannot remove user {UserId} because they are assigned to one or more Periods.", id);
+                return UserRemovalOutcome.Blocked;
+            }
+
+            // ResultSet.CapturedById is required and uses DeleteBehavior.Restrict.
+            // If the user captured any result sets, archive instead of deleting.
+            var hasCapturedResultSets = await context.ResultSets.AnyAsync(rs => rs.CapturedById == id);
+
+            // ResultSet.TeacherId is optional but uses DeleteBehavior.Restrict; clear it to allow delete/archive.
+            await context.ResultSets
+                .Where(rs => rs.TeacherId == id)
+                .ExecuteUpdateAsync(s => s.SetProperty(rs => rs.TeacherId, (Guid?)null));
+
+            if (hasCapturedResultSets)
+            {
+                if (!existing.IsArchived)
+                {
+                    existing.IsArchived = true;
+                    existing.ArchivedAt = DateTime.UtcNow;
+                    existing.LockoutEnabled = true;
+                    existing.LockoutEnd = DateTimeOffset.UtcNow.AddYears(100);
+
+                    // Make the account clearly inactive.
+                    existing.EmailConfirmed = false;
+                    existing.PhoneNumberConfirmed = false;
+                }
+
+                await context.SaveChangesAsync();
+                await uiEventService.PublishAsync(UiEvents.UsersUpdated, null);
+                logger.LogInformation("Archived user {UserId} because they are referenced by Result Sets.", id);
+                return UserRemovalOutcome.Archived;
             }
 
             context.Users.Remove(existing);
             await context.SaveChangesAsync();
             await uiEventService.PublishAsync(UiEvents.UsersUpdated, null);
-            logger.LogInformation("Deleted teacher: {TeacherId}", id);
-            return true;
+            logger.LogInformation("Deleted user: {UserId}", id);
+            return UserRemovalOutcome.Deleted;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error deleting teacher with ID: {TeacherId}", id);
-            return false;
+            logger.LogError(ex, "Error removing user with ID: {UserId}", id);
+            return UserRemovalOutcome.Failed;
         }
     }
 
@@ -276,6 +340,7 @@ public class UserService(
             await using var context = await dbContextFactory.CreateDbContextAsync();
             return await context.Users
                 .Where(u => u.SchoolId == schoolId)
+                .Where(u => !u.IsArchived)
                 .ToListAsync();
         }
         catch (Exception ex)
@@ -289,6 +354,18 @@ public class UserService(
     {
         await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.RegisterClasses.AnyAsync(rc => rc.UserId == userId);
+    }
+
+    public async Task<bool> HasPeriodsAsync(Guid userId)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+        return await context.Periods.AnyAsync(p => p.TeacherId == userId);
+    }
+
+    public async Task<bool> HasCapturedResultSetsAsync(Guid userId)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
+        return await context.ResultSets.AnyAsync(rs => rs.CapturedById == userId);
     }
 
     public async Task<List<User>> GetAvailableTeachersAsync(Guid userId)
@@ -306,7 +383,7 @@ public class UserService(
 
             return await context.Users
                 .AsNoTracking()
-                .Where(t => t.SchoolId == teacher.SchoolId && t.Id != userId)
+                .Where(t => t.SchoolId == teacher.SchoolId && t.Id != userId && !t.IsArchived)
                 .ToListAsync();
         }
         catch (Exception ex)

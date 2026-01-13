@@ -58,14 +58,7 @@
             </Authorized>
         </AuthorizeView>
 
-        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Teacher}")">
-            <Authorized>
-                <MudNavLink Href="/academic-planning/test"
-                            Icon="@Icons.Material.Filled.ChromeReaderMode">
-                    Academic Planning
-                </MudNavLink>
-            </Authorized>
-        </AuthorizeView>
+        
 
         
         <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">

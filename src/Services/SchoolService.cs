@@ -190,40 +190,6 @@ public class SchoolService(
         return true;
     }
 
-    public async Task<bool> DeleteAcademicYearAsync(Guid academicYearId)
-    {
-        await using var context = await dbContextFactory.CreateDbContextAsync();
-        
-        var academicYear = await context.AcademicYears.FindAsync(academicYearId);
-        if (academicYear == null)
-        {
-            return false;
-        }
-
-        // Cannot delete the current academic year - there must always be exactly one current year
-        if (academicYear.IsCurrent)
-        {
-            logger.LogWarning("Cannot delete current academic year {AcademicYearId}. A school must always have exactly one current academic year.", academicYearId);
-            return false;
-        }
-
-        // Check if there are any records linked to this academic year
-        var hasLinkedRecords = 
-            await context.RegisterClasses.AnyAsync(rc => rc.AcademicYearId == academicYearId) ||
-            await context.Combinations.AnyAsync(c => c.AcademicYearId == academicYearId) ||
-            await context.ResultSets.AnyAsync(rs => rs.AcademicYearId == academicYearId) ||
-            await context.Attendances.AnyAsync(a => a.AcademicYearId == academicYearId);
-
-        if (hasLinkedRecords)
-        {
-            return false; // Cannot delete - has linked records
-        }
-
-        context.AcademicYears.Remove(academicYear);
-        await context.SaveChangesAsync();
-        return true;
-    }
-
     private async Task<IdentityUser<Guid>?> GetCurrentUserAsync()
     {
         var authState = await authenticationStateProvider.GetAuthenticationStateAsync();

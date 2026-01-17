@@ -47,7 +47,6 @@
                             <MudTh Style="width: 150px;">Year</MudTh>
                             <MudTh Style="width: 150px;">Current</MudTh>
                             <MudTh Style="width: 200px;">Created</MudTh>
-                            <MudTh Style="width: 150px;">Actions</MudTh>
                         </HeaderContent>
                         <RowTemplate Context="academicYear">
                             <MudTd DataLabel="Year">
@@ -61,13 +60,6 @@
                             </MudTd>
                             <MudTd DataLabel="Created">
                                 @academicYear.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")
-                            </MudTd>
-                            <MudTd DataLabel="Actions">
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                               Color="Color.Error" 
-                                               Size="Size.Small"
-                                               OnClick="@(() => DeleteAcademicYear(academicYear))"
-                                               Disabled="@academicYear.IsCurrent" />
                             </MudTd>
                         </RowTemplate>
                     </MudTable>
@@ -148,35 +140,6 @@
             await LoadAcademicYears();
             Snackbar.Add("Academic year added successfully.", Severity.Success);
             StateHasChanged();
-        }
-    }
-
-    private async Task DeleteAcademicYear(AcademicYear academicYear)
-    {
-        if (academicYear.IsCurrent)
-        {
-            Snackbar.Add("Cannot delete the current academic year. There must always be exactly one current academic year.", Severity.Warning);
-            return;
-        }
-
-        var confirmed = await DialogService.ShowMessageBox(
-            "Delete Academic Year",
-            $"Are you sure you want to delete the academic year {academicYear.Year}? This action cannot be undone.",
-            yesText: "Delete", cancelText: "Cancel");
-
-        if (confirmed == true)
-        {
-            var success = await SchoolService.DeleteAcademicYearAsync(academicYear.Id);
-            if (success)
-            {
-                await LoadAcademicYears();
-                Snackbar.Add($"Academic year {academicYear.Year} deleted.", Severity.Success);
-                StateHasChanged();
-            }
-            else
-            {
-                Snackbar.Add("Cannot delete this academic year. It may have linked records or is the current year.", Severity.Error);
-            }
         }
     }
 }

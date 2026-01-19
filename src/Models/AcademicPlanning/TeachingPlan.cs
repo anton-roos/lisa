@@ -13,6 +13,8 @@ namespace Lisa.Models.AcademicPlanning
         public Guid SchoolGradeId { get; set; }
         public int SubjectId { get; set; }
         public Guid TeacherId { get; set; }
+        public Guid AcademicYearId { get; set; } // Added Year selection
+        public int Term { get; set; } // Added Term (1-4)
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -28,6 +30,10 @@ namespace Lisa.Models.AcademicPlanning
 
         public int CurrentVersion { get; set; } = 1;
         public bool IsLocked { get; set; } = false;
+
+        // Catch-up plan support
+        public Guid? OriginalPlanId { get; set; } // Reference to original plan if this is a catch-up
+        public bool IsCatchUpPlan { get; set; } = false;
 
         public ICollection<AcademicPlanWeek> Weeks { get; set; } = new List<AcademicPlanWeek>();
     }

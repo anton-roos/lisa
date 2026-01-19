@@ -21,8 +21,8 @@ namespace Lisa.Services.AcademicPlanning
             _db = db ?? throw new ArgumentNullException(nameof(db));
         }
 
-        // Get single plan by combination (school, grade, subject, teacher)
-        public async Task<AcademicPlanDto?> GetPlanAsync(Guid schoolId, Guid schoolGradeId, int subjectId, Guid teacherId, CancellationToken cancellationToken = default)
+        // Get single plan by combination (school, grade, subject, teacher, year, term)
+        public async Task<AcademicPlanDto?> GetPlanAsync(Guid schoolId, Guid schoolGradeId, int subjectId, Guid teacherId, Guid academicYearId, int term, CancellationToken cancellationToken = default)
         {
             var plan = await _db.Set<TeachingPlan>()
                 .AsNoTracking()
@@ -32,7 +32,9 @@ namespace Lisa.Services.AcademicPlanning
                     p.SchoolId == schoolId &&
                     p.SchoolGradeId == schoolGradeId &&
                     p.SubjectId == subjectId &&
-                    p.TeacherId == teacherId)
+                    p.TeacherId == teacherId &&
+                    p.AcademicYearId == academicYearId &&
+                    p.Term == term)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (plan == null) return null;
@@ -57,16 +59,18 @@ namespace Lisa.Services.AcademicPlanning
         {
             if (dto == null) throw new ArgumentNullException(nameof(dto));
 
-            // check duplicate: same school, grade, subject, teacher
+            // check duplicate: same school, grade, subject, teacher, year, term
             var exists = await _db.Set<TeachingPlan>().AnyAsync(p =>
                 p.SchoolId == dto.SchoolId &&
                 p.SchoolGradeId == dto.SchoolGradeId &&
                 p.SubjectId == dto.SubjectId &&
-                p.TeacherId == dto.TeacherId,
+                p.TeacherId == dto.TeacherId &&
+                p.AcademicYearId == dto.AcademicYearId &&
+                p.Term == dto.Term,
                 cancellationToken);
 
             if (exists)
-                throw new InvalidOperationException("An academic plan already exists for this School / Grade / Subject / Teacher combination.");
+                throw new InvalidOperationException("An academic plan already exists for this School / Grade / Subject / Teacher / Year / Term combination.");
 
             var entity = new TeachingPlan
             {
@@ -75,6 +79,10 @@ namespace Lisa.Services.AcademicPlanning
                 SchoolGradeId = dto.SchoolGradeId,
                 SubjectId = dto.SubjectId,
                 TeacherId = dto.TeacherId,
+                AcademicYearId = dto.AcademicYearId,
+                Term = dto.Term,
+                IsCatchUpPlan = dto.IsCatchUpPlan,
+                OriginalPlanId = dto.OriginalPlanId,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 Status = AcademicPlanStatusEnum.Draft
@@ -105,9 +113,23 @@ namespace Lisa.Services.AcademicPlanning
                             AcademicPlanWeekId = weekEntity.Id,
                             PeriodNumber = p.PeriodNumber,
                             Topic = p.Topic,
+                            SubTopic = p.SubTopic,
+                            PercentagePlanned = p.PercentagePlanned,
+                            DatePlanned = p.DatePlanned,
+                            PercentageCompleted = p.PercentageCompleted,
+                            DateCompleted = p.DateCompleted,
                             Resources = p.Resources,
-                            Assessment = p.Assessment,
+                            LessonDetailLink = p.LessonDetailLink,
+                            LessonDetailDescription = p.LessonDetailDescription,
+                            ClassWorkLink = p.ClassWorkLink,
+                            ClassWorkDescription = p.ClassWorkDescription,
                             Homework = p.Homework,
+                            HomeworkLink = p.HomeworkLink,
+                            HomeworkDescription = p.HomeworkDescription,
+                            Assessment = p.Assessment,
+                            AssessmentLink = p.AssessmentLink,
+                            AssessmentDescription = p.AssessmentDescription,
+                            Notes = p.Notes,
                             CreatedAt = DateTime.UtcNow,
                             UpdatedAt = DateTime.UtcNow
                         };
@@ -140,17 +162,21 @@ namespace Lisa.Services.AcademicPlanning
             if (plan.SchoolId != dto.SchoolId ||
                 plan.SchoolGradeId != dto.SchoolGradeId ||
                 plan.SubjectId != dto.SubjectId ||
-                plan.TeacherId != dto.TeacherId)
+                plan.TeacherId != dto.TeacherId ||
+                plan.AcademicYearId != dto.AcademicYearId ||
+                plan.Term != dto.Term)
             {
                 var duplicate = await _db.Set<TeachingPlan>().AnyAsync(p =>
                     p.Id != dto.Id &&
                     p.SchoolId == dto.SchoolId &&
                     p.SchoolGradeId == dto.SchoolGradeId &&
                     p.SubjectId == dto.SubjectId &&
-                    p.TeacherId == dto.TeacherId, cancellationToken);
+                    p.TeacherId == dto.TeacherId &&
+                    p.AcademicYearId == dto.AcademicYearId &&
+                    p.Term == dto.Term, cancellationToken);
 
                 if (duplicate)
-                    throw new InvalidOperationException("Another academic plan already exists for this School / Grade / Subject / Teacher combination.");
+                    throw new InvalidOperationException("Another academic plan already exists for this School / Grade / Subject / Teacher / Year / Term combination.");
             }
 
             // update scalars
@@ -158,6 +184,10 @@ namespace Lisa.Services.AcademicPlanning
             plan.SchoolGradeId = dto.SchoolGradeId;
             plan.SubjectId = dto.SubjectId;
             plan.TeacherId = dto.TeacherId;
+            plan.AcademicYearId = dto.AcademicYearId;
+            plan.Term = dto.Term;
+            plan.IsCatchUpPlan = dto.IsCatchUpPlan;
+            plan.OriginalPlanId = dto.OriginalPlanId;
             plan.UpdatedAt = DateTime.UtcNow;
 
             // sync weeks & periods
@@ -193,9 +223,23 @@ namespace Lisa.Services.AcademicPlanning
                                 AcademicPlanWeekId = newWeek.Id,
                                 PeriodNumber = pDto.PeriodNumber,
                                 Topic = pDto.Topic,
+                                SubTopic = pDto.SubTopic,
+                                PercentagePlanned = pDto.PercentagePlanned,
+                                DatePlanned = pDto.DatePlanned,
+                                PercentageCompleted = pDto.PercentageCompleted,
+                                DateCompleted = pDto.DateCompleted,
                                 Resources = pDto.Resources,
-                                Assessment = pDto.Assessment,
+                                LessonDetailLink = pDto.LessonDetailLink,
+                                LessonDetailDescription = pDto.LessonDetailDescription,
+                                ClassWorkLink = pDto.ClassWorkLink,
+                                ClassWorkDescription = pDto.ClassWorkDescription,
                                 Homework = pDto.Homework,
+                                HomeworkLink = pDto.HomeworkLink,
+                                HomeworkDescription = pDto.HomeworkDescription,
+                                Assessment = pDto.Assessment,
+                                AssessmentLink = pDto.AssessmentLink,
+                                AssessmentDescription = pDto.AssessmentDescription,
+                                Notes = pDto.Notes,
                                 CreatedAt = DateTime.UtcNow,
                                 UpdatedAt = DateTime.UtcNow
                             };
@@ -242,9 +286,23 @@ namespace Lisa.Services.AcademicPlanning
                         {
                             existPeriod.PeriodNumber = pDto.PeriodNumber;
                             existPeriod.Topic = pDto.Topic;
+                            existPeriod.SubTopic = pDto.SubTopic;
+                            existPeriod.PercentagePlanned = pDto.PercentagePlanned;
+                            existPeriod.DatePlanned = pDto.DatePlanned;
+                            existPeriod.PercentageCompleted = pDto.PercentageCompleted;
+                            existPeriod.DateCompleted = pDto.DateCompleted;
                             existPeriod.Resources = pDto.Resources;
-                            existPeriod.Assessment = pDto.Assessment;
+                            existPeriod.LessonDetailLink = pDto.LessonDetailLink;
+                            existPeriod.LessonDetailDescription = pDto.LessonDetailDescription;
+                            existPeriod.ClassWorkLink = pDto.ClassWorkLink;
+                            existPeriod.ClassWorkDescription = pDto.ClassWorkDescription;
                             existPeriod.Homework = pDto.Homework;
+                            existPeriod.HomeworkLink = pDto.HomeworkLink;
+                            existPeriod.HomeworkDescription = pDto.HomeworkDescription;
+                            existPeriod.Assessment = pDto.Assessment;
+                            existPeriod.AssessmentLink = pDto.AssessmentLink;
+                            existPeriod.AssessmentDescription = pDto.AssessmentDescription;
+                            existPeriod.Notes = pDto.Notes;
                             existPeriod.UpdatedAt = DateTime.UtcNow;
                         }
                     }
@@ -340,6 +398,10 @@ namespace Lisa.Services.AcademicPlanning
                 SchoolGradeId = entity.SchoolGradeId,
                 SubjectId = entity.SubjectId,
                 TeacherId = entity.TeacherId,
+                AcademicYearId = entity.AcademicYearId,
+                Term = entity.Term,
+                IsCatchUpPlan = entity.IsCatchUpPlan,
+                OriginalPlanId = entity.OriginalPlanId,
                 Weeks = entity.Weeks?.OrderBy(w => w.WeekNumber).Select(MapWeekToDto).ToList() ?? new List<AcademicPlanWeekDto>()
             };
         }
@@ -364,9 +426,23 @@ namespace Lisa.Services.AcademicPlanning
                 Id = p.Id,
                 PeriodNumber = p.PeriodNumber,
                 Topic = p.Topic,
+                SubTopic = p.SubTopic,
+                PercentagePlanned = p.PercentagePlanned,
+                DatePlanned = p.DatePlanned,
+                PercentageCompleted = p.PercentageCompleted,
+                DateCompleted = p.DateCompleted,
                 Resources = p.Resources,
+                LessonDetailLink = p.LessonDetailLink,
+                LessonDetailDescription = p.LessonDetailDescription,
+                ClassWorkLink = p.ClassWorkLink,
+                ClassWorkDescription = p.ClassWorkDescription,
+                Homework = p.Homework,
+                HomeworkLink = p.HomeworkLink,
+                HomeworkDescription = p.HomeworkDescription,
                 Assessment = p.Assessment,
-                Homework = p.Homework
+                AssessmentLink = p.AssessmentLink,
+                AssessmentDescription = p.AssessmentDescription,
+                Notes = p.Notes
             };
         }
 

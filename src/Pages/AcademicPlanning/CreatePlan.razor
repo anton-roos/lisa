@@ -1,15 +1,20 @@
 @page "/academic-planning/create"
 
 @using Lisa.Models.AcademicPlanning
+@using Lisa.Models.Entities
 @using Lisa.Services.AcademicPlanning.DTOs
 @using Lisa.Enums
 @using Lisa.Pages.AcademicPlanning.Components
 @using Lisa.Services.AcademicPlanning
 @using Lisa.Infrastructure.AcademicPlanning
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 
 @inject IAcademicPlanningService PlanningService
 @inject AcademicPlanExportService ExportService
 @inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UserService UserService
 
 <h3 class="mb-3">Create Academic Plan</h3>
 
@@ -65,15 +70,31 @@
     private List<AcademicPlanPeriod> Periods = new();  // Added periods state
 
     private PlanSelector.SelectionResult? Selection;
-    // Replace with actual logged-in user
-    private Guid CurrentUserId => Guid.NewGuid();
+    private Guid? CurrentUserId;
 
     private bool CanSubmit =>
         PlanId.HasValue &&
         Selection?.SchoolId != null &&
+        Selection?.AcademicYearId != null &&
         Selection?.SchoolGradeId != null &&
         Selection?.SubjectId != null &&
+        Selection?.Term != null &&
         Status == AcademicPlanStatus.Draft;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get current authenticated user
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                CurrentUserId = Guid.Parse(userId);
+            }
+        }
+    }
 
     private void OnSelectionChanged(PlanSelector.SelectionResult result)
     {
@@ -85,16 +106,24 @@
     {
         if (!IsSelectionValid())
         {
-            Message = "Please select School, Grade, and Subject.";
+            Message = "Please select School, Year, Grade, Subject, and Term.";
+            return;
+        }
+
+        if (CurrentUserId == null)
+        {
+            Message = "User not authenticated.";
             return;
         }
 
         var dto = new AcademicPlanDto
         {
             SchoolId = Selection!.SchoolId!.Value,
+            AcademicYearId = Selection.AcademicYearId!.Value,
             SchoolGradeId = Selection.SchoolGradeId!.Value,
             SubjectId = Selection.SubjectId!.Value,
-            TeacherId = CurrentUserId,  
+            Term = Selection.Term!.Value,
+            TeacherId = CurrentUserId.Value,  
             Weeks = new List<AcademicPlanWeekDto>()  
         };
 
@@ -114,10 +143,10 @@
 
     private async Task SubmitForReview()
     {
-        if (!PlanId.HasValue)
+        if (!PlanId.HasValue || CurrentUserId == null)
             return;
 
-        await PlanningService.SubmitForReviewAsync(PlanId.Value, CurrentUserId);
+        await PlanningService.SubmitForReviewAsync(PlanId.Value, CurrentUserId.Value);
 
         Status = AcademicPlanStatus.PendingReview;
         Message = "Academic Plan submitted for review.";
@@ -125,13 +154,13 @@
 
     private async Task SavePeriods(List<AcademicPlanPeriod> periods)
     {
-        if (!PlanId.HasValue)
+        if (!PlanId.HasValue || CurrentUserId == null)
             return;
 
         var success = await PlanningService.SavePlanPeriodsAsync(
             PlanId.Value,
             periods,
-            CurrentUserId);
+            CurrentUserId.Value);
 
         if (success)
         {
@@ -156,7 +185,9 @@
                 Selection.SchoolId!.Value,
                 Selection.SchoolGradeId!.Value,
                 Selection.SubjectId!.Value,
-                CurrentUserId
+                CurrentUserId!.Value,
+                Selection.AcademicYearId!.Value,
+                Selection.Term!.Value
             );
 
             if (planDto == null)
@@ -198,7 +229,9 @@
                 Selection.SchoolId!.Value,
                 Selection.SchoolGradeId!.Value,
                 Selection.SubjectId!.Value,
-                CurrentUserId
+                CurrentUserId!.Value,
+                Selection.AcademicYearId!.Value,
+                Selection.Term!.Value
             );
 
             if (planDto == null)
@@ -229,6 +262,8 @@
     }
     private bool IsSelectionValid() =>
         Selection?.SchoolId != null &&
+        Selection.AcademicYearId != null &&
         Selection.SchoolGradeId != null &&
-        Selection.SubjectId != null;
+        Selection.SubjectId != null &&
+        Selection.Term != null;
 }

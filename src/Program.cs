@@ -19,6 +19,10 @@ builder.Logging.AddSeq();
 builder.Services.AddDbContextFactory<LisaDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Lisa")));
 
+// Add DbContext for services that need it directly
+builder.Services.AddDbContext<LisaDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Lisa")));
+
 builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
 {
     options.Password.RequireDigit = true;
@@ -97,6 +101,13 @@ builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<TemplateRenderService>();
 builder.Services.AddScoped<LeaveEarlyService>();
 builder.Services.AddScoped<IAcademicPlanningService, Lisa.Services.AcademicPlanning.AcademicPlanningService>();
+
+// Academic Planning Services
+builder.Services.AddScoped<Lisa.Services.AcademicPlanning.IAcademicYearSetupService, Lisa.Services.AcademicPlanning.AcademicYearSetupService>();
+builder.Services.AddScoped<Lisa.Services.AcademicPlanning.ISubjectGradePeriodService, Lisa.Services.AcademicPlanning.SubjectGradePeriodService>();
+builder.Services.AddScoped<Lisa.Services.AcademicPlanning.ITermAssessmentPlanService, Lisa.Services.AcademicPlanning.TermAssessmentPlanService>();
+builder.Services.AddScoped<Lisa.Services.AcademicPlanning.IAcademicLibraryService, Lisa.Services.AcademicPlanning.AcademicLibraryService>();
+builder.Services.AddScoped<Lisa.Services.AcademicPlanning.IWorkCompletionReportService, Lisa.Services.AcademicPlanning.WorkCompletionReportService>();
 
 
 builder.Services.AddHttpContextAccessor();

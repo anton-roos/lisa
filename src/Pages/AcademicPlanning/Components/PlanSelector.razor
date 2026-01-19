@@ -1,27 +1,55 @@
 @using Lisa.Models.Entities
 @using Lisa.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @inject SchoolService SchoolService
 @inject SchoolGradeService SchoolGradeService
 @inject SubjectService SubjectService
+@inject UserService UserService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ILogger<PlanSelector> Logger
 
 <div class="card p-3 mb-3">
     <h5 class="mb-3">Plan Context</h5>
 
     <div class="row g-3">
-        <div class="col-md-3">
-            <label class="form-label">School</label>
-            <select class="form-select" @bind="selectedSchoolId">
-                <option value="">-- Select School --</option>
-                @foreach (var school in Schools)
+        @if (IsSystemAdministrator)
+        {
+            <div class="col-md-2">
+                <label class="form-label">School</label>
+                <select class="form-select" @bind="selectedSchoolId" @bind:after="OnSchoolChanged">
+                    <option value="">-- Select School --</option>
+                    @foreach (var school in Schools)
+                    {
+                        <option value="@school.Id">@school.LongName</option>
+                    }
+                </select>
+            </div>
+        }
+        else if (CurrentSchool != null)
+        {
+            <div class="col-md-2">
+                <label class="form-label">School</label>
+                <input type="text" class="form-control" value="@CurrentSchool.LongName" readonly />
+                <input type="hidden" @bind="selectedSchoolId" value="@CurrentSchool.Id" />
+            </div>
+        }
+
+        <div class="col-md-2">
+            <label class="form-label">Year</label>
+            <select class="form-select" @bind="selectedAcademicYearId" disabled="@(!selectedSchoolId.HasValue)" @bind:after="OnYearChanged">
+                <option value="">-- Select Year --</option>
+                @foreach (var year in AcademicYears)
                 {
-                    <option value="@school.Id">@school.LongName</option>
+                    <option value="@year.Id">@year.Year</option>
                 }
             </select>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-2">
             <label class="form-label">Grade</label>
-            <select class="form-select" @bind="selectedSchoolGradeId" disabled="@(!selectedSchoolId.HasValue)">
+            <select class="form-select" @bind="selectedSchoolGradeId" disabled="@(!selectedSchoolId.HasValue)" @bind:after="OnGradeChanged">
                 <option value="">-- Select Grade --</option>
                 @foreach (var grade in SchoolGrades)
                 {
@@ -30,9 +58,9 @@
             </select>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-2">
             <label class="form-label">Subject</label>
-            <select class="form-select" @bind="selectedSubjectId" disabled="@(!selectedSchoolGradeId.HasValue)">
+            <select class="form-select" @bind="selectedSubjectId" disabled="@(!selectedSchoolGradeId.HasValue)" @bind:after="OnSubjectChanged">
                 <option value="">-- Select Subject --</option>
                 @foreach (var subject in Subjects)
                 {
@@ -41,9 +69,9 @@
             </select>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-2">
             <label class="form-label">Term</label>
-            <select class="form-select" @bind="selectedTerm" disabled="@(!selectedSubjectId.HasValue)">
+            <select class="form-select" @bind="selectedTerm" disabled="@(!selectedSubjectId.HasValue)" @bind:after="OnTermChanged">
                 <option value="">-- Select Term --</option>
                 <option value="1">Term 1</option>
                 <option value="2">Term 2</option>
@@ -60,68 +88,107 @@
     private List<School> Schools = new();
     private List<SchoolGrade> SchoolGrades = new();
     private ICollection<Subject> Subjects = new List<Subject>();
+    private List<AcademicYear> AcademicYears = new();
 
     private Guid? selectedSchoolId;
+    private Guid? selectedAcademicYearId;
     private Guid? selectedSchoolGradeId;
     private int? selectedSubjectId;
     private int? selectedTerm;
 
+    private bool IsSystemAdministrator { get; set; } = false;
+    private School? CurrentSchool { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
-        Schools = await SchoolService.GetAllSchoolsAsync();
-    }
-
-    // Use property setters to trigger updates
-    private Guid? SelectedSchoolId
-    {
-        get => selectedSchoolId;
-        set
+        try
         {
-            if (selectedSchoolId != value)
+            // Get current user and check if system administrator
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            IsSystemAdministrator = user.IsInRole(Data.Roles.SystemAdministrator);
+
+            if (IsSystemAdministrator)
             {
-                selectedSchoolId = value;
-                selectedSchoolGradeId = null;
-                selectedSubjectId = null;
-                selectedTerm = null;
-                
-                _ = LoadGradesAsync();
+                // Load all schools for system administrators
+                Schools = await SchoolService.GetAllSchoolsAsync();
+            }
+            else
+            {
+                // Auto-assign school for teachers/principals
+                CurrentSchool = await SchoolService.GetSelectedSchoolAsync();
+                if (CurrentSchool != null)
+                {
+                    selectedSchoolId = CurrentSchool.Id;
+                    await LoadAcademicYearsAsync();
+                }
+                else
+                {
+                    Logger.LogWarning("Non-system administrator user does not have an associated school.");
+                }
             }
         }
-    }
-
-    private Guid? SelectedSchoolGradeId
-    {
-        get => selectedSchoolGradeId;
-        set
+        catch (Exception ex)
         {
-            if (selectedSchoolGradeId != value)
-            {
-                selectedSchoolGradeId = value;
-                selectedSubjectId = null;
-                selectedTerm = null;
-                
-                _ = LoadSubjectsAsync();
-            }
+            Logger.LogError(ex, "Error initializing PlanSelector");
         }
     }
 
-    private int? SelectedSubjectId
+    private async Task OnSchoolChanged()
     {
-        get => selectedSubjectId;
-        set
+        selectedAcademicYearId = null;
+        selectedSchoolGradeId = null;
+        selectedSubjectId = null;
+        selectedTerm = null;
+
+        if (selectedSchoolId.HasValue)
         {
-            selectedSubjectId = value;
-            _ = NotifyParentAsync();
+            await LoadAcademicYearsAsync();
+            await LoadGradesAsync();
         }
+        else
+        {
+            AcademicYears.Clear();
+            SchoolGrades.Clear();
+            Subjects.Clear();
+        }
+
+        await NotifyParentAsync();
     }
 
-    private int? SelectedTerm
+    private async Task OnYearChanged()
     {
-        get => selectedTerm;
-        set
+        await NotifyParentAsync();
+    }
+
+    private async Task OnGradeChanged()
+    {
+        selectedSubjectId = null;
+        selectedTerm = null;
+
+        await LoadSubjectsAsync();
+    }
+
+    private async Task OnSubjectChanged()
+    {
+        selectedTerm = null;
+        await NotifyParentAsync();
+    }
+
+    private async Task OnTermChanged()
+    {
+        await NotifyParentAsync();
+    }
+
+    private async Task LoadAcademicYearsAsync()
+    {
+        if (selectedSchoolId.HasValue)
         {
-            selectedTerm = value;
-            _ = NotifyParentAsync();
+            AcademicYears = await SchoolService.GetAcademicYearsForSchoolAsync(selectedSchoolId.Value);
+        }
+        else
+        {
+            AcademicYears.Clear();
         }
     }
 
@@ -159,6 +226,7 @@
         await OnChanged.InvokeAsync(new SelectionResult
         {
             SchoolId = selectedSchoolId,
+            AcademicYearId = selectedAcademicYearId,
             SchoolGradeId = selectedSchoolGradeId,
             SubjectId = selectedSubjectId,
             Term = selectedTerm
@@ -168,6 +236,7 @@
     public class SelectionResult
     {
         public Guid? SchoolId { get; set; }
+        public Guid? AcademicYearId { get; set; }
         public Guid? SchoolGradeId { get; set; }
         public int? SubjectId { get; set; }
         public int? Term { get; set; }

@@ -13,7 +13,9 @@ namespace Lisa.Services.AcademicPlanning
             Guid schoolId, 
             Guid schoolGradeId, 
             int subjectId, 
-            Guid teacherId, 
+            Guid teacherId,
+            Guid academicYearId,
+            int term,
             CancellationToken cancellationToken = default);
 
         Task<List<AcademicPlanDto>> GetPlansBySchoolAsync(

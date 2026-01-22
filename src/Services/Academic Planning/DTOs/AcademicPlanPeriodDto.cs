@@ -18,17 +18,15 @@ namespace Lisa.Services.AcademicPlanning.DTOs
         public decimal? PercentageCompleted { get; set; }
         public DateTime? DateCompleted { get; set; }
 
-        // Resources and links
+        // Resources
         public string? Resources { get; set; }
-        public string? LessonDetailLink { get; set; }
+        
+        // Core lesson planning fields
         public string? LessonDetailDescription { get; set; }
-        public string? ClassWorkLink { get; set; }
         public string? ClassWorkDescription { get; set; }
         public string? Homework { get; set; }
-        public string? HomeworkLink { get; set; }
-        public string? HomeworkDescription { get; set; }
+        
         public string? Assessment { get; set; }
-        public string? AssessmentLink { get; set; }
         public string? AssessmentDescription { get; set; }
         public string? Notes { get; set; }
     }

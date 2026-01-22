@@ -1,0 +1,158 @@
+@page "/academic-planning/work-completion-reports"
+@using Lisa.Models.Entities
+@using Lisa.Models.AcademicPlanning
+@using Lisa.Services
+@using Lisa.Services.AcademicPlanning
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using MudBlazor
+@inject IWorkCompletionReportService ReportService
+@inject SchoolService SchoolService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Work Completion Reports</PageTitle>
+
+<AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
+    <Authorized>
+        <MudText Typo="Typo.h5" Class="mb-4">Work Completion Reports</MudText>
+        <MudText Class="mb-4">View work completion reports showing planned vs actual dates and percentages.</MudText>
+
+        <MudPaper Class="pa-4 mb-4" Elevation="2">
+            <MudStack Spacing="3">
+                <MudSelect @bind-Value="SelectedSchool" Label="School" T="School" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@((School?)null)">-- Select School --</MudSelectItem>
+                    @foreach (var school in Schools)
+                    {
+                        <MudSelectItem Value="@school">@school.LongName</MudSelectItem>
+                    }
+                </MudSelect>
+
+                @if (SelectedSchool != null)
+                {
+                    <MudDatePicker Label="From Date" @bind-Date="FromDate" Variant="Variant.Outlined" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadReports">
+                        Load Reports
+                    </MudButton>
+                }
+            </MudStack>
+        </MudPaper>
+
+        @if (Reports.Any())
+        {
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-3">Reports</MudText>
+                <MudTable Items="@Reports" Hover="true" Striped="true" Dense="true">
+                    <HeaderContent>
+                        <MudTh>Report Date</MudTh>
+                        <MudTh>Period</MudTh>
+                        <MudTh>Total Periods</MudTh>
+                        <MudTh>Planned</MudTh>
+                        <MudTh>Completed</MudTh>
+                        <MudTh>Avg % Planned</MudTh>
+                        <MudTh>Avg % Completed</MudTh>
+                        <MudTh>Behind Schedule</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="report">
+                        <MudTd>@report.ReportDate.ToString("yyyy-MM-dd")</MudTd>
+                        <MudTd>@report.PeriodStartDate.ToString("yyyy-MM-dd") to @report.PeriodEndDate.ToString("yyyy-MM-dd")</MudTd>
+                        <MudTd>@report.TotalPeriods</MudTd>
+                        <MudTd>@report.PlannedPeriods</MudTd>
+                        <MudTd>@report.CompletedPeriods</MudTd>
+                        <MudTd>@report.AveragePercentagePlanned.ToString("F1")%</MudTd>
+                        <MudTd>@report.AveragePercentageCompleted.ToString("F1")%</MudTd>
+                        <MudTd>
+                            @if (report.PeriodsBehindSchedule > 0)
+                            {
+                                <MudChip T="int" Color="Color.Warning" Size="Size.Small">@report.PeriodsBehindSchedule</MudChip>
+                            }
+                            else
+                            {
+                                <MudChip T="int" Color="Color.Success" Size="Size.Small">0</MudChip>
+                            }
+                        </MudTd>
+                        <MudTd>
+                            @if (report.IsSent)
+                            {
+                                <MudChip T="string" Color="Color.Success" Size="Size.Small">Sent</MudChip>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Color="Color.Default" Size="Size.Small">Pending</MudChip>
+                            }
+                        </MudTd>
+                        <MudTd>
+                            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" OnClick="@(() => ViewReportDetails(report))" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        }
+        else if (SelectedSchool != null && !IsLoading)
+        {
+            <MudAlert Severity="Severity.Info" Class="mt-3">No reports found for the selected criteria.</MudAlert>
+        }
+
+        @if (IsLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-4" />
+        }
+    </Authorized>
+    <NotAuthorized>
+        <MudAlert Severity="Severity.Error">You are not authorized to access this page.</MudAlert>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<School> Schools = new();
+    private List<WorkCompletionReport> Reports = new();
+    
+    private School? SelectedSchool;
+    private DateTime? FromDate;
+    private bool IsLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Schools = await SchoolService.GetAllSchoolsAsync();
+    }
+
+    private async Task LoadReports()
+    {
+        if (SelectedSchool == null) return;
+
+        IsLoading = true;
+        try
+        {
+            Reports = await ReportService.GetReportsBySchoolAsync(SelectedSchool.Id);
+            
+            if (FromDate.HasValue)
+            {
+                Reports = Reports.Where(r => r.ReportDate >= FromDate.Value).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading reports: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task ViewReportDetails(WorkCompletionReport report)
+    {
+        var fullReport = await ReportService.GetReportAsync(report.Id);
+        if (fullReport == null)
+        {
+            Snackbar.Add("Report not found", Severity.Error);
+            return;
+        }
+
+        // TODO: Open dialog to show report details
+        Snackbar.Add("Report details view - to be implemented", Severity.Info);
+    }
+}

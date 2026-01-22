@@ -1,0 +1,247 @@
+@page "/academic-planning/periods-setup"
+@using Lisa.Models.Entities
+@using Lisa.Models.AcademicPlanning
+@using Lisa.Services
+@using Lisa.Services.AcademicPlanning
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using MudBlazor
+@inject ISubjectGradePeriodService PeriodsService
+@inject SchoolService SchoolService
+@inject SubjectService SubjectService
+@inject SchoolGradeService SchoolGradeService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Periods Per Week Setup</PageTitle>
+
+<AuthorizeView Roles="@Roles.SystemAdministrator">
+    <Authorized>
+        <MudText Typo="Typo.h5" Class="mb-4">Periods Per Week Setup</MudText>
+        <MudText Class="mb-4">Configure the number of periods per week per subject per grade. Can be set globally or per school.</MudText>
+
+        <MudPaper Class="pa-4 mb-4" Elevation="2">
+            <MudStack Spacing="3">
+                <MudSelect Label="School (Optional - leave empty for global)" T="School" Variant="Variant.Outlined" Value="SelectedSchool" ValueChanged="@(async (School? s) => { SelectedSchool = s; await OnSchoolChanged(); })">
+                    <MudSelectItem Value="@((School?)null)">-- Global (All Schools) --</MudSelectItem>
+                    @foreach (var school in Schools)
+                    {
+                        <MudSelectItem Value="@school">@school.LongName</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudSelect @bind-Value="SelectedSubject" Label="Subject" T="Subject" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@((Subject?)null)">-- Select Subject --</MudSelectItem>
+                    @foreach (var subject in Subjects)
+                    {
+                        <MudSelectItem Value="@subject">@subject.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudSelect @bind-Value="SelectedSchoolGrade" Label="Grade" T="SchoolGrade" Variant="Variant.Outlined" Disabled="@(SelectedSubject == null || (SelectedSchool == null && !IsGlobal))">
+                    <MudSelectItem Value="@((SchoolGrade?)null)">-- Select Grade --</MudSelectItem>
+                    @foreach (var grade in SchoolGrades)
+                    {
+                        <MudSelectItem Value="@grade">@grade.SystemGrade?.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                @if (SelectedSubject != null && SelectedSchoolGrade != null)
+                {
+                    <MudNumericField T="int" Label="Periods Per Week" 
+                                           @bind-Value="PeriodsPerWeek" 
+                                           Variant="Variant.Outlined"
+                                           Min="1" Max="40"
+                                           Required="true" />
+                    
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SavePeriods" Disabled="@(PeriodsPerWeek < 1)">
+                        Save Periods Configuration
+                    </MudButton>
+                }
+            </MudStack>
+        </MudPaper>
+
+        @if (CurrentPeriods.Any())
+        {
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-3">Current Configuration</MudText>
+                <MudTable Items="@CurrentPeriods" Hover="true" Striped="true" Dense="true">
+                    <HeaderContent>
+                        <MudTh>Subject</MudTh>
+                        <MudTh>Grade</MudTh>
+                        <MudTh>School</MudTh>
+                        <MudTh>Periods/Week</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="period">
+                        <MudTd>@period.Subject?.Name</MudTd>
+                        <MudTd>@period.SchoolGrade?.SystemGrade?.Name</MudTd>
+                        <MudTd>@(period.School?.LongName ?? "Global")</MudTd>
+                        <MudTd>@period.PeriodsPerWeek</MudTd>
+                        <MudTd>
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => EditPeriod(period))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeletePeriod(period))" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        }
+
+        @if (IsLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-4" />
+        }
+    </Authorized>
+    <NotAuthorized>
+        <MudAlert Severity="Severity.Error">You are not authorized to access this page. System Administrator role required.</MudAlert>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<School> Schools = new();
+    private List<Subject> Subjects = new();
+    private List<SchoolGrade> SchoolGrades = new();
+    private List<SubjectGradePeriod> CurrentPeriods = new();
+    
+    private School? SelectedSchool;
+    private Subject? SelectedSubject;
+    private SchoolGrade? SelectedSchoolGrade;
+    private int PeriodsPerWeek = 0;
+    private bool IsLoading = false;
+    private bool IsGlobal => SelectedSchool == null;
+    private Guid? CurrentUserId;
+
+    private async Task OnSchoolChanged()
+    {
+        SelectedSubject = null;
+        SelectedSchoolGrade = null;
+        SchoolGrades.Clear();
+        
+        if (SelectedSchool != null)
+        {
+            SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchool.Id);
+        }
+        
+        await LoadCurrentPeriods();
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                CurrentUserId = Guid.Parse(userId);
+            }
+        }
+
+        Schools = await SchoolService.GetAllSchoolsAsync();
+        Subjects = await SubjectService.GetAllAsync();
+        await LoadCurrentPeriods();
+    }
+
+    private async Task LoadCurrentPeriods()
+    {
+        IsLoading = true;
+        try
+        {
+            if (SelectedSchool != null)
+            {
+                CurrentPeriods = await PeriodsService.GetBySchoolAsync(SelectedSchool.Id);
+            }
+            else
+            {
+                // Load all periods
+                CurrentPeriods = new List<SubjectGradePeriod>();
+                foreach (var subject in Subjects)
+                {
+                    var periods = await PeriodsService.GetBySubjectAsync(subject.Id);
+                    CurrentPeriods.AddRange(periods);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading periods: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task SavePeriods()
+    {
+        if (SelectedSubject == null || SelectedSchoolGrade == null || CurrentUserId == null || PeriodsPerWeek < 1)
+        {
+            Snackbar.Add("Please fill in all required fields", Severity.Warning);
+            return;
+        }
+
+        IsLoading = true;
+        try
+        {
+            var period = new SubjectGradePeriod
+            {
+                SubjectId = SelectedSubject.Id,
+                SchoolGradeId = SelectedSchoolGrade.Id,
+                PeriodsPerWeek = PeriodsPerWeek,
+                SchoolId = SelectedSchool?.Id
+            };
+
+            await PeriodsService.CreateOrUpdateAsync(period, CurrentUserId.Value);
+            Snackbar.Add("Periods configuration saved successfully", Severity.Success);
+            
+            // Reset form
+            PeriodsPerWeek = 0;
+            SelectedSubject = null;
+            SelectedSchoolGrade = null;
+            
+            await LoadCurrentPeriods();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving periods: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task EditPeriod(SubjectGradePeriod period)
+    {
+        SelectedSubject = period.Subject;
+        SelectedSchoolGrade = period.SchoolGrade;
+        SelectedSchool = period.School;
+        PeriodsPerWeek = period.PeriodsPerWeek;
+        
+        if (SelectedSchoolGrade != null)
+        {
+            SchoolGrades = await SchoolGradeService.GetGradesForSchool(SelectedSchoolGrade.SchoolId);
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task DeletePeriod(SubjectGradePeriod period)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Delete Period Configuration",
+            $"Are you sure you want to delete the periods configuration for {period.Subject?.Name} - {period.SchoolGrade?.SystemGrade?.Name}?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            await PeriodsService.DeleteAsync(period.Id);
+            await LoadCurrentPeriods();
+            Snackbar.Add("Periods configuration deleted successfully", Severity.Success);
+        }
+    }
+}

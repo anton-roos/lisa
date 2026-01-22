@@ -1,0 +1,84 @@
+@page "/academic-planning/library"
+@using Lisa.Data
+@using MudBlazor
+
+<PageTitle>Academic Library</PageTitle>
+
+<AuthorizeView Roles="@($"{Roles.Teacher},{Roles.Principal},{Roles.SchoolManagement}")">
+    <Authorized>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+            <MudPaper Elevation="8" Class="pa-8 text-center" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px;">
+                <MudStack AlignItems="AlignItems.Center" Spacing="4">
+                    <MudIcon Icon="@Icons.Material.Filled.LibraryBooks" Size="Size.Large" Style="font-size: 120px; color: white; opacity: 0.9;" />
+                    
+                    <MudText Typo="Typo.h3" Style="color: white; font-weight: 600; margin-top: 16px;">
+                        Academic Library
+                    </MudText>
+                    
+                    <MudText Typo="Typo.h5" Style="color: rgba(255, 255, 255, 0.95); font-weight: 400; max-width: 600px; margin: 16px 0;">
+                        Coming Soon!
+                    </MudText>
+                    
+                    <MudText Typo="Typo.body1" Style="color: rgba(255, 255, 255, 0.9); max-width: 700px; line-height: 1.8; margin: 16px 0;">
+                        We're building an amazing resource library where you'll be able to upload, share, and discover 
+                        planning documents, subject materials, and assessments. This feature will enable seamless 
+                        collaboration among teachers across all schools while maintaining proper document ownership and naming conventions.
+                    </MudText>
+                    
+                    <MudPaper Elevation="0" Class="pa-4 mt-4" Style="background: rgba(255, 255, 255, 0.15); border-radius: 12px; backdrop-filter: blur(10px); max-width: 600px;">
+                        <MudStack Spacing="2" AlignItems="AlignItems.Start">
+                            <MudText Typo="Typo.subtitle1" Style="color: white; font-weight: 600; margin-bottom: 8px;">
+                                What to Expect:
+                            </MudText>
+                            <MudText Typo="Typo.body2" Style="color: rgba(255, 255, 255, 0.95);">
+                                ✓ Upload planning documents, subject materials, and assessments
+                            </MudText>
+                            <MudText Typo="Typo.body2" Style="color: rgba(255, 255, 255, 0.95);">
+                                ✓ Share resources with teachers across all schools
+                            </MudText>
+                            <MudText Typo="Typo.body2" Style="color: rgba(255, 255, 255, 0.95);">
+                                ✓ Automatic naming convention enforcement
+                            </MudText>
+                            <MudText Typo="Typo.body2" Style="color: rgba(255, 255, 255, 0.95);">
+                                ✓ Download and customize documents for your school
+                            </MudText>
+                            <MudText Typo="Typo.body2" Style="color: rgba(255, 255, 255, 0.95);">
+                                ✓ Search and filter by subject, grade, and document type
+                            </MudText>
+                        </MudStack>
+                    </MudPaper>
+                    
+                    <MudText Typo="Typo.body2" Style="color: rgba(255, 255, 255, 0.85); margin-top: 32px; font-style: italic;">
+                        Stay tuned for updates! We're working hard to bring you this exciting feature.
+                    </MudText>
+                </MudStack>
+            </MudPaper>
+        </MudContainer>
+    </Authorized>
+    <NotAuthorized>
+        <MudAlert Severity="Severity.Warning">
+            You do not have permission to access the Academic Library.
+        </MudAlert>
+    </NotAuthorized>
+</AuthorizeView>
+
+<style>
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .mud-paper {
+        animation: fadeIn 0.8s ease-out;
+    }
+    
+    .mud-icon {
+        animation: fadeIn 1s ease-out 0.2s both;
+    }
+</style>

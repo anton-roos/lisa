@@ -31,20 +31,17 @@ namespace Lisa.Models.AcademicPlanning
         
         public DateTime? DateCompleted { get; set; } // Actual date completed
         
-        // Resources and links
+        // Resources
         public string? Resources { get; set; } // Resources/class work
-        public string? LessonDetailLink { get; set; } // Link to document/PowerPoint in Academic Library
-        public string? LessonDetailDescription { get; set; } // Description for lesson detail link
         
-        public string? ClassWorkLink { get; set; } // Link to class work document
-        public string? ClassWorkDescription { get; set; } // Description for class work link
+        // Core lesson planning fields
+        public string? LessonDetailDescription { get; set; } // Lesson objective, explanation, and teacher notes
         
-        public string? Homework { get; set; } // Homework
-        public string? HomeworkLink { get; set; } // Link to homework document
-        public string? HomeworkDescription { get; set; } // Description for homework link
+        public string? ClassWorkDescription { get; set; } // In-class activities, exercises, and student tasks
+        
+        public string? Homework { get; set; } // Assigned work for students to complete after the lesson
         
         public string? Assessment { get; set; } // Assessment
-        public string? AssessmentLink { get; set; } // Link to assessment document
         public string? AssessmentDescription { get; set; } // Description for assessment link
         
         // Notes column for teacher

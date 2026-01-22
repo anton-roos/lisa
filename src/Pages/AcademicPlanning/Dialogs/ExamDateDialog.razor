@@ -1,0 +1,94 @@
+@using Lisa.Models.AcademicPlanning
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="@ExamDateModel" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <MudStack Spacing="3">
+                <MudTextField Label="Exam Name" 
+                              @bind-Value="ExamDateModel.Name" 
+                              Variant="Variant.Outlined"
+                              Required="true"
+                              MaxLength="100" />
+                
+                <MudDatePicker Label="Date" 
+                              @bind-Date="ExamDateValue" 
+                              Variant="Variant.Outlined"
+                              Required="true" />
+                
+                <MudTextField Label="Applicable Phases (JSON array, e.g. [&quot;Foundation&quot;, &quot;Intermediate&quot;])" 
+                              @bind-Value="ExamDateModel.ApplicablePhases" 
+                              Variant="Variant.Outlined"
+                              HelperText="Leave empty for all phases" />
+                
+                <MudCheckBox T="bool" Label="Grade 12 Specific" 
+                            checked="ExamDateModel.IsGrade12Specific"
+                            checkedChanged="@((bool value) => ExamDateModel.IsGrade12Specific = value)" />
+                
+                <MudTextField Label="Description" 
+                              @bind-Value="ExamDateModel.Description" 
+                              Variant="Variant.Outlined"
+                              Lines="3"
+                              MaxLength="500" />
+            </MudStack>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="HandleValidSubmit" Disabled="@IsSaving">
+            @(IsSaving ? "Saving..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public ExamDate? ExamDateItem { get; set; }
+    [Parameter] public EventCallback<ExamDate> OnSave { get; set; }
+
+    private ExamDate ExamDateModel = new();
+    private DateTime? ExamDateValue;
+    private bool IsSaving = false;
+
+    protected override void OnInitialized()
+    {
+        if (ExamDateItem != null)
+        {
+            ExamDateModel = new ExamDate
+            {
+                Id = ExamDateItem.Id,
+                Name = ExamDateItem.Name,
+                Date = ExamDateItem.Date,
+                ApplicablePhases = ExamDateItem.ApplicablePhases,
+                IsGrade12Specific = ExamDateItem.IsGrade12Specific,
+                Description = ExamDateItem.Description
+            };
+            ExamDateValue = ExamDateModel.Date;
+        }
+        else
+        {
+            ExamDateModel = new ExamDate
+            {
+                Id = Guid.NewGuid(),
+                Date = DateTime.Today
+            };
+            ExamDateValue = ExamDateModel.Date;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (ExamDateValue.HasValue)
+        {
+            ExamDateModel.Date = ExamDateValue.Value;
+        }
+
+        IsSaving = true;
+        await OnSave.InvokeAsync(ExamDateModel);
+        IsSaving = false;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Close();
+}

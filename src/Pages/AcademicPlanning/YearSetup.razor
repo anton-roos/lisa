@@ -1,0 +1,532 @@
+@page "/academic-planning/year-setup"
+@using Lisa.Models.Entities
+@using Lisa.Models.AcademicPlanning
+@using Lisa.Services
+@using Lisa.Services.AcademicPlanning
+@using Lisa.Data
+@using Lisa.Pages.AcademicPlanning.Dialogs
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using MudBlazor
+@inject IAcademicYearSetupService YearSetupService
+@inject SchoolService SchoolService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Year Setup</PageTitle>
+
+<AuthorizeView Roles="@Roles.SystemAdministrator">
+    <Authorized>
+        <MudText Typo="Typo.h5" Class="mb-4">Year Setup</MudText>
+        <MudText Class="mb-4">Configure terms, weeks, holidays, exam dates, and administrative days for academic years.</MudText>
+
+        <MudPaper Class="pa-4 mb-4" Elevation="2">
+            <MudStack Spacing="3">
+                <MudSelect Label="School" T="School" Variant="Variant.Outlined" Value="SelectedSchool" ValueChanged="@((School? s) => SchoolChanged(s))">
+                    <MudSelectItem Value="@((School?)null)">-- Select School --</MudSelectItem>
+                    @foreach (var school in Schools)
+                    {
+                        <MudSelectItem Value="@school">@school.LongName</MudSelectItem>
+                    }
+                </MudSelect>
+
+                @if (SelectedSchool != null)
+                {
+                    <MudSelect @bind-Value="SelectedAcademicYear" Label="Academic Year" T="AcademicYear" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@((AcademicYear?)null)">-- Select Year --</MudSelectItem>
+                        @foreach (var year in AcademicYears)
+                        {
+                            <MudSelectItem Value="@year">@year.Year</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+
+                @if (SelectedAcademicYear != null)
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadOrCreateSetup">
+                        Load/Create Year Setup
+                    </MudButton>
+                }
+            </MudStack>
+        </MudPaper>
+
+        @if (CurrentSetup != null)
+        {
+            <MudTabs Elevation="2">
+                <MudTabPanel Text="Terms & Weeks">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddTerm" Class="mb-3">
+                        Add Term
+                    </MudButton>
+
+                    @if (CurrentSetup.Terms.Any())
+                    {
+                        <MudTable Items="@CurrentSetup.Terms" Hover="true" Striped="true">
+                            <HeaderContent>
+                                <MudTh>Term</MudTh>
+                                <MudTh>Start Date</MudTh>
+                                <MudTh>End Date</MudTh>
+                                <MudTh>Weeks</MudTh>
+                                <MudTh>Actions</MudTh>
+                            </HeaderContent>
+                            <RowTemplate Context="term">
+                                <MudTd>@term.TermNumber</MudTd>
+                                <MudTd>@term.StartDate.ToString("yyyy-MM-dd")</MudTd>
+                                <MudTd>@term.EndDate.ToString("yyyy-MM-dd")</MudTd>
+                                <MudTd>@term.Weeks.Count</MudTd>
+                                <MudTd>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => EditTerm(term))" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteTerm(term))" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.ViewList" Size="Size.Small" OnClick="@(() => ManageWeeks(term))" />
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudTabPanel>
+
+                <MudTabPanel Text="Holidays">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddHoliday" Class="mb-3">
+                        Add Holiday
+                    </MudButton>
+
+                    @if (CurrentSetup.Holidays.Any())
+                    {
+                        <MudTable Items="@CurrentSetup.Holidays" Hover="true" Striped="true">
+                            <HeaderContent>
+                                <MudTh>Name</MudTh>
+                                <MudTh>Date</MudTh>
+                                <MudTh>Actions</MudTh>
+                            </HeaderContent>
+                            <RowTemplate Context="holiday">
+                                <MudTd>@holiday.Name</MudTd>
+                                <MudTd>@holiday.Date.ToString("yyyy-MM-dd")</MudTd>
+                                <MudTd>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => EditHoliday(holiday))" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteHoliday(holiday))" />
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudTabPanel>
+
+                <MudTabPanel Text="Administrative Days">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddAdministrativeDay" Class="mb-3">
+                        Add Administrative Day
+                    </MudButton>
+
+                    @if (CurrentSetup.AdministrativeDays.Any())
+                    {
+                        <MudTable Items="@CurrentSetup.AdministrativeDays" Hover="true" Striped="true">
+                            <HeaderContent>
+                                <MudTh>Name</MudTh>
+                                <MudTh>Date</MudTh>
+                                <MudTh>Actions</MudTh>
+                            </HeaderContent>
+                            <RowTemplate Context="adminDay">
+                                <MudTd>@adminDay.Name</MudTd>
+                                <MudTd>@adminDay.Date.ToString("yyyy-MM-dd")</MudTd>
+                                <MudTd>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => EditAdministrativeDay(adminDay))" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteAdministrativeDay(adminDay))" />
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudTabPanel>
+
+                <MudTabPanel Text="Exam Dates">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddExamDate" Class="mb-3">
+                        Add Exam Date
+                    </MudButton>
+
+                    @if (CurrentSetup.ExamDates.Any())
+                    {
+                        <MudTable Items="@CurrentSetup.ExamDates" Hover="true" Striped="true">
+                            <HeaderContent>
+                                <MudTh>Name</MudTh>
+                                <MudTh>Date</MudTh>
+                                <MudTh>Phases</MudTh>
+                                <MudTh>Actions</MudTh>
+                            </HeaderContent>
+                            <RowTemplate Context="examDate">
+                                <MudTd>@examDate.Name</MudTd>
+                                <MudTd>@examDate.Date.ToString("yyyy-MM-dd")</MudTd>
+                                <MudTd>@examDate.ApplicablePhases</MudTd>
+                                <MudTd>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => EditExamDate(examDate))" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteExamDate(examDate))" />
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudTabPanel>
+            </MudTabs>
+        }
+
+        @if (IsLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-4" />
+        }
+    </Authorized>
+    <NotAuthorized>
+        <MudAlert Severity="Severity.Error">You are not authorized to access this page. System Administrator role required.</MudAlert>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<School> Schools = new();
+    private List<AcademicYear> AcademicYears = new();
+    private School? SelectedSchool;
+    private AcademicYear? SelectedAcademicYear;
+    private AcademicYearSetup? CurrentSetup;
+    private bool IsLoading = false;
+    private Guid? CurrentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get current user
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                CurrentUserId = Guid.Parse(userId);
+            }
+        }
+
+        Schools = await SchoolService.GetAllSchoolsAsync();
+    }
+
+    private async Task LoadOrCreateSetup()
+    {
+        if (SelectedSchool == null || SelectedAcademicYear == null || CurrentUserId == null)
+            return;
+
+        IsLoading = true;
+        try
+        {
+            CurrentSetup = await YearSetupService.GetBySchoolAndYearAsync(SelectedSchool.Id, SelectedAcademicYear.Id);
+
+            if (CurrentSetup == null)
+            {
+                // Create new setup
+                CurrentSetup = new AcademicYearSetup
+                {
+                    Id = Guid.NewGuid(),
+                    SchoolId = SelectedSchool.Id,
+                    AcademicYearId = SelectedAcademicYear.Id,
+                    CreatedBy = CurrentUserId.Value,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                CurrentSetup = await YearSetupService.CreateOrUpdateAsync(CurrentSetup, CurrentUserId.Value);
+                Snackbar.Add("Year setup created successfully", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Year setup loaded", Severity.Info);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task AddTerm()
+    {
+        if (CurrentSetup == null || CurrentUserId == null) return;
+
+        var parameters = new DialogParameters<TermDialog>
+        {
+            { x => x.AcademicYearSetupId, CurrentSetup.Id }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<TermDialog>("Add Term", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            var term = await dialog.GetReturnValueAsync<AcademicTerm>();
+            if (term != null)
+            {
+                await YearSetupService.AddTermAsync(CurrentSetup.Id, term);
+                await ReloadSetup();
+                Snackbar.Add("Term added successfully", Severity.Success);
+            }
+        }
+    }
+
+    private async Task EditTerm(AcademicTerm term)
+    {
+        if (CurrentSetup == null) return;
+
+        var parameters = new DialogParameters<TermDialog>
+        {
+            { x => x.Term, term },
+            { x => x.AcademicYearSetupId, CurrentSetup.Id }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<TermDialog>("Edit Term", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            var updatedTerm = await dialog.GetReturnValueAsync<AcademicTerm>();
+            if (updatedTerm != null)
+            {
+                await YearSetupService.UpdateTermAsync(updatedTerm);
+                await ReloadSetup();
+                Snackbar.Add("Term updated successfully", Severity.Success);
+            }
+        }
+    }
+
+    private async Task DeleteTerm(AcademicTerm term)
+    {
+        if (CurrentSetup == null) return;
+
+        var result = await DialogService.ShowMessageBox(
+            "Delete Term",
+            $"Are you sure you want to delete Term {term.TermNumber}? This will also delete all associated weeks.",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            await YearSetupService.DeleteTermAsync(term.Id);
+            await ReloadSetup();
+            Snackbar.Add("Term deleted successfully", Severity.Success);
+        }
+    }
+
+    private async Task ManageWeeks(AcademicTerm term)
+    {
+        // TODO: Create weeks management dialog
+        Snackbar.Add("Weeks management - to be implemented", Severity.Info);
+    }
+
+    private async Task AddHoliday()
+    {
+        if (CurrentSetup == null || CurrentUserId == null) return;
+
+        var parameters = new DialogParameters<HolidayDialog>();
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<HolidayDialog>("Add Holiday", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            var holiday = await dialog.GetReturnValueAsync<Holiday>();
+            if (holiday != null)
+            {
+                await YearSetupService.AddHolidayAsync(CurrentSetup.Id, holiday);
+                await ReloadSetup();
+                Snackbar.Add("Holiday added successfully", Severity.Success);
+            }
+        }
+    }
+
+    private async Task EditHoliday(Holiday holiday)
+    {
+        if (CurrentSetup == null) return;
+
+        var parameters = new DialogParameters<HolidayDialog>
+        {
+            { x => x.Holiday, holiday }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<HolidayDialog>("Edit Holiday", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            var updatedHoliday = await dialog.GetReturnValueAsync<Holiday>();
+            if (updatedHoliday != null)
+            {
+                await YearSetupService.UpdateHolidayAsync(updatedHoliday);
+                await ReloadSetup();
+                Snackbar.Add("Holiday updated successfully", Severity.Success);
+            }
+        }
+    }
+
+    private async Task DeleteHoliday(Holiday holiday)
+    {
+        if (CurrentSetup == null) return;
+
+        var result = await DialogService.ShowMessageBox(
+            "Delete Holiday",
+            $"Are you sure you want to delete '{holiday.Name}'?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            await YearSetupService.DeleteHolidayAsync(holiday.Id);
+            await ReloadSetup();
+            Snackbar.Add("Holiday deleted successfully", Severity.Success);
+        }
+    }
+
+    private async Task AddAdministrativeDay()
+    {
+        if (CurrentSetup == null || CurrentUserId == null) return;
+
+        var parameters = new DialogParameters<AdministrativeDayDialog>();
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<AdministrativeDayDialog>("Add Administrative Day", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            var adminDay = await dialog.GetReturnValueAsync<AdministrativeDay>();
+            if (adminDay != null)
+            {
+                await YearSetupService.AddAdministrativeDayAsync(CurrentSetup.Id, adminDay);
+                await ReloadSetup();
+                Snackbar.Add("Administrative day added successfully", Severity.Success);
+            }
+        }
+    }
+
+    private async Task EditAdministrativeDay(AdministrativeDay adminDay)
+    {
+        if (CurrentSetup == null) return;
+
+        var parameters = new DialogParameters<AdministrativeDayDialog>
+        {
+            { x => x.AdministrativeDay, adminDay }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<AdministrativeDayDialog>("Edit Administrative Day", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            var updatedAdminDay = await dialog.GetReturnValueAsync<AdministrativeDay>();
+            if (updatedAdminDay != null)
+            {
+                await YearSetupService.UpdateAdministrativeDayAsync(updatedAdminDay);
+                await ReloadSetup();
+                Snackbar.Add("Administrative day updated successfully", Severity.Success);
+            }
+        }
+    }
+
+    private async Task DeleteAdministrativeDay(AdministrativeDay adminDay)
+    {
+        if (CurrentSetup == null) return;
+
+        var result = await DialogService.ShowMessageBox(
+            "Delete Administrative Day",
+            $"Are you sure you want to delete '{adminDay.Name}'?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            await YearSetupService.DeleteAdministrativeDayAsync(adminDay.Id);
+            await ReloadSetup();
+            Snackbar.Add("Administrative day deleted successfully", Severity.Success);
+        }
+    }
+
+    private async Task AddExamDate()
+    {
+        if (CurrentSetup == null || CurrentUserId == null) return;
+
+        var parameters = new DialogParameters<ExamDateDialog>();
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<ExamDateDialog>("Add Exam Date", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            var examDate = await dialog.GetReturnValueAsync<ExamDate>();
+            if (examDate != null)
+            {
+                await YearSetupService.AddExamDateAsync(CurrentSetup.Id, examDate);
+                await ReloadSetup();
+                Snackbar.Add("Exam date added successfully", Severity.Success);
+            }
+        }
+    }
+
+    private async Task EditExamDate(ExamDate examDate)
+    {
+        if (CurrentSetup == null) return;
+
+        var parameters = new DialogParameters<ExamDateDialog>
+        {
+            { x => x.ExamDateItem, examDate }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<ExamDateDialog>("Edit Exam Date", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            var updatedExamDate = await dialog.GetReturnValueAsync<ExamDate>();
+            if (updatedExamDate != null)
+            {
+                await YearSetupService.UpdateExamDateAsync(updatedExamDate);
+                await ReloadSetup();
+                Snackbar.Add("Exam date updated successfully", Severity.Success);
+            }
+        }
+    }
+
+    private async Task DeleteExamDate(ExamDate examDate)
+    {
+        if (CurrentSetup == null) return;
+
+        var result = await DialogService.ShowMessageBox(
+            "Delete Exam Date",
+            $"Are you sure you want to delete '{examDate.Name}'?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            await YearSetupService.DeleteExamDateAsync(examDate.Id);
+            await ReloadSetup();
+            Snackbar.Add("Exam date deleted successfully", Severity.Success);
+        }
+    }
+
+    private async Task ReloadSetup()
+    {
+        if (SelectedSchool == null || SelectedAcademicYear == null) return;
+        CurrentSetup = await YearSetupService.GetBySchoolAndYearAsync(SelectedSchool.Id, SelectedAcademicYear.Id);
+        StateHasChanged();
+    }
+
+    private async Task SchoolChanged(School? school)
+    {
+        SelectedSchool = school;
+        SelectedAcademicYear = null;
+        CurrentSetup = null;
+
+        if (school != null)
+        {
+            AcademicYears = await SchoolService.GetAcademicYearsForSchoolAsync(school.Id);
+        }
+        else
+        {
+            AcademicYears.Clear();
+        }
+    }
+}

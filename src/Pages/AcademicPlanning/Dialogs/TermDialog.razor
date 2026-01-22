@@ -1,0 +1,100 @@
+@using Lisa.Models.AcademicPlanning
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="@TermModel" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <MudStack Spacing="3">
+                <MudNumericField T="int" Label="Term Number" 
+                                       @bind-Value="TermModel.TermNumber" 
+                                       Variant="Variant.Outlined"
+                                       Min="1" Max="4"
+                                       Required="true" />
+                
+                <MudDatePicker Label="Start Date" 
+                              @bind-Date="StartDate" 
+                              Variant="Variant.Outlined"
+                              Required="true" />
+                
+                <MudDatePicker Label="End Date" 
+                              @bind-Date="EndDate" 
+                              Variant="Variant.Outlined"
+                              Required="true" />
+                
+                <MudTextField Label="Applicable Phases (JSON array, e.g. [&quot;Foundation&quot;, &quot;Intermediate&quot;])" 
+                              @bind-Value="TermModel.ApplicablePhases" 
+                              Variant="Variant.Outlined"
+                              HelperText="Leave empty for all phases" />
+                
+                <MudCheckBox T="bool" Label="Grade 12 Specific" 
+                            checked="TermModel.IsGrade12Specific"
+                            checkedChanged="@((bool value) => TermModel.IsGrade12Specific = value)" />
+            </MudStack>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="HandleValidSubmit" Disabled="@IsSaving">
+            @(IsSaving ? "Saving..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public AcademicTerm? Term { get; set; }
+    [Parameter] public Guid AcademicYearSetupId { get; set; }
+    [Parameter] public EventCallback<AcademicTerm> OnSave { get; set; }
+
+    private AcademicTerm TermModel = new();
+    private DateTime? StartDate;
+    private DateTime? EndDate;
+    private bool IsSaving = false;
+
+    protected override void OnInitialized()
+    {
+        if (Term != null)
+        {
+            TermModel = new AcademicTerm
+            {
+                Id = Term.Id,
+                TermNumber = Term.TermNumber,
+                StartDate = Term.StartDate,
+                EndDate = Term.EndDate,
+                ApplicablePhases = Term.ApplicablePhases,
+                IsGrade12Specific = Term.IsGrade12Specific
+            };
+            StartDate = Term.StartDate;
+            EndDate = Term.EndDate;
+        }
+        else
+        {
+            TermModel = new AcademicTerm
+            {
+                Id = Guid.NewGuid(),
+                TermNumber = 1,
+                StartDate = DateTime.Today,
+                EndDate = DateTime.Today.AddDays(90)
+            };
+            StartDate = TermModel.StartDate;
+            EndDate = TermModel.EndDate;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (StartDate.HasValue && EndDate.HasValue)
+        {
+            TermModel.StartDate = StartDate.Value;
+            TermModel.EndDate = EndDate.Value;
+        }
+
+        IsSaving = true;
+        await OnSave.InvokeAsync(TermModel);
+        IsSaving = false;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Close();
+}

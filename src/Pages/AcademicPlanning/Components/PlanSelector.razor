@@ -18,13 +18,21 @@
         {
             <div class="col-md-2">
                 <label class="form-label">School</label>
-                <select class="form-select" @bind="selectedSchoolId" @bind:after="OnSchoolChanged">
-                    <option value="">-- Select School --</option>
-                    @foreach (var school in Schools)
-                    {
-                        <option value="@school.Id">@school.LongName</option>
-                    }
-                </select>
+                @if (IsReadOnly && selectedSchoolId.HasValue)
+                {
+                    var selectedSchool = Schools.FirstOrDefault(s => s.Id == selectedSchoolId.Value);
+                    <input type="text" class="form-control" value="@(selectedSchool?.LongName ?? "Loading...")" readonly />
+                }
+                else
+                {
+                    <select class="form-select" @bind="selectedSchoolId" @bind:after="OnSchoolChanged" disabled="@IsReadOnly">
+                        <option value="">-- Select School --</option>
+                        @foreach (var school in Schools)
+                        {
+                            <option value="@school.Id">@school.LongName</option>
+                        }
+                    </select>
+                }
             </div>
         }
         else if (CurrentSchool != null)
@@ -32,58 +40,94 @@
             <div class="col-md-2">
                 <label class="form-label">School</label>
                 <input type="text" class="form-control" value="@CurrentSchool.LongName" readonly />
-                <input type="hidden" @bind="selectedSchoolId" value="@CurrentSchool.Id" />
             </div>
         }
 
         <div class="col-md-2">
             <label class="form-label">Year</label>
-            <select class="form-select" @bind="selectedAcademicYearId" disabled="@(!selectedSchoolId.HasValue)" @bind:after="OnYearChanged">
-                <option value="">-- Select Year --</option>
-                @foreach (var year in AcademicYears)
-                {
-                    <option value="@year.Id">@year.Year</option>
-                }
-            </select>
+            @if (IsReadOnly && selectedAcademicYearId.HasValue)
+            {
+                var selectedYear = AcademicYears.FirstOrDefault(y => y.Id == selectedAcademicYearId.Value);
+                <input type="text" class="form-control" value="@(selectedYear != null ? $"{selectedYear.Year} {(selectedYear.IsCurrent ? "(Current)" : "")}" : "Loading...")" readonly />
+            }
+            else
+            {
+                <select class="form-select" @bind="selectedAcademicYearId" disabled="@(!selectedSchoolId.HasValue || IsReadOnly)" @bind:after="OnYearChanged">
+                    <option value="">-- Select Year --</option>
+                    @foreach (var year in AcademicYears.OrderByDescending(y => y.Year))
+                    {
+                        var isSelected = selectedAcademicYearId == null && (
+                            year.Year == DateTime.UtcNow.Year || 
+                            (year.IsCurrent && AcademicYears.All(y => y.Year != DateTime.UtcNow.Year))
+                        );
+                        <option value="@year.Id" selected="@isSelected">@year.Year @(year.IsCurrent ? "(Current)" : "")</option>
+                    }
+                </select>
+            }
         </div>
 
         <div class="col-md-2">
             <label class="form-label">Grade</label>
-            <select class="form-select" @bind="selectedSchoolGradeId" disabled="@(!selectedSchoolId.HasValue)" @bind:after="OnGradeChanged">
-                <option value="">-- Select Grade --</option>
-                @foreach (var grade in SchoolGrades)
-                {
-                    <option value="@grade.Id">@grade.SystemGrade?.Name</option>
-                }
-            </select>
+            @if (IsReadOnly && selectedSchoolGradeId.HasValue)
+            {
+                var selectedGrade = SchoolGrades.FirstOrDefault(g => g.Id == selectedSchoolGradeId.Value);
+                <input type="text" class="form-control" value="@(selectedGrade?.SystemGrade?.Name ?? "Loading...")" readonly />
+            }
+            else
+            {
+                <select class="form-select" @bind="selectedSchoolGradeId" disabled="@(!selectedSchoolId.HasValue || !selectedAcademicYearId.HasValue || IsReadOnly)" @bind:after="OnGradeChanged">
+                    <option value="">-- Select Grade --</option>
+                    @foreach (var grade in SchoolGrades)
+                    {
+                        <option value="@grade.Id">@grade.SystemGrade?.Name</option>
+                    }
+                </select>
+            }
         </div>
 
         <div class="col-md-2">
             <label class="form-label">Subject</label>
-            <select class="form-select" @bind="selectedSubjectId" disabled="@(!selectedSchoolGradeId.HasValue)" @bind:after="OnSubjectChanged">
-                <option value="">-- Select Subject --</option>
-                @foreach (var subject in Subjects)
-                {
-                    <option value="@subject.Id">@subject.Name</option>
-                }
-            </select>
+            @if (IsReadOnly && selectedSubjectId.HasValue)
+            {
+                var selectedSubject = Subjects.FirstOrDefault(s => s.Id == selectedSubjectId.Value);
+                <input type="text" class="form-control" value="@(selectedSubject?.Name ?? "Loading...")" readonly />
+            }
+            else
+            {
+                <select class="form-select" @bind="selectedSubjectId" disabled="@(!selectedSchoolGradeId.HasValue || IsReadOnly)" @bind:after="OnSubjectChanged">
+                    <option value="">-- Select Subject --</option>
+                    @foreach (var subject in Subjects)
+                    {
+                        <option value="@subject.Id">@subject.Name</option>
+                    }
+                </select>
+            }
         </div>
 
         <div class="col-md-2">
             <label class="form-label">Term</label>
-            <select class="form-select" @bind="selectedTerm" disabled="@(!selectedSubjectId.HasValue)" @bind:after="OnTermChanged">
-                <option value="">-- Select Term --</option>
-                <option value="1">Term 1</option>
-                <option value="2">Term 2</option>
-                <option value="3">Term 3</option>
-                <option value="4">Term 4</option>
-            </select>
+            @if (IsReadOnly && selectedTerm.HasValue)
+            {
+                <input type="text" class="form-control" value="@($"Term {selectedTerm.Value}")" readonly />
+            }
+            else
+            {
+                <select class="form-select" @bind="selectedTerm" disabled="@(!selectedSubjectId.HasValue || IsReadOnly)" @bind:after="OnTermChanged">
+                    <option value="">-- Select Term --</option>
+                    <option value="1">Term 1</option>
+                    <option value="2">Term 2</option>
+                    <option value="3">Term 3</option>
+                    <option value="4">Term 4</option>
+                </select>
+            }
         </div>
     </div>
 </div>
 
 @code {
     [Parameter] public EventCallback<SelectionResult> OnChanged { get; set; }
+    [Parameter] public SelectionResult? InitialSelection { get; set; }
+    [Parameter] public bool IsReadOnly { get; set; } = false;
 
     private List<School> Schools = new();
     private List<SchoolGrade> SchoolGrades = new();
@@ -121,6 +165,19 @@
                 {
                     selectedSchoolId = CurrentSchool.Id;
                     await LoadAcademicYearsAsync();
+                    await LoadGradesAsync(); // Load grades when school is auto-assigned
+                    
+                    // Set default year: prefer current year (2026), then IsCurrent flag, then most recent
+                    var currentYearValue = DateTime.UtcNow.Year; // This will be 2026
+                    var preferredYear = AcademicYears.FirstOrDefault(y => y.Year == currentYearValue)
+                        ?? AcademicYears.FirstOrDefault(y => y.IsCurrent)
+                        ?? AcademicYears.OrderByDescending(y => y.Year).FirstOrDefault();
+                    
+                    if (preferredYear != null)
+                    {
+                        selectedAcademicYearId = preferredYear.Id;
+                        await OnYearChanged();
+                    }
                 }
                 else
                 {
@@ -131,6 +188,78 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error initializing PlanSelector");
+        }
+
+        // If initial selection is provided (e.g., when loading an existing plan), populate the fields
+        if (InitialSelection != null)
+        {
+            await LoadInitialSelectionAsync();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Reload initial selection if it changes
+        if (InitialSelection != null)
+        {
+            await LoadInitialSelectionAsync();
+        }
+        await base.OnParametersSetAsync();
+    }
+
+    private async Task LoadInitialSelectionAsync()
+    {
+        if (InitialSelection == null) return;
+
+        try
+        {
+            // Set school first
+            if (InitialSelection.SchoolId.HasValue)
+            {
+                selectedSchoolId = InitialSelection.SchoolId.Value;
+                
+                // Load schools if not already loaded (for System Admins)
+                if (IsSystemAdministrator && Schools.Count == 0)
+                {
+                    Schools = await SchoolService.GetAllSchoolsAsync();
+                }
+                
+                // Load academic years for the school
+                await LoadAcademicYearsAsync();
+            }
+
+            // Set academic year
+            if (InitialSelection.AcademicYearId.HasValue)
+            {
+                selectedAcademicYearId = InitialSelection.AcademicYearId.Value;
+                await LoadGradesAsync(); // Load grades when year is set
+            }
+
+            // Set school grade
+            if (InitialSelection.SchoolGradeId.HasValue)
+            {
+                selectedSchoolGradeId = InitialSelection.SchoolGradeId.Value;
+                await LoadSubjectsAsync(); // Load subjects when grade is set
+            }
+
+            // Set subject
+            if (InitialSelection.SubjectId.HasValue)
+            {
+                selectedSubjectId = InitialSelection.SubjectId.Value;
+            }
+
+            // Set term
+            if (InitialSelection.Term.HasValue)
+            {
+                selectedTerm = InitialSelection.Term.Value;
+            }
+
+            // Notify parent of the loaded selection
+            await NotifyParentAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading initial selection in PlanSelector");
         }
     }
 
@@ -158,6 +287,11 @@
 
     private async Task OnYearChanged()
     {
+        // When year changes, ensure grades are loaded if not already loaded
+        if (selectedSchoolId.HasValue && SchoolGrades.Count == 0)
+        {
+            await LoadGradesAsync();
+        }
         await NotifyParentAsync();
     }
 
@@ -185,6 +319,25 @@
         if (selectedSchoolId.HasValue)
         {
             AcademicYears = await SchoolService.GetAcademicYearsForSchoolAsync(selectedSchoolId.Value);
+            
+            // Ensure current year (2026) exists - create it if it doesn't
+            var currentYearValue = DateTime.UtcNow.Year;
+            if (!AcademicYears.Any(y => y.Year == currentYearValue))
+            {
+                try
+                {
+                    var newYear = await SchoolService.AddAcademicYearAsync(selectedSchoolId.Value, currentYearValue);
+                    if (newYear != null)
+                    {
+                        AcademicYears.Add(newYear);
+                        AcademicYears = AcademicYears.OrderByDescending(y => y.Year).ToList();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Failed to create academic year {Year} for school {SchoolId}", currentYearValue, selectedSchoolId.Value);
+                }
+            }
         }
         else
         {

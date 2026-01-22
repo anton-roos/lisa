@@ -11,6 +11,8 @@
     {
         AcademicPlanStatus.Draft => "Draft",
         AcademicPlanStatus.PendingReview => "Pending Review",
+        AcademicPlanStatus.Approved => "Approved",
+        AcademicPlanStatus.Rejected => "Revisions Required",
         AcademicPlanStatus.Published => "Published",
         _ => "Unknown"
     };
@@ -18,8 +20,10 @@
     private string CssClass => Status switch
     {
         AcademicPlanStatus.Draft => "bg-secondary",        // Grey
-        AcademicPlanStatus.PendingReview => "bg-warning", // Orange
-        AcademicPlanStatus.Published => "bg-success",    // Green
+        AcademicPlanStatus.PendingReview => "bg-warning", // Yellow/Orange
+        AcademicPlanStatus.Approved => "bg-success",      // Green
+        AcademicPlanStatus.Rejected => "bg-danger",       // Red
+        AcademicPlanStatus.Published => "bg-success",     // Green
         _ => "bg-dark"
     };
 }

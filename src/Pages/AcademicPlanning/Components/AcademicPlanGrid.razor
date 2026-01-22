@@ -1,68 +1,152 @@
 @using Lisa.Models.AcademicPlanning
 @using Lisa.Enums  
+@using MudBlazor
 
 @if (Periods == null || !Periods.Any())
 {
-    <div class="alert alert-warning">
+    <MudAlert Severity="Severity.Warning" Class="mt-3">
         No periods configured for this plan.
-    </div>
+    </MudAlert>
 }
 else
 {
-    <table class="table table-bordered table-sm mt-3">
-        <thead class="table-light">
-            <tr>
-                <th style="width:5%">Period</th>
-                <th style="width:20%">Topic</th>
-                <th style="width:25%">Resources</th>  
-                <th style="width:20%">Assessment</th>
-                <th style="width:15%">Homework</th>   
-                <th style="width:15%">Actions</th>    
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var p in Periods.OrderBy(x => x.PeriodNumber))
-            {
+    <div class="table-responsive mt-3">
+        <table class="table table-bordered table-sm">
+            <thead class="table-light">
                 <tr>
-                    <td>@p.PeriodNumber</td>
-
-                    <td>
-                        <input class="form-control"
-                               @bind="p.Topic"
-                               disabled="@IsReadOnly" />
-                    </td>
-
-                    <td>
-                        <textarea class="form-control"
-                                  rows="2"
-                                  @bind="p.Resources"
-                                  disabled="@IsReadOnly"></textarea>
-                    </td>
-
-                    <td>
-                        <textarea class="form-control"
-                                  rows="2"
-                                  @bind="p.Assessment"
-                                  disabled="@IsReadOnly"></textarea>
-                    </td>
-
-                    <td>
-                        <textarea class="form-control"
-                                  rows="2"
-                                  @bind="p.Homework"
-                                  disabled="@IsReadOnly"></textarea>
-                    </td>
+                    <th style="width:3%">Period</th>
+                    <th style="width:12%">Lesson Topic</th>
+                    <th style="width:10%">Sub-Topic</th>
+                    <th style="width:18%">Lesson Detail</th>
+                    <th style="width:18%">Class Work</th>
+                    <th style="width:18%">Homework</th>
+                    <th style="width:8%">Planned %</th>
+                    <th style="width:8%">Actual %</th>
+                    <th style="width:10%">Date Planned</th>
+                    <th style="width:10%">Actual Date</th>
+                    <th style="width:12%">Notes</th>
+                    <th style="width:8%">Actions</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var p in Periods.OrderBy(x => x.PeriodNumber))
+                {
+                    <tr>
+                        <td>@p.PeriodNumber</td>
+
+                        <td>
+                            <input class="form-control form-control-sm"
+                                   @bind="p.Topic"
+                                   @bind:event="onchange"
+                                   disabled="@IsReadOnly"
+                                   required />
+                        </td>
+
+                        <td>
+                            <input class="form-control form-control-sm"
+                                   @bind="p.SubTopic"
+                                   @bind:event="onchange"
+                                   disabled="@IsReadOnly" />
+                        </td>
+
+                        <td>
+                            <textarea class="form-control form-control-sm"
+                                      rows="5"
+                                      @bind="p.LessonDetailDescription"
+                                      @bind:event="onchange"
+                                      placeholder="Enter lesson objective, explanation, and teacher notes..."
+                                      disabled="@IsReadOnly"></textarea>
+                        </td>
+
+                        <td>
+                            <textarea class="form-control form-control-sm"
+                                      rows="5"
+                                      @bind="p.ClassWorkDescription"
+                                      @bind:event="onchange"
+                                      placeholder="Describe in-class activities, exercises, and student tasks..."
+                                      disabled="@IsReadOnly"></textarea>
+                        </td>
+
+                        <td>
+                            <textarea class="form-control form-control-sm"
+                                      rows="5"
+                                      @bind="p.Homework"
+                                      @bind:event="onchange"
+                                      placeholder="Detail assigned work for students to complete after the lesson..."
+                                      disabled="@IsReadOnly"></textarea>
+                        </td>
+
+                        <td>
+                            <input type="number" 
+                                   class="form-control form-control-sm"
+                                   @bind="p.PercentagePlanned"
+                                   @bind:event="onchange"
+                                   step="0.1"
+                                   min="0"
+                                   max="100"
+                                   disabled="@IsReadOnly" />
+                        </td>
+
+                        <td>
+                            <input type="number" 
+                                   class="form-control form-control-sm"
+                                   @bind="p.PercentageCompleted"
+                                   @bind:event="onchange"
+                                   step="0.1"
+                                   min="0"
+                                   max="100"
+                                   disabled="@IsReadOnly" />
+                        </td>
+
+                        <td>
+                            <input type="date" 
+                                   class="form-control form-control-sm"
+                                   @bind="p.DatePlanned"
+                                   @bind:event="onchange"
+                                   disabled="@IsReadOnly" />
+                        </td>
+
+                        <td>
+                            <input type="date" 
+                                   class="form-control form-control-sm"
+                                   @bind="p.DateCompleted"
+                                   @bind:event="onchange"
+                                   disabled="@IsReadOnly" />
+                        </td>
+
+                        <td>
+                            <textarea class="form-control form-control-sm"
+                                      rows="3"
+                                      @bind="p.Notes"
+                                      @bind:event="onchange"
+                                      placeholder="Notes at planning stage or after lesson..."
+                                      disabled="@IsReadOnly"></textarea>
+                        </td>
+
+                        <td>
+                            @if (!IsReadOnly)
+                            {
+                                <button class="btn btn-sm btn-outline-primary"
+                                        @onclick="@(() => SavePeriod(p))"
+                                        title="Save this period">
+                                    Save
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 
     @if (!IsReadOnly)
     {
-        <button class="btn btn-outline-primary"
-                @onclick="SavePeriods">
-               Save Plan Content
-        </button>
+        <div class="mt-3">
+            <button class="btn btn-primary"
+                    @onclick="SaveAllPeriods">
+                Save All Periods
+            </button>
+        </div>
     }
 }
 
@@ -75,7 +159,13 @@ else
 
     private bool IsReadOnly => Status != AcademicPlanStatus.Draft;
 
-    private async Task SavePeriods()
+    private async Task SavePeriod(AcademicPlanPeriod period)
+    {
+        // Save individual period - could be optimized to save only this one
+        await SaveAllPeriods();
+    }
+
+    private async Task SaveAllPeriods()
     {
         await OnSave.InvokeAsync(Periods);
     }

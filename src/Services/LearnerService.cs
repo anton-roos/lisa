@@ -164,9 +164,17 @@ public class LearnerService
     {
         await using var context = await dbContextFactory.CreateDbContextAsync();
         return await context.Learners
-            .Where(l => l.RegisterClassId == registerClassId)
+            .Where(l => l.RegisterClassId == registerClassId ||
+                       (l.PreviousRegisterClassId == registerClassId && 
+                        (l.Status == Lisa.Enums.LearnerStatus.Promoted || 
+                         l.Status == Lisa.Enums.LearnerStatus.Retained)))
             .Include(l => l.RegisterClass)
             .ThenInclude(rc => rc!.SchoolGrade)
+            .ThenInclude(sg => sg!.SystemGrade)
+            .Include(l => l.PreviousRegisterClass)
+            .ThenInclude(rc => rc!.SchoolGrade)
+            .ThenInclude(sg => sg!.SystemGrade)
+            .Include(l => l.PreviousSchoolGrade)
             .ThenInclude(sg => sg!.SystemGrade)
             .Include(l => l.Combination)
             .ThenInclude(c => c!.Subjects)
@@ -432,9 +440,17 @@ public class LearnerService
     {
         await using var context = await dbContextFactory.CreateDbContextAsync();
         var learners = await context.Learners
-            .Where(l => l.RegisterClass != null && l.RegisterClass.SchoolGradeId == gradeId)
+            .Where(l => (l.RegisterClass != null && l.RegisterClass.SchoolGradeId == gradeId) ||
+                       (l.PreviousSchoolGradeId == gradeId && 
+                        (l.Status == Lisa.Enums.LearnerStatus.Promoted || 
+                         l.Status == Lisa.Enums.LearnerStatus.Retained)))
             .Include(l => l.RegisterClass!)
             .ThenInclude(r => r.SchoolGrade!)
+            .ThenInclude(sg => sg.SystemGrade)
+            .Include(l => l.PreviousSchoolGrade!)
+            .ThenInclude(sg => sg.SystemGrade)
+            .Include(l => l.PreviousRegisterClass!)
+            .ThenInclude(rc => rc.SchoolGrade!)
             .ThenInclude(sg => sg.SystemGrade)
             .Include(l => l.LearnerSubjects!)
             .ThenInclude(ls => ls.Subject)

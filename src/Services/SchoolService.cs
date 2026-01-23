@@ -561,6 +561,13 @@ public class SchoolService(
                 return false;
             }
 
+            // Prevent double activation
+            if (school.IsYearEndMode)
+            {
+                logger.LogWarning("Year-end mode is already active for school {SchoolId}", schoolId);
+                return false;
+            }
+
             // Get the current academic year (the one being archived)
             var currentAcademicYear = await context.AcademicYears
                 .FirstOrDefaultAsync(ay => ay.SchoolId == schoolId && ay.IsCurrent);
@@ -626,8 +633,10 @@ public class SchoolService(
                 
                 context.LearnerAcademicRecords.Add(historyRecord);
 
-                // Archive the learner's state
+                // Archive the learner's state and preserve their grade/class info
                 learner.Status = Enums.LearnerStatus.PendingPromotion;
+                learner.PreviousSchoolGradeId = learner.RegisterClass?.SchoolGradeId;
+                learner.PreviousRegisterClassId = learner.RegisterClassId;
                 
                 // Remove all subjects (now archived in academic record)
                 if (learner.LearnerSubjects != null && learner.LearnerSubjects.Any())
@@ -712,25 +721,23 @@ public class SchoolService(
             school.IsYearEndMode = false;
             context.Schools.Update(school);
 
-            // Restore learners from PendingPromotion state
-            // Only restore learners who haven't been processed (still pending)
-            // Promoted/Retained learners should have already been moved to their new grades
-            var archivedLearners = await context.Learners
+            // Restore promoted/retained learners to Active status
+            var promotedRetainedLearners = await context.Learners
                 .Where(l => l.SchoolId == schoolId && 
-                           l.Status == Enums.LearnerStatus.PendingPromotion)
+                           (l.Status == Enums.LearnerStatus.Promoted || 
+                            l.Status == Enums.LearnerStatus.Retained))
                 .ToListAsync();
 
-            foreach (var learner in archivedLearners)
+            foreach (var learner in promotedRetainedLearners)
             {
-                // Restore learners who weren't processed back to Active
                 learner.Status = Enums.LearnerStatus.Active;
             }
 
             await context.SaveChangesAsync();
             await uiEventService.PublishAsync(UiEvents.SchoolsUpdated, _selectedSchool);
 
-            logger.LogInformation("Year-end mode deactivated for school {SchoolId}. {LearnerCount} unprocessed learners restored to Active status.", 
-                schoolId, archivedLearners.Count);
+            logger.LogInformation("Year-end mode deactivated for school {SchoolId}. {ProcessedCount} promoted/retained learners restored to Active status.", 
+                schoolId, promotedRetainedLearners.Count);
 
             return true;
         }

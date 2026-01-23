@@ -34,12 +34,23 @@
                 <HeaderContent>
                     <MudTh>Short Name</MudTh>
                     <MudTh>Long Name</MudTh>
+                    <MudTh>Academic Year</MudTh>
                     <MudTh>Color</MudTh>
                     <MudTh>Actions</MudTh>
                 </HeaderContent>
                 <RowTemplate Context="school">
                     <MudTd DataLabel="Short Name">@school.ShortName</MudTd>
                     <MudTd DataLabel="Long Name">@school.LongName</MudTd>
+                    <MudTd DataLabel="Academic Year">
+                        @if (_academicYears.TryGetValue(school.Id, out var year))
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@year</MudChip>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Not Set</MudText>
+                        }
+                    </MudTd>
                     <MudTd DataLabel="Color">
                         <div class="d-flex align-items-center gap-2">
                             <div class="color-box" style="background-color:@school.Color;"></div>
@@ -76,12 +87,28 @@
     private List<School>? _schools;
     private List<SchoolType> _schoolTypes = [];
     private List<SchoolCurriculum> _curriculums = [];
+    private Dictionary<Guid, int> _academicYears = new();
 
     protected override async Task OnInitializedAsync()
     {
         _schools = await SchoolService.GetAllAsync();
         _schoolTypes = await SchoolService.GetSchoolTypesAsync();
         _curriculums = await SchoolService.GetSchoolCurriculumsAsync();
+        await LoadAcademicYears();
+    }
+
+    private async Task LoadAcademicYears()
+    {
+        if (_schools == null) return;
+        
+        foreach (var school in _schools)
+        {
+            var currentYear = await SchoolService.GetCurrentAcademicYearAsync(school.Id);
+            if (currentYear != null)
+            {
+                _academicYears[school.Id] = currentYear.Year;
+            }
+        }
     }
 
     private async Task EditSchool(School school)
@@ -101,6 +128,7 @@
         if (result is { Canceled: false })
         {
             _schools = await SchoolService.GetAllAsync();
+            await LoadAcademicYears();
         }
     }
 
@@ -134,6 +162,7 @@
 
         if (result is { Canceled: false })
         {
+            await LoadAcademicYears();
             _schools = await SchoolService.GetAllAsync();
         }
     }
@@ -154,6 +183,7 @@
 
         if (result is { Canceled: false })
         {
+            await LoadAcademicYears();
             _schools = await SchoolService.GetAllAsync();
         }
     }

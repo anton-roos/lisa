@@ -58,9 +58,36 @@
             </Authorized>
         </AuthorizeView>
 
-        
+        <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement},{Roles.Administrator},{Roles.Teacher}")" Context="academicPlanningAuth">
+            <Authorized>
+                <MudNavGroup Title="Academic Planning" Icon="@Icons.Material.Filled.Book" Expanded="false">
+                    <MudNavLink Href="/academic-planning/create" Icon="@Icons.Material.Filled.Add">Create Plan</MudNavLink>
+                    <MudNavLink Href="/academic-planning" Icon="@Icons.Material.Filled.ViewList">View Plans</MudNavLink>
+                    <AuthorizeView Roles="@($"{Roles.Principal},{Roles.SchoolManagement}")" Context="assessmentPlannerAuth">
+                        <Authorized>
+                            <MudNavLink Href="/academic-planning/assessment-planner" Icon="@Icons.Material.Filled.CalendarToday">Assessment Planner</MudNavLink>
+                        </Authorized>
+                    </AuthorizeView>
+                    <AuthorizeView Roles="@Roles.Teacher" Context="libraryAuth">
+                        <Authorized>
+                            <MudNavLink Href="/academic-planning/library" Icon="@Icons.Material.Filled.LibraryBooks">Academic Library</MudNavLink>
+                        </Authorized>
+                    </AuthorizeView>
+                    <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")" Context="reportsAuth">
+                        <Authorized>
+                            <MudNavLink Href="/academic-planning/work-completion-reports" Icon="@Icons.Material.Filled.Assessment">Work Completion Reports</MudNavLink>
+                        </Authorized>
+                    </AuthorizeView>
+                    <AuthorizeView Roles="@Roles.SystemAdministrator" Context="systemAdminAuth">
+                        <Authorized>
+                            <MudNavLink Href="/academic-planning/year-setup" Icon="@Icons.Material.Filled.CalendarMonth">Year Setup</MudNavLink>
+                            <MudNavLink Href="/academic-planning/periods-setup" Icon="@Icons.Material.Filled.Schedule">Periods Setup</MudNavLink>
+                        </Authorized>
+                    </AuthorizeView>
+                </MudNavGroup>
+            </Authorized>
+        </AuthorizeView>
 
-        
         <AuthorizeView Roles="@($"{Roles.SystemAdministrator},{Roles.Principal},{Roles.SchoolManagement}")">
             <Authorized>
                 <MudNavLink Href="/communication" Icon="@Icons.Material.Filled.Campaign">Communication</MudNavLink>

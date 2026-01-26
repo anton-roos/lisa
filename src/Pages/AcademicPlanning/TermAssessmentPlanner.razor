@@ -1,0 +1,321 @@
+@page "/academic-planning/assessment-planner"
+@using Lisa.Models.Entities
+@using Lisa.Models.AcademicPlanning
+@using Lisa.Services
+@using Lisa.Services.AcademicPlanning
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using MudBlazor
+@using AssessmentTypeEnum = Lisa.Models.AcademicPlanning.AssessmentTypeEnum
+@inject ITermAssessmentPlanService AssessmentPlanService
+@inject SchoolService SchoolService
+@inject SubjectService SubjectService
+@inject SchoolGradeService SchoolGradeService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Term Assessment Planner</PageTitle>
+
+<AuthorizeView Roles="@($"{Roles.Principal},{Roles.SchoolManagement}")">
+    <Authorized>
+        <MudText Typo="Typo.h5" Class="mb-4">Term Assessment Planner</MudText>
+        <MudText Class="mb-4">Schedule assessments for each term. Assessments are linked to Capture Results module.</MudText>
+
+        <MudPaper Class="pa-4 mb-4" Elevation="2">
+            <MudStack Spacing="3">
+                <MudSelect @bind-Value="SelectedSchool" Label="School" T="School" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@((School?)null)">-- Select School --</MudSelectItem>
+                    @foreach (var school in Schools)
+                    {
+                        <MudSelectItem Value="@school">@school.LongName</MudSelectItem>
+                    }
+                </MudSelect>
+
+                @if (SelectedSchool != null)
+                {
+                    <MudSelect @bind-Value="SelectedAcademicYear" Label="Academic Year" T="AcademicYear" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@((AcademicYear?)null)">-- Select Year --</MudSelectItem>
+                        @foreach (var year in AcademicYears)
+                        {
+                            <MudSelectItem Value="@year">@year.Year</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudSelect @bind-Value="SelectedSchoolGrade" Label="Grade" T="SchoolGrade" Variant="Variant.Outlined" Disabled="@(SelectedAcademicYear == null)">
+                        <MudSelectItem Value="@((SchoolGrade?)null)">-- Select Grade --</MudSelectItem>
+                        @foreach (var grade in SchoolGrades)
+                        {
+                            <MudSelectItem Value="@grade">@grade.SystemGrade?.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudSelect @bind-Value="SelectedTerm" Label="Term" Variant="Variant.Outlined" Disabled="@(SelectedSchoolGrade == null)">
+                        <MudSelectItem Value="0">-- Select Term --</MudSelectItem>
+                        <MudSelectItem Value="1">Term 1</MudSelectItem>
+                        <MudSelectItem Value="2">Term 2</MudSelectItem>
+                        <MudSelectItem Value="3">Term 3</MudSelectItem>
+                        <MudSelectItem Value="4">Term 4</MudSelectItem>
+                    </MudSelect>
+
+                    @if (SelectedTerm > 0)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadOrCreatePlan">
+                            Load/Create Assessment Plan
+                        </MudButton>
+                    }
+                }
+            </MudStack>
+        </MudPaper>
+
+        @if (CurrentPlan != null)
+        {
+            <MudPaper Class="pa-4 mb-4" Elevation="2">
+                <MudStack Spacing="3">
+                    <MudText Typo="Typo.h6">Schedule Assessment</MudText>
+                    
+                    <MudSelect @bind-Value="SelectedSubjectForAssessment" Label="Subject" T="Subject" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@((Subject?)null)">-- Select Subject --</MudSelectItem>
+                        @foreach (var subject in Subjects)
+                        {
+                            <MudSelectItem Value="@subject">@subject.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudTextField Label="Assessment Name" @bind-Value="AssessmentName" Variant="Variant.Outlined" />
+                    
+                    <MudSelect @bind-Value="SelectedAssessmentType" Label="Assessment Type" T="AssessmentTypeEnum" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@AssessmentTypeEnum.SASAMs">SASAMs</MudSelectItem>
+                        <MudSelectItem Value="@AssessmentTypeEnum.Exam">Exam</MudSelectItem>
+                        <MudSelectItem Value="@AssessmentTypeEnum.DCGETestTT">DCEG TEST (TT)</MudSelectItem>
+                        <MudSelectItem Value="@AssessmentTypeEnum.DCGETestST">DCEG TEST (ST)</MudSelectItem>
+                        <MudSelectItem Value="@AssessmentTypeEnum.Test">Test</MudSelectItem>
+                        <MudSelectItem Value="@AssessmentTypeEnum.Assignment">Assignment</MudSelectItem>
+                        <MudSelectItem Value="@AssessmentTypeEnum.Project">Project</MudSelectItem>
+                    </MudSelect>
+
+                    <MudDatePicker Label="Scheduled Date" @bind-Date="ScheduledDate" Variant="Variant.Outlined" Required="true" />
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ScheduleAssessment" Disabled="@(!CanSchedule)">
+                        Schedule Assessment
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-3">Scheduled Assessments</MudText>
+                
+                @if (CurrentPlan.ScheduledAssessments.Any())
+                {
+                    <MudTable Items="@CurrentPlan.ScheduledAssessments.OrderBy(a => a.ScheduledDate)" Hover="true" Striped="true">
+                        <HeaderContent>
+                            <MudTh>Subject</MudTh>
+                            <MudTh>Assessment Name</MudTh>
+                            <MudTh>Type</MudTh>
+                            <MudTh>Date</MudTh>
+                            <MudTh>Status</MudTh>
+                            <MudTh>Actions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate Context="assessment">
+                            <MudTd>@assessment.Subject?.Name</MudTd>
+                            <MudTd>@assessment.AssessmentName</MudTd>
+                            <MudTd>@assessment.AssessmentType</MudTd>
+                            <MudTd>@assessment.ScheduledDate.ToString("yyyy-MM-dd")</MudTd>
+                            <MudTd>
+                                @if (assessment.MarksCaptured)
+                                {
+                                    <MudChip T="string" Color="Color.Success" Size="Size.Small">Marks Captured</MudChip>
+                                }
+                                else if (assessment.IsMarksLate)
+                                {
+                                    <MudChip T="string" Color="Color.Error" Size="Size.Small">Marks Late</MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Color="Color.Default" Size="Size.Small">Pending</MudChip>
+                                }
+                            </MudTd>
+                            <MudTd>
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => EditAssessment(assessment))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteAssessment(assessment))" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">No assessments scheduled yet.</MudAlert>
+                }
+            </MudPaper>
+        }
+
+        @if (IsLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-4" />
+        }
+    </Authorized>
+    <NotAuthorized>
+        <MudAlert Severity="Severity.Error">You are not authorized to access this page. Principal or School Management role required.</MudAlert>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<School> Schools = new();
+    private List<AcademicYear> AcademicYears = new();
+    private List<SchoolGrade> SchoolGrades = new();
+    private List<Subject> Subjects = new();
+    
+    private School? SelectedSchool;
+    private AcademicYear? SelectedAcademicYear;
+    private SchoolGrade? SelectedSchoolGrade;
+    private int SelectedTerm = 0;
+    private TermAssessmentPlan? CurrentPlan;
+    
+    private Subject? SelectedSubjectForAssessment;
+    private string AssessmentName = string.Empty;
+    private AssessmentTypeEnum SelectedAssessmentType = AssessmentTypeEnum.Test;
+    private DateTime? ScheduledDate;
+    
+    private bool IsLoading = false;
+    private Guid? CurrentUserId;
+
+    private bool CanSchedule => SelectedSubjectForAssessment != null && 
+                                !string.IsNullOrWhiteSpace(AssessmentName) && 
+                                ScheduledDate.HasValue &&
+                                CurrentPlan != null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                CurrentUserId = Guid.Parse(userId);
+            }
+        }
+
+        Schools = await SchoolService.GetAllSchoolsAsync();
+        Subjects = await SubjectService.GetAllAsync();
+    }
+
+    private async Task LoadOrCreatePlan()
+    {
+        if (SelectedSchool == null || SelectedAcademicYear == null || SelectedSchoolGrade == null || SelectedTerm == 0 || CurrentUserId == null)
+            return;
+
+        IsLoading = true;
+        try
+        {
+            CurrentPlan = await AssessmentPlanService.GetAsync(
+                SelectedSchool.Id, 
+                SelectedSchoolGrade.Id, 
+                SelectedAcademicYear.Id, 
+                SelectedTerm);
+
+            if (CurrentPlan == null)
+            {
+                CurrentPlan = new TermAssessmentPlan
+                {
+                    Id = Guid.NewGuid(),
+                    SchoolId = SelectedSchool.Id,
+                    SchoolGradeId = SelectedSchoolGrade.Id,
+                    AcademicYearId = SelectedAcademicYear.Id,
+                    Term = SelectedTerm,
+                    CreatedBy = CurrentUserId.Value,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                CurrentPlan = await AssessmentPlanService.CreateOrUpdateAsync(CurrentPlan, CurrentUserId.Value);
+                Snackbar.Add("Assessment plan created successfully", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Assessment plan loaded", Severity.Info);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task ScheduleAssessment()
+    {
+        if (!CanSchedule || CurrentPlan == null || CurrentUserId == null) return;
+
+        IsLoading = true;
+        try
+        {
+            // Check if another assessment is scheduled for this date
+            var canSchedule = await AssessmentPlanService.CanScheduleAssessmentAsync(CurrentPlan.Id, ScheduledDate!.Value);
+            if (!canSchedule)
+            {
+                Snackbar.Add("Another assessment is already scheduled for this date", Severity.Warning);
+                return;
+            }
+
+            var assessment = new ScheduledAssessment
+            {
+                Id = Guid.NewGuid(),
+                SubjectId = SelectedSubjectForAssessment!.Id,
+                AssessmentName = AssessmentName,
+                AssessmentType = SelectedAssessmentType,
+                ScheduledDate = ScheduledDate.Value,
+                CreatedBy = CurrentUserId.Value,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await AssessmentPlanService.ScheduleAssessmentAsync(CurrentPlan.Id, assessment, CurrentUserId.Value);
+            Snackbar.Add("Assessment scheduled successfully", Severity.Success);
+            
+            // Reset form
+            SelectedSubjectForAssessment = null;
+            AssessmentName = string.Empty;
+            ScheduledDate = null;
+            
+            // Reload plan
+            await LoadOrCreatePlan();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error scheduling assessment: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task EditAssessment(ScheduledAssessment assessment)
+    {
+        // TODO: Open edit dialog
+        Snackbar.Add("Edit assessment functionality - to be implemented", Severity.Info);
+    }
+
+    private async Task DeleteAssessment(ScheduledAssessment assessment)
+    {
+        if (CurrentPlan == null) return;
+
+        var result = await DialogService.ShowMessageBox(
+            "Delete Assessment",
+            $"Are you sure you want to delete '{assessment.AssessmentName}'?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            await AssessmentPlanService.DeleteAssessmentAsync(assessment.Id);
+            await LoadOrCreatePlan();
+            Snackbar.Add("Assessment deleted successfully", Severity.Success);
+        }
+    }
+}

@@ -1,19 +1,48 @@
 @page "/academic-planning"
 @using Lisa.Models.Entities
-@inject AcademicPlanningService AcademicPlanningService
+@using Lisa.Services.AcademicPlanning
+@using Lisa.Services.AcademicPlanning.DTOs
+@using Lisa.Enums
+@using Lisa.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inject IAcademicPlanningService PlanningService
 @inject IDialogService DialogService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject SchoolService SchoolService
+@inject UserService UserService
+@inject NavigationManager Navigation
 
-<PageTitle>Academic Plans</PageTitle>
+<PageTitle>View Academic Plans</PageTitle>
 
-<MudText Typo="Typo.h5" Class="mb-4">Academic Plans</MudText>
+<MudText Typo="Typo.h5" Class="mb-4">View Academic Plans</MudText>
 
-<MudButton Variant="Variant.Filled" 
-           Color="Color.Primary" 
-           StartIcon="@Icons.Material.Filled.Add"
-           OnClick="AddAcademicPlan"
-           Class="mb-3">
-    Add Academic Plan
-</MudButton>
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudStack Spacing="3">
+        <MudText Typo="Typo.h6">Filter Plans</MudText>
+        <MudGrid>
+            @if (IsSystemAdministrator)
+            {
+                <MudItem xs="12" md="4">
+                    <MudSelect Value="@SelectedSchoolId" ValueChanged="@(async (Guid? value) => { SelectedSchoolId = value; await OnSchoolFilterChanged(); })" Label="School" T="Guid?" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@((Guid?)null)">All Schools</MudSelectItem>
+                        @foreach (var school in Schools)
+                        {
+                            <MudSelectItem Value="@((Guid?)school.Id)">@school.LongName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            }
+            <MudItem xs="12" md="4">
+                <MudNumericField T="int?" Label="Year" @bind-Value="FilterYear" Variant="Variant.Outlined" Min="2020" Max="2030" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadPlans" StartIcon="@Icons.Material.Filled.Search">Search</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="ClearFilters" Class="ml-2">Clear</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudStack>
+</MudPaper>
 
 @if (isLoading)
 {
@@ -22,7 +51,7 @@
 else if (academicPlans.Count == 0)
 {
     <MudAlert Severity="Severity.Info" Class="mt-3">
-        No academic plans found.
+        No academic plans found. @(IsSystemAdministrator ? "Select a school and year to view plans." : "Create a plan to get started.")
     </MudAlert>
 }
 else
@@ -31,138 +60,162 @@ else
               Hover="true" 
               Striped="true" 
               Dense="true"
-              Elevation="2">
+              Elevation="2"
+              sortMode="SortMode.Multiple">
         <HeaderContent>
-            <MudTh>Name</MudTh>
+            <MudTh>School</MudTh>
+            <MudTh>Year</MudTh>
+            <MudTh>Grade</MudTh>
+            <MudTh>Subject</MudTh>
+            <MudTh>Term</MudTh>
+            <MudTh>Teacher</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Created</MudTh>
             <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate Context="plan">
-            <MudTd DataLabel="Name">@plan.Name</MudTd>
+            <MudTd DataLabel="School">@plan.SchoolName</MudTd>
+            <MudTd DataLabel="Year">@plan.Year</MudTd>
+            <MudTd DataLabel="Grade">@plan.GradeName</MudTd>
+            <MudTd DataLabel="Subject">@plan.SubjectName</MudTd>
+            <MudTd DataLabel="Term">Term @plan.Term</MudTd>
+            <MudTd DataLabel="Teacher">@plan.TeacherName</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(plan.Status)">@plan.Status</MudChip>
+                @if (plan.IsCatchUpPlan)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="ml-1">Catch-up</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="Created">@plan.CreatedAt.ToString("yyyy-MM-dd")</MudTd>
             <MudTd DataLabel="Actions">
                 <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
                                Color="Color.Primary" 
                                Size="Size.Small"
-                               OnClick="@(() => ViewAcademicPlan(plan))"
-                               title="View" />
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" 
-                               Color="Color.Secondary" 
-                               Size="Size.Small"
-                               OnClick="@(() => EditAcademicPlan(plan))"
-                               title="Edit" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                               Color="Color.Error" 
-                               Size="Size.Small"
-                               OnClick="@(() => ShowDeleteConfirmationAsync(plan))"
-                               title="Delete" />
+                               OnClick="@(() => ViewPlan(plan))"
+                               title="View Plan" />
+                @if (plan.Status == AcademicPlanStatus.Draft)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                   Color="Color.Secondary" 
+                                   Size="Size.Small"
+                                   OnClick="@(() => EditPlan(plan))"
+                                   title="Edit Plan" />
+                }
             </MudTd>
         </RowTemplate>
     </MudTable>
 }
 
 @code {
-    private List<AcademicPlan> academicPlans = new();
+    private List<AcademicPlanDisplayDto> academicPlans = new();
+    private List<School> Schools = new();
     private bool isLoading = true;
+    private bool IsSystemAdministrator = false;
+    private Guid? SelectedSchoolId;
+    private int? FilterYear;
+    private Guid? CurrentUserId;
+    private Guid? CurrentSchoolId;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadAcademicPlans();
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        IsSystemAdministrator = user.IsInRole(Data.Roles.SystemAdministrator);
+
+        if (IsSystemAdministrator)
+        {
+            Schools = await SchoolService.GetAllSchoolsAsync();
+        }
+        else
+        {
+            var currentSchool = await SchoolService.GetSelectedSchoolAsync();
+            if (currentSchool != null)
+            {
+                CurrentSchoolId = currentSchool.Id;
+                SelectedSchoolId = currentSchool.Id;
+            }
+        }
+
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrEmpty(userId))
+        {
+            CurrentUserId = Guid.Parse(userId);
+        }
+
+        FilterYear = DateTime.UtcNow.Year; // Default to current year
+        await LoadPlans();
     }
 
-    private async Task LoadAcademicPlans()
+    private async Task LoadPlans()
     {
         isLoading = true;
         await InvokeAsync(StateHasChanged);
-        academicPlans = await AcademicPlanningService.GetAllAsync();
+
+        try
+        {
+            var plans = await PlanningService.GetPlansForDisplayAsync(
+                SelectedSchoolId,
+                IsSystemAdministrator ? null : CurrentUserId,
+                CancellationToken.None);
+
+            // Filter by year if specified
+            if (FilterYear.HasValue)
+            {
+                plans = plans.Where(p => p.Year == FilterYear.Value).ToList();
+            }
+
+            academicPlans = plans.OrderByDescending(p => p.CreatedAt).ToList();
+        }
+        catch (Exception ex)
+        {
+            // Log error - in production, use proper logging
+            System.Diagnostics.Debug.WriteLine($"Error loading plans: {ex.Message}");
+            academicPlans = new List<AcademicPlanDisplayDto>();
+        }
+
         isLoading = false;
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task AddAcademicPlan()
+    private async Task OnSchoolFilterChanged()
     {
-        var parameters = new DialogParameters<AcademicPlanEditDialog>
-        {
-            { x => x.AcademicPlanId, null }
-        };
-
-        var options = new DialogOptions 
-        { 
-            CloseButton = true,
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true,
-            CloseOnEscapeKey = true
-        };
-
-        var dialog = await DialogService.ShowAsync<AcademicPlanEditDialog>("Add Academic Plan", parameters, options);
-        var result = await dialog.Result;
-        
-        if (result != null)
-        {
-            await LoadAcademicPlans();
-        }
+        await LoadPlans();
     }
 
-    private async Task EditAcademicPlan(AcademicPlan plan)
+    private async Task ClearFilters()
     {
-        var parameters = new DialogParameters<AcademicPlanEditDialog>
+        FilterYear = DateTime.UtcNow.Year;
+        if (!IsSystemAdministrator)
         {
-            { x => x.AcademicPlanId, plan.Id }
-        };
-
-        var options = new DialogOptions 
-        { 
-            CloseButton = true,
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true,
-            CloseOnEscapeKey = true
-        };
-
-        var dialog = await DialogService.ShowAsync<AcademicPlanEditDialog>("Edit Academic Plan", parameters, options);
-        var result = await dialog.Result;
-        
-        if (result != null)
-        {
-            await LoadAcademicPlans();
+            SelectedSchoolId = CurrentSchoolId;
         }
+        else
+        {
+            SelectedSchoolId = null;
+        }
+        await LoadPlans();
     }
 
-    private async Task ViewAcademicPlan(AcademicPlan plan)
+    private Color GetStatusColor(AcademicPlanStatus status)
     {
-        var parameters = new DialogParameters<AcademicPlanViewDialog>
+        return status switch
         {
-            { x => x.AcademicPlanId, plan.Id }
+            AcademicPlanStatus.Draft => Color.Default,
+            AcademicPlanStatus.PendingReview => Color.Warning,
+            _ => Color.Default
         };
-
-        var options = new DialogOptions 
-        { 
-            CloseButton = true,
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true,
-            CloseOnEscapeKey = true
-        };
-
-        await DialogService.ShowAsync<AcademicPlanViewDialog>($"Academic Plan: {plan.Name}", parameters, options);
     }
 
-    private async Task ShowDeleteConfirmationAsync(AcademicPlan plan)
+    private void ViewPlan(AcademicPlanDisplayDto plan)
     {
-        var options = new DialogOptions
-        {
-            CloseButton = true,
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        };
+        // Navigate to create page with the plan loaded for viewing
+        Navigation.NavigateTo($"/academic-planning/create?planId={plan.Id}&mode=view");
+    }
 
-        var dialog = await DialogService.ShowMessageBox(
-            title: "Delete Academic Plan",
-            message: "This will delete the academic plan. Once deleted it cannot be rolled back. Do you want to proceed?",
-            yesText: "Delete",
-            cancelText: "Cancel",
-            options: options);
-
-        if (dialog == true)
-        {
-            await AcademicPlanningService.DeleteAsync(plan.Id);
-            await LoadAcademicPlans();
-        }
+    private void EditPlan(AcademicPlanDisplayDto plan)
+    {
+        // Navigate to create page with the plan loaded for editing
+        Navigation.NavigateTo($"/academic-planning/create?planId={plan.Id}&mode=edit");
     }
 }

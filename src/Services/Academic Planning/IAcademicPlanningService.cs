@@ -13,7 +13,9 @@ namespace Lisa.Services.AcademicPlanning
             Guid schoolId, 
             Guid schoolGradeId, 
             int subjectId, 
-            Guid teacherId, 
+            Guid teacherId,
+            Guid academicYearId,
+            int term,
             CancellationToken cancellationToken = default);
 
         Task<List<AcademicPlanDto>> GetPlansBySchoolAsync(
@@ -32,11 +34,12 @@ namespace Lisa.Services.AcademicPlanning
             Guid planId,
             CancellationToken cancellationToken = default);
         
-        Task SubmitForReviewAsync(Guid planId, Guid userId, CancellationToken cancellationToken = default);
+        Task SubmitForReviewAsync(Guid planId, Guid userId, bool isSystemAdministrator = false, CancellationToken cancellationToken = default);
         Task<TeachingPlan?> GetTeachingPlanByIdAsync(Guid planId, CancellationToken cancellationToken = default);
-        Task ApprovePlanAsync(Guid planId, Guid approverUserId, CancellationToken cancellationToken = default);
-        Task RejectPlanAsync(Guid planId, Guid approverUserId, string reason, CancellationToken cancellationToken = default);
+        Task ApprovePlanAsync(Guid planId, Guid approverUserId, bool isSystemAdministrator = false, CancellationToken cancellationToken = default);
+        Task RejectPlanAsync(Guid planId, Guid approverUserId, string reason, bool isSystemAdministrator = false, CancellationToken cancellationToken = default);
         Task<List<AcademicPlanHistoryDto>> GetPlanHistoryAsync(Guid planId, CancellationToken cancellationToken = default);
         Task<bool> SavePlanPeriodsAsync(Guid planId, List<AcademicPlanPeriod> periods, Guid userId, CancellationToken cancellationToken = default);
+        Task<List<AcademicPlanDisplayDto>> GetPlansForDisplayAsync(Guid? schoolId, Guid? teacherId, CancellationToken cancellationToken = default);
     }
 }

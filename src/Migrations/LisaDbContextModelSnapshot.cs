@@ -53,6 +53,109 @@ namespace Lisa.Migrations
                     b.ToTable("CombinationSubject");
                 });
 
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.AcademicLibraryDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AssessmentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AssessmentType")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Curriculum")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DescriptionText")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("DocumentType")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DownloadCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("Grade")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("MimeType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("OriginalDocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Period")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("SubTopic")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("SubjectId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Term")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Topic")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Week")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OriginalDocumentId");
+
+                    b.HasIndex("SchoolId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("TeacherId");
+
+                    b.ToTable("AcademicLibraryDocuments", (string)null);
+                });
+
             modelBuilder.Entity("Lisa.Models.AcademicPlanning.AcademicPlanHistory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -69,6 +172,9 @@ namespace Lisa.Migrations
 
                     b.Property<Guid>("ChangedByUserId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
 
                     b.Property<string>("SnapshotJson")
                         .IsRequired()
@@ -100,11 +206,36 @@ namespace Lisa.Migrations
                     b.Property<string>("Assessment")
                         .HasColumnType("text");
 
+                    b.Property<string>("AssessmentDescription")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClassWorkDescription")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DateCompleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DatePlanned")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Homework")
                         .HasColumnType("text");
+
+                    b.Property<string>("LessonDetailDescription")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<decimal?>("PercentageCompleted")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PercentagePlanned")
+                        .HasColumnType("numeric");
 
                     b.Property<int>("PeriodNumber")
                         .HasColumnType("integer");
@@ -112,8 +243,14 @@ namespace Lisa.Migrations
                     b.Property<string>("Resources")
                         .HasColumnType("text");
 
+                    b.Property<string>("SubTopic")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("Topic")
-                        .HasColumnType("text");
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -161,10 +298,301 @@ namespace Lisa.Migrations
                     b.ToTable("AcademicPlanWeeks", (string)null);
                 });
 
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.AcademicTerm", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicYearSetupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApplicablePhases")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsGrade12Specific")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("TermNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearSetupId");
+
+                    b.ToTable("AcademicTerms", (string)null);
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.AcademicYearSetup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicYearId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
+
+                    b.HasIndex("SchoolId");
+
+                    b.ToTable("AcademicYearSetups", (string)null);
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.AdministrativeDay", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicYearSetupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearSetupId");
+
+                    b.ToTable("AdministrativeDays", (string)null);
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.ExamDate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicYearSetupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApplicablePhases")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsGrade12Specific")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearSetupId");
+
+                    b.ToTable("ExamDates", (string)null);
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.Holiday", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicYearSetupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearSetupId");
+
+                    b.ToTable("Holidays", (string)null);
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.ScheduledAssessment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AssessmentName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("AssessmentType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsMarksLate")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("MarksCaptured")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("ResultSetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ScheduledDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TermAssessmentPlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("WeekNumber")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ResultSetId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("TermAssessmentPlanId", "ScheduledDate")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ScheduledAssessment_NoDuplicateDate");
+
+                    b.ToTable("ScheduledAssessments", (string)null);
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.SubjectGradePeriod", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("PeriodsPerWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SchoolGradeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolGradeId");
+
+                    b.HasIndex("SchoolId");
+
+                    b.HasIndex("SubjectId", "SchoolGradeId")
+                        .IsUnique()
+                        .HasFilter("[SchoolId] IS NULL");
+
+                    b.HasIndex("SubjectId", "SchoolGradeId", "SchoolId")
+                        .IsUnique()
+                        .HasFilter("[SchoolId] IS NOT NULL");
+
+                    b.ToTable("SubjectGradePeriods", (string)null);
+                });
+
             modelBuilder.Entity("Lisa.Models.AcademicPlanning.TeachingPlan", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicYearId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ApprovedAt")
@@ -184,10 +612,16 @@ namespace Lisa.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(1);
 
+                    b.Property<bool>("IsCatchUpPlan")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsLocked")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
+
+                    b.Property<Guid?>("OriginalPlanId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("SchoolGradeId")
                         .HasColumnType("uuid");
@@ -207,6 +641,9 @@ namespace Lisa.Migrations
                     b.Property<Guid>("TeacherId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Term")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -215,11 +652,230 @@ namespace Lisa.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SchoolId", "SchoolGradeId", "SubjectId", "TeacherId")
+                    b.HasIndex("AcademicYearId");
+
+                    b.HasIndex("OriginalPlanId");
+
+                    b.HasIndex("SchoolId", "SchoolGradeId", "SubjectId", "TeacherId", "AcademicYearId", "Term")
                         .IsUnique()
-                        .HasDatabaseName("UQ_TeachingPlan_School_Grade_Subject_Teacher");
+                        .HasDatabaseName("UQ_TeachingPlan_School_Grade_Subject_Teacher_Year_Term");
 
                     b.ToTable("TeachingPlans", (string)null);
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.TermAssessmentPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicYearId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SchoolGradeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Term")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
+
+                    b.HasIndex("SchoolGradeId");
+
+                    b.HasIndex("SchoolId", "SchoolGradeId", "AcademicYearId", "Term")
+                        .IsUnique();
+
+                    b.ToTable("TermAssessmentPlans", (string)null);
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.TermWeek", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicTermId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("WeekNumber")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicTermId");
+
+                    b.ToTable("TermWeeks", (string)null);
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.WorkCompletionReport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("AveragePercentageCompleted")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("AveragePercentagePlanned")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("CompletedPeriods")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsSent")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("PeriodEndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("PeriodStartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PeriodsBehindSchedule")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PlannedPeriods")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("ReportDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("TeachingPlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TotalPeriods")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId");
+
+                    b.HasIndex("TeachingPlanId");
+
+                    b.ToTable("WorkCompletionReports", (string)null);
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.WorkCompletionReportDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AcademicPlanPeriodId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DateCompleted")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DatePlanned")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DaysBehind")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsLate")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsOnSchedule")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("PercentageCompleted")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PercentagePlanned")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("PeriodNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SubTopic")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Topic")
+                        .HasColumnType("text");
+
+                    b.Property<int>("WeekNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("WorkCompletionReportId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicPlanPeriodId");
+
+                    b.HasIndex("WorkCompletionReportId");
+
+                    b.ToTable("WorkCompletionReportDetails", (string)null);
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.WorkCompletionReportRecipient", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("SchoolId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("WorkCompletionReportRecipients", (string)null);
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.AcademicDevelopmentClass", b =>
@@ -1926,6 +2582,39 @@ namespace Lisa.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.AcademicLibraryDocument", b =>
+                {
+                    b.HasOne("Lisa.Models.AcademicPlanning.AcademicLibraryDocument", "OriginalDocument")
+                        .WithMany()
+                        .HasForeignKey("OriginalDocumentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Lisa.Models.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Lisa.Models.Entities.User", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("OriginalDocument");
+
+                    b.Navigation("School");
+
+                    b.Navigation("Subject");
+
+                    b.Navigation("Teacher");
+                });
+
             modelBuilder.Entity("Lisa.Models.AcademicPlanning.AcademicPlanPeriod", b =>
                 {
                     b.HasOne("Lisa.Models.AcademicPlanning.AcademicPlanWeek", "AcademicPlanWeek")
@@ -1946,6 +2635,230 @@ namespace Lisa.Migrations
                         .IsRequired();
 
                     b.Navigation("AcademicPlan");
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.AcademicTerm", b =>
+                {
+                    b.HasOne("Lisa.Models.AcademicPlanning.AcademicYearSetup", "AcademicYearSetup")
+                        .WithMany("Terms")
+                        .HasForeignKey("AcademicYearSetupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AcademicYearSetup");
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.AcademicYearSetup", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.AcademicYear", "AcademicYear")
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AcademicYear");
+
+                    b.Navigation("School");
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.AdministrativeDay", b =>
+                {
+                    b.HasOne("Lisa.Models.AcademicPlanning.AcademicYearSetup", "AcademicYearSetup")
+                        .WithMany("AdministrativeDays")
+                        .HasForeignKey("AcademicYearSetupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AcademicYearSetup");
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.ExamDate", b =>
+                {
+                    b.HasOne("Lisa.Models.AcademicPlanning.AcademicYearSetup", "AcademicYearSetup")
+                        .WithMany("ExamDates")
+                        .HasForeignKey("AcademicYearSetupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AcademicYearSetup");
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.Holiday", b =>
+                {
+                    b.HasOne("Lisa.Models.AcademicPlanning.AcademicYearSetup", "AcademicYearSetup")
+                        .WithMany("Holidays")
+                        .HasForeignKey("AcademicYearSetupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AcademicYearSetup");
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.ScheduledAssessment", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.ResultSet", "ResultSet")
+                        .WithMany()
+                        .HasForeignKey("ResultSetId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Lisa.Models.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.AcademicPlanning.TermAssessmentPlan", "TermAssessmentPlan")
+                        .WithMany("ScheduledAssessments")
+                        .HasForeignKey("TermAssessmentPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ResultSet");
+
+                    b.Navigation("Subject");
+
+                    b.Navigation("TermAssessmentPlan");
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.SubjectGradePeriod", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.SchoolGrade", "SchoolGrade")
+                        .WithMany()
+                        .HasForeignKey("SchoolGradeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Lisa.Models.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("School");
+
+                    b.Navigation("SchoolGrade");
+
+                    b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.TeachingPlan", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.AcademicYear", null)
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.AcademicPlanning.TeachingPlan", null)
+                        .WithMany()
+                        .HasForeignKey("OriginalPlanId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.TermAssessmentPlan", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.AcademicYear", "AcademicYear")
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.SchoolGrade", "SchoolGrade")
+                        .WithMany()
+                        .HasForeignKey("SchoolGradeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AcademicYear");
+
+                    b.Navigation("School");
+
+                    b.Navigation("SchoolGrade");
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.TermWeek", b =>
+                {
+                    b.HasOne("Lisa.Models.AcademicPlanning.AcademicTerm", "AcademicTerm")
+                        .WithMany("Weeks")
+                        .HasForeignKey("AcademicTermId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AcademicTerm");
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.WorkCompletionReport", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.AcademicPlanning.TeachingPlan", "TeachingPlan")
+                        .WithMany()
+                        .HasForeignKey("TeachingPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("School");
+
+                    b.Navigation("TeachingPlan");
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.WorkCompletionReportDetail", b =>
+                {
+                    b.HasOne("Lisa.Models.AcademicPlanning.AcademicPlanPeriod", "AcademicPlanPeriod")
+                        .WithMany()
+                        .HasForeignKey("AcademicPlanPeriodId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.AcademicPlanning.WorkCompletionReport", "WorkCompletionReport")
+                        .WithMany("Details")
+                        .HasForeignKey("WorkCompletionReportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AcademicPlanPeriod");
+
+                    b.Navigation("WorkCompletionReport");
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.WorkCompletionReportRecipient", b =>
+                {
+                    b.HasOne("Lisa.Models.Entities.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lisa.Models.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("School");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.AcademicDevelopmentClass", b =>
@@ -2577,9 +3490,44 @@ namespace Lisa.Migrations
                     b.Navigation("Periods");
                 });
 
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.AcademicTerm", b =>
+                {
+                    b.Navigation("Weeks");
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.AcademicYearSetup", b =>
+                {
+                    b.Navigation("AdministrativeDays");
+
+                    b.Navigation("ExamDates");
+
+                    b.Navigation("Holidays");
+
+                    b.Navigation("Terms");
+                });
+
             modelBuilder.Entity("Lisa.Models.AcademicPlanning.TeachingPlan", b =>
                 {
                     b.Navigation("Weeks");
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.TermAssessmentPlan", b =>
+                {
+                    b.Navigation("ScheduledAssessments");
+                });
+
+            modelBuilder.Entity("Lisa.Models.AcademicPlanning.WorkCompletionReport", b =>
+                {
+                    b.Navigation("Details");
+                });
+
+            modelBuilder.Entity("Lisa.Models.Entities.AcademicDevelopmentClass", b =>
+                {
+                    b.Navigation("AdiLearners");
+
+                    b.Navigation("AdiSubjects");
+
+                    b.Navigation("AdiTeachers");
                 });
 
             modelBuilder.Entity("Lisa.Models.Entities.Attendance", b =>

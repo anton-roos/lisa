@@ -2,21 +2,24 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch Lisa (Local)",
+      "name": "Launch Lisa",
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "Build Lisa",
-      "program": "dotnet",
-      "args": [
-        "${workspaceFolder}/src/bin/Debug/net10.0/Lisa.dll"
-      ],
-      "cwd": "${workspaceFolder}/src",
+      "program": "${workspaceFolder}\\src\\bin\\Debug\\net10.0\\Lisa.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}\\src",
       "stopAtEntry": false,
       "serverReadyAction": {
         "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
         "uriFormat": "%s",
         "action": "openExternally"
-      }
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "console": "internalConsole",
+      "requireExactSource": false
     }
   ]
 }

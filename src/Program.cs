@@ -6,18 +6,27 @@ using Lisa.Models.AcademicPlanning;
 using Lisa.Pages;
 using Lisa.Services.AcademicPlanning;
 using Lisa.Services;
+using Lisa.Infrastructure.AcademicPlanning;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Logging.AddSeq();
 
+var dbConnectionString = builder.Configuration.GetConnectionString("Lisa");
+
 builder.Services.AddDbContextFactory<LisaDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Lisa")));
+    options.UseNpgsql(dbConnectionString));
+
+// Add DbContext for Identity and services that need it directly (scoped lifetime)
+// Using AddDbContextPool for better performance and to avoid scoped service resolution issues
+builder.Services.AddDbContextPool<LisaDbContext>(options =>
+    options.UseNpgsql(dbConnectionString));
 
 builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
 {
@@ -96,7 +105,22 @@ builder.Services.AddScoped<AssessmentTypeService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<TemplateRenderService>();
 builder.Services.AddScoped<LeaveEarlyService>();
+// Old AcademicPlanningService (for AcademicPlan entities - used by some UI components)
+builder.Services.AddScoped<Lisa.Services.AcademicPlanningService>();
+// New AcademicPlanningService (for TeachingPlan entities - implements IAcademicPlanningService)
 builder.Services.AddScoped<IAcademicPlanningService, Lisa.Services.AcademicPlanning.AcademicPlanningService>();
+
+// Academic Planning Services
+builder.Services.AddScoped<Lisa.Services.AcademicPlanning.IAcademicYearSetupService, Lisa.Services.AcademicPlanning.AcademicYearSetupService>();
+builder.Services.AddScoped<Lisa.Services.AcademicPlanning.ISubjectGradePeriodService, Lisa.Services.AcademicPlanning.SubjectGradePeriodService>();
+builder.Services.AddScoped<Lisa.Services.AcademicPlanning.ITermAssessmentPlanService, Lisa.Services.AcademicPlanning.TermAssessmentPlanService>();
+builder.Services.AddScoped<Lisa.Services.AcademicPlanning.IAcademicLibraryService, Lisa.Services.AcademicPlanning.AcademicLibraryService>();
+builder.Services.AddScoped<Lisa.Services.AcademicPlanning.IWorkCompletionReportService, Lisa.Services.AcademicPlanning.WorkCompletionReportService>();
+
+// Academic Planning Export Services
+builder.Services.AddScoped<AcademicPlanExcelExporter>();
+builder.Services.AddScoped<AcademicPlanPdfExporter>();
+builder.Services.AddScoped<AcademicPlanExportService>();
 
 
 builder.Services.AddHttpContextAccessor();
@@ -117,12 +141,29 @@ builder.Services.AddRazorComponents()
 
 var app = builder.Build();
 
-using var scope = app.Services.CreateScope();
-var db = scope.ServiceProvider.GetRequiredService<LisaDbContext>();
-
+// Run migrations by creating DbContext directly to avoid scoped service resolution issues
 app.Logger.LogInformation("Attempting database migration...");
-db.Database.Migrate();
-app.Logger.LogInformation("Database migration successful!");
+try
+{
+    var migrationConnectionString = app.Configuration.GetConnectionString("Lisa");
+    var optionsBuilder = new DbContextOptionsBuilder<LisaDbContext>();
+    optionsBuilder.UseNpgsql(migrationConnectionString);
+    // Suppress pending model changes warning during migration
+    optionsBuilder.ConfigureWarnings(warnings => 
+        warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
+    
+    using (var db = new LisaDbContext(optionsBuilder.Options))
+    {
+        db.Database.Migrate();
+    }
+    
+    app.Logger.LogInformation("Database migration successful!");
+}
+catch (Exception ex)
+{
+    app.Logger.LogError(ex, "Database migration failed!");
+    throw;
+}
 
 if (!app.Environment.IsDevelopment())
 {

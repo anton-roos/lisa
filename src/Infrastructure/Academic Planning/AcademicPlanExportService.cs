@@ -16,7 +16,10 @@ public class AcademicPlanExportService
     }
 
     public byte[] ExportExcel(TeachingPlan plan) => _excel.Export(plan);
+    public byte[] ExportExcel(AcademicPlanExportData exportData) => _excel.Export(exportData);
+    
     public byte[] ExportPdf(TeachingPlan plan) => _pdf.Export(plan);
+    public byte[] ExportPdf(AcademicPlanExportData exportData) => _pdf.Export(exportData);
     
     public byte[] ExportToPdf(TeachingPlan plan)
     {

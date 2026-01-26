@@ -1,0 +1,83 @@
+@using Lisa.Models.AcademicPlanning
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="@AdminDayModel" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <MudStack Spacing="3">
+                <MudTextField Label="Name" 
+                              @bind-Value="AdminDayModel.Name" 
+                              Variant="Variant.Outlined"
+                              Required="true"
+                              MaxLength="100" />
+                
+                <MudDatePicker Label="Date" 
+                              @bind-Date="AdminDayDate" 
+                              Variant="Variant.Outlined"
+                              Required="true" />
+                
+                <MudTextField Label="Description" 
+                              @bind-Value="AdminDayModel.Description" 
+                              Variant="Variant.Outlined"
+                              Lines="3"
+                              MaxLength="500" />
+            </MudStack>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="HandleValidSubmit" Disabled="@IsSaving">
+            @(IsSaving ? "Saving..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public AdministrativeDay? AdministrativeDay { get; set; }
+    [Parameter] public EventCallback<AdministrativeDay> OnSave { get; set; }
+
+    private AdministrativeDay AdminDayModel = new();
+    private DateTime? AdminDayDate;
+    private bool IsSaving = false;
+
+    protected override void OnInitialized()
+    {
+        if (AdministrativeDay != null)
+        {
+            AdminDayModel = new AdministrativeDay
+            {
+                Id = AdministrativeDay.Id,
+                Name = AdministrativeDay.Name,
+                Date = AdministrativeDay.Date,
+                Description = AdministrativeDay.Description
+            };
+            AdminDayDate = AdministrativeDay.Date;
+        }
+        else
+        {
+            AdminDayModel = new AdministrativeDay
+            {
+                Id = Guid.NewGuid(),
+                Date = DateTime.Today
+            };
+            AdminDayDate = AdminDayModel.Date;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (AdminDayDate.HasValue)
+        {
+            AdminDayModel.Date = AdminDayDate.Value;
+        }
+
+        IsSaving = true;
+        await OnSave.InvokeAsync(AdminDayModel);
+        IsSaving = false;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Close();
+}

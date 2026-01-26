@@ -1,0 +1,39 @@
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField Label="Rejection Reason"
+                       @bind-Value="RejectionReason"
+                       Variant="Variant.Outlined"
+                       Lines="4"
+                       Placeholder="Please provide a reason for rejecting this plan..."
+                       Required="true" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Error"
+                   Variant="Variant.Filled"
+                   OnClick="Submit"
+                   Disabled="@(string.IsNullOrWhiteSpace(RejectionReason))">
+            Reject Plan
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public Guid PlanId { get; set; }
+    
+    private string RejectionReason { get; set; } = string.Empty;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        if (!string.IsNullOrWhiteSpace(RejectionReason))
+        {
+            MudDialog.Close(DialogResult.Ok(RejectionReason));
+        }
+    }
+}

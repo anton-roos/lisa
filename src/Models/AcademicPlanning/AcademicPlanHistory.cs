@@ -12,5 +12,6 @@ namespace Lisa.Models.AcademicPlanning
         public required string SnapshotJson { get; set; }
         public Guid ChangedByUserId { get; set; }
         public DateTime ChangedAt { get; set; }
+        public string? Notes { get; set; } // For rejection reasons and other notes
     }
 }

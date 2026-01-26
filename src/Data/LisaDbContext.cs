@@ -49,6 +49,19 @@ public class LisaDbContext
     public DbSet<AcademicYear> AcademicYears { get; set; } = null!;
     public DbSet<LearnerAcademicRecord> LearnerAcademicRecords { get; set; } = null!;
     public DbSet<AcademicPlanHistory> AcademicPlanHistories { get; set; }
+    public DbSet<AcademicYearSetup> AcademicYearSetups { get; set; } = null!;
+    public DbSet<AcademicTerm> AcademicTerms { get; set; } = null!;
+    public DbSet<TermWeek> TermWeeks { get; set; } = null!;
+    public DbSet<Holiday> Holidays { get; set; } = null!;
+    public DbSet<AdministrativeDay> AdministrativeDays { get; set; } = null!;
+    public DbSet<ExamDate> ExamDates { get; set; } = null!;
+    public DbSet<SubjectGradePeriod> SubjectGradePeriods { get; set; } = null!;
+    public DbSet<TermAssessmentPlan> TermAssessmentPlans { get; set; } = null!;
+    public DbSet<ScheduledAssessment> ScheduledAssessments { get; set; } = null!;
+    public DbSet<AcademicLibraryDocument> AcademicLibraryDocuments { get; set; } = null!;
+    public DbSet<WorkCompletionReport> WorkCompletionReports { get; set; } = null!;
+    public DbSet<WorkCompletionReportDetail> WorkCompletionReportDetails { get; set; } = null!;
+    public DbSet<WorkCompletionReportRecipient> WorkCompletionReportRecipients { get; set; } = null!;
 
 
 
@@ -624,14 +637,26 @@ public class LisaDbContext
             entity.ToTable("TeachingPlans");
             entity.HasKey(e => e.Id);
 
-            entity.HasIndex(e => new { e.SchoolId, e.SchoolGradeId, e.SubjectId, e.TeacherId })
+            entity.HasIndex(e => new { e.SchoolId, e.SchoolGradeId, e.SubjectId, e.TeacherId, e.AcademicYearId, e.Term })
                 .IsUnique()
-                .HasDatabaseName("UQ_TeachingPlan_School_Grade_Subject_Teacher");
+                .HasDatabaseName("UQ_TeachingPlan_School_Grade_Subject_Teacher_Year_Term");
 
             entity.HasMany(e => e.Weeks)
                 .WithOne(w => w.AcademicPlan)
                 .HasForeignKey(w => w.AcademicPlanId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // AcademicYear relationship
+            entity.HasOne<AcademicYear>()
+                .WithMany()
+                .HasForeignKey(e => e.AcademicYearId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Self-referencing for catch-up plans
+            entity.HasOne<TeachingPlan>()
+                .WithMany()
+                .HasForeignKey(e => e.OriginalPlanId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Configure the AcademicPlanWeek entity to map to the "AcademicPlanWeeks" table
@@ -716,6 +741,211 @@ public class LisaDbContext
             entity.HasIndex(e => e.AcademicPlanId)
                 .HasDatabaseName("idx_academicplanhistory_plan");
         });
+
+        // Academic Year Setup entities
+        modelBuilder.Entity<AcademicYearSetup>(entity =>
+        {
+            entity.ToTable("AcademicYearSetups");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.School)
+                .WithMany()
+                .HasForeignKey(e => e.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.AcademicYear)
+                .WithMany()
+                .HasForeignKey(e => e.AcademicYearId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(e => e.Terms)
+                .WithOne(t => t.AcademicYearSetup)
+                .HasForeignKey(t => t.AcademicYearSetupId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.Holidays)
+                .WithOne(h => h.AcademicYearSetup)
+                .HasForeignKey(h => h.AcademicYearSetupId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.AdministrativeDays)
+                .WithOne(a => a.AcademicYearSetup)
+                .HasForeignKey(a => a.AcademicYearSetupId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.ExamDates)
+                .WithOne(e => e.AcademicYearSetup)
+                .HasForeignKey(e => e.AcademicYearSetupId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AcademicTerm>(entity =>
+        {
+            entity.ToTable("AcademicTerms");
+            entity.HasKey(e => e.Id);
+            entity.HasMany(e => e.Weeks)
+                .WithOne(w => w.AcademicTerm)
+                .HasForeignKey(w => w.AcademicTermId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TermWeek>(entity =>
+        {
+            entity.ToTable("TermWeeks");
+            entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<Holiday>(entity =>
+        {
+            entity.ToTable("Holidays");
+            entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<AdministrativeDay>(entity =>
+        {
+            entity.ToTable("AdministrativeDays");
+            entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<ExamDate>(entity =>
+        {
+            entity.ToTable("ExamDates");
+            entity.HasKey(e => e.Id);
+        });
+
+        // Subject Grade Period
+        modelBuilder.Entity<SubjectGradePeriod>(entity =>
+        {
+            entity.ToTable("SubjectGradePeriods");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.Subject)
+                .WithMany()
+                .HasForeignKey(e => e.SubjectId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.SchoolGrade)
+                .WithMany()
+                .HasForeignKey(e => e.SchoolGradeId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.School)
+                .WithMany()
+                .HasForeignKey(e => e.SchoolId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => new { e.SubjectId, e.SchoolGradeId, e.SchoolId })
+                .IsUnique()
+                .HasFilter("[SchoolId] IS NOT NULL");
+            entity.HasIndex(e => new { e.SubjectId, e.SchoolGradeId })
+                .IsUnique()
+                .HasFilter("[SchoolId] IS NULL");
+        });
+
+        // Term Assessment Plan
+        modelBuilder.Entity<TermAssessmentPlan>(entity =>
+        {
+            entity.ToTable("TermAssessmentPlans");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.School)
+                .WithMany()
+                .HasForeignKey(e => e.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.SchoolGrade)
+                .WithMany()
+                .HasForeignKey(e => e.SchoolGradeId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.AcademicYear)
+                .WithMany()
+                .HasForeignKey(e => e.AcademicYearId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(e => e.ScheduledAssessments)
+                .WithOne(s => s.TermAssessmentPlan)
+                .HasForeignKey(s => s.TermAssessmentPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => new { e.SchoolId, e.SchoolGradeId, e.AcademicYearId, e.Term })
+                .IsUnique();
+        });
+
+        modelBuilder.Entity<ScheduledAssessment>(entity =>
+        {
+            entity.ToTable("ScheduledAssessments");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.Subject)
+                .WithMany()
+                .HasForeignKey(e => e.SubjectId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.ResultSet)
+                .WithMany()
+                .HasForeignKey(e => e.ResultSetId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.Property(e => e.AssessmentType)
+                .HasConversion<int>();
+            entity.HasIndex(e => new { e.TermAssessmentPlanId, e.ScheduledDate })
+                .IsUnique()
+                .HasDatabaseName("IX_ScheduledAssessment_NoDuplicateDate");
+        });
+
+        // Academic Library Document
+        modelBuilder.Entity<AcademicLibraryDocument>(entity =>
+        {
+            entity.ToTable("AcademicLibraryDocuments");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.School)
+                .WithMany()
+                .HasForeignKey(e => e.SchoolId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Teacher)
+                .WithMany()
+                .HasForeignKey(e => e.TeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Subject)
+                .WithMany()
+                .HasForeignKey(e => e.SubjectId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.OriginalDocument)
+                .WithMany()
+                .HasForeignKey(e => e.OriginalDocumentId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.Property(e => e.DocumentType)
+                .HasConversion<int>();
+        });
+
+        // Work Completion Report
+        modelBuilder.Entity<WorkCompletionReport>(entity =>
+        {
+            entity.ToTable("WorkCompletionReports");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.School)
+                .WithMany()
+                .HasForeignKey(e => e.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.TeachingPlan)
+                .WithMany()
+                .HasForeignKey(e => e.TeachingPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.Details)
+                .WithOne(d => d.WorkCompletionReport)
+                .HasForeignKey(d => d.WorkCompletionReportId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<WorkCompletionReportDetail>(entity =>
+        {
+            entity.ToTable("WorkCompletionReportDetails");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.AcademicPlanPeriod)
+                .WithMany()
+                .HasForeignKey(e => e.AcademicPlanPeriodId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<WorkCompletionReportRecipient>(entity =>
+        {
+            entity.ToTable("WorkCompletionReportRecipients");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.School)
+                .WithMany()
+                .HasForeignKey(e => e.SchoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => new { e.SchoolId, e.UserId })
+                .IsUnique();
+        });
+
         }
 
     public override int SaveChanges()

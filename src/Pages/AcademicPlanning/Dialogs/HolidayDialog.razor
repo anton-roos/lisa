@@ -1,0 +1,83 @@
+@using Lisa.Models.AcademicPlanning
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="@HolidayModel" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <MudStack Spacing="3">
+                <MudTextField Label="Holiday Name" 
+                              @bind-Value="HolidayModel.Name" 
+                              Variant="Variant.Outlined"
+                              Required="true"
+                              MaxLength="100" />
+                
+                <MudDatePicker Label="Date" 
+                              @bind-Date="HolidayDate" 
+                              Variant="Variant.Outlined"
+                              Required="true" />
+                
+                <MudTextField Label="Description" 
+                              @bind-Value="HolidayModel.Description" 
+                              Variant="Variant.Outlined"
+                              Lines="3"
+                              MaxLength="500" />
+            </MudStack>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="HandleValidSubmit" Disabled="@IsSaving">
+            @(IsSaving ? "Saving..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Holiday? Holiday { get; set; }
+    [Parameter] public EventCallback<Holiday> OnSave { get; set; }
+
+    private Holiday HolidayModel = new();
+    private DateTime? HolidayDate;
+    private bool IsSaving = false;
+
+    protected override void OnInitialized()
+    {
+        if (Holiday != null)
+        {
+            HolidayModel = new Holiday
+            {
+                Id = Holiday.Id,
+                Name = Holiday.Name,
+                Date = Holiday.Date,
+                Description = Holiday.Description
+            };
+            HolidayDate = Holiday.Date;
+        }
+        else
+        {
+            HolidayModel = new Holiday
+            {
+                Id = Guid.NewGuid(),
+                Date = DateTime.Today
+            };
+            HolidayDate = HolidayModel.Date;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (HolidayDate.HasValue)
+        {
+            HolidayModel.Date = HolidayDate.Value;
+        }
+
+        IsSaving = true;
+        await OnSave.InvokeAsync(HolidayModel);
+        IsSaving = false;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Close();
+}

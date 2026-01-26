@@ -1,15 +1,29 @@
 @page "/academic-planning/create"
 
 @using Lisa.Models.AcademicPlanning
+@using Lisa.Models.Entities
 @using Lisa.Services.AcademicPlanning.DTOs
 @using Lisa.Enums
 @using Lisa.Pages.AcademicPlanning.Components
 @using Lisa.Services.AcademicPlanning
 @using Lisa.Infrastructure.AcademicPlanning
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 
 @inject IAcademicPlanningService PlanningService
 @inject AcademicPlanExportService ExportService
 @inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UserService UserService
+@inject SchoolService SchoolService
+@inject SchoolGradeService SchoolGradeService
+@inject SubjectService SubjectService
+@inject IDbContextFactory<LisaDbContext> DbContextFactory
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+@using Lisa.Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.WebUtilities
 
 <h3 class="mb-3">Create Academic Plan</h3>
 
@@ -18,7 +32,9 @@
     <PlanStatusBadge Status="@Status" />
 }
 
-<PlanSelector OnChanged="OnSelectionChanged" />
+<PlanSelector OnChanged="OnSelectionChanged" 
+             InitialSelection="@Selection"
+             IsReadOnly="@(Status != AcademicPlanStatus.Draft || (Navigation.Uri.Contains("mode=view")))" />
 
 @if (PlanId.HasValue)
 {
@@ -30,33 +46,104 @@
 
 @if (!string.IsNullOrWhiteSpace(Message))
 {
-    <div class="alert alert-info mt-2">@Message</div>
+    var isError = Message.Contains("Error:") || Message.Contains("Failed");
+    <div class="alert @(isError ? "alert-danger" : "alert-info") mt-2" style="white-space: pre-wrap;">@Message</div>
 }
 
-<div class="mt-4 d-flex gap-2">
-    <button class="btn btn-secondary"
-            @onclick="SaveDraft">
-          Save Draft
-    </button>
+@* Action Panel - Redesigned with clear visual hierarchy and intuitive color scheme *@
+<MudPaper Class="pa-4 mt-4" Elevation="1">
+    <MudStack Spacing="4">
+        @* Group 1: Plan State Actions - Primary actions that change plan status *@
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.subtitle2" Class="mb-2" Style="font-weight: 600; color: var(--mud-palette-text-primary);">
+                Plan State Actions
+            </MudText>
+            <MudStack Spacing="2" Row="true" rowBreakpoint="Breakpoint.Sm">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="SaveDraft"
+                           StartIcon="@Icons.Material.Filled.Save"
+                           Class="flex-grow-1 flex-sm-grow-0"
+                           Style="min-width: 140px;">
+                    Save Draft
+                </MudButton>
 
-    <button class="btn btn-primary"
-            disabled="@(!CanSubmit)"
-            @onclick="SubmitForReview">
-          Submit for Review
-    </button>
+                @if (IsSystemAdministrator)
+                {
+                    @* System Administrators: Show Approve/Reject buttons *@
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Success"
+                               Disabled="@(!CanApprove)"
+                               OnClick="ApprovePlan"
+                               StartIcon="@Icons.Material.Filled.CheckCircle"
+                               Class="flex-grow-1 flex-sm-grow-0"
+                               Style="min-width: 140px;"
+                               title="Approve this plan">
+                        Approve Plan
+                    </MudButton>
 
-    <button class="btn btn-success"
-            disabled="@(!PlanId.HasValue)"
-            @onclick="ExportExcel">
-          Export Excel
-    </button>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Error"
+                               Disabled="@(!CanReject)"
+                               OnClick="ShowRejectDialog"
+                               StartIcon="@Icons.Material.Filled.Cancel"
+                               Class="flex-grow-1 flex-sm-grow-0"
+                               Style="min-width: 140px;"
+                               title="Reject this plan with feedback">
+                        Reject Plan
+                    </MudButton>
+                }
+                else
+                {
+                    @* Teachers: Show Submit for Review button *@
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Info"
+                               Disabled="@(!CanSubmit)"
+                               OnClick="SubmitForReview"
+                               StartIcon="@Icons.Material.Filled.Send"
+                               Class="flex-grow-1 flex-sm-grow-0"
+                               Style="min-width: 140px;"
+                               title="Submit plan for administrator review">
+                        Submit for Review
+                    </MudButton>
+                }
+            </MudStack>
+        </MudStack>
 
-    <button class="btn btn-danger"
-            disabled="@(!PlanId.HasValue)"
-            @onclick="ExportPdf">
-          Export PDF
-    </button>
-</div>
+        @* Visual Separator *@
+        <MudDivider Class="my-2" />
+
+        @* Group 2: Export Actions - Secondary output functions *@
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.subtitle2" Class="mb-2" Style="font-weight: 600; color: var(--mud-palette-text-primary);">
+                Export Options
+            </MudText>
+            <MudStack Spacing="2" Row="true" rowBreakpoint="Breakpoint.Sm">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Info"
+                           StartIcon="@Icons.Material.Filled.Description"
+                           Disabled="@(!PlanId.HasValue)"
+                           OnClick="ExportExcel"
+                           Class="flex-grow-1 flex-sm-grow-0"
+                           Style="min-width: 160px;"
+                           title="Export plan to Microsoft Excel format">
+                    Export to Excel
+                </MudButton>
+
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.PictureAsPdf"
+                           Disabled="@(!PlanId.HasValue)"
+                           OnClick="ExportPdf"
+                           Class="flex-grow-1 flex-sm-grow-0"
+                           Style="min-width: 160px;"
+                           title="Export plan to PDF format">
+                    Export to PDF
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudStack>
+</MudPaper>
 
 @code {
     private Guid? PlanId;
@@ -65,19 +152,195 @@
     private List<AcademicPlanPeriod> Periods = new();  // Added periods state
 
     private PlanSelector.SelectionResult? Selection;
-    // Replace with actual logged-in user
-    private Guid CurrentUserId => Guid.NewGuid();
+    private Guid? CurrentUserId;
+    private bool IsSystemAdministrator = false;
 
     private bool CanSubmit =>
         PlanId.HasValue &&
         Selection?.SchoolId != null &&
+        Selection?.AcademicYearId != null &&
         Selection?.SchoolGradeId != null &&
         Selection?.SubjectId != null &&
-        Status == AcademicPlanStatus.Draft;
+        Selection?.Term != null &&
+        Status == AcademicPlanStatus.Draft &&
+        !IsSystemAdministrator; // Only teachers can submit
 
-    private void OnSelectionChanged(PlanSelector.SelectionResult result)
+    private bool CanApprove =>
+        PlanId.HasValue &&
+        IsSystemAdministrator &&
+        (Status == AcademicPlanStatus.Draft || Status == AcademicPlanStatus.PendingReview);
+
+    private bool CanReject =>
+        PlanId.HasValue &&
+        IsSystemAdministrator &&
+        (Status == AcademicPlanStatus.Draft || Status == AcademicPlanStatus.PendingReview);
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get current authenticated user
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                CurrentUserId = Guid.Parse(userId);
+            }
+            
+            // Check if user is System Administrator
+            IsSystemAdministrator = user.IsInRole(Data.Roles.SystemAdministrator);
+        }
+
+        // Check for planId in query string (from View/Edit navigation)
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var queryParams = QueryHelpers.ParseQuery(uri.Query);
+        
+        if (queryParams.TryGetValue("planId", out var planIdValue) && Guid.TryParse(planIdValue, out var planIdGuid))
+        {
+            await LoadPlanById(planIdGuid);
+            
+            // Check for mode parameter (view/edit)
+            if (queryParams.TryGetValue("mode", out var modeValue))
+            {
+                if (modeValue == "view")
+                {
+                    // In view mode, make the form read-only
+                    // This could be handled by setting Status to non-draft or adding a read-only flag
+                    Message = "Viewing plan (read-only mode)";
+                }
+            }
+        }
+    }
+
+    private async Task LoadPlanById(Guid planId)
+    {
+        try
+        {
+            var plan = await PlanningService.GetTeachingPlanByIdAsync(planId);
+            if (plan != null)
+            {
+                PlanId = plan.Id;
+                Status = plan.Status;
+                
+                // Set selection from plan data
+                Selection = new PlanSelector.SelectionResult
+                {
+                    SchoolId = plan.SchoolId,
+                    AcademicYearId = plan.AcademicYearId,
+                    SchoolGradeId = plan.SchoolGradeId,
+                    SubjectId = plan.SubjectId,
+                    Term = plan.Term
+                };
+                
+                // Load periods from the plan
+                if (plan.Weeks != null && plan.Weeks.Any())
+                {
+                    var allPeriods = new List<AcademicPlanPeriod>();
+                    foreach (var week in plan.Weeks.OrderBy(w => w.WeekNumber))
+                    {
+                        if (week.Periods != null)
+                        {
+                            allPeriods.AddRange(week.Periods.OrderBy(p => p.PeriodNumber));
+                        }
+                    }
+                    Periods = allPeriods;
+                }
+                else
+                {
+                    Periods = new List<AcademicPlanPeriod>();
+                }
+                
+                Message = "Plan loaded successfully.";
+            }
+            else
+            {
+                Message = "Plan not found.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Message = $"Error loading plan: {ex.Message}";
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task OnSelectionChanged(PlanSelector.SelectionResult result)
     {
         Selection = result;
+        
+        // If all selections are made, check if a plan already exists and load it
+        if (IsSelectionValid() && CurrentUserId.HasValue)
+        {
+            try
+            {
+                var existingPlan = await PlanningService.GetPlanAsync(
+                    Selection!.SchoolId!.Value,
+                    Selection.SchoolGradeId!.Value,
+                    Selection.SubjectId!.Value,
+                    CurrentUserId.Value,
+                    Selection.AcademicYearId!.Value,
+                    Selection.Term!.Value
+                );
+
+                if (existingPlan != null)
+                {
+                    // Plan exists - load it
+                    PlanId = existingPlan.Id;
+                    
+                    var plan = await PlanningService.GetTeachingPlanByIdAsync(existingPlan.Id);
+                    if (plan != null)
+                    {
+                        Status = plan.Status;
+                        
+                        // Load periods from the existing plan
+                        if (plan.Weeks != null && plan.Weeks.Any())
+                        {
+                            var allPeriods = new List<AcademicPlanPeriod>();
+                            foreach (var week in plan.Weeks.OrderBy(w => w.WeekNumber))
+                            {
+                                if (week.Periods != null)
+                                {
+                                    allPeriods.AddRange(week.Periods.OrderBy(p => p.PeriodNumber));
+                                }
+                            }
+                            Periods = allPeriods;
+                        }
+                        else
+                        {
+                            // No periods yet - create empty ones
+                            Periods = Enumerable.Range(1, 8)
+                                .Select(p => new AcademicPlanPeriod
+                                {
+                                    PeriodNumber = p,
+                                    CreatedAt = DateTime.UtcNow,
+                                    UpdatedAt = DateTime.UtcNow
+                                }).ToList();
+                        }
+                    }
+                }
+                else
+                {
+                    // No existing plan - clear the current plan
+                    PlanId = null;
+                    Status = AcademicPlanStatus.Draft;
+                    Periods = new List<AcademicPlanPeriod>();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Silently handle errors during auto-load - user can still create new plan
+                System.Diagnostics.Debug.WriteLine($"Error auto-loading plan: {ex.Message}");
+            }
+        }
+        else
+        {
+            // Selections incomplete - clear plan
+            PlanId = null;
+            Periods = new List<AcademicPlanPeriod>();
+        }
+        
         StateHasChanged();
     }
 
@@ -85,63 +348,252 @@
     {
         if (!IsSelectionValid())
         {
-            Message = "Please select School, Grade, and Subject.";
+            Message = "Please select School, Year, Grade, Subject, and Term.";
             return;
         }
 
-        var dto = new AcademicPlanDto
+        if (CurrentUserId == null)
         {
-            SchoolId = Selection!.SchoolId!.Value,
-            SchoolGradeId = Selection.SchoolGradeId!.Value,
-            SubjectId = Selection.SubjectId!.Value,
-            TeacherId = CurrentUserId,  
-            Weeks = new List<AcademicPlanWeekDto>()  
-        };
+            Message = "User not authenticated.";
+            return;
+        }
 
-        PlanId = await PlanningService.CreatePlanAsync(dto);
-        Status = AcademicPlanStatus.Draft;
+        try
+        {
+            // First, check if a plan already exists for this combination
+            var existingPlan = await PlanningService.GetPlanAsync(
+                Selection!.SchoolId!.Value,
+                Selection.SchoolGradeId!.Value,
+                Selection.SubjectId!.Value,
+                CurrentUserId.Value,
+                Selection.AcademicYearId!.Value,
+                Selection.Term!.Value
+            );
 
-        Periods = Enumerable.Range(1, 8)
-            .Select(p => new AcademicPlanPeriod
+            if (existingPlan != null)
             {
-                PeriodNumber = p,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            }).ToList();
+                // Plan already exists - load it instead of creating a new one
+                PlanId = existingPlan.Id;
+                
+                // Load the existing plan to get status and periods
+                var plan = await PlanningService.GetTeachingPlanByIdAsync(existingPlan.Id);
+                if (plan != null)
+                {
+                    Status = plan.Status;
+                    
+                    // Load periods from the existing plan
+                    if (plan.Weeks != null && plan.Weeks.Any())
+                    {
+                        var allPeriods = new List<AcademicPlanPeriod>();
+                        foreach (var week in plan.Weeks.OrderBy(w => w.WeekNumber))
+                        {
+                            if (week.Periods != null)
+                            {
+                                allPeriods.AddRange(week.Periods.OrderBy(p => p.PeriodNumber));
+                            }
+                        }
+                        Periods = allPeriods;
+                    }
+                    else
+                    {
+                        // No periods yet - create empty ones
+                        Periods = Enumerable.Range(1, 8)
+                            .Select(p => new AcademicPlanPeriod
+                            {
+                                PeriodNumber = p,
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow
+                            }).ToList();
+                    }
+                }
+                else
+                {
+                    Status = AcademicPlanStatus.Draft;
+                    Periods = Enumerable.Range(1, 8)
+                        .Select(p => new AcademicPlanPeriod
+                        {
+                            PeriodNumber = p,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        }).ToList();
+                }
 
-        Message = "Draft saved successfully.";
+                Message = "Existing plan loaded. You can continue editing.";
+            }
+            else
+            {
+                // No existing plan - create a new one
+                var dto = new AcademicPlanDto
+                {
+                    SchoolId = Selection.SchoolId!.Value,
+                    AcademicYearId = Selection.AcademicYearId!.Value,
+                    SchoolGradeId = Selection.SchoolGradeId!.Value,
+                    SubjectId = Selection.SubjectId!.Value,
+                    Term = Selection.Term!.Value,
+                    TeacherId = CurrentUserId.Value,  
+                    Weeks = new List<AcademicPlanWeekDto>()  
+                };
+
+                PlanId = await PlanningService.CreatePlanAsync(dto);
+                Status = AcademicPlanStatus.Draft;
+
+                Periods = Enumerable.Range(1, 8)
+                    .Select(p => new AcademicPlanPeriod
+                    {
+                        PeriodNumber = p,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    }).ToList();
+
+                Message = "New draft plan created successfully.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Message = $"Error: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                Message += $"\n\nDetails: {ex.InnerException.Message}";
+            }
+        }
+        
+        StateHasChanged();
     }
 
     private async Task SubmitForReview()
     {
-        if (!PlanId.HasValue)
+        if (!PlanId.HasValue || CurrentUserId == null)
             return;
 
-        await PlanningService.SubmitForReviewAsync(PlanId.Value, CurrentUserId);
+        try
+        {
+            await PlanningService.SubmitForReviewAsync(PlanId.Value, CurrentUserId.Value, IsSystemAdministrator);
+            Status = AcademicPlanStatus.PendingReview;
+            Message = "Academic Plan submitted for review.";
+            // Message already set above
+        }
+        catch (Exception ex)
+        {
+            Message = $"Error submitting plan: {ex.Message}";
+            // Error message already set above
+        }
+        
+        StateHasChanged();
+    }
 
-        Status = AcademicPlanStatus.PendingReview;
-        Message = "Academic Plan submitted for review.";
+    private async Task ApprovePlan()
+    {
+        if (!PlanId.HasValue || CurrentUserId == null)
+            return;
+
+        try
+        {
+            await PlanningService.ApprovePlanAsync(PlanId.Value, CurrentUserId.Value, IsSystemAdministrator);
+            Status = AcademicPlanStatus.Approved;
+            Message = "Academic Plan approved successfully.";
+            // Message already set above
+        }
+        catch (Exception ex)
+        {
+            Message = $"Error approving plan: {ex.Message}";
+            // Error message already set above
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task ShowRejectDialog()
+    {
+        if (!PlanId.HasValue || CurrentUserId == null)
+            return;
+
+        var parameters = new DialogParameters
+        {
+            ["PlanId"] = PlanId.Value
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<RejectPlanDialog>("Reject Plan", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is string rejectionReason && !string.IsNullOrWhiteSpace(rejectionReason))
+        {
+            try
+            {
+                await PlanningService.RejectPlanAsync(PlanId.Value, CurrentUserId.Value, rejectionReason, IsSystemAdministrator);
+                Status = AcademicPlanStatus.Rejected;
+                Message = $"Plan rejected. Reason: {rejectionReason}";
+                // Message already set above
+            }
+            catch (Exception ex)
+            {
+                Message = $"Error rejecting plan: {ex.Message}";
+                // Error message already set above
+            }
+            
+            StateHasChanged();
+        }
     }
 
     private async Task SavePeriods(List<AcademicPlanPeriod> periods)
     {
-        if (!PlanId.HasValue)
+        if (!PlanId.HasValue || CurrentUserId == null)
             return;
 
-        var success = await PlanningService.SavePlanPeriodsAsync(
-            PlanId.Value,
-            periods,
-            CurrentUserId);
+        try
+        {
+            var success = await PlanningService.SavePlanPeriodsAsync(
+                PlanId.Value,
+                periods,
+                CurrentUserId.Value);
 
-        if (success)
-        {
-            Message = "Plan content saved successfully.";
-            Periods = periods; 
+            if (success)
+            {
+                Message = "Plan content saved successfully.";
+                Periods = periods; 
+            }
+            else
+            {
+                Message = "Failed to save plan content.";
+            }
         }
-        else
+        catch (Exception ex)
         {
-            Message = "Failed to save plan content.";
-        } 
+            // Build detailed error message
+            var errorDetails = $"Error: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                errorDetails += $"\n\nInner Exception: {ex.InnerException.Message}";
+                if (ex.InnerException.InnerException != null)
+                {
+                    errorDetails += $"\n\nInner Exception (2): {ex.InnerException.InnerException.Message}";
+                }
+            }
+            
+            // For database errors, try to extract more details
+            if (ex.InnerException != null)
+            {
+                var innerEx = ex.InnerException;
+                errorDetails += $"\n\nInner Exception Type: {innerEx.GetType().Name}";
+                errorDetails += $"\nInner Exception Source: {innerEx.Source}";
+                
+                // Check if it's a PostgreSQL exception
+                if (innerEx.GetType().Name.Contains("PostgresException"))
+                {
+                    errorDetails += $"\n\nThis appears to be a database constraint violation.";
+                    errorDetails += $"\nPlease check that all required fields are filled.";
+                }
+            }
+            
+            Message = errorDetails;
+        }
+        
         StateHasChanged();
     }
 
@@ -156,7 +608,9 @@
                 Selection.SchoolId!.Value,
                 Selection.SchoolGradeId!.Value,
                 Selection.SubjectId!.Value,
-                CurrentUserId
+                CurrentUserId!.Value,
+                Selection.AcademicYearId!.Value,
+                Selection.Term!.Value
             );
 
             if (planDto == null)
@@ -172,7 +626,27 @@
                 return;
             }
 
-            var bytes = ExportService.ExportExcel(plan);
+            // Get related data for export
+            await using var db = await DbContextFactory.CreateDbContextAsync();
+            var school = await db.Set<School>().FirstOrDefaultAsync(s => s.Id == plan.SchoolId);
+            var schoolGrade = await db.Set<SchoolGrade>()
+                .Include(sg => sg.SystemGrade)
+                .FirstOrDefaultAsync(sg => sg.Id == plan.SchoolGradeId);
+            var subject = await db.Set<Subject>().FirstOrDefaultAsync(s => s.Id == plan.SubjectId);
+            var teacher = await db.Set<User>().FirstOrDefaultAsync(u => u.Id == plan.TeacherId);
+            var academicYear = await db.Set<AcademicYear>().FirstOrDefaultAsync(ay => ay.Id == plan.AcademicYearId);
+
+            var exportData = new AcademicPlanExportData
+            {
+                Plan = plan,
+                SchoolName = school?.LongName ?? string.Empty,
+                GradeName = schoolGrade?.SystemGrade?.Name ?? string.Empty,
+                SubjectName = subject?.Name ?? string.Empty,
+                TeacherName = $"{teacher?.Name} {teacher?.Surname}".Trim(),
+                Year = academicYear?.Year ?? DateTime.UtcNow.Year
+            };
+
+            var bytes = ExportService.ExportExcel(exportData);
 
             await JS.InvokeVoidAsync(
                 "downloadFile",
@@ -198,7 +672,9 @@
                 Selection.SchoolId!.Value,
                 Selection.SchoolGradeId!.Value,
                 Selection.SubjectId!.Value,
-                CurrentUserId
+                CurrentUserId!.Value,
+                Selection.AcademicYearId!.Value,
+                Selection.Term!.Value
             );
 
             if (planDto == null)
@@ -213,7 +689,27 @@
                 return;
             }
 
-            var bytes = ExportService.ExportPdf(plan);
+            // Get related data for export
+            await using var db = await DbContextFactory.CreateDbContextAsync();
+            var school = await db.Set<School>().FirstOrDefaultAsync(s => s.Id == plan.SchoolId);
+            var schoolGrade = await db.Set<SchoolGrade>()
+                .Include(sg => sg.SystemGrade)
+                .FirstOrDefaultAsync(sg => sg.Id == plan.SchoolGradeId);
+            var subject = await db.Set<Subject>().FirstOrDefaultAsync(s => s.Id == plan.SubjectId);
+            var teacher = await db.Set<User>().FirstOrDefaultAsync(u => u.Id == plan.TeacherId);
+            var academicYear = await db.Set<AcademicYear>().FirstOrDefaultAsync(ay => ay.Id == plan.AcademicYearId);
+
+            var exportData = new AcademicPlanExportData
+            {
+                Plan = plan,
+                SchoolName = school?.LongName ?? string.Empty,
+                GradeName = schoolGrade?.SystemGrade?.Name ?? string.Empty,
+                SubjectName = subject?.Name ?? string.Empty,
+                TeacherName = $"{teacher?.Name} {teacher?.Surname}".Trim(),
+                Year = academicYear?.Year ?? DateTime.UtcNow.Year
+            };
+
+            var bytes = ExportService.ExportPdf(exportData);
 
             await JS.InvokeVoidAsync(
                 "downloadFile",
@@ -229,6 +725,8 @@
     }
     private bool IsSelectionValid() =>
         Selection?.SchoolId != null &&
+        Selection.AcademicYearId != null &&
         Selection.SchoolGradeId != null &&
-        Selection.SubjectId != null;
+        Selection.SubjectId != null &&
+        Selection.Term != null;
 }

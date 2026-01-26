@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Lisa.Data;
 using AcademicPlanStatusEnum = Lisa.Enums.AcademicPlanStatus;
 using Lisa.Models.AcademicPlanning;
+using Lisa.Models.Entities;
 using Lisa.Services.AcademicPlanning.DTOs;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,17 +15,18 @@ namespace Lisa.Services.AcademicPlanning
 {
     public class AcademicPlanningService : IAcademicPlanningService
     {
-        private readonly LisaDbContext _db;
+        private readonly IDbContextFactory<LisaDbContext> _dbFactory;
 
-        public AcademicPlanningService(LisaDbContext db)
+        public AcademicPlanningService(IDbContextFactory<LisaDbContext> dbFactory)
         {
-            _db = db ?? throw new ArgumentNullException(nameof(db));
+            _dbFactory = dbFactory ?? throw new ArgumentNullException(nameof(dbFactory));
         }
 
-        // Get single plan by combination (school, grade, subject, teacher)
-        public async Task<AcademicPlanDto?> GetPlanAsync(Guid schoolId, Guid schoolGradeId, int subjectId, Guid teacherId, CancellationToken cancellationToken = default)
+        // Get single plan by combination (school, grade, subject, teacher, year, term)
+        public async Task<AcademicPlanDto?> GetPlanAsync(Guid schoolId, Guid schoolGradeId, int subjectId, Guid teacherId, Guid academicYearId, int term, CancellationToken cancellationToken = default)
         {
-            var plan = await _db.Set<TeachingPlan>()
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var plan = await db.Set<TeachingPlan>()
                 .AsNoTracking()
                 .Include(p => p.Weeks)
                     .ThenInclude(w => w.Periods)
@@ -32,7 +34,9 @@ namespace Lisa.Services.AcademicPlanning
                     p.SchoolId == schoolId &&
                     p.SchoolGradeId == schoolGradeId &&
                     p.SubjectId == subjectId &&
-                    p.TeacherId == teacherId)
+                    p.TeacherId == teacherId &&
+                    p.AcademicYearId == academicYearId &&
+                    p.Term == term)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (plan == null) return null;
@@ -42,7 +46,8 @@ namespace Lisa.Services.AcademicPlanning
         // Get all plans for a school
         public async Task<List<AcademicPlanDto>> GetPlansBySchoolAsync(Guid schoolId, CancellationToken cancellationToken = default)
         {
-            var plans = await _db.Set<TeachingPlan>()
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var plans = await db.Set<TeachingPlan>()
                 .AsNoTracking()
                 .Include(p => p.Weeks)
                     .ThenInclude(w => w.Periods)
@@ -57,16 +62,20 @@ namespace Lisa.Services.AcademicPlanning
         {
             if (dto == null) throw new ArgumentNullException(nameof(dto));
 
-            // check duplicate: same school, grade, subject, teacher
-            var exists = await _db.Set<TeachingPlan>().AnyAsync(p =>
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            
+            // check duplicate: same school, grade, subject, teacher, year, term
+            var exists = await db.Set<TeachingPlan>().AnyAsync(p =>
                 p.SchoolId == dto.SchoolId &&
                 p.SchoolGradeId == dto.SchoolGradeId &&
                 p.SubjectId == dto.SubjectId &&
-                p.TeacherId == dto.TeacherId,
+                p.TeacherId == dto.TeacherId &&
+                p.AcademicYearId == dto.AcademicYearId &&
+                p.Term == dto.Term,
                 cancellationToken);
 
             if (exists)
-                throw new InvalidOperationException("An academic plan already exists for this School / Grade / Subject / Teacher combination.");
+                throw new InvalidOperationException("An academic plan already exists for this School / Grade / Subject / Teacher / Year / Term combination.");
 
             var entity = new TeachingPlan
             {
@@ -75,6 +84,10 @@ namespace Lisa.Services.AcademicPlanning
                 SchoolGradeId = dto.SchoolGradeId,
                 SubjectId = dto.SubjectId,
                 TeacherId = dto.TeacherId,
+                AcademicYearId = dto.AcademicYearId,
+                Term = dto.Term,
+                IsCatchUpPlan = dto.IsCatchUpPlan,
+                OriginalPlanId = dto.OriginalPlanId,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 Status = AcademicPlanStatusEnum.Draft
@@ -105,9 +118,18 @@ namespace Lisa.Services.AcademicPlanning
                             AcademicPlanWeekId = weekEntity.Id,
                             PeriodNumber = p.PeriodNumber,
                             Topic = p.Topic,
+                            SubTopic = p.SubTopic,
+                            PercentagePlanned = p.PercentagePlanned,
+                            DatePlanned = p.DatePlanned,
+                            PercentageCompleted = p.PercentageCompleted,
+                            DateCompleted = p.DateCompleted,
                             Resources = p.Resources,
-                            Assessment = p.Assessment,
+                            LessonDetailDescription = p.LessonDetailDescription,
+                            ClassWorkDescription = p.ClassWorkDescription,
                             Homework = p.Homework,
+                            Assessment = p.Assessment,
+                            AssessmentDescription = p.AssessmentDescription,
+                            Notes = p.Notes,
                             CreatedAt = DateTime.UtcNow,
                             UpdatedAt = DateTime.UtcNow
                         };
@@ -118,8 +140,8 @@ namespace Lisa.Services.AcademicPlanning
                 entity.Weeks.Add(weekEntity);
             }
 
-            await _db.Set<TeachingPlan>().AddAsync(entity, cancellationToken);
-            await _db.SaveChangesAsync(cancellationToken);
+            await db.Set<TeachingPlan>().AddAsync(entity, cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
 
             return entity.Id;
         }
@@ -129,7 +151,8 @@ namespace Lisa.Services.AcademicPlanning
         {
             if (dto == null) throw new ArgumentNullException(nameof(dto));
 
-            var plan = await _db.Set<TeachingPlan>()
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var plan = await db.Set<TeachingPlan>()
                 .Include(p => p.Weeks)
                     .ThenInclude(w => w.Periods)
                 .FirstOrDefaultAsync(p => p.Id == dto.Id, cancellationToken);
@@ -140,17 +163,21 @@ namespace Lisa.Services.AcademicPlanning
             if (plan.SchoolId != dto.SchoolId ||
                 plan.SchoolGradeId != dto.SchoolGradeId ||
                 plan.SubjectId != dto.SubjectId ||
-                plan.TeacherId != dto.TeacherId)
+                plan.TeacherId != dto.TeacherId ||
+                plan.AcademicYearId != dto.AcademicYearId ||
+                plan.Term != dto.Term)
             {
-                var duplicate = await _db.Set<TeachingPlan>().AnyAsync(p =>
+                var duplicate = await db.Set<TeachingPlan>().AnyAsync(p =>
                     p.Id != dto.Id &&
                     p.SchoolId == dto.SchoolId &&
                     p.SchoolGradeId == dto.SchoolGradeId &&
                     p.SubjectId == dto.SubjectId &&
-                    p.TeacherId == dto.TeacherId, cancellationToken);
+                    p.TeacherId == dto.TeacherId &&
+                    p.AcademicYearId == dto.AcademicYearId &&
+                    p.Term == dto.Term, cancellationToken);
 
                 if (duplicate)
-                    throw new InvalidOperationException("Another academic plan already exists for this School / Grade / Subject / Teacher combination.");
+                    throw new InvalidOperationException("Another academic plan already exists for this School / Grade / Subject / Teacher / Year / Term combination.");
             }
 
             // update scalars
@@ -158,12 +185,16 @@ namespace Lisa.Services.AcademicPlanning
             plan.SchoolGradeId = dto.SchoolGradeId;
             plan.SubjectId = dto.SubjectId;
             plan.TeacherId = dto.TeacherId;
+            plan.AcademicYearId = dto.AcademicYearId;
+            plan.Term = dto.Term;
+            plan.IsCatchUpPlan = dto.IsCatchUpPlan;
+            plan.OriginalPlanId = dto.OriginalPlanId;
             plan.UpdatedAt = DateTime.UtcNow;
 
             // sync weeks & periods
             var incomingWeekIds = dto.Weeks.Select(w => w.Id).Where(id => id != Guid.Empty).ToHashSet();
             var weeksToRemove = plan.Weeks.Where(w => !incomingWeekIds.Contains(w.Id)).ToList();
-            if (weeksToRemove.Any()) _db.Set<AcademicPlanWeek>().RemoveRange(weeksToRemove);
+            if (weeksToRemove.Any()) db.Set<AcademicPlanWeek>().RemoveRange(weeksToRemove);
 
             foreach (var wDto in dto.Weeks)
             {
@@ -193,9 +224,18 @@ namespace Lisa.Services.AcademicPlanning
                                 AcademicPlanWeekId = newWeek.Id,
                                 PeriodNumber = pDto.PeriodNumber,
                                 Topic = pDto.Topic,
+                                SubTopic = pDto.SubTopic,
+                                PercentagePlanned = pDto.PercentagePlanned,
+                                DatePlanned = pDto.DatePlanned,
+                                PercentageCompleted = pDto.PercentageCompleted,
+                                DateCompleted = pDto.DateCompleted,
                                 Resources = pDto.Resources,
-                                Assessment = pDto.Assessment,
+                                LessonDetailDescription = pDto.LessonDetailDescription,
+                                ClassWorkDescription = pDto.ClassWorkDescription,
                                 Homework = pDto.Homework,
+                                Assessment = pDto.Assessment,
+                                AssessmentDescription = pDto.AssessmentDescription,
+                                Notes = pDto.Notes,
                                 CreatedAt = DateTime.UtcNow,
                                 UpdatedAt = DateTime.UtcNow
                             };
@@ -217,7 +257,7 @@ namespace Lisa.Services.AcademicPlanning
                     var incomingPeriodIds = (wDto.Periods ?? Enumerable.Empty<AcademicPlanPeriodDto>())
                         .Select(p => p.Id).Where(id => id != Guid.Empty).ToHashSet();
                     var periodsToRemove = existingWeek.Periods.Where(p => !incomingPeriodIds.Contains(p.Id)).ToList();
-                    if (periodsToRemove.Any()) _db.Set<AcademicPlanPeriod>().RemoveRange(periodsToRemove);
+                    if (periodsToRemove.Any()) db.Set<AcademicPlanPeriod>().RemoveRange(periodsToRemove);
 
                     foreach (var pDto in wDto.Periods ?? Enumerable.Empty<AcademicPlanPeriodDto>())
                     {
@@ -242,33 +282,44 @@ namespace Lisa.Services.AcademicPlanning
                         {
                             existPeriod.PeriodNumber = pDto.PeriodNumber;
                             existPeriod.Topic = pDto.Topic;
+                            existPeriod.SubTopic = pDto.SubTopic;
+                            existPeriod.PercentagePlanned = pDto.PercentagePlanned;
+                            existPeriod.DatePlanned = pDto.DatePlanned;
+                            existPeriod.PercentageCompleted = pDto.PercentageCompleted;
+                            existPeriod.DateCompleted = pDto.DateCompleted;
                             existPeriod.Resources = pDto.Resources;
-                            existPeriod.Assessment = pDto.Assessment;
+                            existPeriod.LessonDetailDescription = pDto.LessonDetailDescription;
+                            existPeriod.ClassWorkDescription = pDto.ClassWorkDescription;
                             existPeriod.Homework = pDto.Homework;
+                            existPeriod.Assessment = pDto.Assessment;
+                            existPeriod.AssessmentDescription = pDto.AssessmentDescription;
+                            existPeriod.Notes = pDto.Notes;
                             existPeriod.UpdatedAt = DateTime.UtcNow;
                         }
                     }
                 }
             }
 
-            await _db.SaveChangesAsync(cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
             return true;
         }
 
         public async Task<bool> DeletePlanAsync(Guid planId, CancellationToken cancellationToken = default)
         {
-            var plan = await _db.Set<TeachingPlan>().FindAsync(new object[] { planId }, cancellationToken);
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var plan = await db.Set<TeachingPlan>().FindAsync(new object[] { planId }, cancellationToken);
             if (plan == null) return false;
 
-            _db.Set<TeachingPlan>().Remove(plan);
-            await _db.SaveChangesAsync(cancellationToken);
+            db.Set<TeachingPlan>().Remove(plan);
+            await db.SaveChangesAsync(cancellationToken);
             return true;
         }
 
         #region Lifecycle methods (using enum alias)
-        public async Task SubmitForReviewAsync(Guid planId, Guid userId, CancellationToken cancellationToken = default)
+        public async Task SubmitForReviewAsync(Guid planId, Guid userId, bool isSystemAdministrator = false, CancellationToken cancellationToken = default)
         {
-            var plan = await _db.Set<TeachingPlan>()
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var plan = await db.Set<TeachingPlan>()
                 .Include(p => p.Weeks)
                     .ThenInclude(w => w.Periods)
                 .FirstOrDefaultAsync(p => p.Id == planId, cancellationToken);
@@ -276,7 +327,8 @@ namespace Lisa.Services.AcademicPlanning
             if (plan == null) throw new InvalidOperationException("Plan not found");
             if (plan.Status != AcademicPlanStatusEnum.Draft) throw new InvalidOperationException("Only drafts can be submitted");
 
-            if (plan.TeacherId != userId)
+            // System Administrators can submit any plan, teachers can only submit their own
+            if (!isSystemAdministrator && plan.TeacherId != userId)
                 throw new UnauthorizedAccessException("Cannot submit another teacher's plan");
 
             plan.Status = AcademicPlanStatusEnum.PendingReview;
@@ -284,49 +336,74 @@ namespace Lisa.Services.AcademicPlanning
             plan.UpdatedAt = DateTime.UtcNow;
             plan.CurrentVersion++;
 
-            await RecordHistoryAsync(plan, userId);
-            await _db.SaveChangesAsync(cancellationToken);
+            await RecordHistoryAsync(db, plan, userId);
+            await db.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task ApprovePlanAsync(Guid planId, Guid approverUserId, CancellationToken cancellationToken = default)
+        public async Task ApprovePlanAsync(Guid planId, Guid approverUserId, bool isSystemAdministrator = false, CancellationToken cancellationToken = default)
         {
-            var plan = await _db.Set<TeachingPlan>()
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var plan = await db.Set<TeachingPlan>()
                 .Include(p => p.Weeks)
                     .ThenInclude(w => w.Periods)
                 .FirstOrDefaultAsync(p => p.Id == planId, cancellationToken);
 
             if (plan == null) throw new InvalidOperationException("Plan not found");
-            if (plan.Status != AcademicPlanStatusEnum.PendingReview)
-                throw new InvalidOperationException("Only plans pending review can be approved");
+            
+            // System Administrators can approve Draft or PendingReview plans directly
+            // Regular users can only approve PendingReview plans
+            if (isSystemAdministrator)
+            {
+                if (plan.Status != AcademicPlanStatusEnum.Draft && plan.Status != AcademicPlanStatusEnum.PendingReview)
+                    throw new InvalidOperationException("Only draft or pending review plans can be approved");
+            }
+            else
+            {
+                if (plan.Status != AcademicPlanStatusEnum.PendingReview)
+                    throw new InvalidOperationException("Only plans pending review can be approved");
+            }
 
-            plan.Status = AcademicPlanStatusEnum.Published;
+            plan.Status = AcademicPlanStatusEnum.Approved;
             plan.ApprovedAt = DateTime.UtcNow;
             plan.ApprovedByUserId = approverUserId;
             plan.IsLocked = true;
             plan.UpdatedAt = DateTime.UtcNow;
             plan.CurrentVersion++;
 
-            await RecordHistoryAsync(plan, approverUserId);
-            await _db.SaveChangesAsync(cancellationToken);
+            await RecordHistoryAsync(db, plan, approverUserId);
+            await db.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task RejectPlanAsync(Guid planId, Guid approverUserId, string reason, CancellationToken cancellationToken = default)
+        public async Task RejectPlanAsync(Guid planId, Guid approverUserId, string reason, bool isSystemAdministrator = false, CancellationToken cancellationToken = default)
         {
-            var plan = await _db.Set<TeachingPlan>()
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var plan = await db.Set<TeachingPlan>()
                 .Include(p => p.Weeks)
                     .ThenInclude(w => w.Periods)
                 .FirstOrDefaultAsync(p => p.Id == planId, cancellationToken);
 
             if (plan == null) throw new InvalidOperationException("Plan not found");
-            if (plan.Status != AcademicPlanStatusEnum.PendingReview)
-                throw new InvalidOperationException("Only plans pending review can be rejected");
+            
+            // System Administrators can reject Draft or PendingReview plans
+            // Regular users can only reject PendingReview plans
+            if (isSystemAdministrator)
+            {
+                if (plan.Status != AcademicPlanStatusEnum.Draft && plan.Status != AcademicPlanStatusEnum.PendingReview)
+                    throw new InvalidOperationException("Only draft or pending review plans can be rejected");
+            }
+            else
+            {
+                if (plan.Status != AcademicPlanStatusEnum.PendingReview)
+                    throw new InvalidOperationException("Only plans pending review can be rejected");
+            }
 
-            plan.Status = AcademicPlanStatusEnum.Draft;
+            plan.Status = AcademicPlanStatusEnum.Rejected;
             plan.UpdatedAt = DateTime.UtcNow;
             plan.CurrentVersion++;
-
-            await RecordHistoryAsync(plan, approverUserId);
-            await _db.SaveChangesAsync(cancellationToken);
+            
+            // Store rejection reason in history
+            await RecordHistoryAsync(db, plan, approverUserId, $"Rejected: {reason}");
+            await db.SaveChangesAsync(cancellationToken);
         }
         #endregion
 
@@ -340,6 +417,10 @@ namespace Lisa.Services.AcademicPlanning
                 SchoolGradeId = entity.SchoolGradeId,
                 SubjectId = entity.SubjectId,
                 TeacherId = entity.TeacherId,
+                AcademicYearId = entity.AcademicYearId,
+                Term = entity.Term,
+                IsCatchUpPlan = entity.IsCatchUpPlan,
+                OriginalPlanId = entity.OriginalPlanId,
                 Weeks = entity.Weeks?.OrderBy(w => w.WeekNumber).Select(MapWeekToDto).ToList() ?? new List<AcademicPlanWeekDto>()
             };
         }
@@ -364,38 +445,106 @@ namespace Lisa.Services.AcademicPlanning
                 Id = p.Id,
                 PeriodNumber = p.PeriodNumber,
                 Topic = p.Topic,
+                SubTopic = p.SubTopic,
+                PercentagePlanned = p.PercentagePlanned,
+                DatePlanned = p.DatePlanned,
+                PercentageCompleted = p.PercentageCompleted,
+                DateCompleted = p.DateCompleted,
                 Resources = p.Resources,
+                LessonDetailDescription = p.LessonDetailDescription,
+                ClassWorkDescription = p.ClassWorkDescription,
+                Homework = p.Homework,
                 Assessment = p.Assessment,
-                Homework = p.Homework
+                AssessmentDescription = p.AssessmentDescription,
+                Notes = p.Notes
             };
         }
 
-        private async Task RecordHistoryAsync(TeachingPlan plan, Guid changedByUserId)
+        private async Task RecordHistoryAsync(LisaDbContext db, TeachingPlan plan, Guid changedByUserId, string? notes = null)
         {
+            // Create a DTO to avoid circular reference issues when serializing
+            var planSnapshot = new
+            {
+                Id = plan.Id,
+                SchoolId = plan.SchoolId,
+                SchoolGradeId = plan.SchoolGradeId,
+                SubjectId = plan.SubjectId,
+                TeacherId = plan.TeacherId,
+                AcademicYearId = plan.AcademicYearId,
+                Term = plan.Term,
+                Status = plan.Status,
+                CreatedAt = plan.CreatedAt,
+                UpdatedAt = plan.UpdatedAt,
+                SubmittedAt = plan.SubmittedAt,
+                ApprovedAt = plan.ApprovedAt,
+                ApprovedByUserId = plan.ApprovedByUserId,
+                CurrentVersion = plan.CurrentVersion,
+                IsLocked = plan.IsLocked,
+                IsCatchUpPlan = plan.IsCatchUpPlan,
+                OriginalPlanId = plan.OriginalPlanId,
+                Weeks = plan.Weeks?.Select(w => new
+                {
+                    Id = w.Id,
+                    WeekNumber = w.WeekNumber,
+                    StartDate = w.StartDate,
+                    EndDate = w.EndDate,
+                    Notes = w.Notes,
+                    Periods = w.Periods?.Select(p => new
+                    {
+                        Id = p.Id,
+                        PeriodNumber = p.PeriodNumber,
+                        Topic = p.Topic,
+                        SubTopic = p.SubTopic,
+                        PercentagePlanned = p.PercentagePlanned,
+                        DatePlanned = p.DatePlanned,
+                        PercentageCompleted = p.PercentageCompleted,
+                        DateCompleted = p.DateCompleted,
+                        LessonDetailDescription = p.LessonDetailDescription,
+                        ClassWorkDescription = p.ClassWorkDescription,
+                        Homework = p.Homework,
+                        Assessment = p.Assessment,
+                        AssessmentDescription = p.AssessmentDescription,
+                        Notes = p.Notes,
+                        Resources = p.Resources,
+                        CreatedAt = p.CreatedAt,
+                        UpdatedAt = p.UpdatedAt
+                    }).ToList()
+                }).ToList()
+            };
+
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = false,
+                ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles
+            };
+
             var history = new AcademicPlanHistory
             {
                 Id = Guid.NewGuid(),
                 AcademicPlanId = plan.Id,
                 VersionNumber = plan.CurrentVersion,
                 Status = (int)plan.Status,
-                SnapshotJson = JsonSerializer.Serialize(plan),
+                SnapshotJson = JsonSerializer.Serialize(planSnapshot, options),
                 ChangedByUserId = changedByUserId,
-                ChangedAt = DateTime.UtcNow
+                ChangedAt = DateTime.UtcNow,
+                Notes = notes
             };
 
-            await _db.Set<AcademicPlanHistory>().AddAsync(history);
+            await db.Set<AcademicPlanHistory>().AddAsync(history);
         }
 
         public async Task<TeachingPlan?> GetTeachingPlanByIdAsync(Guid planId, CancellationToken cancellationToken = default)
         {
-            return await _db.Set<TeachingPlan>()
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            return await db.Set<TeachingPlan>()
                 .Include(p => p.Weeks)
                     .ThenInclude(w => w.Periods)
                 .FirstOrDefaultAsync(p => p.Id == planId, cancellationToken);
         }
         public async Task<List<AcademicPlanHistoryDto>> GetPlanHistoryAsync(Guid planId, CancellationToken cancellationToken = default)
         {
-            var history = await _db.Set<AcademicPlanHistory>()
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var history = await db.Set<AcademicPlanHistory>()
                 .Where(h => h.AcademicPlanId == planId)
                 .OrderBy(h => h.VersionNumber)
                 .ToListAsync(cancellationToken);
@@ -412,44 +561,204 @@ namespace Lisa.Services.AcademicPlanning
         }
         public async Task<bool> SavePlanPeriodsAsync(Guid planId, List<AcademicPlanPeriod> periods, Guid userId, CancellationToken cancellationToken = default)
         {
-            var plan = await _db.Set<TeachingPlan>()
-                .Include(p => p.Weeks)
-                    .ThenInclude(w => w.Periods)
-                .FirstOrDefaultAsync(p => p.Id == planId, cancellationToken);
-
-            if (plan == null) return false;
-
-            var week = plan.Weeks.FirstOrDefault();
-            if (week == null)
+            try
             {
-                week = new AcademicPlanWeek
+                await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+                var plan = await db.Set<TeachingPlan>()
+                    .Include(p => p.Weeks)
+                        .ThenInclude(w => w.Periods)
+                    .FirstOrDefaultAsync(p => p.Id == planId, cancellationToken);
+
+                if (plan == null) return false;
+
+                var week = plan.Weeks.FirstOrDefault();
+                if (week == null)
                 {
-                    Id = Guid.NewGuid(),
-                    AcademicPlanId = planId,
-                    WeekNumber = 1,
-                    StartDate = DateTime.UtcNow,
-                    EndDate = DateTime.UtcNow.AddDays(7),
-                    CreatedAt = DateTime.UtcNow,
+                    week = new AcademicPlanWeek
+                    {
+                        Id = Guid.NewGuid(),
+                        AcademicPlanId = planId,
+                        WeekNumber = 1,
+                        StartDate = DateTime.UtcNow,
+                        EndDate = DateTime.UtcNow.AddDays(7),
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    db.Set<AcademicPlanWeek>().Add(week);
+                    await db.SaveChangesAsync(cancellationToken); // Save week first to get the ID
+                }
+                else
+                {
+                    // Ensure existing week dates are UTC
+                    if (week.StartDate.HasValue && week.StartDate.Value.Kind != DateTimeKind.Utc)
+                    {
+                        week.StartDate = week.StartDate.Value.ToUniversalTime();
+                    }
+                    if (week.EndDate.HasValue && week.EndDate.Value.Kind != DateTimeKind.Utc)
+                    {
+                        week.EndDate = week.EndDate.Value.ToUniversalTime();
+                    }
+                }
+
+                // Remove existing periods from database
+                var existingPeriods = await db.Set<AcademicPlanPeriod>()
+                    .Where(p => p.AcademicPlanWeekId == week.Id)
+                    .ToListAsync(cancellationToken);
+                
+                if (existingPeriods.Any())
+                {
+                    db.Set<AcademicPlanPeriod>().RemoveRange(existingPeriods);
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+                
+                // Add new periods
+                foreach (var period in periods)
+                {
+                    // Ensure Topic has a value (required field) - database requires NOT NULL
+                    var topicValue = !string.IsNullOrWhiteSpace(period.Topic) 
+                        ? period.Topic.Trim() 
+                        : $"Period {period.PeriodNumber}"; // Default topic - always non-null
+
+                    // Ensure topic doesn't exceed max length
+                    if (topicValue.Length > 200)
+                    {
+                        topicValue = topicValue.Substring(0, 200);
+                    }
+
+                // Ensure all DateTime values are UTC for PostgreSQL
+                var createdAt = period.CreatedAt == default(DateTime) 
+                    ? DateTime.UtcNow 
+                    : period.CreatedAt.Kind == DateTimeKind.Unspecified 
+                        ? DateTime.SpecifyKind(period.CreatedAt, DateTimeKind.Utc) 
+                        : period.CreatedAt.ToUniversalTime();
+                
+                var datePlanned = period.DatePlanned.HasValue
+                    ? (period.DatePlanned.Value.Kind == DateTimeKind.Unspecified
+                        ? DateTime.SpecifyKind(period.DatePlanned.Value, DateTimeKind.Utc)
+                        : period.DatePlanned.Value.ToUniversalTime())
+                    : (DateTime?)null;
+                
+                var dateCompleted = period.DateCompleted.HasValue
+                    ? (period.DateCompleted.Value.Kind == DateTimeKind.Unspecified
+                        ? DateTime.SpecifyKind(period.DateCompleted.Value, DateTimeKind.Utc)
+                        : period.DateCompleted.Value.ToUniversalTime())
+                    : (DateTime?)null;
+
+                var newPeriod = new AcademicPlanPeriod
+                {
+                    Id = period.Id == Guid.Empty ? Guid.NewGuid() : period.Id,
+                    AcademicPlanWeekId = week.Id,
+                    PeriodNumber = period.PeriodNumber,
+                    Topic = topicValue, // Always non-null and non-empty
+                    SubTopic = !string.IsNullOrWhiteSpace(period.SubTopic) ? period.SubTopic.Trim() : null,
+                    PercentagePlanned = period.PercentagePlanned,
+                    DatePlanned = datePlanned,
+                    PercentageCompleted = period.PercentageCompleted,
+                    DateCompleted = dateCompleted,
+                    Resources = period.Resources,
+                    LessonDetailDescription = period.LessonDetailDescription,
+                    ClassWorkDescription = period.ClassWorkDescription,
+                    Homework = period.Homework,
+                    Assessment = period.Assessment,
+                    AssessmentDescription = period.AssessmentDescription,
+                    Notes = !string.IsNullOrWhiteSpace(period.Notes) && period.Notes.Length > 1000 
+                        ? period.Notes.Substring(0, 1000) 
+                        : period.Notes,
+                    CreatedAt = createdAt,
                     UpdatedAt = DateTime.UtcNow
                 };
-                plan.Weeks.Add(week);
-            }
+                    
+                    db.Set<AcademicPlanPeriod>().Add(newPeriod);
+                }
 
-            week.Periods.Clear();
-            
-            foreach (var period in periods)
+                plan.UpdatedAt = DateTime.UtcNow;
+                
+                // Ensure plan dates are UTC
+                if (plan.CreatedAt.Kind != DateTimeKind.Utc)
+                {
+                    plan.CreatedAt = plan.CreatedAt.ToUniversalTime();
+                }
+                
+                await db.SaveChangesAsync(cancellationToken);
+                
+                return true;
+            }
+            catch (Exception ex)
             {
-                period.Id = period.Id == Guid.Empty ? Guid.NewGuid() : period.Id;
-                period.AcademicPlanWeekId = week.Id;
-                period.CreatedAt = DateTime.UtcNow;
-                period.UpdatedAt = DateTime.UtcNow;
-                week.Periods.Add(period);
+                // Build detailed error message with inner exception
+                var errorMessage = $"Error saving plan periods: {ex.Message}";
+                if (ex.InnerException != null)
+                {
+                    errorMessage += $"\nInner Exception: {ex.InnerException.Message}";
+                    if (ex.InnerException.InnerException != null)
+                    {
+                        errorMessage += $"\nInner Exception (2): {ex.InnerException.InnerException.Message}";
+                    }
+                }
+                errorMessage += $"\nStack Trace: {ex.StackTrace}";
+                
+                // Throw a new exception with the detailed message
+                throw new InvalidOperationException(errorMessage, ex);
+            }
+        }
+
+        public async Task<List<AcademicPlanDisplayDto>> GetPlansForDisplayAsync(Guid? schoolId, Guid? teacherId, CancellationToken cancellationToken = default)
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            
+            var query = db.Set<TeachingPlan>().AsNoTracking().AsQueryable();
+
+            if (schoolId.HasValue)
+            {
+                query = query.Where(p => p.SchoolId == schoolId.Value);
             }
 
-            plan.UpdatedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(cancellationToken);
-            
-            return true;
+            if (teacherId.HasValue)
+            {
+                query = query.Where(p => p.TeacherId == teacherId.Value);
+            }
+
+            var plans = await query.ToListAsync(cancellationToken);
+
+            // Load related data
+            var schoolIds = plans.Select(p => p.SchoolId).Distinct().ToList();
+            var schoolGradeIds = plans.Select(p => p.SchoolGradeId).Distinct().ToList();
+            var subjectIds = plans.Select(p => p.SubjectId).Distinct().ToList();
+            var teacherIds = plans.Select(p => p.TeacherId).Distinct().ToList();
+            var academicYearIds = plans.Select(p => p.AcademicYearId).Distinct().ToList();
+
+            var schools = await db.Set<School>().Where(s => schoolIds.Contains(s.Id)).ToListAsync(cancellationToken);
+            var schoolGrades = await db.Set<SchoolGrade>()
+                .Include(sg => sg.SystemGrade)
+                .Where(sg => schoolGradeIds.Contains(sg.Id))
+                .ToListAsync(cancellationToken);
+            var subjects = await db.Set<Subject>().Where(s => subjectIds.Contains(s.Id)).ToListAsync(cancellationToken);
+            var teachers = await db.Set<User>().Where(u => teacherIds.Contains(u.Id)).ToListAsync(cancellationToken);
+            var academicYears = await db.Set<AcademicYear>().Where(ay => academicYearIds.Contains(ay.Id)).ToListAsync(cancellationToken);
+
+            return plans.Select(p =>
+            {
+                var school = schools.FirstOrDefault(s => s.Id == p.SchoolId);
+                var schoolGrade = schoolGrades.FirstOrDefault(sg => sg.Id == p.SchoolGradeId);
+                var subject = subjects.FirstOrDefault(s => s.Id == p.SubjectId);
+                var teacher = teachers.FirstOrDefault(u => u.Id == p.TeacherId);
+                var academicYear = academicYears.FirstOrDefault(ay => ay.Id == p.AcademicYearId);
+
+                return new AcademicPlanDisplayDto
+                {
+                    Id = p.Id,
+                    SchoolName = school?.LongName ?? "Unknown",
+                    GradeName = schoolGrade?.SystemGrade?.Name ?? "Unknown",
+                    SubjectName = subject?.Name ?? "Unknown",
+                    TeacherName = $"{teacher?.Name} {teacher?.Surname}".Trim(),
+                    Year = academicYear?.Year ?? DateTime.UtcNow.Year,
+                    Term = p.Term,
+                    Status = p.Status,
+                    CreatedAt = p.CreatedAt,
+                    UpdatedAt = p.UpdatedAt,
+                    IsCatchUpPlan = p.IsCatchUpPlan
+                };
+            }).ToList();
         }
         #endregion
     }

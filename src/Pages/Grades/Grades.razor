@@ -1,5 +1,6 @@
 @page "/grades"
 @using Lisa.Models.Entities
+@implements IDisposable
 @inject SchoolService SchoolService
 @inject SchoolGradeService SchoolGradeService
 @inject SystemGradeService SystemGradeService
@@ -194,6 +195,17 @@
 
         var timeOnly = TimeOnly.FromTimeSpan(newTime.Value);
         
+        // Validate time range
+        var proposedStartTime = isStartTime ? timeOnly : (existingSchoolGrade.StartTime ?? new TimeOnly(8, 0));
+        var proposedEndTime = isStartTime ? (existingSchoolGrade.EndTime ?? new TimeOnly(14, 0)) : timeOnly;
+        
+        if (proposedStartTime >= proposedEndTime)
+        {
+            await ShowWarningDialog("Invalid Time Range", "Start time must be before end time.");
+            await LoadGrades(); // Reload to reset UI
+            return;
+        }
+        
         var schoolGradeToUpdate = new SchoolGrade
         {
             Id = existingSchoolGrade.Id,
@@ -203,8 +215,21 @@
             EndTime = isStartTime ? existingSchoolGrade.EndTime : timeOnly
         };
 
-        await SchoolGradeService.UpdateAsync(schoolGradeToUpdate);
-        await LoadGrades();
+        try
+        {
+            await SchoolGradeService.UpdateAsync(schoolGradeToUpdate);
+            await LoadGrades();
+        }
+        catch (InvalidOperationException ex)
+        {
+            await ShowWarningDialog("Update Failed", ex.Message);
+            await LoadGrades();
+        }
+        catch (Exception)
+        {
+            await ShowWarningDialog("Error", "Failed to update grade times. Please try again.");
+            await LoadGrades();
+        }
     }
 
     private async Task LoadGrades()
@@ -225,5 +250,10 @@
             title,
             message,
             yesText: "OK");
+    }
+
+    public new void Dispose()
+    {
+        base.Dispose();
     }
 }

@@ -39,12 +39,25 @@ public class SchoolGradeService
                 return null;
             }
 
+            // Validate times
+            if (grade.StartTime.HasValue && grade.EndTime.HasValue && grade.StartTime >= grade.EndTime)
+            {
+                logger.LogWarning("Invalid times for grade {GradeId}: Start time must be before end time", grade.Id);
+                throw new InvalidOperationException("Start time must be before end time");
+            }
+
             existingGrade.StartTime = grade.StartTime;
             existingGrade.EndTime = grade.EndTime;
 
             await context.SaveChangesAsync();
-            logger.LogInformation("Updated grade: {GradeId}", grade.Id);
+            logger.LogInformation("Updated grade {GradeId}: Start={StartTime}, End={EndTime}", 
+                grade.Id, grade.StartTime?.ToString("HH:mm"), grade.EndTime?.ToString("HH:mm"));
             return existingGrade;
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            logger.LogError(ex, "Concurrency conflict updating grade: {GradeId}", grade.Id);
+            throw new InvalidOperationException("The grade was modified by another user. Please refresh and try again.", ex);
         }
         catch (Exception ex)
         {
